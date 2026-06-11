@@ -41,7 +41,7 @@ export const createSchoolService = async ({
     state: state || null,
     zip: zip || null,
     email: email || null,
-    status: "pending",
+    status: "active",
   });
 
   const existingUser = await User.findOne({
@@ -118,6 +118,14 @@ export const updateSchoolAdminStatusService = async ({
 
   admin.is_active = is_active;
   await admin.save();
+
+  // Sync school status with admin active status
+  const school = await School.findByPk(school_id);
+  if (school) {
+    school.status = is_active ? "active" : "suspended";
+    await school.save();
+  }
+
   return admin;
 };
 
