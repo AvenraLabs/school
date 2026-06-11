@@ -1,5 +1,5 @@
 // Centralised API/socket configuration so we don't scatter env parsing.
-const rawBase = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
+const rawBase = (import.meta.env.VITE_API_BASE_URL || "https://school-hhrt.onrender.com/api").replace(/\/$/, "");
 
 // If the base ends with /api, strip it for sockets (which mount at root).
 const derivedSocket =
