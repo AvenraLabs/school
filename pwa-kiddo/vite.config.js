@@ -14,8 +14,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'safari-pinned-tab.svg'],
       manifest: {
-        name: 'PWA Kiddo - Educational App',
-        short_name: 'PWA Kiddo',
+        name: 'Avenra - School App',
+        short_name: 'Avenra',
         description: 'A comprehensive Progressive Web Application for students, teachers, and parents in an educational environment',
         theme_color: '#1976d2',
         background_color: '#ffffff',

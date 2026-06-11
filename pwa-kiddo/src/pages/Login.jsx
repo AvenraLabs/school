@@ -163,7 +163,7 @@ export default function Login() {
                       color: "text.primary",
                     }}
                   >
-                    Kiddo Shadow
+                    School App
                   </Typography>
                 </Box>
               </Stack>

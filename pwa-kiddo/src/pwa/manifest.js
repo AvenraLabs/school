@@ -1,7 +1,7 @@
 // PWA Manifest Configuration
 export const pwaManifest = {
-  name: 'PWA Kiddo - Educational App',
-  short_name: 'PWA Kiddo',
+  name: 'Avenra - School App',
+  short_name: 'Avenra',
   description: 'A comprehensive Progressive Web Application for students, teachers, and parents in an educational environment',
   theme_color: '#1976d2',
   background_color: '#ffffff',
