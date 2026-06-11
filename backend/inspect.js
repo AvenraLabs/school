@@ -1,4 +1,4 @@
-http://localhost:5174/student/timetableimport dotenv from "dotenv";
+import dotenv from "dotenv";
 dotenv.config();
 
 import db from "./src/config/db.js";

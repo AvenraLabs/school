@@ -32,7 +32,7 @@ const schoolAdminLinks = [
   { to: '/admin/approvals', icon: UserCheck, label: 'Approvals' },
   { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },
   { section: 'Operations' },
-  { to: '/admin/assignments', icon: ClipboardList, label: 'Class Teacher Appointments' },
+  { to: '/admin/assignments', icon: ClipboardList, label: 'Teacher Assignments' },
   { to: '/admin/timetables', icon: Calendar, label: 'Timetables' },
   { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
   { section: 'Assessment' },
