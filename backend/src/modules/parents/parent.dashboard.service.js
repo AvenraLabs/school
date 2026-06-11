@@ -1,0 +1,175 @@
+import Parent from "./parent.model.js";
+import Student from "../students/student.model.js";
+import User from "../users/user.model.js";
+import Class from "../classes/classes.model.js";
+import Section from "../sections/section.model.js";
+import { getPagination } from "../../shared/utils/pagination.js";
+
+import Timetable from "../timetables/timetable.model.js";
+import Homework from "../homework/homework.model.js";
+import HomeworkSubmission from "../homework/homework-submission.model.js";
+import ReportCard from "../report-cards/report-card.model.js";
+import Attendance from "../attendance/attendance.model.js";
+import Exam from "../report-cards/exam.model.js";
+
+import { Op } from "sequelize";
+
+/* =========================================================
+   1️⃣ PARENT → CHILDREN LIST (PROFILE / MANAGEMENT)
+   (KEEP THIS – pagination, approvals, profile data)
+========================================================= */
+export const getParentChildrenService = async ({
+  parent_user_id,
+  school_id,
+  query,
+}) => {
+  const { limit, offset } = getPagination(query);
+
+  return Parent.findAndCountAll({
+    where: {
+      user_id: parent_user_id,
+      approval_status: "approved",
+    },
+    include: [
+      {
+        model: Student,
+        where: { approval_status: "approved", school_id },
+        include: [
+          {
+            model: User,
+            attributes: ["id", "name", "username", "is_active"],
+          },
+          {
+            model: Class,
+            attributes: ["id", "class_name"],
+          },
+          {
+            model: Section,
+            attributes: ["id", "name"],
+          },
+        ],
+      },
+    ],
+    limit,
+    offset,
+    order: [["created_at", "DESC"]],
+  });
+};
+
+/* =========================================================
+   2️⃣ PARENT → DAILY DASHBOARD (ACADEMICS)
+========================================================= */
+
+const getToday = () => new Date().toISOString().slice(0, 10);
+
+const getDayName = () =>
+  new Date()
+    .toLocaleDateString("en-US", { weekday: "long" })
+    .toLowerCase();
+
+export const getParentDailyDashboardService = async ({
+  school_id,
+  parent_user_id,
+}) => {
+  // get children
+  const students = await Student.findAll({
+    where: { school_id },
+    include: [
+      {
+        model: Parent,
+        where: { user_id: parent_user_id, approval_status: "approved" },
+      },
+      {
+        model: User,
+        attributes: ["id", "name"],
+      },
+    ],
+  });
+
+  const today = getToday();
+  const day = getDayName();
+
+  const dashboards = [];
+
+  for (const student of students) {
+    /* -------- Timetable (today) -------- */
+    const timetable = await Timetable.findAll({
+      where: {
+        school_id,
+        class_id: student.class_id,
+        section_id: student.section_id,
+        day_of_week: day,
+      },
+      order: [["start_time", "ASC"]],
+    });
+
+    /* -------- Homework (today) -------- */
+    const homework = await Homework.findAll({
+      where: {
+        school_id,
+        class_id: student.class_id,
+        section_id: student.section_id,
+        homework_date: today,
+      },
+    });
+
+    const submissions = await HomeworkSubmission.findAll({
+      where: {
+        student_id: student.id,
+        homework_id: homework.map((h) => h.id),
+      },
+    });
+
+    const submissionMap = {};
+    submissions.forEach((s) => {
+      submissionMap[s.homework_id] = s;
+    });
+
+    const homeworkStatus = homework.map((h) => ({
+      homework_id: h.id,
+      subject_id: h.subject_id,
+      description: h.description,
+      is_completed: submissionMap[h.id]?.is_completed ?? false,
+    }));
+
+    /* -------- Attendance (last 7 days) -------- */
+    const attendance = await Attendance.findAll({
+      where: {
+        student_id: student.id,
+        date: {
+          [Op.gte]: new Date(
+            Date.now() - 7 * 24 * 60 * 60 * 1000
+          ),
+        },
+      },
+      order: [["date", "DESC"]],
+    });
+
+    /* -------- Report Cards (published) -------- */
+    const reportCards = await ReportCard.findAll({
+      where: {
+        student_id: student.id,
+        published_at: { [Op.ne]: null },
+      },
+      include: [{ model: Exam }],
+      order: [["published_at", "DESC"]],
+      limit: 3,
+    });
+
+    dashboards.push({
+      student: {
+        id: student.id,
+        name: (student.user ?? student.User)?.name ?? null,
+        roll_no: student.roll_no,
+        class_id: student.class_id,
+        section_id: student.section_id,
+      },
+      timetable,
+      homework: homeworkStatus,
+      attendance_last_7_days: attendance,
+      report_cards: reportCards,
+    });
+  }
+
+  return dashboards;
+};

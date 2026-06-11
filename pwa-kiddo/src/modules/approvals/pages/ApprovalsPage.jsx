@@ -1,0 +1,194 @@
+import { Box, Typography, Card, CardContent, Button, Avatar, Chip, Container, Stack, Divider, CircularProgress } from "@mui/material";
+import { Check, Close, Person } from "@mui/icons-material";
+import { useState, useEffect } from "react";
+import { getTeacherPendingApprovals, approveRequest } from "../approvals.api";
+import { useAuth } from "../../../auth/AuthProvider";
+
+const detailFields = [
+    "username",
+    "name",
+    "email",
+    "phone",
+    "gender",
+    "dob",
+    "blood_group",
+    "address",
+    "class",
+    "section",
+    "father_name",
+    "mother_name",
+    "guardian_name",
+    "admission_no",
+    "roll_no",
+];
+
+export default function ApprovalsPage() {
+    const { user } = useAuth();
+    const [requests, setRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [expandedId, setExpandedId] = useState(null);
+
+    const fetchApprovals = async () => {
+        try {
+            setLoading(true);
+            const res = await getTeacherPendingApprovals();
+            const items = res.data?.items ?? res.data ?? [];
+            setRequests(Array.isArray(items) ? items : []);
+        } catch (err) {
+            console.error("Failed to load approvals", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchApprovals();
+    }, []);
+
+const handleAction = async (type, id, action) => {
+        try {
+            await approveRequest(type, id, action);
+            // Optimistic update
+            setRequests(prev => prev.filter(r => r.id !== id));
+            if (expandedId === id) setExpandedId(null);
+        } catch (err) {
+            console.error(`Failed to ${action} request`, err);
+            alert(`Failed to ${action} request`);
+        }
+    };
+
+    if (loading) return <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}><CircularProgress /></Box>;
+
+    return (
+        <Container maxWidth="md" sx={{ py: 4 }}>
+            <Box sx={{ mb: 4, borderBottom: 1, borderColor: 'divider', pb: 2 }}>
+                <Typography variant="h4" fontWeight="bold">
+                    Pending Approvals
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                    Review requests from your students
+                </Typography>
+            </Box>
+
+            {requests.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 8, bgcolor: 'background.paper', borderRadius: 2 }}>
+                    <Check sx={{ fontSize: 60, color: 'success.light', mb: 2 }} />
+                    <Typography variant="h6">All caught up!</Typography>
+                    <Typography color="text.secondary">No pending requests to review.</Typography>
+                </Box>
+            ) : (
+                <Stack spacing={2}>
+                    {requests.map((req) => {
+                        const isExpanded = expandedId === (req.id || req.student_id);
+                        const name = req.student?.user?.name || req.student?.name || req?.name || "Student";
+                        const initial = name?.[0] || "U";
+                        const className = req.student?.class?.class_name || req.class?.class_name || req.class_id || "-";
+                        const sectionName = req.student?.section?.name || req.section?.name || req.section_id || "-";
+                        return (
+                        <Card
+                            key={req.id || `${req.student_id}-${req.section_id}`}
+                            sx={{ overflow: 'visible', cursor: 'pointer' }}
+                            onClick={() => setExpandedId(isExpanded ? null : (req.id || req.student_id))}
+                        >
+                            <CardContent>
+                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                    <Avatar
+                                        src={req.student?.avatar}
+                                        sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}
+                                    >
+                                        {initial}
+                                    </Avatar>
+
+                                    <Box sx={{ flex: 1 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                            <Typography variant="h6">
+                                                {name}
+                                            </Typography>
+                                            <Chip label={req.type || "Profile Update"} size="small" color="info" variant="outlined" />
+                                        </Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Class {className} - {sectionName}
+                                        </Typography>
+
+                                        {isExpanded && req.changes && (
+                                            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                                                <Typography variant="caption" fontWeight="bold" display="block" sx={{ mb: 1 }}>
+                                                    REQUESTED CHANGES
+                                                </Typography>
+                                                {Object.entries(req.changes).map(([key, value]) => (
+                                                    <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
+                                                            {key.replace('_', ' ')}:
+                                                        </Typography>
+                                                        <Typography variant="body2" fontWeight="medium">
+                                                            {String(value)}
+                                                        </Typography>
+                                                    </Box>
+                                                ))}
+                                            </Box>
+                                        )}
+                                    </Box>
+                                </Box>
+
+                                {isExpanded && (
+                                  <>
+                                    <Divider sx={{ my: 2 }} />
+                                    <Stack spacing={0.75} sx={{ mb: 2 }}>
+                                      {detailFields.map((field) => {
+                                        let value =
+                                          req?.student?.user?.[field] ??
+                                          req?.student?.[field] ??
+                                          req?.user?.[field] ??
+                                          req?.[field];
+
+                                        if (field === "username") {
+                                          value = req?.student?.user?.username || req?.user?.username || req?.username;
+                                        }
+                                        if (field === "class") value = className;
+                                        if (field === "section") value = sectionName;
+
+                                        if (value === undefined || value === null || value === "") return null;
+
+                                        return (
+                                          <Box key={field} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                                            <Typography variant="body2" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
+                                              {field.replace("_", " ")}
+                                            </Typography>
+                                            <Typography variant="body2" fontWeight="medium">
+                                              {String(value)}
+                                            </Typography>
+                                          </Box>
+                                        );
+                                      })}
+                                    </Stack>
+
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                                      <Button
+                                        variant="outlined"
+                                        color="error"
+                                        startIcon={<Close />}
+                                        onClick={(e) => { e.stopPropagation(); handleAction('student_profile', req.id, 'reject'); }}
+                                      >
+                                        Reject
+                                      </Button>
+                                      <Button
+                                        variant="contained"
+                                        color="success"
+                                        startIcon={<Check />}
+                                        onClick={(e) => { e.stopPropagation(); handleAction('student_profile', req.id, 'approve'); }}
+                                      >
+                                        Approve
+                                      </Button>
+                                    </Box>
+                                  </>
+                                )}
+
+                            </CardContent>
+                        </Card>
+                        );
+                    })}
+                </Stack>
+            )}
+        </Container>
+    );
+}

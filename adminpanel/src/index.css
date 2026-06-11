@@ -1,0 +1,329 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+}
+
+/* Base resets */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  text-align: left;
+  border: none;
+  display: flex;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-semibold text-slate-900;
+}
+
+button:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+input, select, textarea {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400;
+}
+
+/* Utilities */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out bg-indigo-600 text-white shadow-sm shadow-indigo-200;
+}
+.btn-primary:hover {
+  @apply bg-indigo-700 shadow-md shadow-indigo-200;
+}
+.btn-primary:active { transform: scale(0.97); }
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out bg-white text-slate-700 border border-slate-200 shadow-sm;
+}
+.btn-secondary:hover {
+  @apply bg-slate-50 border-slate-300;
+}
+.btn-secondary:active { transform: scale(0.97); }
+
+.btn-danger {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out bg-rose-600 text-white shadow-sm shadow-rose-200;
+}
+.btn-danger:hover { @apply bg-rose-700; }
+.btn-danger:active { transform: scale(0.97); }
+
+.btn-success {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out bg-emerald-600 text-white shadow-sm shadow-emerald-200;
+}
+.btn-success:hover { @apply bg-emerald-700; }
+.btn-success:active { transform: scale(0.97); }
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out bg-transparent text-slate-600;
+}
+.btn-ghost:hover { @apply bg-slate-100 text-slate-800; }
+.btn-ghost:active { transform: scale(0.97); }
+
+.btn-sm {
+  @apply px-3.5 py-2 text-xs rounded-lg;
+}
+.btn-lg {
+  @apply px-7 py-3.5 text-base rounded-xl;
+}
+
+/* Card */
+.card {
+  @apply bg-white rounded-2xl shadow-sm border border-slate-200/60;
+}
+
+.card-hover {
+  @apply bg-white rounded-2xl shadow-sm border border-slate-200/60 transition-all duration-200;
+}
+.card-hover:hover {
+  @apply shadow-md border-slate-200 -translate-y-0.5;
+}
+
+/* Input */
+.input-field {
+  @apply w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 placeholder-slate-400 transition-all duration-200;
+  min-height: 44px;
+  color: #1e293b;
+  caret-color: #1e293b;
+}
+.input-field:focus {
+  @apply outline-none ring-2 ring-indigo-500/20 border-indigo-400;
+}
+.input-field:disabled {
+  @apply bg-slate-50 text-slate-400 cursor-not-allowed;
+}
+
+.select-field {
+  @apply input-field appearance-none bg-no-repeat cursor-pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-size: 1.25rem;
+  padding-right: 2.5rem;
+}
+
+.label {
+  @apply block text-sm font-medium text-slate-700 mb-2;
+}
+
+/* Tables */
+.data-table {
+  @apply w-full text-sm text-left;
+}
+.data-table thead {
+  @apply bg-slate-50 border-b border-slate-200;
+}
+.data-table th {
+  @apply px-5 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider;
+}
+.data-table td {
+  @apply px-5 py-4 text-slate-700 border-b border-slate-100;
+}
+.data-table tbody tr {
+  @apply transition-colors duration-150;
+}
+.data-table tbody tr:hover {
+  @apply bg-slate-50/80;
+}
+
+/* Badges */
+.badge {
+  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium;
+}
+
+.badge-active {
+  @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200;
+}
+.badge-inactive {
+  @apply badge bg-slate-100 text-slate-600 border border-slate-200;
+}
+.badge-pending {
+  @apply badge bg-amber-50 text-amber-700 border border-amber-200;
+}
+.badge-approved {
+  @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200;
+}
+.badge-rejected {
+  @apply badge bg-rose-50 text-rose-700 border border-rose-200;
+}
+.badge-info {
+  @apply badge bg-indigo-50 text-indigo-700 border border-indigo-200;
+}
+
+/* Page layout */
+.page-header {
+  @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6;
+}
+.page-title {
+  @apply text-2xl font-bold text-slate-900;
+}
+.page-subtitle {
+  @apply text-sm text-slate-500 mt-1;
+}
+
+/* Stat cards */
+.stat-card {
+  @apply card p-6 flex items-center gap-5;
+}
+.stat-card-icon {
+  @apply w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0;
+}
+.stat-card-value {
+  @apply text-3xl font-bold text-slate-900;
+}
+.stat-card-label {
+  @apply text-sm text-slate-500 mt-1;
+}
+
+/* Modal */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+  animation: fadeIn 0.15s ease-out;
+}
+.modal-content {
+  @apply bg-white rounded-2xl shadow-2xl w-full max-h-[90vh] overflow-y-auto;
+  animation: slideUp 0.2s ease-out;
+}
+.modal-header {
+  @apply flex items-center justify-between p-6 border-b border-slate-100;
+}
+.modal-body {
+  @apply p-6;
+}
+.modal-footer {
+  @apply flex items-center justify-end gap-3 p-6 border-t border-slate-100;
+}
+
+/* Toast */
+.toast {
+  @apply flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium min-w-[320px];
+}
+
+.toast-success {
+  @apply toast bg-emerald-600 text-white;
+}
+.toast-error {
+  @apply toast bg-rose-600 text-white;
+}
+.toast-info {
+  @apply toast bg-indigo-600 text-white;
+}
+
+/* Sidebar — layout now handled fully in component with Tailwind */
+
+/* Content area */
+.content-header {
+  @apply sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/60 px-6 py-3;
+}
+
+/* Empty state */
+.empty-state {
+  @apply flex flex-col items-center justify-center py-16 text-center;
+}
+.empty-state-icon {
+  @apply w-16 h-16 text-slate-300 mb-4;
+}
+.empty-state-title {
+  @apply text-lg font-semibold text-slate-600 mb-2;
+}
+.empty-state-desc {
+  @apply text-sm text-slate-400 max-w-sm;
+}
+
+/* Loading skeleton */
+.skeleton {
+  @apply bg-slate-200 rounded-lg animate-pulse;
+}
+
+/* Tabs */
+.tabs {
+  @apply flex border-b border-slate-200 gap-1;
+}
+.tab {
+  @apply px-4 py-2.5 text-sm font-medium text-slate-500 border-b-2 border-transparent cursor-pointer transition-all duration-200 -mb-px;
+}
+.tab:hover {
+  @apply text-slate-700;
+}
+.tab.active {
+  @apply text-indigo-600 border-indigo-600;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin 1.5s linear infinite;
+}
+
+/* Responsive — sidebar handled via component translate */
