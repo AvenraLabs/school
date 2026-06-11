@@ -2,9 +2,10 @@ import db from "../../config/db.js";
 import User from "../users/user.model.js";
 import Parent from "./parent.model.js";
 import Student from "../students/student.model.js";
+import Class from "../classes/classes.model.js";
+import Section from "../sections/section.model.js";
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
-
 /* =========================
    ADMIN: CREATE PARENT + LINK
 ========================= */
@@ -210,9 +211,36 @@ export const listParentsService = async ({ school_id, query }) => {
    ADMIN: PARENT OPTIONS
 ========================= */
 export const listParentOptionsService = async ({ school_id }) => {
-  return User.findAll({
-    where: { school_id, role: "parent" },
-    attributes: ["id", "username", "name", "phone", "is_active"],
-    order: [["username", "ASC"]],
+  return Parent.findAll({
+    include: [
+      {
+        model: User,
+        required: true,
+        where: { school_id },
+        attributes: ["id", "username", "name", "phone", "is_active"],
+      },
+      {
+        model: Student,
+        required: true,
+        where: { school_id },
+        attributes: ["id", "class_id", "section_id"],
+        include: [
+          {
+            model: User,
+            required: true,
+            attributes: ["id", "username", "name"],
+          },
+          {
+            model: Class,
+            attributes: ["id", "class_name"],
+          },
+          {
+            model: Section,
+            attributes: ["id", "name"],
+          },
+        ],
+      },
+    ],
+    order: [[User, "username", "ASC"]],
   });
 };

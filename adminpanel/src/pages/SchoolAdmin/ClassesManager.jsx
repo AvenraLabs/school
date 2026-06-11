@@ -179,6 +179,18 @@ export function ClassesManager() {
 
   const handleAddSection = async (e) => {
     e.preventDefault();
+    const normalizedNewName = newSectionName.trim().toUpperCase();
+
+    // Check if section already exists locally in this class
+    const existsLocally = showAddSection?.sections?.some(
+      (sec) => sec.name.trim().toUpperCase() === normalizedNewName
+    );
+
+    if (existsLocally) {
+      toast.error('Section already exists for this class');
+      return;
+    }
+
     setSaving(true);
     try {
       await sectionsAPI.create(showAddSection.id, newSectionName);

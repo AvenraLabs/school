@@ -136,7 +136,7 @@ export function ReportCards() {
               {students.map((s) => (
                 <div key={s.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                   <div>
-                    <span className="font-medium text-sm">{s.user?.name || s.user?.username || `Student #${s.id}`}</span>
+                    <span className="font-medium text-sm">{s.user?.name || s.User?.name || s.user?.username || s.User?.username || `Student #${s.id}`}</span>
                     <span className="text-xs text-slate-400 ml-2">Roll: {s.roll_no}</span>
                   </div>
                   <div className="flex gap-2">
@@ -172,7 +172,18 @@ export function ReportCards() {
             <label className="label">Student</label>
             <select className="select-field" required value={selectedStudent} onChange={(e) => setSelectedStudent(e.target.value)}>
               <option value="">Select</option>
-              {students.map((s) => <option key={s.id} value={s.id}>{s.user?.name || s.user?.username} (Roll: {s.roll_no})</option>)}
+              {students.map((s) => {
+                const name = s.User?.name || s.user?.name || '';
+                const username = s.User?.username || s.user?.username || '';
+                const display = name && name !== username
+                  ? `${name} (${username})`
+                  : username || `ID: ${s.id}`;
+                return (
+                  <option key={s.id} value={s.id}>
+                    {display} {s.roll_no ? `(Roll: ${s.roll_no})` : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div className="flex justify-end gap-3">

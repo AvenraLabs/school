@@ -14,12 +14,14 @@ const s = {
 
   classCard: {
     background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.04)', marginBottom: '12px', overflow: 'hidden',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)', marginBottom: '12px', overflow: 'visible',
   },
   classHeader: {
     display: 'flex', alignItems: 'center', gap: '10px',
     padding: '14px 18px', cursor: 'pointer', userSelect: 'none',
     background: '#fafafa',
+    borderTopLeftRadius: '15px',
+    borderTopRightRadius: '15px',
   },
   classIcon: {
     width: '32px', height: '32px', borderRadius: '8px',
@@ -203,7 +205,7 @@ export function TeacherAssignments() {
   }, [activePicker, sectionAssignments, saving]);
 
   const teacherDisplayName = (t) =>
-    t?.user?.name || t?.user?.username || t?.employee_id || `Teacher #${t?.id}`;
+    t?.user?.name || t?.User?.name || t?.user?.username || t?.User?.username || t?.employee_id || `Teacher #${t?.id}`;
 
   const filteredTeachers = teachers.filter(t =>
     teacherDisplayName(t).toLowerCase().includes(pickerSearch.toLowerCase())
@@ -265,7 +267,7 @@ export function TeacherAssignments() {
                     const isOpen = activePicker?.sectionId === sec.id;
 
                     return (
-                      <div key={sec.id} style={{ ...s.sectionCard, position: 'relative' }}>
+                      <div key={sec.id} style={{ ...s.sectionCard, position: 'relative', zIndex: isOpen ? 50 : 1 }}>
                         <div style={s.sectionLabel}>{cls.class_name}</div>
                         <div style={s.sectionName}>Section {sec.name}</div>
 
@@ -282,7 +284,7 @@ export function TeacherAssignments() {
                                 )}
                               </div>
                             </div>
-                            <div style={{ position: 'relative' }}>
+                            <div style={{ position: 'relative', zIndex: isOpen ? 60 : 1 }}>
                               <button style={s.changeBtn} onClick={() => isOpen ? closePicker() : openPicker(sec.id, cls.id)}>
                                 Change Teacher
                               </button>
@@ -306,7 +308,7 @@ export function TeacherAssignments() {
                             <span style={s.unassignedBadge}>
                               <span style={{ fontSize: '10px' }}>●</span> Not assigned
                             </span>
-                            <div style={{ position: 'relative' }}>
+                            <div style={{ position: 'relative', zIndex: isOpen ? 60 : 1 }}>
                               <button style={s.assignBtn} onClick={() => isOpen ? closePicker() : openPicker(sec.id, cls.id)}>
                                 <UserPlus style={{ width: '12px', height: '12px' }} /> Assign Teacher
                               </button>

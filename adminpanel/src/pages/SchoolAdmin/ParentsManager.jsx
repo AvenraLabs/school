@@ -159,7 +159,18 @@ export function ParentsManager() {
             <label className="label">Student</label>
             <select className="select-field" required value={createForm.student_id} onChange={(e) => setCreateForm({ ...createForm, student_id: e.target.value })}>
               <option value="">Select student</option>
-              {studentOptions.map((s) => <option key={s.id} value={s.id}>{s.user?.name || s.user?.username || `Student #${s.id}`} — {s.class?.class_name} {s.section?.name}</option>)}
+              {studentOptions.map((s) => {
+                const name = s.User?.name || s.user?.name || '';
+                const username = s.User?.username || s.user?.username || '';
+                const display = name && name !== username
+                  ? `${name} (${username})`
+                  : username || `ID: ${s.id}`;
+                return (
+                  <option key={s.id} value={s.id}>
+                    {display} — {s.class?.class_name || '—'} Section {s.section?.name || '—'}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div>
@@ -184,14 +195,39 @@ export function ParentsManager() {
             <label className="label">Existing Parent</label>
             <select className="select-field" required value={linkForm.parent_user_id} onChange={(e) => setLinkForm({ ...linkForm, parent_user_id: e.target.value })}>
               <option value="">Select parent</option>
-              {parentOptions.map((p) => <option key={p.id} value={p.id}>{p.name || p.username} ({p.phone || 'No phone'})</option>)}
+              {parentOptions.map((p) => {
+                const parentUser = p.User || p.user || p;
+                const parentName = parentUser?.name || '';
+                const parentUsername = parentUser?.username || '';
+
+                const display = parentName && parentName !== parentUsername
+                  ? `${parentUsername} (${parentName})`
+                  : parentUsername;
+
+                return (
+                  <option key={parentUser?.id || p.id} value={parentUser?.id || p.id}>
+                    {display}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div>
             <label className="label">Student</label>
             <select className="select-field" required value={linkForm.student_id} onChange={(e) => setLinkForm({ ...linkForm, student_id: e.target.value })}>
               <option value="">Select student</option>
-              {studentOptions.map((s) => <option key={s.id} value={s.id}>{s.user?.name || s.user?.username || `Student #${s.id}`}</option>)}
+              {studentOptions.map((s) => {
+                const name = s.User?.name || s.user?.name || '';
+                const username = s.User?.username || s.user?.username || '';
+                const display = name && name !== username
+                  ? `${name} (${username})`
+                  : username || `ID: ${s.id}`;
+                return (
+                  <option key={s.id} value={s.id}>
+                    {display} — {s.class?.class_name || '—'} Section {s.section?.name || '—'}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div>
