@@ -9,7 +9,7 @@ const db = new Sequelize(process.env.DB_URI, {
   logging: false,
 
   pool: {
-    max: 10,
+    max: parseInt(process.env.DB_POOL_MAX) || 4,
     min: 0,
     acquire: 30000,
     idle: 10000,
