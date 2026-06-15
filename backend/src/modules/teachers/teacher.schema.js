@@ -18,5 +18,4 @@ export const completeTeacherProfileSchema = z.object({
   experience: z.preprocess(emptyToUndefined, z.coerce.number().int().nonnegative().optional()),
   email: z.preprocess(emptyToUndefined, z.string().email().optional()),
   avatar_url: z.string().optional().or(z.literal("")).or(z.null()),
-  subject: z.string().optional(),
 });

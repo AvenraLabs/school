@@ -74,7 +74,6 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
     qualification,
     experience,
     avatar_url,
-    subject,
   } = req.body;
 
   const teacher = await Teacher.findOne({
@@ -121,7 +120,6 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
     designation,
     qualification,
     experience,
-    subject,
     approval_status: "pending",
     approved_by: null,
     approved_at: null,

@@ -60,10 +60,6 @@ export function Approvals() {
               <span className="font-medium text-slate-800 font-mono">{selectedItem.employee_id || '—'}</span>
             </div>
             <div>
-              <span className="text-slate-400 block mb-1">Subject/Department</span>
-              <span className="font-medium text-slate-800">{selectedItem.subject || '—'}</span>
-            </div>
-            <div>
               <span className="text-slate-400 block mb-1">Designation</span>
               <span className="font-medium text-slate-800">{selectedItem.designation || '—'}</span>
             </div>
