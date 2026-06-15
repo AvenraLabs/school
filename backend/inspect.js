@@ -11,13 +11,11 @@ async function run() {
     await db.authenticate();
     console.log("DB authenticated");
 
-    const timetables = await Timetable.findAll();
-    console.log("Timetables count:", timetables.length);
-    console.log("All Timetables:", timetables.map(t => ({ id: t.id, class_id: t.class_id, section_id: t.section_id, day_of_week: t.day_of_week })));
+    const teacherDesc = await db.models.teacher.describe();
+    console.log("Teacher Columns:", Object.keys(teacherDesc));
 
-    const assignments = await TeacherAssignment.findAll();
-    console.log("Assignments count:", assignments.length);
-    console.log("All Assignments:", assignments.map(a => ({ id: a.id, class_id: a.class_id, section_id: a.section_id, teacher_id: a.teacher_id })));
+    const userDesc = await db.models.user.describe();
+    console.log("User Columns:", Object.keys(userDesc));
   } catch (err) {
     console.error(err);
   } finally {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { timetableAPI, classesAPI, teacherAssignmentsAPI } from '../../api';
+import { timetableAPI, classesAPI, teacherAssignmentsAPI, teachersAPI, subjectsAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { Calendar, Plus, Trash2, Save, ChevronLeft } from 'lucide-react';
 
@@ -157,13 +157,19 @@ export function Timetables() {
   const [selectedSection, setSelectedSection] = useState('');
   const [timetable, setTimetable] = useState({});
   const [assignments, setAssignments] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editDay, setEditDay] = useState(null);
   const [entries, setEntries] = useState([]);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
-  useEffect(() => { loadClasses(); }, []);
+  useEffect(() => {
+    loadClasses();
+    loadTeachers();
+    loadSubjects();
+  }, []);
 
   useEffect(() => {
     if (selectedClass && selectedSection) {
@@ -176,6 +182,20 @@ export function Timetables() {
     try {
       const res = await classesAPI.list();
       setClasses(res.items || []);
+    } catch { /* ignore */ }
+  };
+
+  const loadTeachers = async () => {
+    try {
+      const res = await teachersAPI.getOptions();
+      setTeachers(res.items || []);
+    } catch { /* ignore */ }
+  };
+
+  const loadSubjects = async () => {
+    try {
+      const res = await subjectsAPI.list();
+      setSubjects(res.items || []);
     } catch { /* ignore */ }
   };
 
@@ -207,20 +227,22 @@ export function Timetables() {
           start_time: e.start_time || '',
           end_time: e.end_time || '',
           teacher_assignment_id: e.teacher_assignment_id || '',
+          teacher_id: e.teacher_id || '',
+          subject_id: e.subject_id || '',
           title: e.title || '',
           is_break: e.is_break || false,
         }))
-      : [{ start_time: '09:00', end_time: '09:45', teacher_assignment_id: '', title: '', is_break: false }]
+      : [{ start_time: '09:00', end_time: '09:45', teacher_assignment_id: '', teacher_id: '', subject_id: '', title: '', is_break: false }]
     );
     setEditDay(day);
   };
 
-  const addEntry = () => setEntries([...entries, { start_time: '', end_time: '', teacher_assignment_id: '', title: '', is_break: false }]);
+  const addEntry = () => setEntries([...entries, { start_time: '', end_time: '', teacher_assignment_id: '', teacher_id: '', subject_id: '', title: '', is_break: false }]);
   const removeEntry = (idx) => setEntries(entries.filter((_, i) => i !== idx));
   const updateEntry = (idx, field, value) => {
     const updated = [...entries];
     updated[idx][field] = field === 'is_break' ? value
-      : field === 'teacher_assignment_id' ? (value === '' ? undefined : Number(value))
+      : (field === 'teacher_assignment_id' || field === 'teacher_id' || field === 'subject_id') ? (value === '' ? undefined : Number(value))
       : value;
     setEntries(updated);
   };
@@ -231,7 +253,8 @@ export function Timetables() {
       await timetableAPI.create(Number(selectedClass), Number(selectedSection), editDay, entries.map((e) => ({
         start_time: e.start_time,
         end_time: e.end_time,
-        teacher_assignment_id: e.teacher_assignment_id || undefined,
+        teacher_id: e.teacher_id ? Number(e.teacher_id) : undefined,
+        subject_id: e.subject_id ? Number(e.subject_id) : undefined,
         title: e.title || undefined,
         is_break: e.is_break,
       })));
@@ -356,18 +379,33 @@ export function Timetables() {
                     placeholder="Break label (e.g. Lunch)"
                   />
                 ) : (
-                  <select
-                    style={st.selectField}
-                    value={entry.teacher_assignment_id || ''}
-                    onChange={e => updateEntry(idx, 'teacher_assignment_id', e.target.value)}
-                  >
-                    <option value="">Select subject / teacher</option>
-                    {assignments.map(a => (
-                      <option key={a.id} value={a.id}>
-                        {a.subject?.name || 'Subject'} — {a.teacher?.user?.name || a.teacher?.employee_id || 'Teacher'}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      style={{ ...st.selectField, marginRight: '8px' }}
+                      value={entry.subject_id || ''}
+                      onChange={e => updateEntry(idx, 'subject_id', e.target.value)}
+                    >
+                      <option value="">Select subject…</option>
+                      {subjects.map(sub => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      style={st.selectField}
+                      value={entry.teacher_id || ''}
+                      onChange={e => updateEntry(idx, 'teacher_id', e.target.value)}
+                    >
+                      <option value="">Select teacher…</option>
+                      {teachers.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.user?.name || t.employee_id || `Teacher #${t.id}`}
+                        </option>
+                      ))}
+                    </select>
+                  </>
                 )}
 
                 {/* Break toggle */}

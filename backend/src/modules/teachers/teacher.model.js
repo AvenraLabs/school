@@ -54,6 +54,11 @@ const Teacher = db.define(
       allowNull: true,
     },
 
+    subject: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
     approval_status: {
       type: DataTypes.ENUM("pending", "approved", "rejected"),
       allowNull: false,

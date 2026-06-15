@@ -45,6 +45,7 @@ export default function ProfileForm({
       designation: profile?.designation || "",
       qualification: profile?.qualification || "",
       experience: profile?.experience || "",
+      subject: profile?.subject || "",
     },
   });
 
@@ -366,6 +367,11 @@ export default function ProfileForm({
                 {...register("experience")}
               />
             </Stack>
+            <TextField
+              label="Subject/Department"
+              fullWidth
+              {...register("subject")}
+            />
             <TextField
               label="Email"
               fullWidth

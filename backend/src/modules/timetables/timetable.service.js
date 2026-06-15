@@ -69,23 +69,46 @@ export const saveTimetableService = async ({
      * 4️⃣ Insert new timetable entries
      */
     for (const e of entries) {
-      if (!e.is_break && !e.teacher_assignment_id) {
+      if (!e.is_break && !e.teacher_assignment_id && (!e.teacher_id || !e.subject_id)) {
         throw new AppError("ASSIGNMENT_REQUIRED", 400);
       }
 
       let assignment = null;
 
       if (!e.is_break) {
-        assignment = await TeacherAssignment.findOne({
-          where: {
-            id: e.teacher_assignment_id,
-            school_id,
-            class_id,
-            section_id,
-            is_active: true,
-          },
-          transaction: t,
-        });
+        if (e.teacher_assignment_id) {
+          assignment = await TeacherAssignment.findOne({
+            where: {
+              id: e.teacher_assignment_id,
+              school_id,
+              class_id,
+              section_id,
+              is_active: true,
+            },
+            transaction: t,
+          });
+        } else if (e.teacher_id && e.subject_id) {
+          const [assoc, created] = await TeacherAssignment.findOrCreate({
+            where: {
+              school_id,
+              class_id,
+              section_id,
+              teacher_id: e.teacher_id,
+              subject_id: e.subject_id,
+            },
+            defaults: {
+              is_active: true,
+              is_class_teacher: false,
+            },
+            transaction: t,
+          });
+
+          if (!assoc.is_active) {
+            await assoc.update({ is_active: true }, { transaction: t });
+          }
+
+          assignment = assoc;
+        }
 
         if (!assignment) {
           throw new AppError("INVALID_TEACHER_ASSIGNMENT", 400);

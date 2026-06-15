@@ -18,6 +18,8 @@ export const saveTimetableSchema = z.object({
         start_time: z.string(), // HH:mm
         end_time: z.string(),
         teacher_assignment_id: z.number().int().positive().optional(),
+        teacher_id: z.number().int().positive().optional(),
+        subject_id: z.number().int().positive().optional(),
         title: z.string().optional(),
         is_break: z.boolean(),
       })

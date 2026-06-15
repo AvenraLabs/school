@@ -222,6 +222,13 @@ try {
     console.log("Verification of DB ENUM values finished:", enumErr.message);
   }
 
+  try {
+    await db.query("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS subject VARCHAR(255)");
+    console.log("Teacher subject column verified/added successfully");
+  } catch (err) {
+    console.log("Verification of subject column failed:", err.message);
+  }
+
   await db.sync({ force: false });
 
   httpServer.listen(PORT, "0.0.0.0", () => {

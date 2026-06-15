@@ -83,7 +83,7 @@ export const getPendingStudentApprovalsService = async ({
     include: [
       {
         model: User,
-        attributes: ["id", "name", "username", "email", "phone"],
+        attributes: ["id", "name", "username", "email", "phone", "avatar_url"],
       },
       { model: Class, attributes: ["id", "class_name"] },
       { model: Section, attributes: ["id", "name"] },
@@ -93,7 +93,7 @@ export const getPendingStudentApprovalsService = async ({
 
 /* =========================
    ADMIN: TEACHER PENDING
-========================= */
+ ========================= */
 export const getPendingTeacherApprovalsService = async ({
   school_id,
   user,
@@ -120,12 +120,18 @@ export const getPendingTeacherApprovalsService = async ({
     limit,
     offset,
     order: [["updated_at", "DESC"]],
+    include: [
+      {
+        model: User,
+        attributes: ["id", "name", "username", "email", "phone", "avatar_url"],
+      },
+    ],
   });
 };
 
 /* =========================
    ADMIN: PARENT PENDING
-========================= */
+ ========================= */
 export const getPendingParentApprovalsService = async ({
   school_id,
   user,
@@ -152,8 +158,8 @@ export const getPendingParentApprovalsService = async ({
       {
         model: User,
         required: true,
-        where: { school_id: scopedSchoolId }, // FIXED: school scoped
-        attributes: ["id", "name", "username", "email", "phone"],
+        where: { school_id: scopedSchoolId },
+        attributes: ["id", "name", "username", "email", "phone", "avatar_url"],
       },
       {
         model: Student,
