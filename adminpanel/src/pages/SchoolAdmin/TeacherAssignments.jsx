@@ -291,8 +291,8 @@ export function TeacherAssignments() {
       <div>
         <div style={s.pageHeader}>
           <div>
-            <h1 style={s.pageTitle}>Teacher Assignments</h1>
-            <p style={s.pageSubtitle}>Assign class teachers and subject teachers</p>
+            <h1 style={s.pageTitle}>Class Incharge Appointment</h1>
+            <p style={s.pageSubtitle}>Appoint class incharge to each section</p>
           </div>
         </div>
         <div style={s.emptyState}><p style={{ color: '#94a3b8' }}>Loading…</p></div>
@@ -304,8 +304,8 @@ export function TeacherAssignments() {
     <div>
       <div style={s.pageHeader}>
         <div>
-          <h1 style={s.pageTitle}>Teacher Assignments</h1>
-          <p style={s.pageSubtitle}>Assign class teachers and subject teachers to sections</p>
+          <h1 style={s.pageTitle}>Class Incharge Appointment</h1>
+          <p style={s.pageSubtitle}>Appoint class incharge to each section</p>
         </div>
       </div>
 

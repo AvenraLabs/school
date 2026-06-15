@@ -11,7 +11,7 @@ export const saveReportCardMarksSchema = z.object({
   marks: z
     .array(
       z.object({
-        subject_id: z.number().int().positive(),
+        subject_id: z.coerce.number().int().positive(),
         marks_obtained: z.number(),
         max_marks: z.number().positive(),
       })

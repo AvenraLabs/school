@@ -24,18 +24,17 @@ export function DashboardLayout() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           height: '56px', flexShrink: 0,
           background: '#fff', borderBottom: '1px solid #e2e8f0',
-          padding: '0 32px',
+          padding: '0 24px',
         }}>
           {/* Mobile hamburger */}
           <button
             onClick={() => setSidebarOpen(true)}
             style={{
-              display: 'none', // overridden below via media — use inline fallback
               width: '36px', height: '36px', borderRadius: '8px',
               border: 'none', background: 'transparent', cursor: 'pointer',
-              alignItems: 'center', justifyContent: 'center', color: '#64748b',
+              color: '#64748b',
             }}
-            className="mobile-menu-btn"
+            className="flex lg:hidden items-center justify-center hover:bg-slate-100 transition-colors"
           >
             <Menu style={{ width: '20px', height: '20px' }} />
           </button>
@@ -61,7 +60,7 @@ export function DashboardLayout() {
 
         {/* Page content */}
         <main style={{ flex: 1, overflowY: 'auto', background: '#f8fafc' }}>
-          <div style={{ padding: '36px 44px', maxWidth: '1400px' }}>
+          <div style={{ maxWidth: '1400px' }} className="py-9 px-6 sm:px-11">
             <Outlet />
           </div>
         </main>
