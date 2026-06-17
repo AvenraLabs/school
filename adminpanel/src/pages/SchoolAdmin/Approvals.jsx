@@ -19,6 +19,16 @@ export function Approvals() {
   const [modalType, setModalType] = useState(null);
   const toast = useToast();
 
+  const [teachersPage, setTeachersPage] = useState(0);
+  const [parentsPage, setParentsPage] = useState(0);
+  const [studentsPage, setStudentsPage] = useState(0);
+
+  const [teachersTotal, setTeachersTotal] = useState(0);
+  const [parentsTotal, setParentsTotal] = useState(0);
+  const [studentsTotal, setStudentsTotal] = useState(0);
+
+  const PAGE_SIZE = 50;
+
   const openDetails = (type, item) => {
     setSelectedItem(item);
     setModalType(type);
@@ -188,10 +198,18 @@ export function Approvals() {
   const loadPending = async () => {
     setLoading(true);
     try {
-      const res = await approvalsAPI.getPending(100, 0);
+      const res = await approvalsAPI.getPending(PAGE_SIZE, 0);
       setTeachers(res.teachers?.items || []);
+      setTeachersTotal(res.teachers?.total || 0);
+      setTeachersPage(0);
+
       setParents(res.parents?.items || []);
+      setParentsTotal(res.parents?.total || 0);
+      setParentsPage(0);
+
       setStudents(res.students?.items || []);
+      setStudentsTotal(res.students?.total || 0);
+      setStudentsPage(0);
     } catch (e) {
       toast.error('Failed to load approvals');
     } finally {
@@ -199,11 +217,35 @@ export function Approvals() {
     }
   };
 
+  const loadTab = async (type, pg) => {
+    try {
+      const res = await approvalsAPI.getPending(PAGE_SIZE, pg * PAGE_SIZE, undefined, undefined, type);
+      if (type === 'teacher') {
+        setTeachers(res.teachers?.items || []);
+        setTeachersTotal(res.teachers?.total || 0);
+        setTeachersPage(pg);
+      } else if (type === 'parent') {
+        setParents(res.parents?.items || []);
+        setParentsTotal(res.parents?.total || 0);
+        setParentsPage(pg);
+      } else if (type === 'student') {
+        setStudents(res.students?.items || []);
+        setStudentsTotal(res.students?.total || 0);
+        setStudentsPage(pg);
+      }
+    } catch (e) {
+      toast.error(`Failed to load ${type} approvals`);
+    }
+  };
+
   const handleApprove = async (type, id, action) => {
     try {
       await approvalsAPI.approveRequest(type, id, action);
       toast.success(`${type} ${action}d`);
-      loadPending();
+      const pg = type === 'teacher' ? teachersPage : type === 'parent' ? parentsPage : studentsPage;
+      const currentItems = type === 'teacher' ? teachers : type === 'parent' ? parents : students;
+      const nextPg = (currentItems.length === 1 && pg > 0) ? pg - 1 : pg;
+      await loadTab(type, nextPg);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed');
     }
@@ -216,7 +258,8 @@ export function Approvals() {
       await teachersAPI.bulkApprove(selectedTeachers, action);
       toast.success(`${selectedTeachers.length} teachers ${action}d`);
       setSelectedTeachers([]);
-      loadPending();
+      const nextPg = (teachers.length === selectedTeachers.length && teachersPage > 0) ? teachersPage - 1 : teachersPage;
+      await loadTab('teacher', nextPg);
     } catch (e) {
       toast.error('Bulk action failed');
     } finally {
@@ -231,7 +274,8 @@ export function Approvals() {
       await parentsAPI.bulkApprove(selectedParents, action);
       toast.success(`${selectedParents.length} parents ${action}d`);
       setSelectedParents([]);
-      loadPending();
+      const nextPg = (parents.length === selectedParents.length && parentsPage > 0) ? parentsPage - 1 : parentsPage;
+      await loadTab('parent', nextPg);
     } catch (e) {
       toast.error('Bulk action failed');
     } finally {
@@ -246,7 +290,8 @@ export function Approvals() {
       await studentsAPI.bulkApprove(selectedStudents, action);
       toast.success(`${selectedStudents.length} students ${action}d`);
       setSelectedStudents([]);
-      loadPending();
+      const nextPg = (students.length === selectedStudents.length && studentsPage > 0) ? studentsPage - 1 : studentsPage;
+      await loadTab('student', nextPg);
     } catch (e) {
       toast.error('Bulk action failed');
     } finally {
@@ -278,26 +323,30 @@ export function Approvals() {
     setSelectedStudents(selectedStudents.length === students.length ? [] : students.map((s) => s.id));
   };
 
+  const teachersTotalPages = Math.ceil(teachersTotal / PAGE_SIZE);
+  const parentsTotalPages = Math.ceil(parentsTotal / PAGE_SIZE);
+  const studentsTotalPages = Math.ceil(studentsTotal / PAGE_SIZE);
+
   return (
     <div>
       <div className="page-header">
         <div>
           <h1 className="page-title">Approvals</h1>
           <p className="page-subtitle">
-            {teachers.length} pending teachers, {parents.length} pending parents, {students.length} pending students
+            {teachersTotal} pending teachers, {parentsTotal} pending parents, {studentsTotal} pending students
           </p>
         </div>
       </div>
 
       <div className="tabs mb-6">
         <button className={`tab ${activeTab === 'teachers' ? 'active' : ''}`} onClick={() => setActiveTab('teachers')}>
-          Teachers ({teachers.length})
+          Teachers ({teachersTotal})
         </button>
         <button className={`tab ${activeTab === 'parents' ? 'active' : ''}`} onClick={() => setActiveTab('parents')}>
-          Parents ({parents.length})
+          Parents ({parentsTotal})
         </button>
         <button className={`tab ${activeTab === 'students' ? 'active' : ''}`} onClick={() => setActiveTab('students')}>
-          Students ({students.length})
+          Students ({studentsTotal})
         </button>
       </div>
 
@@ -321,31 +370,42 @@ export function Approvals() {
               <p className="empty-state-title">No pending teachers</p>
             </div>
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th><input type="checkbox" className="checkbox-custom" checked={selectedTeachers.length === teachers.length} onChange={toggleAllTeachers} /></th>
-                  <th>Employee ID</th><th>Username</th><th>Name</th><th>Status</th><th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teachers.map((t) => (
-                  <tr key={t.id} className="cursor-pointer hover:bg-slate-50" onClick={() => openDetails('teacher', t)}>
-                    <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="checkbox-custom" checked={selectedTeachers.includes(t.id)} onChange={() => toggleTeacher(t.id)} /></td>
-                    <td className="font-mono text-xs">{t.employee_id || '—'}</td>
-                    <td className="font-mono text-xs">{t.user?.username || '—'}</td>
-                    <td>{t.user?.name || '—'}</td>
-                    <td><StatusBadge status="pending" /></td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        <button onClick={() => handleApprove('teacher', t.id, 'approve')} className="btn-sm btn-success">Approve</button>
-                        <button onClick={() => handleApprove('teacher', t.id, 'reject')} className="btn-sm btn-danger">Reject</button>
-                      </div>
-                    </td>
+            <>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" className="checkbox-custom" checked={selectedTeachers.length === teachers.length && teachers.length > 0} onChange={toggleAllTeachers} /></th>
+                    <th>Employee ID</th><th>Username</th><th>Name</th><th>Status</th><th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {teachers.map((t) => (
+                    <tr key={t.id} className="cursor-pointer hover:bg-slate-50" onClick={() => openDetails('teacher', t)}>
+                      <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="checkbox-custom" checked={selectedTeachers.includes(t.id)} onChange={() => toggleTeacher(t.id)} /></td>
+                      <td className="font-mono text-xs">{t.employee_id || '—'}</td>
+                      <td className="font-mono text-xs">{t.user?.username || '—'}</td>
+                      <td>{t.user?.name || '—'}</td>
+                      <td><StatusBadge status="pending" /></td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-1">
+                          <button onClick={() => handleApprove('teacher', t.id, 'approve')} className="btn-sm btn-success">Approve</button>
+                          <button onClick={() => handleApprove('teacher', t.id, 'reject')} className="btn-sm btn-danger">Reject</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {teachersTotalPages > 1 && (
+                <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
+                  <span className="text-sm text-slate-500">Page {teachersPage + 1} of {teachersTotalPages}</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => loadTab('teacher', Math.max(0, teachersPage - 1))} disabled={teachersPage === 0} className="btn-sm btn-secondary">Previous</button>
+                    <button onClick={() => loadTab('teacher', Math.min(teachersTotalPages - 1, teachersPage + 1))} disabled={teachersPage >= teachersTotalPages - 1} className="btn-sm btn-secondary">Next</button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : activeTab === 'parents' ? (
@@ -366,31 +426,42 @@ export function Approvals() {
               <p className="empty-state-title">No pending parents</p>
             </div>
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th><input type="checkbox" className="checkbox-custom" checked={selectedParents.length === parents.length} onChange={toggleAllParents} /></th>
-                  <th>Username</th><th>Name</th><th>Student</th><th>Status</th><th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {parents.map((p) => (
-                  <tr key={p.id} className="cursor-pointer hover:bg-slate-50" onClick={() => openDetails('parent', p)}>
-                    <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="checkbox-custom" checked={selectedParents.includes(p.id)} onChange={() => toggleParent(p.id)} /></td>
-                    <td className="font-mono text-xs">{p.user?.username || '—'}</td>
-                    <td>{p.user?.name || '—'}</td>
-                    <td>{p.student?.user?.name || '—'}</td>
-                    <td><StatusBadge status="pending" /></td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        <button onClick={() => handleApprove('parent', p.id, 'approve')} className="btn-sm btn-success">Approve</button>
-                        <button onClick={() => handleApprove('parent', p.id, 'reject')} className="btn-sm btn-danger">Reject</button>
-                      </div>
-                    </td>
+            <>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" className="checkbox-custom" checked={selectedParents.length === parents.length && parents.length > 0} onChange={toggleAllParents} /></th>
+                    <th>Username</th><th>Name</th><th>Student</th><th>Status</th><th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {parents.map((p) => (
+                    <tr key={p.id} className="cursor-pointer hover:bg-slate-50" onClick={() => openDetails('parent', p)}>
+                      <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="checkbox-custom" checked={selectedParents.includes(p.id)} onChange={() => toggleParent(p.id)} /></td>
+                      <td className="font-mono text-xs">{p.user?.username || '—'}</td>
+                      <td>{p.user?.name || '—'}</td>
+                      <td>{p.student?.user?.name || '—'}</td>
+                      <td><StatusBadge status="pending" /></td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-1">
+                          <button onClick={() => handleApprove('parent', p.id, 'approve')} className="btn-sm btn-success">Approve</button>
+                          <button onClick={() => handleApprove('parent', p.id, 'reject')} className="btn-sm btn-danger">Reject</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {parentsTotalPages > 1 && (
+                <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
+                  <span className="text-sm text-slate-500">Page {parentsPage + 1} of {parentsTotalPages}</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => loadTab('parent', Math.max(0, parentsPage - 1))} disabled={parentsPage === 0} className="btn-sm btn-secondary">Previous</button>
+                    <button onClick={() => loadTab('parent', Math.min(parentsTotalPages - 1, parentsPage + 1))} disabled={parentsPage >= parentsTotalPages - 1} className="btn-sm btn-secondary">Next</button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : (
@@ -411,33 +482,44 @@ export function Approvals() {
               <p className="empty-state-title">No pending students</p>
             </div>
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th><input type="checkbox" className="checkbox-custom" checked={selectedStudents.length === students.length} onChange={toggleAllStudents} /></th>
-                  <th>Admission No</th><th>Username</th><th>Name</th><th>Class</th><th>Section</th><th>Status</th><th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((s) => (
-                  <tr key={s.id} className="cursor-pointer hover:bg-slate-50" onClick={() => openDetails('student', s)}>
-                    <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="checkbox-custom" checked={selectedStudents.includes(s.id)} onChange={() => toggleStudent(s.id)} /></td>
-                    <td className="font-mono text-xs">{s.admission_no || '—'}</td>
-                    <td className="font-mono text-xs">{s.user?.username || '—'}</td>
-                    <td>{s.user?.name || '—'}</td>
-                    <td>{s.class?.class_name || '—'}</td>
-                    <td>{s.section?.name || '—'}</td>
-                    <td><StatusBadge status="pending" /></td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        <button onClick={() => handleApprove('student', s.id, 'approve')} className="btn-sm btn-success">Approve</button>
-                        <button onClick={() => handleApprove('student', s.id, 'reject')} className="btn-sm btn-danger">Reject</button>
-                      </div>
-                    </td>
+            <>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" className="checkbox-custom" checked={selectedStudents.length === students.length && students.length > 0} onChange={toggleAllStudents} /></th>
+                    <th>Admission No</th><th>Username</th><th>Name</th><th>Class</th><th>Section</th><th>Status</th><th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {students.map((s) => (
+                    <tr key={s.id} className="cursor-pointer hover:bg-slate-50" onClick={() => openDetails('student', s)}>
+                      <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="checkbox-custom" checked={selectedStudents.includes(s.id)} onChange={() => toggleStudent(s.id)} /></td>
+                      <td className="font-mono text-xs">{s.admission_no || '—'}</td>
+                      <td className="font-mono text-xs">{s.user?.username || '—'}</td>
+                      <td>{s.user?.name || '—'}</td>
+                      <td>{s.class?.class_name || '—'}</td>
+                      <td>{s.section?.name || '—'}</td>
+                      <td><StatusBadge status="pending" /></td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-1">
+                          <button onClick={() => handleApprove('student', s.id, 'approve')} className="btn-sm btn-success">Approve</button>
+                          <button onClick={() => handleApprove('student', s.id, 'reject')} className="btn-sm btn-danger">Reject</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {studentsTotalPages > 1 && (
+                <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
+                  <span className="text-sm text-slate-500">Page {studentsPage + 1} of {studentsTotalPages}</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => loadTab('student', Math.max(0, studentsPage - 1))} disabled={studentsPage === 0} className="btn-sm btn-secondary">Previous</button>
+                    <button onClick={() => loadTab('student', Math.min(studentsTotalPages - 1, studentsPage + 1))} disabled={studentsPage >= studentsTotalPages - 1} className="btn-sm btn-secondary">Next</button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

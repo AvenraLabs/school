@@ -1,4 +1,4 @@
-import { Box, Typography, Card, CardContent, Button, Avatar, Chip, Container, Stack, Divider, CircularProgress } from "@mui/material";
+import { Box, Typography, Card, CardContent, Button, Avatar, Chip, Container, Stack, Divider, CircularProgress, Grid } from "@mui/material";
 import { Check, Close, Person } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import { getTeacherPendingApprovals, approveRequest } from "../approvals.api";
@@ -80,47 +80,57 @@ const handleAction = async (type, id, action) => {
                 <Stack spacing={2}>
                     {requests.map((req) => {
                         const isExpanded = expandedId === (req.id || req.student_id);
-                        const name = req.student?.user?.name || req.student?.name || req?.name || "Student";
-                        const initial = name?.[0] || "U";
-                        const className = req.student?.class?.class_name || req.class?.class_name || req.class_id || "-";
-                        const sectionName = req.student?.section?.name || req.section?.name || req.section_id || "-";
+                        const name = req.user?.name || req.User?.name || req.name || "Student";
+                        const cleanName = name.replace(/^(Student Class|Student)\s+/gi, '').trim() || "Student";
+                        const username = req.user?.username || req.User?.username || "";
+                        const avatarUrl = req.user?.avatar_url || req.User?.avatar_url;
+                        const initial = name?.[0]?.toUpperCase() || "S";
+                        const className = req.class?.class_name || req.class_id || "-";
+                        const sectionName = req.section?.name || req.section_id || "-";
                         return (
                         <Card
                             key={req.id || `${req.student_id}-${req.section_id}`}
-                            sx={{ overflow: 'visible', cursor: 'pointer' }}
+                            sx={{ overflow: 'visible', cursor: 'pointer', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 8px rgba(0,0,0,0.01)' }}
                             onClick={() => setExpandedId(isExpanded ? null : (req.id || req.student_id))}
                         >
-                            <CardContent>
-                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                            <CardContent sx={{ p: 2.5 }}>
+                                <Box sx={{ display: 'flex', gap: 2, alignItems: { xs: 'flex-start', sm: 'center' } }}>
                                     <Avatar
-                                        src={req.student?.avatar}
-                                        sx={{ width: 56, height: 56, bgcolor: 'primary.main' }}
+                                        src={avatarUrl}
+                                        sx={{ width: 52, height: 52, bgcolor: 'primary.main', fontWeight: 'bold', mt: { xs: 0.5, sm: 0 } }}
                                     >
                                         {initial}
                                     </Avatar>
 
-                                    <Box sx={{ flex: 1 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                            <Typography variant="h6">
-                                                {name}
-                                            </Typography>
-                                            <Chip label={req.type || "Profile Update"} size="small" color="info" variant="outlined" />
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1, mb: 0.5 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, minWidth: 0 }}>
+                                                <Typography variant="subtitle1" fontWeight="bold" sx={{ fontSize: '1rem', color: 'text.primary', lineHeight: 1.2 }}>
+                                                    {cleanName}
+                                                </Typography>
+                                                {username && (
+                                                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.82rem', fontWeight: 500, bgcolor: 'action.hover', px: 0.8, py: 0.2, borderRadius: '4px', border: '1px solid rgba(0,0,0,0.04)' }}>
+                                                        @{username}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                            <Chip label={req.type || "Profile Update"} size="small" color="info" variant="outlined" sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, alignSelf: { xs: 'flex-start', sm: 'center' } }} />
                                         </Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Class {className} - {sectionName}
+                                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.82rem' }}>
+                                            Class {className} - Section {sectionName}
                                         </Typography>
 
                                         {isExpanded && req.changes && (
-                                            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-                                                <Typography variant="caption" fontWeight="bold" display="block" sx={{ mb: 1 }}>
+                                            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.02)' }}>
+                                                <Typography variant="caption" fontWeight="bold" display="block" sx={{ mb: 1, letterSpacing: '0.5px', color: 'text.secondary' }}>
                                                     REQUESTED CHANGES
                                                 </Typography>
                                                 {Object.entries(req.changes).map(([key, value]) => (
                                                     <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                                        <Typography variant="body2" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
+                                                        <Typography variant="body2" color="text.secondary" sx={{ textTransform: 'capitalize', fontSize: '0.8rem' }}>
                                                             {key.replace('_', ' ')}:
                                                         </Typography>
-                                                        <Typography variant="body2" fontWeight="medium">
+                                                        <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
                                                             {String(value)}
                                                         </Typography>
                                                     </Box>
@@ -133,33 +143,96 @@ const handleAction = async (type, id, action) => {
                                 {isExpanded && (
                                   <>
                                     <Divider sx={{ my: 2 }} />
-                                    <Stack spacing={0.75} sx={{ mb: 2 }}>
-                                      {detailFields.map((field) => {
-                                        let value =
-                                          req?.student?.user?.[field] ??
-                                          req?.student?.[field] ??
-                                          req?.user?.[field] ??
-                                          req?.[field];
+                                    
+                                    <Stack spacing={2} sx={{ mb: 3 }}>
+                                      {/* Academic Info */}
+                                      <Box>
+                                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', mb: 1 }}>
+                                          Academic Details
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                          <Grid item xs={6}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.72rem' }}>Admission Number</Typography>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ fontFamily: 'monospace', fontSize: '0.82rem' }}>{req.admission_no || '—'}</Typography>
+                                          </Grid>
+                                          <Grid item xs={6}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.72rem' }}>Roll Number</Typography>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.82rem' }}>{req.roll_no || '—'}</Typography>
+                                          </Grid>
+                                        </Grid>
+                                      </Box>
 
-                                        if (field === "username") {
-                                          value = req?.student?.user?.username || req?.user?.username || req?.username;
-                                        }
-                                        if (field === "class") value = className;
-                                        if (field === "section") value = sectionName;
+                                      <Divider sx={{ borderStyle: 'dashed', borderColor: 'rgba(0,0,0,0.08)' }} />
 
-                                        if (value === undefined || value === null || value === "") return null;
+                                      {/* Personal Info */}
+                                      <Box>
+                                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', mb: 1 }}>
+                                          Personal Details
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                          <Grid item xs={4}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.72rem' }}>Date of Birth</Typography>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.82rem' }}>{req.dob || '—'}</Typography>
+                                          </Grid>
+                                          <Grid item xs={4}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.72rem' }}>Gender</Typography>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ textTransform: 'capitalize', fontSize: '0.82rem' }}>{req.gender || '—'}</Typography>
+                                          </Grid>
+                                          <Grid item xs={4}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.72rem' }}>Blood Group</Typography>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ textTransform: 'uppercase', fontSize: '0.82rem' }}>{req.blood_group || '—'}</Typography>
+                                          </Grid>
+                                        </Grid>
+                                      </Box>
 
-                                        return (
-                                          <Box key={field} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                                            <Typography variant="body2" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
-                                              {field.replace("_", " ")}
+                                      <Divider sx={{ borderStyle: 'dashed', borderColor: 'rgba(0,0,0,0.08)' }} />
+
+                                      {/* Family & Contact Details */}
+                                      <Box>
+                                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', mb: 1 }}>
+                                          Family & Contact Details
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                          <Grid item xs={6}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.72rem' }}>Father's Name</Typography>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.82rem' }}>{req.father_name || '—'}</Typography>
+                                          </Grid>
+                                          <Grid item xs={6}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.72rem' }}>Mother's Name</Typography>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.82rem' }}>{req.mother_name || '—'}</Typography>
+                                          </Grid>
+                                          <Grid item xs={12}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.72rem' }}>Guardian Name</Typography>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.82rem' }}>{req.guardian_name || '—'}</Typography>
+                                          </Grid>
+                                          <Grid item xs={6}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.72rem' }}>Contact Email</Typography>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.82rem' }}>{req.user?.email || '—'}</Typography>
+                                          </Grid>
+                                          <Grid item xs={6}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.72rem' }}>Contact Phone</Typography>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '0.82rem' }}>{req.user?.phone || '—'}</Typography>
+                                          </Grid>
+                                          <Grid item xs={12}>
+                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.72rem', mb: 0.5 }}>Address</Typography>
+                                            <Typography 
+                                              variant="body2" 
+                                              fontWeight="bold" 
+                                              sx={{ 
+                                                p: 1.5, 
+                                                bgcolor: '#f8fafc', 
+                                                borderRadius: '8px', 
+                                                border: '1px solid rgba(0,0,0,0.03)',
+                                                whiteSpace: 'pre-wrap',
+                                                fontSize: '0.8rem',
+                                                lineHeight: 1.4
+                                              }}
+                                            >
+                                              {req.address || '—'}
                                             </Typography>
-                                            <Typography variant="body2" fontWeight="medium">
-                                              {String(value)}
-                                            </Typography>
-                                          </Box>
-                                        );
-                                      })}
+                                          </Grid>
+                                        </Grid>
+                                      </Box>
                                     </Stack>
 
                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
@@ -168,6 +241,7 @@ const handleAction = async (type, id, action) => {
                                         color="error"
                                         startIcon={<Close />}
                                         onClick={(e) => { e.stopPropagation(); handleAction('student_profile', req.id, 'reject'); }}
+                                        sx={{ borderRadius: '10px', fontWeight: 800, fontSize: '0.75rem', px: 2 }}
                                       >
                                         Reject
                                       </Button>
@@ -176,6 +250,7 @@ const handleAction = async (type, id, action) => {
                                         color="success"
                                         startIcon={<Check />}
                                         onClick={(e) => { e.stopPropagation(); handleAction('student_profile', req.id, 'approve'); }}
+                                        sx={{ borderRadius: '10px', fontWeight: 800, fontSize: '0.75rem', px: 2, bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
                                       >
                                         Approve
                                       </Button>

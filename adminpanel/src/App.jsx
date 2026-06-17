@@ -27,6 +27,7 @@ import { Notifications } from './pages/SchoolAdmin/Notifications';
 import { ExamsManager } from './pages/SchoolAdmin/ExamsManager';
 import { ReportCards } from './pages/SchoolAdmin/ReportCards';
 import { AuditLogs } from './pages/SchoolAdmin/AuditLogs';
+import { SchoolRegistry } from './pages/SchoolAdmin/SchoolRegistry';
 
 import './App.css';
 
@@ -62,6 +63,7 @@ function App() {
               }
             >
               <Route path="/admin/dashboard" element={<SchoolAdminDashboard />} />
+              <Route path="/admin/directory" element={<SchoolRegistry />} />
               <Route path="/admin/bulk-seeder" element={<BulkSeeder />} />
               <Route path="/admin/classes" element={<ClassesManager />} />
               <Route path="/admin/subjects" element={<SubjectsManager />} />

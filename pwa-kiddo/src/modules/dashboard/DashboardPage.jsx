@@ -149,94 +149,113 @@ export default function DashboardPage() {
 
   // TEACHER VIEW
   if (user.role === 'teacher') {
+    const aiTokens = data?.ai_tokens || { remaining: 0, used: 0, total: 0 };
+    const aiRemaining = aiTokens.remaining ?? 0;
+    const aiUsed = aiTokens.used ?? 0;
+    const aiTotal = aiTokens.total ?? 0;
+
+    const homeworkSummary = data?.homework_summary || [];
+    const pendingHomeworkCount = homeworkSummary.reduce((sum, hw) => sum + (hw.pending || 0), 0);
+    const pendingReportCardsCount = data?.pending_report_cards ?? 0;
+    const totalPendingTasks = pendingHomeworkCount + pendingReportCardsCount;
+
     return (
       <Box sx={{ pb: 2, bgcolor: 'background.default' }}>
         <Box
           sx={{
             p: 3,
             pt: 4,
-            background: 'linear-gradient(135deg, #20BF6B 0%, #0FB9B1 100%)',
+            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
             color: 'white',
             borderBottomLeftRadius: 24,
             borderBottomRightRadius: 24,
-            boxShadow: '0 4px 20px rgba(32, 191, 107, 0.3)'
+            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.25)'
           }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Avatar src={user.avatar_url} sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <Avatar src={user.avatar_url} sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 40, height: 40 }}>
                 {user.name?.[0] || "T"}
               </Avatar>
               <Box>
-                <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Welcome back,</Typography>
-                <Typography variant="h6" fontWeight="bold">{user.name || "Teacher"}</Typography>
+                <Typography variant="subtitle2" sx={{ opacity: 0.9, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Welcome back,
+                </Typography>
+                <Typography variant="h6" fontWeight="bold">
+                  {user.name || "Teacher"}
+                </Typography>
               </Box>
             </Stack>
           </Stack>
+
+          {/* Stats Grid inside header */}
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <Paper
+                sx={{
+                  p: 2,
+                  bgcolor: 'rgba(255,255,255,0.12)',
+                  backdropFilter: 'blur(12px)',
+                  color: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <Box>
+                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
+                    AI Tokens
+                  </Typography>
+                  <Typography variant="h5" fontWeight="950">
+                    {aiRemaining}
+                  </Typography>
+                </Box>
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: '0.68rem' }}>
+                    Used: {aiUsed} / {aiTotal}
+                  </Typography>
+                </Box>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={6}>
+              <Paper
+                sx={{
+                  p: 2,
+                  bgcolor: 'rgba(255,255,255,0.12)',
+                  backdropFilter: 'blur(12px)',
+                  color: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <Box>
+                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
+                    Grading Tasks
+                  </Typography>
+                  <Typography variant="h5" fontWeight="950">
+                    {totalPendingTasks} Pending
+                  </Typography>
+                </Box>
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: '0.68rem' }}>
+                    HW: {pendingHomeworkCount} | Exams: {pendingReportCardsCount}
+                  </Typography>
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
         </Box>
 
         <Container sx={{ mt: 3 }}>
-          <TeacherDashboard />
-
-          <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ mt: 3 }}>
-            Quick Actions
-          </Typography>
-
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <Card
-                sx={{ borderRadius: 4, display: 'flex', alignItems: 'center', p: 2, cursor: 'pointer' }}
-                onClick={() => navigate('/teacher/diary')}
-              >
-                <Avatar sx={{ bgcolor: '#E1F5FE', color: '#039BE5', mr: 2 }}>
-                  <Assignment />
-                </Avatar>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle1" fontWeight="bold">Diary & Homework</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Manage class homework
-                  </Typography>
-                </Box>
-                <ChevronRight color="action" />
-              </Card>
-            </Grid>
-
-            <Grid item xs={12}>
-              <Card
-                sx={{ borderRadius: 4, display: 'flex', alignItems: 'center', p: 2, cursor: 'pointer' }}
-                onClick={() => navigate('/teacher/class-sessions')}
-              >
-                <Avatar sx={{ bgcolor: '#FFF3E0', color: '#FB8C00', mr: 2 }}>
-                  <Timer />
-                </Avatar>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle1" fontWeight="bold">Class Sessions</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Start or end sessions
-                  </Typography>
-                </Box>
-                <ChevronRight color="action" />
-              </Card>
-            </Grid>
-
-            <Grid item xs={12}>
-              <Card
-                sx={{ borderRadius: 4, display: 'flex', alignItems: 'center', p: 2, cursor: 'pointer' }}
-                onClick={() => navigate('/teacher/timetable')}
-              >
-                <Avatar sx={{ bgcolor: '#E8F5E9', color: '#2E7D32', mr: 2 }}>
-                  <School />
-                </Avatar>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle1" fontWeight="bold">My Classes</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    View timetable
-                  </Typography>
-                </Box>
-                <ChevronRight color="action" />
-              </Card>
-            </Grid>
-          </Grid>
+          <TeacherDashboard data={data} />
         </Container>
       </Box>
     );

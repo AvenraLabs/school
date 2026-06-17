@@ -15,7 +15,7 @@ export function useReportCard(reportCardId) {
     try {
       setLoading(true);
       const res = await getReportCard(reportCardId);
-      setData(res.data);
+      setData(res.data.data);
     } catch {
       setError("Failed to load report card");
     } finally {

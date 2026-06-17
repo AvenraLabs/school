@@ -35,7 +35,6 @@ export default function BottomNav() {
     student: [
       { label: "Home", icon: <Home />, path: `${base}/dashboard` },
       { label: "Timetable", icon: <CalendarMonth />, path: `${base}/timetable` },
-      { label: "AI", icon: <SmartToy />, path: `${base}/ai-chat` },
       { label: "Chat", icon: <Chat />, path: `${base}/group-chat` },
       { label: "Profile", icon: <Person />, path: "SIDEBAR_STUDENT" }, // opens student sidebar
     ],
@@ -51,7 +50,7 @@ export default function BottomNav() {
       { label: "Timetable", icon: <CalendarMonth />, path: `${base}/timetable` },
       { label: "Diary", icon: <Book />, path: `${base}/diary` },
       { label: "Chat", icon: <Chat />, path: `${base}/group-chat` },
-      { label: "Profile", icon: <Person />, path: `${base}/profile` },
+      { label: "Profile", icon: <Person />, path: "SIDEBAR_PARENT" },
     ],
   };
 
@@ -79,6 +78,10 @@ export default function BottomNav() {
           }
           if (newValue === "SIDEBAR_STUDENT") {
             window.dispatchEvent(new Event("toggle-student-sidebar"));
+            return;
+          }
+          if (newValue === "SIDEBAR_PARENT") {
+            window.dispatchEvent(new Event("toggle-parent-sidebar"));
             return;
           }
           setValue(newValue);

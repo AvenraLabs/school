@@ -50,6 +50,11 @@ export const schoolAPI = {
     });
     return response.data;
   },
+
+  getDirectory: async () => {
+    const response = await axiosInstance.get('/schools/directory');
+    return response.data;
+  },
 };
 
 // Classes API
@@ -297,10 +302,11 @@ export const bulkAPI = {
 
 // Approvals API
 export const approvalsAPI = {
-  getPending: async (limit = 10, offset = 0, fromDate, toDate) => {
+  getPending: async (limit = 10, offset = 0, fromDate, toDate, type) => {
     const params = { limit, offset };
     if (fromDate) params.from_date = fromDate;
     if (toDate) params.to_date = toDate;
+    if (type) params.type = type;
     const response = await axiosInstance.get('/admin/approvals/pending', { params });
     return response.data;
   },
@@ -459,6 +465,13 @@ export const reportCardsAPI = {
 
   getById: async (id) => {
     const response = await axiosInstance.get(`/report-cards/${id}`);
+    return response.data;
+  },
+
+  list: async (classId, examId) => {
+    const response = await axiosInstance.get('/report-cards', {
+      params: { class_id: classId, exam_id: examId },
+    });
     return response.data;
   },
 };

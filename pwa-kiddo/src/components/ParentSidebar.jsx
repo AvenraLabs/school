@@ -8,6 +8,7 @@ import {
   Close,
   Palette,
   Logout,
+  School,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { Link, useNavigate } from "react-router-dom";
@@ -17,6 +18,7 @@ export default function ParentSidebar({ open, onClose }) {
   const navigate = useNavigate();
 
   const menuItems = [
+    { label: "My Child", icon: <School />, path: "/parent/student-analytics" },
     { label: "Attendance", icon: <FactCheck />, path: "/parent/attendance" },
     { label: "Diary", icon: <Book />, path: "/parent/diary" },
     { label: "Report Cards", icon: <ReceiptLong />, path: "/parent/report-cards" },

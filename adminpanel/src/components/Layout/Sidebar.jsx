@@ -21,6 +21,7 @@ const superAdminLinks = [
 const schoolAdminLinks = [
   { section: 'Overview' },
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/admin/directory', icon: School, label: 'School Registry' },
   { to: '/admin/bulk-seeder', icon: Database, label: 'Bulk Seeder' },
   { section: 'Academic' },
   { to: '/admin/classes', icon: Layers, label: 'Classes & Sections' },
