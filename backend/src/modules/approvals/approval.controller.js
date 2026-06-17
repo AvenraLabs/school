@@ -29,35 +29,54 @@ export const getTeacherPendingApprovals = async (req, res, next) => {
 ========================= */
 export const getAdminPendingApprovals = async (req, res, next) => {
   try {
-    const [teachers, parents, students] = await Promise.all([
-      getPendingTeacherApprovalsService({
-        user: req.user,
-        query: req.query,
-      }),
-      getPendingParentApprovalsService({
-        user: req.user,
-        query: req.query,
-      }),
-      getPendingStudentApprovalsService({
-        user: req.user,
-        query: req.query,
-      }),
-    ]);
+    const { type } = req.query;
+    const responseData = {};
+    const promises = [];
 
-    res.json({
-      teachers: {
-        total: teachers.count,
-        items: teachers.rows,
-      },
-      parents: {
-        total: parents.count,
-        items: parents.rows,
-      },
-      students: {
-        total: students.count,
-        items: students.rows,
-      },
-    });
+    if (!type || type === "teacher") {
+      promises.push(
+        getPendingTeacherApprovalsService({
+          user: req.user,
+          query: req.query,
+        }).then((teachers) => {
+          responseData.teachers = {
+            total: teachers.count,
+            items: teachers.rows,
+          };
+        })
+      );
+    }
+
+    if (!type || type === "parent") {
+      promises.push(
+        getPendingParentApprovalsService({
+          user: req.user,
+          query: req.query,
+        }).then((parents) => {
+          responseData.parents = {
+            total: parents.count,
+            items: parents.rows,
+          };
+        })
+      );
+    }
+
+    if (!type || type === "student") {
+      promises.push(
+        getPendingStudentApprovalsService({
+          user: req.user,
+          query: req.query,
+        }).then((students) => {
+          responseData.students = {
+            total: students.count,
+            items: students.rows,
+          };
+        })
+      );
+    }
+
+    await Promise.all(promises);
+    res.json(responseData);
   } catch (e) {
     next(e);
   }

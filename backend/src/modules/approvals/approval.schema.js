@@ -10,5 +10,6 @@ export const listPendingApprovalsSchema = z.object({
     teacher_id: z.string().optional(),
     from_date: z.string().optional(),
     to_date: z.string().optional(),
+    type: z.string().optional(),
   }),
 });

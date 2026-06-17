@@ -10,8 +10,17 @@ import {
 
 import { getParentChildren } from "./parent.children.controller.js";
 import { getParentDashboard } from "./parent.dashboard.controller.js";
+import { getStudentAnalytics } from "./student-analytics.controller.js";
 
 const router = express.Router();
+
+/* parent → student academic analytics */
+router.get(
+  "/parents/student-analytics/:student_id",
+  protect,
+  allowRoles("parent"),
+  getStudentAnalytics
+);
 
 /* parent → children list */
 router.get(

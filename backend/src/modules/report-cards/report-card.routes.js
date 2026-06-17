@@ -5,6 +5,7 @@ import {
   createReportCardSchema,
   saveReportCardMarksSchema,
   publishReportCardSchema,
+  getAcademicReportCardsSchema,
 } from "./report-card.schema.js";
 import {
   createReportCard,
@@ -12,12 +13,21 @@ import {
   publishReportCard,
   getReportCard,
   listReportCards,
+  getAcademicReportCards,
 } from "./report-card.controller.js";
 import { allowRoles } from "../../shared/middlewares/role.js";
 
 const router = express.Router();
 
 router.use(protect);
+
+/* teacher/admin listing all report cards for a class and exam */
+router.get(
+  "/",
+  allowRoles("school_admin", "teacher"),
+  validate(getAcademicReportCardsSchema),
+  getAcademicReportCards
+);
 
 /* teacher */
 router.post(

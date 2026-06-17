@@ -12,6 +12,8 @@ import {
   resetSchoolAdminPassword,
 } from "./school.controller.js";
 
+import { getSchoolDirectory } from "./school.directory.controller.js";
+
 import {
   createSchoolSchema,
   updateSchoolStatusSchema,
@@ -20,6 +22,9 @@ import {
 } from "./school.schema.js";
 
 const router = express.Router();
+
+// Directory endpoint for school admins
+router.get("/directory", protect, allowRoles("school_admin"), getSchoolDirectory);
 
 router.use(protect, allowRoles("super_admin"));
 

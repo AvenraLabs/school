@@ -7,6 +7,7 @@ import { triggerReportCardNotification } from "../notifications/notification-tri
 import db from "../../config/db.js";
 import AppError from "../../shared/appError.js";
 import User from "../users/user.model.js";
+import Subject from "../subjects/subject.model.js";
 
 /* =========================
    CREATE (DRAFT)
@@ -181,12 +182,24 @@ export const getReportCardService = async ({ report_card_id }) => {
     include: [
       {
         model: ReportCardMark,
+        include: [
+          {
+            model: Subject,
+            attributes: ["id", "name"],
+          },
+        ],
       },
       {
         model: Exam,
       },
       {
         model: Student,
+        include: [
+          {
+            model: User,
+            attributes: ["id", "name", "username"],
+          },
+        ],
       },
     ],
   });
@@ -198,11 +211,31 @@ export const listReportCardsService = async ({ student_id, school_id }) => {
     include: [
       {
         model: Exam,
-        attributes: ["id", "name", "start_date"],
+        attributes: ["id", "name", "start_date", "end_date"],
+      },
+      {
+        model: ReportCardMark,
+        include: [
+          {
+            model: Subject,
+            attributes: ["id", "name"],
+          },
+        ],
       },
     ],
     order: [[Exam, "start_date", "DESC"]],
   }));
+};
+
+export const getAcademicReportCardsService = async ({ school_id, class_id, exam_id }) => {
+  return ReportCard.findAll({
+    where: { school_id, class_id, exam_id },
+    include: [
+      {
+        model: ReportCardMark,
+      },
+    ],
+  });
 };
 
 async function toList(promise) {

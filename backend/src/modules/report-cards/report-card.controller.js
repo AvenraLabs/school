@@ -6,6 +6,7 @@ import {
   publishReportCardService,
   getReportCardService,
   listReportCardsService,
+  getAcademicReportCardsService,
 } from "./report-card.service.js";
 
 /* TEACHER: CREATE */
@@ -56,7 +57,16 @@ export const getReportCard = asyncHandler(async (req, res) => {
     report_card_id: req.params.id,
   });
 
-  if (!reportCard || !reportCard.published_at) {
+  if (!reportCard) {
+    throw new AppError("Report card not found", 404);
+  }
+
+  // If report card is not published, only school_admin and teacher can view it
+  if (
+    !reportCard.published_at &&
+    req.user.role !== "school_admin" &&
+    req.user.role !== "teacher"
+  ) {
     throw new AppError("Report card not available", 404);
   }
 
@@ -130,5 +140,23 @@ export const listReportCards = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: result.rows,
+  });
+});
+
+export const getAcademicReportCards = asyncHandler(async (req, res) => {
+  const { class_id, exam_id } = req.query;
+  if (!class_id || !exam_id) {
+    throw new AppError("class_id and exam_id are required", 400);
+  }
+
+  const reportCards = await getAcademicReportCardsService({
+    school_id: req.user.school_id,
+    class_id: Number(class_id),
+    exam_id: Number(exam_id),
+  });
+
+  res.json({
+    success: true,
+    data: reportCards,
   });
 });

@@ -23,3 +23,11 @@ export const saveReportCardMarksSchema = z.object({
 export const publishReportCardSchema = z.object({
   remarks: z.string().optional(),
 });
+
+/* teacher/admin: get report cards for class & exam */
+export const getAcademicReportCardsSchema = z.object({
+  query: z.object({
+    class_id: z.string(),
+    exam_id: z.string(),
+  }),
+});
