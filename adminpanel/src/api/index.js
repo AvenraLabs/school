@@ -55,6 +55,26 @@ export const schoolAPI = {
     const response = await axiosInstance.get('/schools/directory');
     return response.data;
   },
+
+  getSectionRoster: async (sectionId) => {
+    const response = await axiosInstance.get(`/schools/directory/sections/${sectionId}`);
+    return response.data;
+  },
+
+  getParentsDirectory: async () => {
+    const response = await axiosInstance.get('/schools/directory/parents');
+    return response.data;
+  },
+
+  getStudentProfile: async (studentId) => {
+    const response = await axiosInstance.get(`/schools/directory/students/${studentId}`);
+    return response.data;
+  },
+
+  getStudentAttendanceLogs: async (studentId) => {
+    const response = await axiosInstance.get(`/schools/directory/students/${studentId}/attendance-logs`);
+    return response.data;
+  },
 };
 
 // Classes API

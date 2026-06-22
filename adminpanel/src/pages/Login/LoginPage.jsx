@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { authAPI } from '../../api';
 import { Eye, EyeOff, ArrowRight, GraduationCap, AlertCircle } from 'lucide-react';
+import './LoginPage.css';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
@@ -82,7 +83,7 @@ export function LoginPage() {
             backgroundSize: '28px 28px',
           }} />
 
-        <div className="relative z-10 w-full max-w-[400px] mx-6">
+        <div className="relative z-10 w-full max-w-[400px] mx-8 sm:mx-10 px-2">
 
           {/* Mobile logo */}
           <div className="lg:hidden flex flex-col items-center mb-8">
@@ -96,7 +97,7 @@ export function LoginPage() {
           {/* Heading */}
           <div className="mb-7">
             <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Welcome back</h2>
-            <p className="text-slate-400 text-sm mt-1.5">Sign in to your admin account to continue.</p>
+            
           </div>
 
           {/* Error */}
@@ -125,9 +126,7 @@ export function LoginPage() {
                 required
                 autoFocus
                 disabled={loading}
-                className="w-full h-11 px-4 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-900 caret-slate-800 placeholder-slate-400
-                           focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 focus:bg-white
-                           disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                className="login-input"
               />
             </div>
 
@@ -146,15 +145,13 @@ export function LoginPage() {
                   placeholder="Enter your password"
                   required
                   disabled={loading}
-                  className="w-full h-11 px-4 pr-11 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-900 caret-slate-800 placeholder-slate-400
-                             focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 focus:bg-white
-                             disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  className="login-input login-input--password"
                 />
                 <button
                   type="button"
                   tabIndex={-1}
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5">
+                  className="login-password-toggle">
                   {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
                 </button>
               </div>
@@ -164,24 +161,17 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group w-full h-11 rounded-xl text-white text-sm font-semibold
-                         flex items-center justify-center gap-2
-                         active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed
-                         transition-all duration-200 cursor-pointer mt-1"
-              style={{
-                background: 'linear-gradient(135deg, #1a1350 0%, #312e81 50%, #4338ca 100%)',
-                boxShadow: '0 4px 20px rgba(99,102,241,0.25)',
-              }}
+              className="login-submit"
             >
               {loading ? (
                 <>
-                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  <span className="login-spinner" />
                   <span>Verifying…</span>
                 </>
               ) : (
                 <>
                   <span>Sign in</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
+                  <ArrowRight className="login-submit__arrow" style={{ width: 16, height: 16 }} />
                 </>
               )}
             </button>

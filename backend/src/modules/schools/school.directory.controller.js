@@ -14,10 +14,11 @@ import Subject from "../subjects/subject.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import TeacherClassSession from "../teacher-class-sessions/teacher-class-session.model.js";
 
+// 1. Optimized Main Init Endpoint (Structure & Teachers list only)
 export const getSchoolDirectory = asyncHandler(async (req, res) => {
   const school_id = req.user.school_id;
 
-  // 1. Fetch all Classes and their Sections in this school
+  // Fetch all Classes and Sections in this school
   const classes = await Class.findAll({
     where: { school_id },
     include: [
@@ -33,82 +34,40 @@ export const getSchoolDirectory = asyncHandler(async (req, res) => {
     order: [["class_name", "ASC"]]
   });
 
-  // 2. Fetch all approved Students, their Users, linked Parents, Class/Section ids
-  const students = await Student.findAll({
-    where: { school_id, approval_status: "approved" },
-    include: [
-      {
-        model: User,
-        attributes: ["id", "name", "username", "email", "phone", "avatar_url", "is_active"]
-      },
-      {
-        model: Parent,
-        include: [
-          {
-            model: User,
-            attributes: ["id", "name", "username", "email", "phone", "avatar_url"]
-          }
-        ]
-      }
-    ]
-  });
-
-  // 3. Aggregate Attendance statistics for all students in school
-  const attendanceStats = await Attendance.findAll({
-    where: { school_id },
+  // Calculate Student Count per Class & Section
+  const studentCounts = await Student.findAll({
+    where: { school_id, approval_status: "approved", is_active: true },
     attributes: [
-      "student_id",
-      [fn("COUNT", col("id")), "total_days"],
-      [fn("SUM", literal(`CASE WHEN status = 'present' THEN 1 ELSE 0 END`)), "present_days"],
-      [fn("SUM", literal(`CASE WHEN status = 'absent' THEN 1 ELSE 0 END`)), "absent_days"],
-      [fn("SUM", literal(`CASE WHEN status = 'leave' THEN 1 ELSE 0 END`)), "leave_days"]
+      "class_id",
+      "section_id",
+      [fn("COUNT", col("id")), "count"]
     ],
-    group: ["student_id"]
+    group: ["class_id", "section_id"],
+    raw: true
   });
 
-  const attendanceMap = {};
-  attendanceStats.forEach(row => {
-    const total = Number(row.get("total_days"));
-    const present = Number(row.get("present_days"));
-    attendanceMap[row.student_id] = {
-      total_days: total,
-      present_days: present,
-      absent_days: Number(row.get("absent_days")),
-      leave_days: Number(row.get("leave_days")),
-      percentage: total ? Number(((present / total) * 100).toFixed(2)) : 0
-    };
+  const classCounts = {};
+  const sectionCounts = {};
+  studentCounts.forEach(row => {
+    const cid = String(row.class_id);
+    const sid = String(row.section_id);
+    const count = Number(row.count);
+    
+    classCounts[cid] = (classCounts[cid] || 0) + count;
+    sectionCounts[sid] = count;
   });
 
-  // 4. Fetch all Report Cards and their Marks for all students in school
-  const reportCards = await ReportCard.findAll({
-    where: { school_id },
-    include: [
-      {
-        model: Exam,
-        attributes: ["id", "name", "start_date"]
-      },
-      {
-        model: ReportCardMark,
-        include: [
-          {
-            model: Subject,
-            attributes: ["id", "name"]
-          }
-        ]
-      }
-    ],
-    order: [[Exam, "start_date", "DESC"]]
+  const classesData = classes.map(c => {
+    const cJson = c.toJSON();
+    cJson.student_count = classCounts[String(c.id)] || 0;
+    cJson.sections = (cJson.sections || []).map(sec => ({
+      ...sec,
+      student_count: sectionCounts[String(sec.id)] || 0
+    }));
+    return cJson;
   });
 
-  const reportCardMap = {};
-  reportCards.forEach(rc => {
-    if (!reportCardMap[rc.student_id]) {
-      reportCardMap[rc.student_id] = [];
-    }
-    reportCardMap[rc.student_id].push(rc);
-  });
-
-  // 5. Fetch all Teachers, their user profiles, and assignments
+  // Fetch all Teachers, profiles, and assignments
   const teachers = await Teacher.findAll({
     where: { school_id },
     include: [
@@ -136,7 +95,7 @@ export const getSchoolDirectory = asyncHandler(async (req, res) => {
     ]
   });
 
-  // 6. Aggregate sessions taken by teachers in this school
+  // Sessions count for teachers
   const sessionStats = await TeacherClassSession.findAll({
     where: { school_id },
     attributes: [
@@ -151,7 +110,181 @@ export const getSchoolDirectory = asyncHandler(async (req, res) => {
     sessionsMap[row.teacher_id] = Number(row.get("total_sessions"));
   });
 
-  // 7. Fetch all Parents with User profile and their child lists
+  const teachersData = teachers.map(t => {
+    const tJson = t.toJSON();
+    tJson.total_sessions = sessionsMap[t.id] || 0;
+    return tJson;
+  });
+
+  // Calculate overall counts for stats chips
+  const totalStudentsCount = await Student.count({
+    where: { school_id, approval_status: "approved", is_active: true }
+  });
+
+  const totalParentsCount = await Parent.count({
+    include: [
+      {
+        model: Student,
+        where: { school_id, approval_status: "approved" },
+        required: true
+      }
+    ]
+  });
+
+  res.json({
+    success: true,
+    data: {
+      classes: classesData,
+      teachers: teachersData,
+      total_students_count: totalStudentsCount,
+      total_parents_count: totalParentsCount
+    }
+  });
+});
+
+// 2. Fetch Section Students (Roster list, overall attendance stats, and report cards)
+export const getSectionRoster = asyncHandler(async (req, res) => {
+  const school_id = req.user.school_id;
+  const { sectionId } = req.params;
+
+  const students = await Student.findAll({
+    where: { school_id, section_id: sectionId, approval_status: "approved" },
+    include: [
+      {
+        model: User,
+        attributes: ["id", "name", "username", "email", "phone", "avatar_url", "is_active"]
+      },
+      {
+        model: Parent,
+        include: [
+          {
+            model: User,
+            attributes: ["id", "name", "username", "email", "phone", "avatar_url"]
+          }
+        ]
+      }
+    ]
+  });
+
+  const studentIds = students.map(s => s.id);
+
+  // Overall Attendance stats
+  const attendanceStats = studentIds.length ? await Attendance.findAll({
+    where: { school_id, student_id: studentIds },
+    attributes: [
+      "student_id",
+      [fn("COUNT", col("id")), "total_days"],
+      [fn("SUM", literal(`CASE WHEN status = 'present' THEN 1 ELSE 0 END`)), "present_days"],
+      [fn("SUM", literal(`CASE WHEN status = 'absent' THEN 1 ELSE 0 END`)), "absent_days"],
+    ],
+    group: ["student_id"]
+  }) : [];
+
+  const attendanceMap = {};
+  attendanceStats.forEach(row => {
+    const total = Number(row.get("total_days"));
+    const present = Number(row.get("present_days"));
+    const sid = row.student_id;
+    attendanceMap[sid] = {
+      total_days: total,
+      present_days: present,
+      absent_days: Number(row.get("absent_days")),
+      percentage: total ? Number(((present / total) * 100).toFixed(2)) : 0,
+      logs: [], // lazy-loaded on request
+      subject_stats: {}
+    };
+  });
+
+  // Overall Subject-wise count stats for drawer preview
+  const attendanceLogs = studentIds.length ? await Attendance.findAll({
+    where: { school_id, student_id: studentIds },
+    attributes: ["student_id", "status"],
+    include: [
+      {
+        model: TeacherClassSession,
+        attributes: ["id"],
+        include: [
+          {
+            model: TeacherAssignment,
+            attributes: ["id"],
+            include: [
+              {
+                model: Subject,
+                attributes: ["name"]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }) : [];
+
+  const subjectStatsMap = {};
+  attendanceLogs.forEach(row => {
+    const sid = row.student_id;
+    const subjectName = row.teacher_class_session?.teacher_assignment?.subject?.name || "General";
+    if (!subjectStatsMap[sid]) subjectStatsMap[sid] = {};
+    if (!subjectStatsMap[sid][subjectName]) {
+      subjectStatsMap[sid][subjectName] = { present: 0, total: 0 };
+    }
+    subjectStatsMap[sid][subjectName].total += 1;
+    if (row.status === "present") {
+      subjectStatsMap[sid][subjectName].present += 1;
+    }
+  });
+
+  Object.keys(attendanceMap).forEach(sid => {
+    attendanceMap[sid].subject_stats = subjectStatsMap[sid] || {};
+  });
+
+  // Report Cards
+  const reportCards = studentIds.length ? await ReportCard.findAll({
+    where: { school_id, student_id: studentIds },
+    include: [
+      {
+        model: Exam,
+        attributes: ["id", "name", "start_date"]
+      },
+      {
+        model: ReportCardMark,
+        include: [
+          {
+            model: Subject,
+            attributes: ["id", "name"]
+          }
+        ]
+      }
+    ],
+    order: [[Exam, "start_date", "DESC"]]
+  }) : [];
+
+  const reportCardMap = {};
+  reportCards.forEach(rc => {
+    if (!reportCardMap[rc.student_id]) {
+      reportCardMap[rc.student_id] = [];
+    }
+    reportCardMap[rc.student_id].push(rc);
+  });
+
+  res.json({
+    success: true,
+    data: {
+      students: students.map(s => {
+        const sJson = s.toJSON();
+        return {
+          ...sJson,
+          attendance: attendanceMap[s.id] || { total_days: 0, present_days: 0, percentage: 0, logs: [], subject_stats: {} },
+          report_cards: reportCardMap[s.id] || []
+        };
+      })
+    }
+  });
+});
+
+// 3. Fetch Parents List on activeParents tab switch
+export const getParentsList = asyncHandler(async (req, res) => {
+  const school_id = req.user.school_id;
+
   const parents = await Parent.findAll({
     include: [
       {
@@ -170,27 +303,159 @@ export const getSchoolDirectory = asyncHandler(async (req, res) => {
     ]
   });
 
-  // Assemble full directory payload
+  res.json({
+    success: true,
+    data: parents.filter(p => p.student !== null)
+  });
+});
+
+// 4. Fetch Single Student Profile (drawer cross-linking)
+export const getStudentProfile = asyncHandler(async (req, res) => {
+  const school_id = req.user.school_id;
+  const { studentId } = req.params;
+
+  const student = await Student.findOne({
+    where: { school_id, id: studentId, approval_status: "approved" },
+    include: [
+      {
+        model: User,
+        attributes: ["id", "name", "username", "email", "phone", "avatar_url", "is_active"]
+      },
+      {
+        model: Parent,
+        include: [
+          {
+            model: User,
+            attributes: ["id", "name", "username", "email", "phone", "avatar_url"]
+          }
+        ]
+      }
+    ]
+  });
+
+  if (!student) {
+    return res.status(404).json({ success: false, message: "Student profile not found." });
+  }
+
+  const attendanceStats = await Attendance.findAll({
+    where: { school_id, student_id: studentId },
+    attributes: [
+      "student_id",
+      [fn("COUNT", col("id")), "total_days"],
+      [fn("SUM", literal(`CASE WHEN status = 'present' THEN 1 ELSE 0 END`)), "present_days"],
+      [fn("SUM", literal(`CASE WHEN status = 'absent' THEN 1 ELSE 0 END`)), "absent_days"],
+    ],
+    group: ["student_id"]
+  });
+
+  const attendanceMap = {
+    total_days: 0,
+    present_days: 0,
+    absent_days: 0,
+    percentage: 0,
+    logs: [],
+    subject_stats: {}
+  };
+
+  if (attendanceStats.length) {
+    const row = attendanceStats[0];
+    const total = Number(row.get("total_days"));
+    const present = Number(row.get("present_days"));
+    attendanceMap.total_days = total;
+    attendanceMap.present_days = present;
+    attendanceMap.absent_days = Number(row.get("absent_days"));
+    attendanceMap.percentage = total ? Number(((present / total) * 100).toFixed(2)) : 0;
+
+    const attendanceLogs = await Attendance.findAll({
+      where: { school_id, student_id: studentId },
+      attributes: ["student_id", "status"],
+      include: [
+        {
+          model: TeacherClassSession,
+          attributes: ["id"],
+          include: [
+            {
+              model: TeacherAssignment,
+              attributes: ["id"],
+              include: [
+                {
+                  model: Subject,
+                  attributes: ["name"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    const subjectStats = {};
+    attendanceLogs.forEach(row => {
+      const subjectName = row.teacher_class_session?.teacher_assignment?.subject?.name || "General";
+      if (!subjectStats[subjectName]) {
+        subjectStats[subjectName] = { present: 0, total: 0 };
+      }
+      subjectStats[subjectName].total += 1;
+      if (row.status === "present") {
+        subjectStats[subjectName].present += 1;
+      }
+    });
+    attendanceMap.subject_stats = subjectStats;
+  }
+
+  const reportCards = await ReportCard.findAll({
+    where: { school_id, student_id: studentId },
+    include: [
+      {
+        model: Exam,
+        attributes: ["id", "name", "start_date"]
+      },
+      {
+        model: ReportCardMark,
+        include: [
+          {
+            model: Subject,
+            attributes: ["id", "name"]
+          }
+        ]
+      }
+    ],
+    order: [[Exam, "start_date", "DESC"]]
+  });
+
   res.json({
     success: true,
     data: {
-      classes,
-      students: students.map(s => {
-        const sJson = s.toJSON();
-        return {
-          ...sJson,
-          attendance: attendanceMap[s.id] || { total_days: 0, present_days: 0, percentage: 0 },
-          report_cards: reportCardMap[s.id] || []
-        };
-      }),
-      teachers: teachers.map(t => {
-        const tJson = t.toJSON();
-        return {
-          ...tJson,
-          total_sessions: sessionsMap[t.id] || 0
-        };
-      }),
-      parents: parents.filter(p => p.student !== null) // Filter out parents without approved linked child in school
+      ...student.toJSON(),
+      attendance: attendanceMap,
+      report_cards: reportCards
     }
+  });
+});
+
+// 5. Fetch Student Raw Attendance Logs (On-demand calendar view)
+export const getStudentAttendanceLogs = asyncHandler(async (req, res) => {
+  const school_id = req.user.school_id;
+  const { studentId } = req.params;
+
+  const attendanceLogs = await Attendance.findAll({
+    where: { school_id, student_id: studentId },
+    attributes: ["student_id", "date", "status"],
+    order: [["date", "ASC"]],
+  });
+
+  const logs = attendanceLogs.map(row => {
+    let dateStr = row.date;
+    if (dateStr instanceof Date) {
+      dateStr = dateStr.toISOString().split("T")[0];
+    } else if (typeof dateStr === "string") {
+      dateStr = dateStr.substring(0, 10);
+    }
+    return { date: dateStr, status: row.status };
+  });
+
+  res.json({
+    success: true,
+    data: { logs }
   });
 });

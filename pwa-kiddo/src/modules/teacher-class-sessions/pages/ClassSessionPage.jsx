@@ -506,5 +506,4 @@ export default function ClassSessionPage() {
 const statusOptions = [
     { value: "present", label: "P" },
     { value: "absent", label: "A" },
-    { value: "leave", label: "L" },
 ];

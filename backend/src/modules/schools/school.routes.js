@@ -12,7 +12,13 @@ import {
   resetSchoolAdminPassword,
 } from "./school.controller.js";
 
-import { getSchoolDirectory } from "./school.directory.controller.js";
+import {
+  getSchoolDirectory,
+  getSectionRoster,
+  getParentsList,
+  getStudentProfile,
+  getStudentAttendanceLogs,
+} from "./school.directory.controller.js";
 
 import {
   createSchoolSchema,
@@ -23,8 +29,12 @@ import {
 
 const router = express.Router();
 
-// Directory endpoint for school admins
-router.get("/directory", protect, allowRoles("school_admin"), getSchoolDirectory);
+// Directory endpoints for school admins, super admins, and teachers
+router.get("/directory", protect, allowRoles("school_admin", "super_admin", "teacher"), getSchoolDirectory);
+router.get("/directory/sections/:sectionId", protect, allowRoles("school_admin", "super_admin", "teacher"), getSectionRoster);
+router.get("/directory/parents", protect, allowRoles("school_admin", "super_admin", "teacher"), getParentsList);
+router.get("/directory/students/:studentId", protect, allowRoles("school_admin", "super_admin", "teacher"), getStudentProfile);
+router.get("/directory/students/:studentId/attendance-logs", protect, allowRoles("school_admin", "super_admin", "teacher"), getStudentAttendanceLogs);
 
 router.use(protect, allowRoles("super_admin"));
 

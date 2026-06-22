@@ -7,6 +7,7 @@ import {
   Award,
   Layers,
   ChevronRight,
+  ChevronLeft,
   BookOpen,
   Calendar,
   Phone,
@@ -18,6 +19,7 @@ import {
   X,
   Sparkles,
 } from 'lucide-react';
+import './SchoolRegistry.css';
 
 export function SchoolRegistry() {
   const { showToast } = useToast();
@@ -34,6 +36,62 @@ export function SchoolRegistry() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [selectedParent, setSelectedParent] = useState(null);
+
+  // Attendance calendar states
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+
+  // Production Optimization & Lazy Loading states
+  const [parents, setParents] = useState([]);
+  const [parentsLoading, setParentsLoading] = useState(false);
+  const [sectionStudents, setSectionStudents] = useState([]);
+  const [sectionLoading, setSectionLoading] = useState(false);
+  const [calendarLogs, setCalendarLogs] = useState([]);
+  const [calendarLogsLoading, setCalendarLogsLoading] = useState(false);
+
+  // Lazy load parents when tab is clicked
+  useEffect(() => {
+    if (activeMainTab !== 'parents') return;
+    if (parents.length > 0) return; // already loaded
+
+    async function loadParents() {
+      try {
+        setParentsLoading(true);
+        const res = await schoolAPI.getParentsDirectory();
+        setParents(res.data || []);
+      } catch (err) {
+        console.error('Failed to load parents list', err);
+        showToast('Failed to load parents.', 'error');
+      } finally {
+        setParentsLoading(false);
+      }
+    }
+
+    loadParents();
+  }, [activeMainTab]);
+
+  // Lazy load roster when selectedSectionId changes
+  useEffect(() => {
+    if (!selectedSectionId) {
+      setSectionStudents([]);
+      return;
+    }
+
+    async function loadRoster() {
+      try {
+        setSectionLoading(true);
+        const res = await schoolAPI.getSectionRoster(selectedSectionId);
+        setSectionStudents(res.data?.students || []);
+      } catch (err) {
+        console.error('Failed to load section roster', err);
+        showToast('Failed to load section roster details.', 'error');
+      } finally {
+        setSectionLoading(false);
+      }
+    }
+
+    loadRoster();
+  }, [selectedSectionId]);
 
   useEffect(() => {
     async function loadDirectory() {
@@ -63,96 +121,201 @@ export function SchoolRegistry() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-indigo-600"></div>
+      <div className="sr-spinner-wrap">
+        <div className="sr-spinner"></div>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-500 font-semibold">Failed to load school registry data.</p>
+      <div className="sr-error">
+        <p className="sr-error__text">Failed to load school registry data.</p>
       </div>
     );
   }
 
-  const { classes, students, teachers, parents } = data;
+  const { classes, teachers } = data;
 
   // Selected Class details
   const activeClass = classes.find(c => c.id === selectedClassId);
   const activeClassSections = activeClass?.sections || [];
   const activeSection = activeClassSections.find(s => s.id === selectedSectionId);
 
-  // Roster filtered by section
-  const sectionStudents = students.filter(s => s.class_id === selectedClassId && s.section_id === selectedSectionId);
-
   // Teacher Assignments in active class/section
   const sectionTeachers = activeSection ? teachers.filter(t => 
     t.teacher_assignments?.some(ta => ta.class_id === selectedClassId && ta.section_id === selectedSectionId)
   ) : [];
 
+  // Cross-link helpers: navigate between student ↔ parent drawers
+  const openParentFromStudent = (parentRecord) => {
+    // Inject current student profile as parent's child
+    const parentWithChild = {
+      ...parentRecord,
+      student: selectedStudent
+    };
+    setSelectedStudent(null);
+    setSelectedParent(parentWithChild);
+  };
+
+  const openStudentFromParent = async (parentRecord) => {
+    const studentId = parentRecord.student?.id;
+    if (!studentId) return;
+
+    // Check if the student is already loaded in the active section list
+    const foundLocal = sectionStudents.find(s => s.id === studentId);
+    if (foundLocal) {
+      setSelectedParent(null);
+      setSelectedStudent(foundLocal);
+      return;
+    }
+
+    // Otherwise, fetch the full student details on demand
+    try {
+      showToast('Loading student profile...', 'info');
+      const res = await schoolAPI.getStudentProfile(studentId);
+      if (res.data) {
+        setSelectedParent(null);
+        setSelectedStudent(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load child profile', err);
+      showToast('Failed to load student details.', 'error');
+    }
+  };
+
+  // Calendar rendering helpers
+  const prevMonth = () => {
+    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+  const nextMonth = () => {
+    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  // Open calendar & fetch logs on-demand
+  const openCalendar = async (student) => {
+    setCalendarMonth(new Date());
+    setCalendarOpen(true);
+    setCalendarLogs([]);
+    try {
+      setCalendarLogsLoading(true);
+      const res = await schoolAPI.getStudentAttendanceLogs(student.id);
+      setCalendarLogs(res.data?.logs || res.data || []);
+    } catch (err) {
+      console.error('Failed to load attendance logs', err);
+      showToast('Failed to load calendar attendance logs.', 'error');
+    } finally {
+      setCalendarLogsLoading(false);
+    }
+  };
+
+  const getCalendarCells = () => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    
+    const cells = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      cells.push({ key: `empty-${i}`, day: null });
+    }
+    for (let i = 1; i <= totalDays; i++) {
+      cells.push({ key: `day-${i}`, day: new Date(year, month, i) });
+    }
+    return cells;
+  };
+  const calendarCells = getCalendarCells();
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
   return (
-    <div className="space-y-8 max-w-7xl mx-auto px-6 py-6 pb-20">
+    <div className="sr-page">
       {/* ── Page Header ── */}
-      <div className="flex justify-between items-center border-b border-slate-100 pb-6">
+      <div className="sr-header">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-950 tracking-tight flex items-center gap-3">
+          <h1 className="sr-header__title">
             School Directory
           </h1>
-          <p className="text-slate-400 text-sm mt-1.5 font-medium">
+          <p className="sr-header__subtitle">
             Real-time management dashboard. Click cards to view classes, sections, students, and parent records.
           </p>
         </div>
       </div>
 
+      {/* ── Stat Overview Chips ── */}
+      <div className="sr-stats">
+        <div className="sr-stat-chip">
+          <div className="sr-stat-chip__icon sr-stat-chip__icon--indigo">
+            <Layers style={{ width: 18, height: 18 }} />
+          </div>
+          <div>
+            <div className="sr-stat-chip__value">{classes.length}</div>
+            <div className="sr-stat-chip__label">Classes</div>
+          </div>
+        </div>
+        <div className="sr-stat-chip">
+          <div className="sr-stat-chip__icon sr-stat-chip__icon--emerald">
+            <GraduationCap style={{ width: 18, height: 18 }} />
+          </div>
+          <div>
+            <div className="sr-stat-chip__value">{data.total_students_count || 0}</div>
+            <div className="sr-stat-chip__label">Students</div>
+          </div>
+        </div>
+        <div className="sr-stat-chip">
+          <div className="sr-stat-chip__icon sr-stat-chip__icon--indigo">
+            <Briefcase style={{ width: 18, height: 18 }} />
+          </div>
+          <div>
+            <div className="sr-stat-chip__value">{teachers.length}</div>
+            <div className="sr-stat-chip__label">Teachers</div>
+          </div>
+        </div>
+        <div className="sr-stat-chip">
+          <div className="sr-stat-chip__icon sr-stat-chip__icon--amber">
+            <Users style={{ width: 18, height: 18 }} />
+          </div>
+          <div>
+            <div className="sr-stat-chip__value">{data.total_parents_count || 0}</div>
+            <div className="sr-stat-chip__label">Parents</div>
+          </div>
+        </div>
+      </div>
+
       {/* ── Main Tab Navigation (Segmented Pill Group) ── */}
-      <div className="bg-slate-100/80 backdrop-blur-md p-1.5 rounded-2xl flex gap-1 w-fit border border-slate-200/50 shadow-inner">
+      <div className="sr-tabs">
         <button
           onClick={() => setActiveMainTab('classes')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-            activeMainTab === 'classes'
-              ? 'bg-white text-indigo-600 shadow-md shadow-indigo-100/50'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
-          }`}
+          className={`sr-tab ${activeMainTab === 'classes' ? 'sr-tab--active' : ''}`}
         >
-          <Layers className="w-4 h-4" />
+          <Layers style={{ width: 16, height: 16 }} />
           Classes Registry
         </button>
         <button
           onClick={() => setActiveMainTab('teachers')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-            activeMainTab === 'teachers'
-              ? 'bg-white text-indigo-600 shadow-md shadow-indigo-100/50'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
-          }`}
+          className={`sr-tab ${activeMainTab === 'teachers' ? 'sr-tab--active' : ''}`}
         >
-          <Users className="w-4 h-4" />
+          <Users style={{ width: 16, height: 16 }} />
           Teachers ({teachers.length})
         </button>
         <button
           onClick={() => setActiveMainTab('parents')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-            activeMainTab === 'parents'
-              ? 'bg-white text-indigo-600 shadow-md shadow-indigo-100/50'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
-          }`}
+          className={`sr-tab ${activeMainTab === 'parents' ? 'sr-tab--active' : ''}`}
         >
-          <Users className="w-4 h-4" />
-          Parents ({parents.length})
+          <Users style={{ width: 16, height: 16 }} />
+          Parents ({data.total_parents_count || 0})
         </button>
       </div>
 
       {/* ── 1. CLASSES REGISTRY TAB ── */}
       {activeMainTab === 'classes' && (
-        <div className="space-y-8">
+        <div className="sr-classes-tab">
           {/* Class scroll horizontal deck */}
-          <div className="space-y-4">
-            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Select Class</h2>
-            <div className="flex gap-5 overflow-x-auto pb-4 scrollbar-none">
+          <div className="sr-class-deck">
+            <h2 className="sr-section-title">Select Class</h2>
+            <div className="sr-class-scroll">
               {classes.map((c) => {
                 const isSelected = c.id === selectedClassId;
-                const studentCount = students.filter(s => s.class_id === c.id).length;
+                const studentCount = c.student_count || 0;
                 return (
                   <div
                     key={c.id}
@@ -164,22 +327,18 @@ export function SchoolRegistry() {
                         setSelectedSectionId(null);
                       }
                     }}
-                    className={`min-w-[220px] flex-shrink-0 cursor-pointer rounded-2xl border p-6 transition-all duration-300 transform hover:-translate-y-0.5 ${
-                      isSelected
-                        ? 'border-indigo-500 bg-gradient-to-br from-indigo-50 to-indigo-100/30 shadow-lg shadow-indigo-100/40'
-                        : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-md shadow-sm'
-                    }`}
+                    className={`sr-class-card ${isSelected ? 'sr-class-card--selected' : ''}`}
                   >
-                    <div className="flex justify-between items-center">
-                      <div className={`p-3 rounded-xl ${isSelected ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-500'}`}>
-                        <Layers className="w-5 h-5" />
+                    <div className="sr-class-card__top">
+                      <div className="sr-class-card__icon">
+                        <Layers style={{ width: 20, height: 20 }} />
                       </div>
-                      <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 uppercase tracking-wide">
+                      <span className="sr-class-card__badge">
                         {c.sections?.length || 0} Sec
                       </span>
                     </div>
-                    <h3 className="font-extrabold text-slate-800 text-xl mt-6">{c.class_name}</h3>
-                    <p className="text-slate-400 text-xs mt-1.5 font-semibold">{studentCount} Active Students</p>
+                    <h3 className="sr-class-card__name">{c.class_name}</h3>
+                    <p className="sr-class-card__count">{studentCount} Active Students</p>
                   </div>
                 );
               })}
@@ -188,24 +347,20 @@ export function SchoolRegistry() {
 
           {/* Section Selector Pills */}
           {activeClass && activeClassSections.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Sections</h2>
-              <div className="flex gap-3 flex-wrap">
+            <div className="sr-sections">
+              <h2 className="sr-section-title">Sections</h2>
+              <div className="sr-section-pills">
                 {activeClassSections.map((sec) => {
                   const isSelected = sec.id === selectedSectionId;
-                  const secStudentCount = students.filter(s => s.class_id === selectedClassId && s.section_id === sec.id).length;
+                  const secStudentCount = sec.student_count || 0;
                   return (
                     <button
                       key={sec.id}
                       onClick={() => setSelectedSectionId(sec.id)}
-                      className={`px-5 py-3 rounded-2xl text-xs font-black transition-all duration-200 flex items-center gap-2.5 border ${
-                        isSelected
-                          ? 'bg-slate-900 border-slate-900 text-white shadow-md shadow-slate-900/10'
-                          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350 hover:bg-slate-50/50'
-                      }`}
+                      className={`sr-section-pill ${isSelected ? 'sr-section-pill--active' : ''}`}
                     >
                       <span>Section {sec.name}</span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                      <span className="sr-section-pill__count">
                         {secStudentCount}
                       </span>
                     </button>
@@ -217,31 +372,27 @@ export function SchoolRegistry() {
 
           {/* Registry Details for selected Class/Section */}
           {activeSection ? (
-            <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-150 pb-5 gap-4">
+            <div className="sr-registry-panel">
+              <div className="sr-registry-panel__header">
                 <div>
-                  <h3 className="text-xl font-extrabold text-slate-900">
+                  <h3 className="sr-registry-panel__title">
                     {activeClass.class_name} — Section {activeSection.name}
                   </h3>
-                  <p className="text-slate-400 text-xs mt-1 font-medium">
+                  <p className="sr-registry-panel__desc">
                     Assigned roster and active subject teachers
                   </p>
                 </div>
 
-                <div className="flex gap-1.5 border border-slate-200 p-1.5 rounded-2xl bg-slate-50/50">
+                <div className="sr-inner-tabs">
                   <button
                     onClick={() => setActiveSectionTab('students')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 ${
-                      activeSectionTab === 'students' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
-                    }`}
+                    className={`sr-inner-tab ${activeSectionTab === 'students' ? 'sr-inner-tab--active' : ''}`}
                   >
                     Student Roster ({sectionStudents.length})
                   </button>
                   <button
                     onClick={() => setActiveSectionTab('teachers')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 ${
-                      activeSectionTab === 'teachers' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
-                    }`}
+                    className={`sr-inner-tab ${activeSectionTab === 'teachers' ? 'sr-inner-tab--active' : ''}`}
                   >
                     Subject Teachers ({sectionTeachers.length})
                   </button>
@@ -249,13 +400,17 @@ export function SchoolRegistry() {
               </div>
 
               {/* Roster content */}
-              {activeSectionTab === 'students' ? (
+              {sectionLoading ? (
+                <div className="sr-spinner-wrap" style={{ minHeight: '180px' }}>
+                  <div className="sr-spinner"></div>
+                </div>
+              ) : activeSectionTab === 'students' ? (
                 sectionStudents.length === 0 ? (
-                  <div className="text-center py-16">
-                    <p className="text-slate-400 text-sm">No students registered in this section yet.</p>
+                  <div className="sr-empty">
+                    No students registered in this section yet.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="sr-grid">
                     {sectionStudents.map((stud) => {
                       const userObj = stud.user || stud.User || {};
                       const studentName = userObj.name || 'Student';
@@ -266,16 +421,16 @@ export function SchoolRegistry() {
                         <div
                           key={stud.id}
                           onClick={() => setSelectedStudent(stud)}
-                          className="flex items-center gap-4 p-5 border border-slate-100 hover:border-slate-200 hover:bg-slate-50/30 rounded-2xl cursor-pointer hover:shadow-sm transition-all duration-200"
+                          className="sr-person-row"
                         >
-                          <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm flex-shrink-0 border border-indigo-100">
+                          <div className="sr-person-row__avatar sr-person-row__avatar--student">
                             {cleanName[0]?.toUpperCase() || 'S'}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-extrabold text-slate-800 truncate text-sm">{cleanName}</h4>
-                            <p className="text-slate-400 text-xs mt-1 truncate">Parent: {cleanParentName}</p>
+                          <div className="sr-person-row__info">
+                            <h4 className="sr-person-row__name">{cleanName}</h4>
+                            <p className="sr-person-row__meta">Parent: {cleanParentName}</p>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <ChevronRight className="sr-person-row__chevron" style={{ width: 16, height: 16 }} />
                         </div>
                       );
                     })}
@@ -283,11 +438,11 @@ export function SchoolRegistry() {
                 )
               ) : (
                 sectionTeachers.length === 0 ? (
-                  <div className="text-center py-16">
-                    <p className="text-slate-400 text-sm">No subject teachers assigned to this section yet.</p>
+                  <div className="sr-empty">
+                    No subject teachers assigned to this section yet.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="sr-grid">
                     {sectionTeachers.map((teach) => {
                       const userObj = teach.user || teach.User || {};
                       const tAssignments = teach.teacher_assignments?.filter(ta => ta.class_id === selectedClassId && ta.section_id === selectedSectionId) || [];
@@ -296,16 +451,16 @@ export function SchoolRegistry() {
                         <div
                           key={teach.id}
                           onClick={() => setSelectedTeacher(teach)}
-                          className="flex items-center gap-4 p-5 border border-slate-100 hover:border-slate-200 hover:bg-slate-50/30 rounded-2xl cursor-pointer hover:shadow-sm transition-all duration-200"
+                          className="sr-person-row"
                         >
-                          <div className="w-12 h-12 rounded-full bg-emerald-55 bg-opacity-10 text-emerald-700 flex items-center justify-center font-black text-sm flex-shrink-0 border border-emerald-100">
+                          <div className="sr-person-row__avatar sr-person-row__avatar--teacher">
                             {userObj.name?.[0]?.toUpperCase() || 'T'}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-extrabold text-slate-800 truncate text-sm">{userObj.name}</h4>
-                            <p className="text-slate-400 text-xs mt-1 truncate">Subject: {subjects || '—'}</p>
+                          <div className="sr-person-row__info">
+                            <h4 className="sr-person-row__name">{userObj.name}</h4>
+                            <p className="sr-person-row__meta">Subject: {subjects || '—'}</p>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <ChevronRight className="sr-person-row__chevron" style={{ width: 16, height: 16 }} />
                         </div>
                       );
                     })}
@@ -314,8 +469,8 @@ export function SchoolRegistry() {
               )}
             </div>
           ) : (
-            <div className="text-center py-12 bg-slate-50 rounded-3xl">
-              <p className="text-slate-400 text-sm">No sections found for this class.</p>
+            <div className="sr-empty sr-empty--bg">
+              No sections found for this class.
             </div>
           )}
         </div>
@@ -323,35 +478,35 @@ export function SchoolRegistry() {
 
       {/* ── 2. ALL TEACHERS DIRECTORY TAB ── */}
       {activeMainTab === 'teachers' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="sr-grid">
           {teachers.map((teach) => {
             const userObj = teach.user || teach.User || {};
             return (
               <div
                 key={teach.id}
                 onClick={() => setSelectedTeacher(teach)}
-                className="bg-white border border-slate-100 hover:border-slate-200 rounded-3xl p-5 cursor-pointer hover:shadow-md shadow-sm transition-all duration-200 space-y-4"
+                className="sr-dir-card"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg flex-shrink-0">
+                <div className="sr-dir-card__profile">
+                  <div className="sr-dir-card__avatar">
                     {userObj.name?.[0]?.toUpperCase() || 'T'}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-slate-800 truncate">{userObj.name}</h3>
-                    <p className="text-slate-400 text-xs mt-1 truncate">{userObj.email || '—'}</p>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 className="sr-dir-card__name">{userObj.name}</h3>
+                    <p className="sr-dir-card__email">{userObj.email || '—'}</p>
                   </div>
                 </div>
                 
-                <div className="border-t border-slate-100 pt-4 flex justify-between items-center">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-400 tracking-wider">CLASSES</span>
-                    <span className="text-xs text-slate-700 mt-1 font-semibold">
+                <div className="sr-dir-card__footer">
+                  <div className="sr-dir-card__stat">
+                    <span className="sr-dir-card__stat-label">CLASSES</span>
+                    <span className="sr-dir-card__stat-value">
                       {teach.teacher_assignments?.length || 0} assigned
                     </span>
                   </div>
-                  <div className="flex flex-col text-right">
-                    <span className="text-[10px] font-black text-slate-400 tracking-wider">SESSIONS</span>
-                    <span className="text-xs text-indigo-600 mt-1 font-bold">
+                  <div className="sr-dir-card__stat sr-dir-card__stat--right">
+                    <span className="sr-dir-card__stat-label">SESSIONS</span>
+                    <span className="sr-dir-card__stat-value sr-dir-card__stat-value--accent">
                       {teach.total_sessions} conducted
                     </span>
                   </div>
@@ -364,196 +519,250 @@ export function SchoolRegistry() {
 
       {/* ── 3. ALL PARENTS DIRECTORY TAB ── */}
       {activeMainTab === 'parents' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {parents.map((par) => {
-            const userObj = par.user || par.User || {};
-            const childUser = par.student?.user || par.student?.User || {};
-            const cleanChildName = childUser.name?.replace(/^(Student Class|Student)\s+/gi, '').trim() || 'Student';
-            return (
-              <div
-                key={par.id}
-                onClick={() => setSelectedParent(par)}
-                className="bg-white border border-slate-100 hover:border-slate-200 rounded-3xl p-5 cursor-pointer hover:shadow-md shadow-sm transition-all duration-200 space-y-4"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg flex-shrink-0">
-                    {userObj.name?.[0]?.toUpperCase() || 'P'}
+        parentsLoading ? (
+          <div className="sr-spinner-wrap" style={{ minHeight: '200px' }}>
+            <div className="sr-spinner"></div>
+          </div>
+        ) : parents.length === 0 ? (
+          <div className="sr-empty">No parents registered in the school directory yet.</div>
+        ) : (
+          <div className="sr-grid">
+            {parents.map((par) => {
+              const userObj = par.user || par.User || {};
+              const childUser = par.student?.user || par.student?.User || {};
+              const cleanChildName = childUser.name?.replace(/^(Student Class|Student)\s+/gi, '').trim() || 'Student';
+              return (
+                <div
+                  key={par.id}
+                  onClick={() => setSelectedParent(par)}
+                  className="sr-dir-card"
+                >
+                  <div className="sr-dir-card__profile">
+                    <div className="sr-dir-card__avatar">
+                      {userObj.name?.[0]?.toUpperCase() || 'P'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3 className="sr-dir-card__name">{userObj.name}</h3>
+                      <p className="sr-dir-card__email">{userObj.email || '—'}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-slate-800 truncate">{userObj.name}</h3>
-                    <p className="text-slate-400 text-xs mt-1 truncate">{userObj.email || '—'}</p>
+                  
+                  <div className="sr-dir-card__footer">
+                    <div className="sr-dir-card__stat">
+                      <span className="sr-dir-card__stat-label">CHILD</span>
+                      <span className="sr-dir-card__stat-value">
+                        {cleanChildName}
+                      </span>
+                    </div>
+                    <div className="sr-dir-card__stat sr-dir-card__stat--right">
+                      <span className="sr-dir-card__stat-label">CLASS</span>
+                      <span className="sr-dir-card__stat-value sr-dir-card__stat-value--accent">
+                        {par.student?.class?.class_name || '—'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="border-t border-slate-100 pt-4 flex justify-between items-center">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-400 tracking-wider">CHILD</span>
-                    <span className="text-xs text-slate-700 mt-1 font-bold truncate">
-                      {cleanChildName}
-                    </span>
-                  </div>
-                  <div className="flex flex-col text-right">
-                    <span className="text-[10px] font-black text-slate-400 tracking-wider">CLASS</span>
-                    <span className="text-xs text-indigo-600 mt-1 font-bold">
-                      {par.student?.class?.class_name || '—'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )
       )}
 
       {/* ── DETAIL DRAWERS ── */}
 
       {/* 1. Student Detail Drawer */}
       {selectedStudent && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setSelectedStudent(null)} />
-          <div className="relative w-full max-w-xl bg-white h-full shadow-2xl flex flex-col z-10 animate-slide-in overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">Student Profile Summary</h2>
-              <button onClick={() => setSelectedStudent(null)} className="p-2 rounded-xl hover:bg-slate-100 transition-colors">
-                <X className="w-6 h-6 text-slate-400" />
+        <div className="sr-drawer-overlay">
+          <div className="sr-drawer-backdrop" onClick={() => setSelectedStudent(null)} />
+          <div className="sr-drawer">
+            <div className="sr-drawer__header">
+              <h2 className="sr-drawer__header-title">Student Profile Summary</h2>
+              <button onClick={() => setSelectedStudent(null)} className="sr-drawer__close">
+                <X style={{ width: 22, height: 22 }} />
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="sr-drawer__body">
               {/* Header profile details */}
-              <div className="flex gap-4 items-center border-b border-slate-100 pb-5">
-                <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center font-black text-2xl">
+              <div className="sr-profile-header">
+                <div className="sr-profile-header__avatar">
                   {(selectedStudent.user?.name || 'S')[0].toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="text-xl font-extrabold text-slate-900">
+                  <h3 className="sr-profile-header__name">
                     {(selectedStudent.user?.name || 'Student').replace(/^(Student Class|Student)\s+/gi, '').trim()}
                   </h3>
-                  <p className="text-indigo-600 text-xs font-bold mt-1">@{selectedStudent.user?.username || ''}</p>
+                  <p className="sr-profile-header__role">@{selectedStudent.user?.username || ''}</p>
                 </div>
               </div>
 
               {/* Roster & Academic Details */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Academic Details</h4>
-                <div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-2xl p-4">
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 block">ADMISSION NO</span>
-                    <span className="font-mono text-sm text-slate-700 font-bold">{selectedStudent.admission_no || '—'}</span>
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Academic Details</h4>
+                <div className="sr-info-grid">
+                  <div className="sr-info-grid__item">
+                    <span className="sr-info-grid__label">ADMISSION NO</span>
+                    <span className="sr-info-grid__value sr-info-grid__value--mono">{selectedStudent.admission_no || '—'}</span>
                   </div>
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 block">ROLL NO</span>
-                    <span className="text-sm text-slate-700 font-bold">{selectedStudent.roll_no || '—'}</span>
+                  <div className="sr-info-grid__item">
+                    <span className="sr-info-grid__label">ROLL NO</span>
+                    <span className="sr-info-grid__value">{selectedStudent.roll_no || '—'}</span>
                   </div>
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 block">CLASS</span>
-                    <span className="text-sm text-slate-700 font-bold">{activeClass?.class_name || '—'}</span>
+                  <div className="sr-info-grid__item">
+                    <span className="sr-info-grid__label">CLASS</span>
+                    <span className="sr-info-grid__value">{activeClass?.class_name || '—'}</span>
                   </div>
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 block">SECTION</span>
-                    <span className="text-sm text-slate-700 font-bold">{activeSection?.name || '—'}</span>
+                  <div className="sr-info-grid__item">
+                    <span className="sr-info-grid__label">SECTION</span>
+                    <span className="sr-info-grid__value">{activeSection?.name || '—'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Personal Details */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Personal Profile</h4>
-                <div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-2xl p-4">
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 block">DATE OF BIRTH</span>
-                    <span className="text-sm text-slate-700 font-bold">{selectedStudent.dob || '—'}</span>
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Personal Profile</h4>
+                <div className="sr-info-grid">
+                  <div className="sr-info-grid__item">
+                    <span className="sr-info-grid__label">DATE OF BIRTH</span>
+                    <span className="sr-info-grid__value">{selectedStudent.dob || '—'}</span>
                   </div>
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 block">GENDER</span>
-                    <span className="text-sm text-slate-700 font-bold capitalize">{selectedStudent.gender || '—'}</span>
+                  <div className="sr-info-grid__item">
+                    <span className="sr-info-grid__label">GENDER</span>
+                    <span className="sr-info-grid__value sr-info-grid__value--capitalize">{selectedStudent.gender || '—'}</span>
                   </div>
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 block">BLOOD GROUP</span>
-                    <span className="text-sm text-slate-700 font-bold uppercase">{selectedStudent.blood_group || '—'}</span>
+                  <div className="sr-info-grid__item">
+                    <span className="sr-info-grid__label">BLOOD GROUP</span>
+                    <span className="sr-info-grid__value sr-info-grid__value--upper">{selectedStudent.blood_group || '—'}</span>
                   </div>
-                  <div className="col-span-2">
-                    <span className="text-[10px] font-black text-slate-400 block">ADDRESS</span>
-                    <span className="text-sm text-slate-700 font-medium">{selectedStudent.address || '—'}</span>
+                  <div className="sr-info-grid__item sr-info-grid__item--full">
+                    <span className="sr-info-grid__label">ADDRESS</span>
+                    <span className="sr-info-grid__value">{selectedStudent.address || '—'}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Parent Profile linked */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Linked Parents</h4>
+              {/* Parent Profile linked — clickable to open parent drawer */}
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Linked Parents</h4>
                 {selectedStudent.parents?.length === 0 ? (
-                  <p className="text-slate-400 text-xs">No parents linked to this student profile.</p>
+                  <p className="sr-empty" style={{ padding: '16px 0' }}>No parents linked to this student profile.</p>
                 ) : (
                   selectedStudent.parents.map((p) => {
                     const pUser = p.user || p.User || {};
                     return (
-                      <div key={p.id} className="border border-slate-100 rounded-2xl p-4 space-y-2">
-                        <div className="flex justify-between items-center border-b border-slate-50 pb-2 mb-2">
-                          <span className="font-bold text-slate-800">{pUser.name}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 uppercase">
-                            {p.relation_type || 'Parent'}
-                          </span>
+                      <div
+                        key={p.id}
+                        className="sr-linked-person"
+                        onClick={() => openParentFromStudent(p)}
+                      >
+                        <div className="sr-linked-person__avatar sr-linked-person__avatar--parent">
+                          {pUser.name?.[0]?.toUpperCase() || 'P'}
                         </div>
-                        <div className="flex gap-4 text-xs text-slate-500">
-                          {pUser.email && (
-                            <span className="flex items-center gap-1.5">
-                              <Mail className="w-3.5 h-3.5" /> {pUser.email}
-                            </span>
-                          )}
-                          {pUser.phone && (
-                            <span className="flex items-center gap-1.5">
-                              <Phone className="w-3.5 h-3.5" /> {pUser.phone}
-                            </span>
-                          )}
+                        <div className="sr-linked-person__info">
+                          <p className="sr-linked-person__name">{pUser.name}</p>
+                          <p className="sr-linked-person__username">@{pUser.username || '—'}</p>
                         </div>
+                        <span className="sr-linked-person__relation">
+                          {p.relation_type || 'Parent'}
+                        </span>
+                        <ChevronRight className="sr-linked-person__arrow" style={{ width: 16, height: 16 }} />
                       </div>
                     );
                   })
                 )}
               </div>
 
-              {/* Attendance Statistics Dial */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Attendance Over The Year</h4>
-                <div className="flex items-center gap-5 bg-slate-50 rounded-2xl p-5 border border-slate-100">
-                  <div className="w-16 h-16 rounded-full border-4 border-indigo-600 flex items-center justify-center font-black text-slate-850 text-sm">
+              {/* Attendance Statistics — clickable to open calendar */}
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Attendance Over The Year</h4>
+                <div
+                  className="sr-attendance"
+                  onClick={() => openCalendar(selectedStudent)}
+                >
+                  <div className="sr-attendance__ring">
                     {selectedStudent.attendance?.percentage}%
                   </div>
                   <div>
-                    <p className="text-slate-700 font-bold text-sm">Overall Attendance</p>
-                    <p className="text-slate-400 text-xs mt-0.5">
-                      {selectedStudent.attendance?.present_days} present, {selectedStudent.attendance?.absent_days} absent, {selectedStudent.attendance?.leave_days} leave days
+                    <p className="sr-attendance__label">Overall Attendance</p>
+                    <p className="sr-attendance__detail">
+                      {selectedStudent.attendance?.present_days} present, {selectedStudent.attendance?.absent_days} absent
+                    </p>
+                    <p className="sr-attendance__hint">
+                      <Calendar style={{ width: 12, height: 12 }} /> Click to view calendar
                     </p>
                   </div>
                 </div>
               </div>
 
+              {/* Subject-wise Attendance Breakdown */}
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Subject Attendance Breakdown</h4>
+                {(!selectedStudent.attendance?.subject_stats || Object.keys(selectedStudent.attendance.subject_stats).length === 0) ? (
+                  <p className="sr-empty" style={{ padding: '16px 0' }}>No subject attendance logs recorded yet.</p>
+                ) : (
+                  <div className="sr-subject-stats-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                    {Object.entries(selectedStudent.attendance.subject_stats).map(([subjectName, stats]) => {
+                      const percentage = stats.total ? Math.round((stats.present / stats.total) * 100) : 0;
+                      return (
+                        <div key={subjectName} className="sr-subject-stat-card" style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '12px 16px',
+                          background: 'var(--sr-slate-50)',
+                          border: '1px solid var(--sr-slate-100)',
+                          borderRadius: 'var(--sr-radius-md)'
+                        }}>
+                          <div>
+                            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--sr-slate-800)' }}>{subjectName}</span>
+                            <span style={{ display: 'block', fontSize: '11px', color: 'var(--sr-slate-500)', marginTop: '2px' }}>
+                              Attended {stats.present} of {stats.total} sessions
+                            </span>
+                          </div>
+                          <span style={{
+                            fontSize: '12px',
+                            fontWeight: '800',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            background: percentage >= 75 ? 'var(--sr-emerald-faint)' : '#fff1f2',
+                            color: percentage >= 75 ? 'var(--sr-emerald)' : 'var(--sr-rose)',
+                            border: `1px solid ${percentage >= 75 ? 'var(--sr-emerald-border)' : '#fecdd3'}`
+                          }}>
+                            {percentage}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* Historical Grades Timeline */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Marks & Exam History</h4>
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Marks &amp; Exam History</h4>
                 {selectedStudent.report_cards?.length === 0 ? (
-                  <p className="text-slate-400 text-xs">No exam records graded yet.</p>
+                  <p className="sr-empty" style={{ padding: '16px 0' }}>No exam records graded yet.</p>
                 ) : (
                   selectedStudent.report_cards.map((rc) => (
-                    <div key={rc.id} className="border border-slate-100 rounded-2xl p-4 space-y-2">
-                      <div className="flex justify-between items-center border-b border-slate-50 pb-2 mb-2">
-                        <span className="font-bold text-slate-800 text-sm">{rc.exam?.name || 'Exam'}</span>
-                        <span className="text-xs text-slate-400">{rc.exam?.start_date}</span>
+                    <div key={rc.id} className="sr-exam-card">
+                      <div className="sr-exam-card__header">
+                        <span className="sr-exam-card__name">{rc.exam?.name || 'Exam'}</span>
+                        <span className="sr-exam-card__date">{rc.exam?.start_date}</span>
                       </div>
-                      <div className="space-y-1">
+                      <div className="sr-exam-card__marks">
                         {rc.report_card_marks?.map((m) => {
                           const percentage = m.max_marks ? Math.round((m.marks_obtained / m.max_marks) * 100) : 0;
                           return (
-                            <div key={m.id} className="flex justify-between text-xs text-slate-600">
+                            <div key={m.id} className="sr-exam-card__mark-row">
                               <span>{m.subject?.name || 'Subject'}</span>
-                              <span className="font-bold">{m.marks_obtained}/{m.max_marks} ({percentage}%)</span>
+                              <span className="sr-exam-card__mark-value">{m.marks_obtained}/{m.max_marks} ({percentage}%)</span>
                             </div>
                           );
                         })}
                       </div>
                       {rc.remarks && (
-                        <p className="text-[11px] italic text-slate-400 mt-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <p className="sr-exam-card__remarks">
                           Remarks: "{rc.remarks}"
                         </p>
                       )}
@@ -568,71 +777,71 @@ export function SchoolRegistry() {
 
       {/* 2. Teacher Detail Drawer */}
       {selectedTeacher && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedTeacher(null)} />
-          <div className="relative w-full max-w-xl bg-white h-full shadow-2xl flex flex-col z-10 animate-slide-in overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">Teacher Profile Summary</h2>
-              <button onClick={() => setSelectedTeacher(null)} className="p-2 rounded-xl hover:bg-slate-100 transition-colors">
-                <X className="w-6 h-6 text-slate-400" />
+        <div className="sr-drawer-overlay">
+          <div className="sr-drawer-backdrop" onClick={() => setSelectedTeacher(null)} />
+          <div className="sr-drawer">
+            <div className="sr-drawer__header">
+              <h2 className="sr-drawer__header-title">Teacher Profile Summary</h2>
+              <button onClick={() => setSelectedTeacher(null)} className="sr-drawer__close">
+                <X style={{ width: 22, height: 22 }} />
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div className="flex gap-4 items-center border-b border-slate-100 pb-5">
-                <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center font-black text-2xl">
+            <div className="sr-drawer__body">
+              <div className="sr-profile-header">
+                <div className="sr-profile-header__avatar">
                   {(selectedTeacher.user?.name || 'T')[0].toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="text-xl font-extrabold text-slate-900">{selectedTeacher.user?.name}</h3>
-                  <p className="text-indigo-600 text-xs font-bold mt-1">Teacher Account</p>
+                  <h3 className="sr-profile-header__name">{selectedTeacher.user?.name}</h3>
+                  <p className="sr-profile-header__role">Teacher Account</p>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Contact Details</h4>
-                <div className="bg-slate-50 rounded-2xl p-4 space-y-2 border border-slate-100">
-                  <div className="flex items-center gap-2.5 text-sm text-slate-700">
-                    <Mail className="w-4 h-4 text-slate-400" />
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Contact Details</h4>
+                <div className="sr-contact-box">
+                  <div className="sr-contact-row">
+                    <Mail className="sr-contact-row__icon" style={{ width: 16, height: 16 }} />
                     <span>{selectedTeacher.user?.email || '—'}</span>
                   </div>
-                  <div className="flex items-center gap-2.5 text-sm text-slate-700">
-                    <Phone className="w-4 h-4 text-slate-400" />
+                  <div className="sr-contact-row">
+                    <Phone className="sr-contact-row__icon" style={{ width: 16, height: 16 }} />
                     <span>{selectedTeacher.user?.phone || '—'}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Professional Info</h4>
-                <div className="bg-slate-50 rounded-2xl p-4 space-y-2 border border-slate-100">
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 block font-sans">QUALIFICATION</span>
-                    <span className="text-sm text-slate-700 font-bold">{selectedTeacher.qualification || '—'}</span>
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Professional Info</h4>
+                <div className="sr-contact-box">
+                  <div className="sr-info-grid__item">
+                    <span className="sr-info-grid__label">QUALIFICATION</span>
+                    <span className="sr-info-grid__value">{selectedTeacher.qualification || '—'}</span>
                   </div>
-                  <div className="pt-2 border-t border-slate-150">
-                    <span className="text-[10px] font-black text-slate-400 block font-sans">JOIN DATE</span>
-                    <span className="text-sm text-slate-700 font-bold">{selectedTeacher.join_date || '—'}</span>
+                  <div className="sr-info-grid__item" style={{ paddingTop: 10, borderTop: '1px solid var(--sr-slate-100)' }}>
+                    <span className="sr-info-grid__label">JOIN DATE</span>
+                    <span className="sr-info-grid__value">{selectedTeacher.join_date || '—'}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Teacher Assignments</h4>
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Teacher Assignments</h4>
                 {selectedTeacher.teacher_assignments?.length === 0 ? (
-                  <p className="text-slate-400 text-xs">No active subject assignments found.</p>
+                  <p className="sr-empty" style={{ padding: '16px 0' }}>No active subject assignments found.</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="sr-assignment-list">
                     {selectedTeacher.teacher_assignments.map((ta) => (
-                      <div key={ta.id} className="border border-slate-100 rounded-2xl p-4 flex justify-between items-center">
+                      <div key={ta.id} className="sr-assignment-card">
                         <div>
-                          <span className="font-bold text-slate-800 block text-sm">{ta.subject?.name || 'Subject'}</span>
-                          <span className="text-slate-500 text-xs mt-0.5 block">
+                          <p className="sr-assignment-card__subject">{ta.subject?.name || 'Subject'}</p>
+                          <p className="sr-assignment-card__class">
                             {ta.class?.class_name} - Section {ta.section?.name}
-                          </span>
+                          </p>
                         </div>
                         {ta.is_class_teacher && (
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">
+                          <span className="sr-sub-card__badge sr-sub-card__badge--emerald">
                             Class Incharge
                           </span>
                         )}
@@ -642,15 +851,15 @@ export function SchoolRegistry() {
                 )}
               </div>
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Activity Stats</h4>
-                <div className="flex items-center gap-4 bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                  <div className="w-16 h-16 rounded-full bg-indigo-65 text-white flex items-center justify-center font-black text-sm bg-indigo-600">
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Activity Stats</h4>
+                <div className="sr-activity-stat">
+                  <div className="sr-activity-stat__circle">
                     {selectedTeacher.total_sessions}
                   </div>
                   <div>
-                    <p className="text-slate-700 font-bold text-sm">Timetable Sessions Conducted</p>
-                    <p className="text-slate-400 text-xs mt-0.5">Sum of finished sessions found in registry logs.</p>
+                    <p className="sr-activity-stat__label">Timetable Sessions Conducted</p>
+                    <p className="sr-activity-stat__desc">Sum of finished sessions found in registry logs.</p>
                   </div>
                 </div>
               </div>
@@ -661,86 +870,172 @@ export function SchoolRegistry() {
 
       {/* 3. Parent Detail Drawer */}
       {selectedParent && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedParent(null)} />
-          <div className="relative w-full max-w-xl bg-white h-full shadow-2xl flex flex-col z-10 animate-slide-in overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">Parent Profile Summary</h2>
-              <button onClick={() => setSelectedParent(null)} className="p-2 rounded-xl hover:bg-slate-100 transition-colors">
-                <X className="w-6 h-6 text-slate-400" />
+        <div className="sr-drawer-overlay">
+          <div className="sr-drawer-backdrop" onClick={() => setSelectedParent(null)} />
+          <div className="sr-drawer">
+            <div className="sr-drawer__header">
+              <h2 className="sr-drawer__header-title">Parent Profile Summary</h2>
+              <button onClick={() => setSelectedParent(null)} className="sr-drawer__close">
+                <X style={{ width: 22, height: 22 }} />
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div className="flex gap-4 items-center border-b border-slate-100 pb-5">
-                <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center font-black text-2xl">
+            <div className="sr-drawer__body">
+              <div className="sr-profile-header">
+                <div className="sr-profile-header__avatar">
                   {(selectedParent.user?.name || 'P')[0].toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="text-xl font-extrabold text-slate-900">{selectedParent.user?.name}</h3>
-                  <p className="text-indigo-600 text-xs font-bold mt-1">Parent Account</p>
+                  <h3 className="sr-profile-header__name">{selectedParent.user?.name}</h3>
+                  <p className="sr-profile-header__role">Parent Account</p>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Contact Details</h4>
-                <div className="bg-slate-50 rounded-2xl p-4 space-y-2 border border-slate-100">
-                  <div className="flex items-center gap-2.5 text-sm text-slate-700">
-                    <Mail className="w-4 h-4 text-slate-400" />
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Contact Details</h4>
+                <div className="sr-contact-box">
+                  <div className="sr-contact-row">
+                    <Mail className="sr-contact-row__icon" style={{ width: 16, height: 16 }} />
                     <span>{selectedParent.user?.email || '—'}</span>
                   </div>
-                  <div className="flex items-center gap-2.5 text-sm text-slate-700">
-                    <Phone className="w-4 h-4 text-slate-400" />
+                  <div className="sr-contact-row">
+                    <Phone className="sr-contact-row__icon" style={{ width: 16, height: 16 }} />
                     <span>{selectedParent.user?.phone || '—'}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Linked Children</h4>
-                <div className="border border-slate-100 rounded-2xl p-4 space-y-3">
-                  <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                    <span className="font-bold text-slate-800 text-sm">
-                      {selectedParent.student?.user?.name?.replace(/^(Student Class|Student)\s+/gi, '').trim()}
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 uppercase">
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Linked Children</h4>
+                {selectedParent.student ? (
+                  <div
+                    className="sr-linked-person"
+                    onClick={() => openStudentFromParent(selectedParent)}
+                  >
+                    <div className="sr-linked-person__avatar sr-linked-person__avatar--student">
+                      {(selectedParent.student?.user?.name || 'S')[0].toUpperCase()}
+                    </div>
+                    <div className="sr-linked-person__info">
+                      <p className="sr-linked-person__name">
+                        {(selectedParent.student?.user?.name || 'Student').replace(/^(Student Class|Student)\s+/gi, '').trim()}
+                      </p>
+                      <p className="sr-linked-person__username">@{selectedParent.student?.user?.username || '—'}</p>
+                      <div className="sr-child-grid" style={{ marginTop: 8 }}>
+                        <div>
+                          <span className="sr-child-grid__label">CLASS</span>
+                          <span className="sr-child-grid__value">{selectedParent.student?.class?.class_name || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="sr-child-grid__label">SECTION</span>
+                          <span className="sr-child-grid__value">Section {selectedParent.student?.section?.name || '—'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="sr-linked-person__relation">
                       {selectedParent.relation_type || 'Son/Daughter'}
                     </span>
+                    <ChevronRight className="sr-linked-person__arrow" style={{ width: 16, height: 16 }} />
                   </div>
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <span className="text-slate-400 block font-bold">CLASS</span>
-                      <span className="text-slate-700 font-bold">{selectedParent.student?.class?.class_name || '—'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block font-bold">SECTION</span>
-                      <span className="text-slate-700 font-bold">Section {selectedParent.student?.section?.name || '—'}</span>
-                    </div>
-                  </div>
-                </div>
+                ) : (
+                  <p className="sr-empty" style={{ padding: '16px 0' }}>No children linked to this parent.</p>
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Scoped CSS animations for custom Drawer slide-in */}
-      <style>{`
-        .scrollbar-none::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-none {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        @keyframes slideIn {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-        .animate-slide-in {
-          animation: slideIn 0.2s ease-out forwards;
-        }
-      `}</style>
+      {/* Attendance Calendar Modal */}
+      {calendarOpen && selectedStudent && (
+        <div className="sr-cal-overlay">
+          <div className="sr-cal-backdrop" onClick={() => setCalendarOpen(false)} />
+          <div className="sr-cal-modal">
+            <div className="sr-cal-header">
+              <h3 className="sr-cal-header__title">
+                Attendance: {(selectedStudent.user?.name || '').replace(/^(Student Class|Student)\s+/gi, '').trim()}
+              </h3>
+              <button className="sr-drawer__close" onClick={() => setCalendarOpen(false)}>
+                <X style={{ width: 18, height: 18 }} />
+              </button>
+            </div>
+
+            <div className="sr-cal-nav">
+              <button className="sr-cal-nav__btn" onClick={prevMonth}>
+                <ChevronLeft style={{ width: 16, height: 16 }} />
+              </button>
+              <span className="sr-cal-nav__label">
+                {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </span>
+              <button className="sr-cal-nav__btn" onClick={nextMonth}>
+                <ChevronRight style={{ width: 16, height: 16 }} />
+              </button>
+            </div>
+
+            {calendarLogsLoading ? (
+              <div className="sr-spinner-wrap" style={{ minHeight: '200px' }}>
+                <div className="sr-spinner"></div>
+              </div>
+            ) : (
+              <div className="sr-cal-grid">
+                {weekdays.map(d => (
+                  <div key={d} className="sr-cal-weekday">{d}</div>
+                ))}
+                {calendarCells.map(({ key, day }) => {
+                  if (!day) {
+                    return <div key={key} className="sr-cal-day sr-cal-day--empty" />;
+                  }
+
+                  const y = day.getFullYear();
+                  const m = String(day.getMonth() + 1).padStart(2, '0');
+                  const d = String(day.getDate()).padStart(2, '0');
+                  const dateStr = `${y}-${m}-${d}`;
+
+                  const logs = calendarLogs || [];
+                  const matches = logs.filter(l => {
+                    if (!l.date) return false;
+                    const logDateStr = typeof l.date === 'string'
+                      ? l.date.substring(0, 10)
+                      : new Date(l.date).toISOString().substring(0, 10);
+                    return logDateStr === dateStr;
+                  });
+                  let statusClass = '';
+                  if (matches.length > 0) {
+                    const hasPresent = matches.some(l => l.status === 'present');
+                    statusClass = hasPresent ? ' sr-cal-day--present' : ' sr-cal-day--absent';
+                  }
+
+                  const today = new Date();
+                  const isToday = day.getFullYear() === today.getFullYear() &&
+                                  day.getMonth() === today.getMonth() &&
+                                  day.getDate() === today.getDate();
+                  const todayClass = isToday ? ' sr-cal-day--today' : '';
+
+                  return (
+                    <div key={key} className={`sr-cal-day${statusClass}${todayClass}`}>
+                      {day.getDate()}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="sr-cal-legend">
+              <div className="sr-cal-legend__item">
+                <span className="sr-cal-legend__dot sr-cal-legend__dot--present" />
+                <span>Present</span>
+              </div>
+              <div className="sr-cal-legend__item">
+                <span className="sr-cal-legend__dot sr-cal-legend__dot--absent" />
+                <span>Absent</span>
+              </div>
+              <div className="sr-cal-legend__item">
+                <span className="sr-cal-legend__dot sr-cal-legend__dot--today" />
+                <span>Today</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
