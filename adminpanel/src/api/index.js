@@ -56,6 +56,11 @@ export const schoolAPI = {
     return response.data;
   },
 
+  getDashboardStats: async () => {
+    const response = await axiosInstance.get('/schools/dashboard-stats');
+    return response.data;
+  },
+
   getSectionRoster: async (sectionId) => {
     const response = await axiosInstance.get(`/schools/directory/sections/${sectionId}`);
     return response.data;

@@ -41,6 +41,7 @@ export function useAiChat({ classLevel }) {
       const aiMsg = {
         role: "ai",
         text: res.data.answer,
+        sources: res.data.sources || [],
         timestamp: new Date(),
       };
 

@@ -18,6 +18,7 @@ import {
   getParentsList,
   getStudentProfile,
   getStudentAttendanceLogs,
+  getDashboardStats,
 } from "./school.directory.controller.js";
 
 import {
@@ -35,6 +36,7 @@ router.get("/directory/sections/:sectionId", protect, allowRoles("school_admin",
 router.get("/directory/parents", protect, allowRoles("school_admin", "super_admin", "teacher"), getParentsList);
 router.get("/directory/students/:studentId", protect, allowRoles("school_admin", "super_admin", "teacher"), getStudentProfile);
 router.get("/directory/students/:studentId/attendance-logs", protect, allowRoles("school_admin", "super_admin", "teacher"), getStudentAttendanceLogs);
+router.get("/dashboard-stats", protect, allowRoles("school_admin", "super_admin"), getDashboardStats);
 
 router.use(protect, allowRoles("super_admin"));
 

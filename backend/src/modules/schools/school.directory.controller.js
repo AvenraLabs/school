@@ -459,3 +459,119 @@ export const getStudentAttendanceLogs = asyncHandler(async (req, res) => {
     data: { logs }
   });
 });
+
+// 6. Get Dashboard Stats (Counts of active, inactive, approved, and pending statuses)
+export const getDashboardStats = asyncHandler(async (req, res) => {
+  const school_id = req.user.school_id;
+
+  // 1. Classes
+  const classesActive = await Class.count({ where: { school_id, is_active: true } });
+  const classesInactive = await Class.count({ where: { school_id, is_active: false } });
+
+  // 2. Sections
+  const sectionsActive = await Section.count({ where: { school_id, is_active: true } });
+  const sectionsInactive = await Section.count({ where: { school_id, is_active: false } });
+
+  // 3. Teachers
+  const teachersActive = await Teacher.count({ where: { school_id, is_active: true } });
+  const teachersInactive = await Teacher.count({ where: { school_id, is_active: false } });
+  const teachersApproved = await Teacher.count({ where: { school_id, approval_status: "approved" } });
+  const teachersPending = await Teacher.count({ where: { school_id, approval_status: "pending" } });
+
+  // 4. Students
+  const studentsActive = await Student.count({ where: { school_id, is_active: true } });
+  const studentsInactive = await Student.count({ where: { school_id, is_active: false } });
+  const studentsApproved = await Student.count({ where: { school_id, approval_status: "approved" } });
+  const studentsPending = await Student.count({ where: { school_id, approval_status: "pending" } });
+
+  // 5. Parents
+  const parentsActive = await Parent.count({
+    include: [
+      {
+        model: Student,
+        where: { school_id },
+        required: true
+      },
+      {
+        model: User,
+        where: { is_active: true },
+        required: true
+      }
+    ]
+  });
+
+  const parentsInactive = await Parent.count({
+    include: [
+      {
+        model: Student,
+        where: { school_id },
+        required: true
+      },
+      {
+        model: User,
+        where: { is_active: false },
+        required: true
+      }
+    ]
+  });
+
+  const parentsApproved = await Parent.count({
+    include: [
+      {
+        model: Student,
+        where: { school_id },
+        required: true
+      }
+    ],
+    where: { approval_status: "approved" }
+  });
+
+  const parentsPending = await Parent.count({
+    include: [
+      {
+        model: Student,
+        where: { school_id },
+        required: true
+      }
+    ],
+    where: { approval_status: "pending" }
+  });
+
+  res.json({
+    success: true,
+    data: {
+      classes: {
+        active: classesActive,
+        inactive: classesInactive,
+        total: classesActive + classesInactive
+      },
+      sections: {
+        active: sectionsActive,
+        inactive: sectionsInactive,
+        total: sectionsActive + sectionsInactive
+      },
+      teachers: {
+        active: teachersActive,
+        inactive: teachersInactive,
+        approved: teachersApproved,
+        pending: teachersPending,
+        total: teachersApproved + teachersPending // or total count
+      },
+      students: {
+        active: studentsActive,
+        inactive: studentsInactive,
+        approved: studentsApproved,
+        pending: studentsPending,
+        total: studentsApproved + studentsPending
+      },
+      parents: {
+        active: parentsActive,
+        inactive: parentsInactive,
+        approved: parentsApproved,
+        pending: parentsPending,
+        total: parentsApproved + parentsPending
+      }
+    }
+  });
+});
+

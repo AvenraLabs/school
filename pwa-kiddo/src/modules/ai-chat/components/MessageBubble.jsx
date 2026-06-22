@@ -56,6 +56,51 @@ export default function MessageBubble({ message, userAvatar }) {
                 >
                     {message.text || message.content}
                 </Typography>
+
+                {isAi && message.sources && message.sources.length > 0 && (
+                    <Box
+                        sx={{
+                            mt: 1.5,
+                            pt: 1,
+                            borderTop: `1px solid ${theme.palette.divider}`,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 0.5,
+                        }}
+                    >
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                fontWeight: 700,
+                                color: theme.palette.text.secondary,
+                                fontSize: "10px",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.05em",
+                            }}
+                        >
+                            Sources:
+                        </Typography>
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                            {message.sources.map((src, i) => (
+                                <Box
+                                    key={i}
+                                    sx={{
+                                        fontSize: "10px",
+                                        bgcolor: theme.palette.action.hover,
+                                        color: theme.palette.text.secondary,
+                                        px: 1,
+                                        py: 0.25,
+                                        borderRadius: 1,
+                                        border: `1px solid ${theme.palette.divider}`,
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    {src}
+                                </Box>
+                            ))}
+                        </Box>
+                    </Box>
+                )}
             </Paper>
 
             {/* User Avatar */}

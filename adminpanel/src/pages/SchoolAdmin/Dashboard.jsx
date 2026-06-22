@@ -1,126 +1,247 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { classesAPI, teachersAPI, studentsAPI, approvalsAPI } from '../../api';
+import { schoolAPI } from '../../api';
 import { useAuth } from '../../hooks/useAuth';
-import { Layers, UserCog, GraduationCap, UserCheck, Database, BookOpen, Calendar, Bell, ArrowRight } from 'lucide-react';
+import { Layers, UserCog, GraduationCap, Users } from 'lucide-react';
 
 const S = {
-  // stat card
-  statGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px', marginBottom: '40px' },
-  statCard: { background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' },
-  statIconWrap: { width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' },
-  statValue: { fontSize: '30px', fontWeight: 800, color: '#0f172a', lineHeight: 1 },
-  statLabel: { fontSize: '13px', color: '#94a3b8', marginTop: '6px' },
-  // section heading
-  sectionLabel: { fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8', marginBottom: '12px' },
-  // action grid
-  actionGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' },
-  actionCard: {
-    background: '#fff', borderRadius: '14px', border: '1px solid #e2e8f0',
-    padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px',
-    textDecoration: 'none', transition: 'box-shadow 0.15s, transform 0.15s',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gap: '24px',
+    marginBottom: '40px',
   },
-  actionIcon: { width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  actionLabel: { fontSize: '13px', fontWeight: 600, color: '#0f172a', lineHeight: 1.3 },
-  actionDesc: { fontSize: '11px', color: '#94a3b8', marginTop: '3px' },
+  card: {
+    background: '#ffffff',
+    borderRadius: '16px',
+    border: '1px solid #e2e8f0',
+    padding: '24px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+  },
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  cardTitle: {
+    fontSize: '15px',
+    fontWeight: 700,
+    color: '#475569',
+  },
+  iconWrap: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  totalWrap: {
+    marginBottom: '16px',
+  },
+  totalVal: {
+    fontSize: '36px',
+    fontWeight: 800,
+    color: '#0f172a',
+    lineHeight: 1,
+  },
+  totalLabel: {
+    fontSize: '11px',
+    fontWeight: 700,
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    marginTop: '4px',
+    letterSpacing: '0.05em',
+  },
+  divider: {
+    height: '1px',
+    background: '#f1f5f9',
+    margin: '16px 0',
+  },
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '12px',
+  },
+  metricItem: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  metricLabel: {
+    fontSize: '10px',
+    color: '#94a3b8',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  metricVal: {
+    fontSize: '15px',
+    fontWeight: 700,
+    marginTop: '2px',
+  },
+  skeletonText: {
+    display: 'inline-block',
+    height: '32px',
+    width: '60px',
+    background: '#f1f5f9',
+    borderRadius: '6px',
+  },
+  skeletonSmall: {
+    display: 'inline-block',
+    height: '16px',
+    width: '30px',
+    background: '#f1f5f9',
+    borderRadius: '4px',
+  }
 };
-
-const STATS = [
-  { label: 'Classes',           key: 'classes',           icon: Layers,        accent: '#4f46e5', bg: '#eef2ff' },
-  { label: 'Teachers',          key: 'teachers',          icon: UserCog,       accent: '#0284c7', bg: '#f0f9ff' },
-  { label: 'Students',          key: 'students',          icon: GraduationCap, accent: '#16a34a', bg: '#f0fdf4' },
-  { label: 'Pending Approvals', key: 'pendingApprovals',  icon: UserCheck,     accent: '#d97706', bg: '#fffbeb' },
-];
-
-const ACTIONS = [
-  { to: '/admin/bulk-seeder',    icon: Database,      label: 'Bulk Setup',    desc: 'Create classes, students & teachers', accent: '#4f46e5', bg: '#eef2ff' },
-  { to: '/admin/classes',        icon: Layers,        label: 'Classes',       desc: 'Manage classes & sections',           accent: '#7c3aed', bg: '#f5f3ff' },
-  { to: '/admin/teachers',       icon: UserCog,       label: 'Teachers',      desc: 'Manage teacher accounts',             accent: '#0284c7', bg: '#f0f9ff' },
-  { to: '/admin/students',       icon: GraduationCap, label: 'Students',      desc: 'Manage student accounts',             accent: '#16a34a', bg: '#f0fdf4' },
-  { to: '/admin/approvals',      icon: UserCheck,     label: 'Approvals',     desc: 'Approve pending accounts',            accent: '#d97706', bg: '#fffbeb' },
-  { to: '/admin/timetables',     icon: Calendar,      label: 'Timetables',    desc: 'Create section timetables',           accent: '#e11d48', bg: '#fff1f2' },
-  { to: '/admin/notifications',  icon: Bell,          label: 'Notifications', desc: 'Send announcements',                  accent: '#4f46e5', bg: '#eef2ff' },
-  { to: '/admin/subjects',       icon: BookOpen,      label: 'Subjects',      desc: 'Manage subject list',                 accent: '#7c3aed', bg: '#f5f3ff' },
-];
 
 export function SchoolAdminDashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState({ classes: 0, teachers: 0, students: 0, pendingApprovals: 0 });
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadStats(); }, []);
+  useEffect(() => {
+    loadStats();
+  }, []);
 
   const loadStats = async () => {
     try {
-      const [cls, tch, stu, app] = await Promise.allSettled([
-        classesAPI.list(), teachersAPI.list(1, 0), studentsAPI.list(1, 0), approvalsAPI.getPending(1, 0),
-      ]);
-      setStats({
-        classes:          cls.status === 'fulfilled' ? (cls.value?.total || cls.value?.items?.length || 0) : 0,
-        teachers:         tch.status === 'fulfilled' ? (tch.value?.total || 0) : 0,
-        students:         stu.status === 'fulfilled' ? (stu.value?.total || 0) : 0,
-        pendingApprovals: app.status === 'fulfilled' ? ((app.value?.teachers?.total || 0) + (app.value?.parents?.total || 0)) : 0,
-      });
-    } catch { /* silent */ }
-    finally { setLoading(false); }
+      setLoading(true);
+      const res = await schoolAPI.getDashboardStats();
+      if (res.success) {
+        setStats(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load dashboard stats', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const firstName = (user?.name || user?.username || 'Admin').split(' ')[0];
 
+  const categories = [
+    {
+      title: 'Classes',
+      key: 'classes',
+      icon: Layers,
+      accent: '#4f46e5',
+      bg: '#f5f3ff',
+      hasApprovals: false
+    },
+    {
+      title: 'Sections',
+      key: 'sections',
+      icon: Layers,
+      accent: '#7c3aed',
+      bg: '#faf5ff',
+      hasApprovals: false
+    },
+    {
+      title: 'Teachers',
+      key: 'teachers',
+      icon: UserCog,
+      accent: '#0284c7',
+      bg: '#f0f9ff',
+      hasApprovals: true
+    },
+    {
+      title: 'Students',
+      key: 'students',
+      icon: GraduationCap,
+      accent: '#10b981',
+      bg: '#ecfdf5',
+      hasApprovals: true
+    },
+    {
+      title: 'Parents',
+      key: 'parents',
+      icon: Users,
+      accent: '#f59e0b',
+      bg: '#fffbeb',
+      hasApprovals: true
+    }
+  ];
+
   return (
-    <div>
+    <div style={{ padding: '4px' }}>
       {/* Greeting */}
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
+        <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
           {greeting}, {firstName} 👋
         </h1>
-        <p style={{ fontSize: '14px', color: '#94a3b8', marginTop: '6px' }}>
-          Welcome back to your school dashboard.
+        <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
+          Here is the active registry status breakdown of your school.
         </p>
       </div>
 
-      {/* Stats */}
-      <div style={S.statGrid}>
-        {STATS.map(({ label, key, icon: Icon, accent, bg }) => (
-          <div key={key} style={S.statCard}>
-            <div style={{ ...S.statIconWrap, background: bg, color: accent }}>
-              <Icon style={{ width: '20px', height: '20px' }} />
-            </div>
-            <div style={S.statValue}>
-              {loading
-                ? <span style={{ display: 'inline-block', width: '40px', height: '28px', background: '#e2e8f0', borderRadius: '6px' }} />
-                : stats[key].toLocaleString()
-              }
-            </div>
-            <div style={S.statLabel}>{label}</div>
-          </div>
-        ))}
-      </div>
+      {/* Grid containing the statistics */}
+      <div style={S.grid}>
+        {categories.map((cat) => {
+          const Icon = cat.icon;
+          const dataObj = stats?.[cat.key];
 
-      {/* Quick Actions */}
-      <div style={S.sectionLabel}>Quick Actions</div>
-      <div style={S.actionGrid}>
-        {ACTIONS.map(({ to, icon: Icon, label, desc, accent, bg }) => (
-          <Link
-            key={to} to={to}
-            style={S.actionCard}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'none'; }}
-          >
-            <div style={{ ...S.actionIcon, background: bg, color: accent }}>
-              <Icon style={{ width: '19px', height: '19px' }} />
+          return (
+            <div key={cat.key} style={S.card}>
+              <div style={S.cardHeader}>
+                <span style={S.cardTitle}>{cat.title}</span>
+                <div style={{ ...S.iconWrap, background: cat.bg, color: cat.accent }}>
+                  <Icon style={{ width: '20px', height: '20px' }} />
+                </div>
+              </div>
+
+              <div style={S.totalWrap}>
+                <div style={S.totalVal}>
+                  {loading ? (
+                    <span style={S.skeletonText} />
+                  ) : (
+                    dataObj?.total || 0
+                  )}
+                </div>
+                <div style={S.totalLabel}>Total Registered</div>
+              </div>
+
+              <div style={S.divider} />
+
+              <div style={S.metricsGrid}>
+                <div style={S.metricItem}>
+                  <span style={S.metricLabel}>Active</span>
+                  <span style={{ ...S.metricVal, color: '#16a34a' }}>
+                    {loading ? <span style={S.skeletonSmall} /> : dataObj?.active || 0}
+                  </span>
+                </div>
+                <div style={S.metricItem}>
+                  <span style={S.metricLabel}>Inactive</span>
+                  <span style={{ ...S.metricVal, color: '#64748b' }}>
+                    {loading ? <span style={S.skeletonSmall} /> : dataObj?.inactive || 0}
+                  </span>
+                </div>
+
+                {cat.hasApprovals && (
+                  <>
+                    <div style={{ ...S.metricItem, marginTop: '8px' }}>
+                      <span style={S.metricLabel}>Approved</span>
+                      <span style={{ ...S.metricVal, color: '#2563eb' }}>
+                        {loading ? <span style={S.skeletonSmall} /> : dataObj?.approved || 0}
+                      </span>
+                    </div>
+                    <div style={{ ...S.metricItem, marginTop: '8px' }}>
+                      <span style={S.metricLabel}>Pending</span>
+                      <span style={{ ...S.metricVal, color: '#d97706' }}>
+                        {loading ? <span style={S.skeletonSmall} /> : dataObj?.pending || 0}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={S.actionLabel}>{label}</div>
-              <div style={S.actionDesc}>{desc}</div>
-            </div>
-            <ArrowRight style={{ width: '14px', height: '14px', color: '#cbd5e1', flexShrink: 0 }} />
-          </Link>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
+
