@@ -18,14 +18,20 @@ export async function assignTeacher({
   subjectId,
   isClassTeacher = false,
 }) {
-  const [teacher, cls, section, subject] = await Promise.all([
+  // subject_id is optional for class-teacher-only assignments
+  const lookups = [
     Teacher.findOne({ where: { id: teacherId, school_id: schoolId } }),
     Class.findOne({ where: { id: classId, school_id: schoolId } }),
     Section.findOne({
       where: { id: sectionId, class_id: classId, school_id: schoolId, is_active: true },
     }),
-    Subject.findOne({ where: { id: subjectId, school_id: schoolId } }),
-  ]);
+  ];
+
+  if (subjectId) {
+    lookups.push(Subject.findOne({ where: { id: subjectId, school_id: schoolId } }));
+  }
+
+  const [teacher, cls, section, subject] = await Promise.all(lookups);
 
   if (!teacher) {
     throw new AppError("TEACHER_NOT_FOUND", 404);
@@ -36,26 +42,29 @@ export async function assignTeacher({
   if (!section) {
     throw new AppError("SECTION_NOT_FOUND", 404);
   }
-  if (!subject) {
+  if (subjectId && !subject) {
     throw new AppError("SUBJECT_NOT_FOUND", 404);
   }
 
-  // Check for existing assignment (same teacher + section + subject in same school)
-  const exists = await TeacherAssignment.findOne({
-    where: {
-      school_id: schoolId,
-      teacher_id: teacherId,
-      section_id: sectionId,
-      subject_id: subjectId,
-      is_active: true,
-    },
-  });
+  // Check for existing assignment
+  if (subjectId) {
+    // Subject assignment: same teacher + section + subject
+    const exists = await TeacherAssignment.findOne({
+      where: {
+        school_id: schoolId,
+        teacher_id: teacherId,
+        section_id: sectionId,
+        subject_id: subjectId,
+        is_active: true,
+      },
+    });
 
-  if (exists) {
-    throw new AppError(
-      "Teacher already assigned to this subject in this section",
-      409
-    );
+    if (exists) {
+      throw new AppError(
+        "Teacher already assigned to this subject in this section",
+        409
+      );
+    }
   }
 
   // If trying to set as class teacher, check if section already has a class teacher
@@ -77,15 +86,21 @@ export async function assignTeacher({
     }
   }
 
-  return TeacherAssignment.create({
+  const createData = {
     school_id: schoolId,
     teacher_id: teacherId,
     class_id: classId,
     section_id: sectionId,
-    subject_id: subjectId,
     is_class_teacher: isClassTeacher,
-  });
+  };
+
+  if (subjectId) {
+    createData.subject_id = subjectId;
+  }
+
+  return TeacherAssignment.create(createData);
 }
+
 
 /* LIST ALL (with pagination) */
 export async function listAssignments({ schoolId, query }) {

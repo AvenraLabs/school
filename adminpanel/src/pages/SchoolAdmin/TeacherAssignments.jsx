@@ -115,7 +115,7 @@ const s = {
   }),
   subjectSectionsGrid: {
     display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '12px', padding: '16px',
+    gap: '12px', padding: '16px', overflow: 'visible',
   },
 };
 
@@ -382,17 +382,19 @@ export function TeacherAssignments() {
                                   Change Teacher
                                 </button>
                                 {isClassPickerOpen && (
-                                  <TeacherPicker
-                                    teachers={filteredTeachers}
-                                    search={pickerSearch}
-                                    onSearch={setPickerSearch}
-                                    hover={pickerHover}
-                                    onHover={setPickerHover}
-                                    onSelect={handleAssign}
-                                    onClose={closePicker}
-                                    saving={saving}
-                                    displayName={teacherDisplayName}
-                                  />
+                                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', zIndex: 100 }}>
+                                    <TeacherPicker
+                                      teachers={filteredTeachers}
+                                      search={pickerSearch}
+                                      onSearch={setPickerSearch}
+                                      hover={pickerHover}
+                                      onHover={setPickerHover}
+                                      onSelect={handleAssign}
+                                      onClose={closePicker}
+                                      saving={saving}
+                                      displayName={teacherDisplayName}
+                                    />
+                                  </div>
                                 )}
                               </div>
                             </>
@@ -406,17 +408,19 @@ export function TeacherAssignments() {
                                   <UserPlus style={{ width: '12px', height: '12px' }} /> Assign Teacher
                                 </button>
                                 {isClassPickerOpen && (
-                                  <TeacherPicker
-                                    teachers={filteredTeachers}
-                                    search={pickerSearch}
-                                    onSearch={setPickerSearch}
-                                    hover={pickerHover}
-                                    onHover={setPickerHover}
-                                    onSelect={handleAssign}
-                                    onClose={closePicker}
-                                    saving={saving}
-                                    displayName={teacherDisplayName}
-                                  />
+                                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', zIndex: 100 }}>
+                                    <TeacherPicker
+                                      teachers={filteredTeachers}
+                                      search={pickerSearch}
+                                      onSearch={setPickerSearch}
+                                      hover={pickerHover}
+                                      onHover={setPickerHover}
+                                      onSelect={handleAssign}
+                                      onClose={closePicker}
+                                      saving={saving}
+                                      displayName={teacherDisplayName}
+                                    />
+                                  </div>
                                 )}
                               </div>
                             </>
@@ -430,7 +434,7 @@ export function TeacherAssignments() {
                               const isSubPickerOpen = activePicker?.sectionId === sec.id && activePicker?.subjectId === sub.id;
 
                               return (
-                                <div key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', border: '1px solid #f1f5f9', borderRadius: '8px', background: '#f8fafc', position: 'relative', zIndex: isSubPickerOpen ? 60 : 1 }}>
+                                <div key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', border: '1px solid #f1f5f9', borderRadius: '8px', background: isSubPickerOpen ? '#eef2ff' : '#f8fafc', position: 'relative', zIndex: isSubPickerOpen ? 60 : 1, overflow: 'visible' }}>
                                   <div style={{ flex: 1, minWidth: 0, marginRight: '8px' }}>
                                     <div style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub.name}</div>
                                     {teacher ? (
@@ -441,7 +445,7 @@ export function TeacherAssignments() {
                                       <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>Unassigned</div>
                                     )}
                                   </div>
-                                  <div style={{ display: 'flex', gap: '4px', position: 'relative', zIndex: isSubPickerOpen ? 70 : 1 }}>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
                                     {teacher ? (
                                       <>
                                         <button style={{ ...s.changeBtn, marginTop: 0, height: '24px', padding: '0 8px', fontSize: '10px' }} onClick={() => isSubPickerOpen ? closePicker() : openPicker(sec.id, cls.id, sub.id)}>
@@ -456,7 +460,9 @@ export function TeacherAssignments() {
                                         Assign
                                       </button>
                                     )}
-                                    {isSubPickerOpen && (
+                                  </div>
+                                  {isSubPickerOpen && (
+                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', zIndex: 100 }}>
                                       <TeacherPicker
                                         teachers={filteredTeachers}
                                         search={pickerSearch}
@@ -468,8 +474,8 @@ export function TeacherAssignments() {
                                         saving={saving}
                                         displayName={teacherDisplayName}
                                       />
-                                    )}
-                                  </div>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
@@ -497,10 +503,9 @@ export function TeacherAssignments() {
 function TeacherPicker({ teachers, search, onSearch, hover, onHover, onSelect, onClose, saving, displayName }) {
   return (
     <div style={{
-      position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
       background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 60,
-      overflow: 'hidden',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 100,
+      overflow: 'hidden', width: '100%',
     }}
       onClick={e => e.stopPropagation()}
     >

@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 export const assignTeacherSchema = z.object({
-  teacher_id: z.number().int().positive(),
-  class_id: z.number().int().positive(),
-  section_id: z.number().int().positive(),
-  subject_id: z.number().int().positive(),
+  teacher_id: z.coerce.number().int().positive(),
+  class_id: z.coerce.number().int().positive(),
+  section_id: z.coerce.number().int().positive(),
+  subject_id: z.coerce.number().int().positive().optional().nullable(),
   is_class_teacher: z.boolean().optional().default(false),
 });
 
