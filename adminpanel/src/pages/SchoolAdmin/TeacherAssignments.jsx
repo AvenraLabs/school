@@ -228,9 +228,10 @@ export function TeacherAssignments() {
           false // is_class_teacher
         );
 
+        const assignmentData = created.data || created;
         setSubjectAssignments(p => {
           const updatedSec = { ...p[sectionId] };
-          updatedSec[subjectId] = created.data || { ...created, teacher, subject: subjects.find(s => s.id === subjectId) };
+          updatedSec[subjectId] = { ...assignmentData, teacher, subject: subjects.find(s => s.id === subjectId) };
           return { ...p, [sectionId]: updatedSec };
         });
         toast.success(`${teacherDisplayName(teacher)} assigned for ${subjects.find(s => s.id === subjectId)?.name || 'subject'}`);
@@ -247,7 +248,8 @@ export function TeacherAssignments() {
           undefined,
           true // is_class_teacher
         );
-        setSectionAssignments(p => ({ ...p, [sectionId]: created.data || { ...created, teacher, is_class_teacher: true } }));
+        const assignmentData = created.data || created;
+        setSectionAssignments(p => ({ ...p, [sectionId]: { ...assignmentData, teacher, is_class_teacher: true } }));
         toast.success(`${teacherDisplayName(teacher)} assigned as class teacher`);
       }
     } catch (e) {
