@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { timetableAPI, classesAPI, teacherAssignmentsAPI, teachersAPI, subjectsAPI } from '../../api';
+import { timetableAPI, classesAPI, teacherAssignmentsAPI, subjectsAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { Calendar, Plus, Trash2, Save, ChevronLeft } from 'lucide-react';
 
@@ -157,7 +157,6 @@ export function Timetables() {
   const [selectedSection, setSelectedSection] = useState('');
   const [timetable, setTimetable] = useState({});
   const [assignments, setAssignments] = useState([]);
-  const [teachers, setTeachers] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editDay, setEditDay] = useState(null);
@@ -167,7 +166,6 @@ export function Timetables() {
 
   useEffect(() => {
     loadClasses();
-    loadTeachers();
     loadSubjects();
   }, []);
 
@@ -185,12 +183,6 @@ export function Timetables() {
     } catch { /* ignore */ }
   };
 
-  const loadTeachers = async () => {
-    try {
-      const res = await teachersAPI.getOptions();
-      setTeachers(res.items || []);
-    } catch { /* ignore */ }
-  };
 
   const loadSubjects = async () => {
     try {
@@ -226,34 +218,64 @@ export function Timetables() {
       ? dayEntries.map((e) => ({
           start_time: e.start_time || '',
           end_time: e.end_time || '',
-          teacher_assignment_id: e.teacher_assignment_id || '',
-          teacher_id: e.teacher_id || '',
-          subject_id: e.subject_id || '',
+          teacher_assignment_id: e.teacher_assignment_id || undefined,
+          subject_id: e.subject_id || undefined,
           title: e.title || '',
           is_break: e.is_break || false,
+          // Hydrate teacher name from the existing entry for the chip display
+          _assignedTeacherName: e.teacher
+            ? (e.teacher.name || e.teacher.user?.name)
+            : null,
+          _hasAssignment: !!e.teacher_assignment_id,
         }))
-      : [{ start_time: '09:00', end_time: '09:45', teacher_assignment_id: '', teacher_id: '', subject_id: '', title: '', is_break: false }]
+      : [{ start_time: '09:00', end_time: '09:45', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false }]
     );
     setEditDay(day);
   };
 
-  const addEntry = () => setEntries([...entries, { start_time: '', end_time: '', teacher_assignment_id: '', teacher_id: '', subject_id: '', title: '', is_break: false }]);
+  // Build subject → assignment map from loaded section assignments
+  const subjectAssignmentMap = {};
+  for (const a of assignments) {
+    if (a.subject_id && !a.is_class_teacher) {
+      subjectAssignmentMap[a.subject_id] = a;
+    }
+  }
+
+  const addEntry = () => setEntries([...entries, { start_time: '', end_time: '', teacher_assignment_id: '', subject_id: '', title: '', is_break: false }]);
   const removeEntry = (idx) => setEntries(entries.filter((_, i) => i !== idx));
   const updateEntry = (idx, field, value) => {
     const updated = [...entries];
-    updated[idx][field] = field === 'is_break' ? value
-      : (field === 'teacher_assignment_id' || field === 'teacher_id' || field === 'subject_id') ? (value === '' ? undefined : Number(value))
-      : value;
+    if (field === 'is_break') {
+      updated[idx].is_break = value;
+    } else if (field === 'subject_id') {
+      const subId = value === '' ? undefined : Number(value);
+      updated[idx].subject_id = subId;
+      // Auto-resolve teacher assignment for this subject
+      const matched = subId ? subjectAssignmentMap[subId] : null;
+      updated[idx].teacher_assignment_id = matched ? matched.id : undefined;
+      updated[idx]._assignedTeacherName = matched
+        ? (matched.teacher?.user?.name || matched.teacher?.User?.name || matched.teacher?.employee_id || `Teacher #${matched.teacher_id}`)
+        : null;
+      updated[idx]._hasAssignment = !!matched;
+    } else {
+      updated[idx][field] = value;
+    }
     setEntries(updated);
   };
 
   const handleSaveDay = async () => {
+    // Validate: non-break entries must have an assignment resolved
+    const unresolved = entries.filter(e => !e.is_break && e.subject_id && !e.teacher_assignment_id);
+    if (unresolved.length > 0) {
+      toast.error('Some subjects have no teacher assigned. Please assign teachers first.');
+      return;
+    }
     setSaving(true);
     try {
       await timetableAPI.create(Number(selectedClass), Number(selectedSection), editDay, entries.map((e) => ({
         start_time: e.start_time,
         end_time: e.end_time,
-        teacher_id: e.teacher_id ? Number(e.teacher_id) : undefined,
+        teacher_assignment_id: e.teacher_assignment_id ? Number(e.teacher_assignment_id) : undefined,
         subject_id: e.subject_id ? Number(e.subject_id) : undefined,
         title: e.title || undefined,
         is_break: e.is_break,
@@ -380,8 +402,9 @@ export function Timetables() {
                   />
                 ) : (
                   <>
+                    {/* Subject selector */}
                     <select
-                      style={{ ...st.selectField, marginRight: '8px' }}
+                      style={{ ...st.selectField, flex: '0 0 160px', marginRight: '8px' }}
                       value={entry.subject_id || ''}
                       onChange={e => updateEntry(idx, 'subject_id', e.target.value)}
                     >
@@ -393,18 +416,49 @@ export function Timetables() {
                       ))}
                     </select>
 
-                    <select
-                      style={st.selectField}
-                      value={entry.teacher_id || ''}
-                      onChange={e => updateEntry(idx, 'teacher_id', e.target.value)}
-                    >
-                      <option value="">Select teacher…</option>
-                      {teachers.map(t => (
-                        <option key={t.id} value={t.id}>
-                          {t.user?.name || t.employee_id || `Teacher #${t.id}`}
-                        </option>
-                      ))}
-                    </select>
+                    {/* Auto-filled teacher chip */}
+                    {entry.subject_id ? (
+                      entry.teacher_assignment_id ? (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          height: '38px', padding: '0 12px', borderRadius: '9px',
+                          background: '#f0fdf4', border: '1px solid #bbf7d0',
+                          fontSize: '12px', fontWeight: 600, color: '#15803d',
+                          flex: 1, minWidth: 0, overflow: 'hidden',
+                        }}>
+                          <span style={{ fontSize: '14px' }}>✓</span>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {entry._assignedTeacherName
+                              || (() => {
+                                const a = subjectAssignmentMap[entry.subject_id];
+                                return a
+                                  ? (a.teacher?.user?.name || a.teacher?.User?.name || a.teacher?.employee_id || `Teacher #${a.teacher_id}`)
+                                  : 'Assigned';
+                              })()}
+                          </span>
+                        </div>
+                      ) : (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          height: '38px', padding: '0 12px', borderRadius: '9px',
+                          background: '#fffbeb', border: '1px solid #fde68a',
+                          fontSize: '12px', fontWeight: 600, color: '#92400e',
+                          flex: 1, minWidth: 0,
+                        }}>
+                          <span style={{ fontSize: '14px' }}>⚠</span>
+                          No teacher assigned
+                        </div>
+                      )
+                    ) : (
+                      <div style={{
+                        height: '38px', padding: '0 12px', borderRadius: '9px',
+                        background: '#f8fafc', border: '1px dashed #e2e8f0',
+                        fontSize: '12px', color: '#94a3b8', display: 'flex',
+                        alignItems: 'center', flex: 1,
+                      }}>
+                        Teacher auto-fills on subject select
+                      </div>
+                    )}
                   </>
                 )}
 
