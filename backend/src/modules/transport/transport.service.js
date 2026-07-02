@@ -615,3 +615,12 @@ export const getDriverActiveTripService = async ({ school_id, driver_id }) => {
     }
   });
 };
+
+export const getDriverProfileService = async ({ school_id, driver_id }) => {
+  const driver = await Driver.findOne({
+    where: { id: driver_id, school_id },
+    include: [{ model: User, attributes: ["id", "name", "phone", "username"] }]
+  });
+  if (!driver) throw new AppError("Driver profile not found", 404);
+  return driver;
+};

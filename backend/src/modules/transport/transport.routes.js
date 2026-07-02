@@ -129,6 +129,12 @@ router.get(
   controller.getDriverActiveTrip
 );
 
+router.get(
+  "/driver/transport/profile",
+  allowRoles("driver"),
+  controller.getDriverProfile
+);
+
 router.post(
   "/driver/transport/trips/start",
   allowRoles("driver"),

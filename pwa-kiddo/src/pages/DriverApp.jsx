@@ -329,10 +329,9 @@ function DriverProfile() {
       const vRes = await api.get("/driver/transport/vehicle");
       if (vRes.data?.success) setVehicle(vRes.data.data);
 
-      const dRes = await api.get("/admin/transport/drivers");
+      const dRes = await api.get("/driver/transport/profile");
       if (dRes.data?.success) {
-        const drv = dRes.data.data.find((d) => d.user_id === user.id);
-        if (drv) setDriverDetails(drv);
+        setDriverDetails(dRes.data.data);
       }
     } catch (e) {
       console.error(e);

@@ -183,6 +183,17 @@ export const getDriverActiveTrip = asyncHandler(async (req, res) => {
   });
 });
 
+export const getDriverProfile = asyncHandler(async (req, res) => {
+  const result = await service.getDriverProfileService({
+    school_id: req.user.school_id,
+    driver_id: req.user.driver_id,
+  });
+  res.json({
+    success: true,
+    data: result,
+  });
+});
+
 export const startTrip = asyncHandler(async (req, res) => {
   const result = await service.startTripService({
     school_id: req.user.school_id,
