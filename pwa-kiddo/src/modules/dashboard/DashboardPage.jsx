@@ -69,29 +69,29 @@ export default function DashboardPage() {
   // PARENT VIEW
   if (user.role === 'parent') {
     return (
-      <Box sx={{ pb: 2, bgcolor: 'background.default' }}>
+      <Box sx={{ pb: 4, bgcolor: '#f8fafc', minHeight: 'calc(100vh - 120px)' }}>
         <Box
           sx={{
             p: 3,
             pt: 4,
-            background: 'linear-gradient(135deg, #FF6B6B 0%, #EE5253 100%)', // Distinct color for Parents
+            background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)', // Premium Indigo-to-Blue gradient
             color: 'white',
-            borderBottomLeftRadius: 24,
-            borderBottomRightRadius: 24,
-            boxShadow: '0 4px 20px rgba(255, 107, 107, 0.3)'
+            borderBottomLeftRadius: 32,
+            borderBottomRightRadius: 32,
+            boxShadow: '0 10px 25px rgba(79, 70, 229, 0.12)'
           }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <Avatar src={user.avatar_url} sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
-                {user.name[0]}
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack direction="row" alignItems="center" spacing={2}>
+              <Avatar src={user.avatar_url} sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 44, height: 44, border: '2px solid rgba(255,255,255,0.3)' }}>
+                {user.name?.[0]?.toUpperCase()}
               </Avatar>
               <Box>
-                <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Welcome,</Typography>
-                <Typography variant="h6" fontWeight="bold">{user.name}</Typography>
+                <Typography variant="subtitle2" sx={{ opacity: 0.85, fontSize: '12px', fontWeight: 500 }}>Welcome,</Typography>
+                <Typography variant="h6" fontWeight="bold" sx={{ fontFamily: "'Outfit', sans-serif" }}>{user.name}</Typography>
               </Box>
             </Stack>
-            <IconButton color="inherit" onClick={() => navigate('/parent/notifications')}>
+            <IconButton color="inherit" onClick={() => navigate('/parent/notifications')} sx={{ bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' } }}>
               <NotifIcon />
             </IconButton>
           </Stack>

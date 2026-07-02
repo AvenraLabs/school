@@ -1,42 +1,45 @@
-import { Paper, Typography, Box } from "@mui/material";
+import { Card, CardContent, Typography, Avatar } from "@mui/material";
 
-export default function DashboardCard({ title, value, subtitle }) {
+export default function DashboardCard({ title, value, subtitle, icon, iconColor, iconBg }) {
   return (
-    <Paper
-      elevation={2}
+    <Card
       sx={{
-        p: 2.5,
-        borderRadius: 4,
-        minHeight: "115px",
+        width: "100%",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between",
-        width: "100%",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
-        border: "1px solid #f1f5f9"
+        borderRadius: "16px",
+        border: "1px solid rgba(0,0,0,0.05)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.01)",
+        transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+        "&:hover": {
+          transform: "translateY(-3px)",
+          boxShadow: "0 8px 16px rgba(0,0,0,0.06)",
+          borderColor: "rgba(0,0,0,0.08)"
+        }
       }}
     >
-      <Box>
-        <Typography variant="caption" color="text.secondary" fontWeight="bold" sx={{ textTransform: "uppercase", letterSpacing: "0.5px" }}>
+      <CardContent sx={{ p: 2, "&:last-child": { pb: 2 }, flexGrow: 1, display: "flex", flexDirection: "column" }}>
+        {icon && (
+          <Avatar sx={{ bgcolor: iconBg, color: iconColor, mb: 1.5, width: 36, height: 36 }}>
+            {icon}
+          </Avatar>
+        )}
+        
+        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "text.secondary", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.5px", mb: 0.5 }}>
           {title}
         </Typography>
 
-        <Typography variant="h4" fontWeight={800} sx={{ mt: 0.5, color: "#1e1b4b" }}>
+        <Typography variant="h5" sx={{ fontWeight: 900, color: "text.primary", mb: 0.5, fontFamily: "'Outfit', 'Inter', sans-serif" }}>
           {value}
         </Typography>
-      </Box>
 
-      <Box>
-        {subtitle ? (
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "11px" }}>
+        {subtitle && (
+          <Typography variant="caption" sx={{ color: "text.secondary", display: "block", lineHeight: 1.3 }}>
             {subtitle}
           </Typography>
-        ) : (
-          <Typography variant="caption" sx={{ display: "block", fontSize: "11px", color: "transparent", select: "none" }}>
-            Spacer
-          </Typography>
         )}
-      </Box>
-    </Paper>
+      </CardContent>
+    </Card>
   );
 }
