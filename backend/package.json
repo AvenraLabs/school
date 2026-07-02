@@ -1,5 +1,5 @@
 {
-  "name": "kiddo",
+  "name": "school management application",
   "version": "1.0.0",
   "description": "An application for school students, that helps learning using AI",
   "main": "server.js",
@@ -17,8 +17,7 @@
     "url": "git+https://github.com/aravindh99/kiddo-backend.git"
   },
   "keywords": [
-    "kiddo",
-    "shadow"
+    "school"
   ],
   "author": "https://github.com/aravindh99",
   "license": "ISC",

@@ -23,6 +23,7 @@ const AssignedClassesPage = lazy(() => import("../modules/teacher-assignments/pa
 const ReportCardEntryPage = lazy(() => import("../modules/report-card/pages/ReportCardEntryPage"));
 const TeacherAIToolsPage = lazy(() => import("../modules/ai-tools/TeacherAIToolsPage"));
 const ThemePage = lazy(() => import("../modules/theme/ThemePage"));
+const TeacherTransportPage = lazy(() => import("../modules/transport/TeacherTransportPage"));
 
 // Quiz pages
 const QuizLobbyPage = lazy(() => import("../modules/quiz/pages/QuizLobbyPage"));
@@ -63,6 +64,7 @@ export default function TeacherApp() {
               <Route path="report-cards/entry" element={<ReportCardEntryPage />} />
               <Route path="ai-tools" element={<TeacherAIToolsPage />} />
               <Route path="themes" element={<ThemePage />} />
+              <Route path="transport" element={<TeacherTransportPage />} />
 
               <Route path="group-chat" element={<GroupChatPage />} />
               <Route path="group-chat/:id" element={<GroupChatRoomPage />} />

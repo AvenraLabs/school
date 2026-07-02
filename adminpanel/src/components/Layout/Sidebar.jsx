@@ -5,7 +5,7 @@ import {
   Users, GraduationCap, UserCheck, BookOpen,
   ClipboardList, Calendar, Bell, FileText,
   Award, ScrollText, LogOut, UserCog,
-  Layers, X, Database, Sparkles,
+  Layers, X, Database, Sparkles, Truck,
 } from 'lucide-react';
 
 const superAdminLinks = [
@@ -33,6 +33,7 @@ const schoolAdminLinks = [
   { to: '/admin/approvals', icon: UserCheck, label: 'Approvals' },
   { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },
   { section: 'Operations' },
+  { to: '/admin/transport', icon: Truck, label: 'Transport' },
   { to: '/admin/assignments', icon: ClipboardList, label: 'Class Incharge Appointment' },
   { to: '/admin/timetables', icon: Calendar, label: 'Timetables' },
   { to: '/admin/notifications', icon: Bell, label: 'Notifications' },

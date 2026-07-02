@@ -60,6 +60,9 @@ const QuizResultPage = lazy(() =>
 const ThemePage = lazy(() =>
   import("../modules/theme/ThemePage")
 );
+const StudentTransportPage = lazy(() =>
+  import("../modules/transport/StudentTransportPage")
+);
 
 export default function StudentApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -103,6 +106,7 @@ export default function StudentApp() {
               <Route path="quiz/:id/play" element={<QuizPlayPage />} />
               <Route path="quiz/:id/results" element={<QuizResultPage />} />
               <Route path="themes" element={<ThemePage />} />
+              <Route path="transport" element={<StudentTransportPage />} />
             </Routes>
           </Suspense>
         </Box>

@@ -9,6 +9,7 @@ import {
     Person,
     Palette,
     Logout,
+    DirectionsBus,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { Link, useNavigate } from "react-router-dom";
@@ -32,7 +33,8 @@ export default function TeacherSidebar({ open, onClose }) {
         { label: "Assigned Classes", icon: <School />, path: "/teacher/assigned-classes" },
         { label: "Diary & Homework", icon: <Book />, path: "/teacher/diary" },
         { label: "Approvals", icon: <Assignment />, path: "/teacher/approvals" },
-        { label: "Exams & Reports", icon: <Assessment />, path: "/teacher/exams/create" }, // Redirects to creation for now
+        { label: "Exams & Reports", icon: <Assessment />, path: "/teacher/exams/create" },
+        { label: "Student Transport", icon: <DirectionsBus />, path: "/teacher/transport" },
         { label: "AI Tools", icon: <AutoAwesome />, path: "/teacher/ai-tools" },
         { label: "Themes", icon: <Palette />, path: "/teacher/themes" },
         { label: "Profile", icon: <Person />, path: "/teacher/profile" },
@@ -68,9 +70,9 @@ export default function TeacherSidebar({ open, onClose }) {
 
             <List>
                 {menuItems.map((item) => (
-                    <ListItem key={item.label} disablePadding>
+                    <ListItem key={item.path} disablePadding>
                         <ListItemButton onClick={() => handleNavigate(item.path)}>
-                            <ListItemIcon sx={{ minWidth: 40, color: 'primary.main' }}>
+                            <ListItemIcon sx={{ minWidth: 40 }}>
                                 {item.icon}
                             </ListItemIcon>
                             <ListItemText primary={item.label} />
@@ -79,18 +81,21 @@ export default function TeacherSidebar({ open, onClose }) {
                 ))}
             </List>
 
-            <Divider sx={{ mt: 1 }} />
-
-            <List>
-                <ListItem disablePadding>
-                    <ListItemButton onClick={handleLogout}>
-                        <ListItemIcon sx={{ minWidth: 40, color: 'error.main' }}>
-                            <Logout />
-                        </ListItemIcon>
-                        <ListItemText primary="Logout" />
-                    </ListItemButton>
-                </ListItem>
-            </List>
+            <Box sx={{ p: 2, mt: 'auto' }}>
+                <Button
+                    onClick={handleLogout}
+                    variant="outlined"
+                    color="error"
+                    fullWidth
+                    startIcon={<Logout />}
+                    sx={{ borderRadius: 2 }}
+                >
+                    Log Out
+                </Button>
+            </Box>
         </Drawer>
     );
 }
+
+// Inline fallback Button import to avoid drawer crashes
+import { Button } from "@mui/material";

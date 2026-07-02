@@ -28,7 +28,7 @@ export const login = asyncHandler(async (req, res) => {
     }
   }
 
-  // For students, fetch class/section info
+  // For students/drivers, fetch additional profile info
   let additionalClaims = {};
   if (user.role === "student") {
 
@@ -40,6 +40,15 @@ export const login = asyncHandler(async (req, res) => {
         class_id: student.class_id,
         section_id: student.section_id,
         student_id: student.id
+      };
+    }
+  } else if (user.role === "driver") {
+    const Driver = (await import("../transport/driver.model.js")).default;
+    const driver = await Driver.findOne({ where: { user_id: user.id } });
+
+    if (driver) {
+      additionalClaims = {
+        driver_id: driver.id
       };
     }
   }

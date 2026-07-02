@@ -584,3 +584,77 @@ export const auditLogsAPI = {
     return response.data;
   },
 };
+
+// Transport API
+export const transportAPI = {
+  getDashboardStats: async () => {
+    const response = await axiosInstance.get('/admin/transport/dashboard-stats');
+    return response.data;
+  },
+
+  listTrips: async (params = {}) => {
+    const response = await axiosInstance.get('/admin/transport/trips', { params });
+    return response.data;
+  },
+
+  // Drivers CRUD
+  listDrivers: async (params = {}) => {
+    const response = await axiosInstance.get('/admin/transport/drivers', { params });
+    return response.data;
+  },
+  createDriver: async (driverData) => {
+    const response = await axiosInstance.post('/admin/transport/drivers', driverData);
+    return response.data;
+  },
+  updateDriver: async (id, driverData) => {
+    const response = await axiosInstance.put(`/admin/transport/drivers/${id}`, driverData);
+    return response.data;
+  },
+  deleteDriver: async (id) => {
+    const response = await axiosInstance.delete(`/admin/transport/drivers/${id}`);
+    return response.data;
+  },
+
+  // Vehicles CRUD
+  listVehicles: async (params = {}) => {
+    const response = await axiosInstance.get('/admin/transport/vehicles', { params });
+    return response.data;
+  },
+  createVehicle: async (vehicleData) => {
+    const response = await axiosInstance.post('/admin/transport/vehicles', vehicleData);
+    return response.data;
+  },
+  updateVehicle: async (id, vehicleData) => {
+    const response = await axiosInstance.put(`/admin/transport/vehicles/${id}`, vehicleData);
+    return response.data;
+  },
+  deleteVehicle: async (id) => {
+    const response = await axiosInstance.delete(`/admin/transport/vehicles/${id}`);
+    return response.data;
+  },
+
+  // Assignments
+  listAssignments: async (params = {}) => {
+    const response = await axiosInstance.get('/admin/transport/assignments', { params });
+    return response.data;
+  },
+  assignStudent: async (student_id, vehicle_id, pickup_point) => {
+    const response = await axiosInstance.post('/admin/transport/assignments', { student_id, vehicle_id, pickup_point });
+    return response.data;
+  },
+  unassignStudent: async (student_id) => {
+    const response = await axiosInstance.delete(`/admin/transport/assignments/${student_id}`);
+    return response.data;
+  },
+
+  // Change Requests
+  listRequests: async (params = {}) => {
+    const response = await axiosInstance.get('/admin/transport/requests', { params });
+    return response.data;
+  },
+  processRequest: async (id, action, rejection_reason) => {
+    const response = await axiosInstance.post(`/admin/transport/requests/${id}/${action}`, { rejection_reason });
+    return response.data;
+  },
+};
+

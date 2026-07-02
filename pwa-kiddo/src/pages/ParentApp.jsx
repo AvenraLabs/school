@@ -19,6 +19,7 @@ import GroupChatPage from "../modules/group-chat/GroupChatPage";
 import GroupChatRoomPage from "../modules/group-chat/GroupChatRoomPage";
 import ThemePage from "../modules/theme/ThemePage";
 import StudentAnalyticsPage from "../modules/parent-analytics/pages/StudentAnalyticsPage";
+import ParentTransportPage from "../modules/transport/ParentTransportPage";
 
 export default function ParentApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -53,6 +54,7 @@ export default function ParentApp() {
             <Route path="student-analytics" element={<StudentAnalyticsPage />} />
             <Route path="student-analytics/:student_id" element={<StudentAnalyticsPage />} />
             <Route path="themes" element={<ThemePage />} />
+            <Route path="transport" element={<ParentTransportPage />} />
           </Routes>
         </Box>
 

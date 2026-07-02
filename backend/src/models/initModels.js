@@ -59,6 +59,14 @@ import GroupChat from "../modules/group-chat/group-chat.model.js";
 import GroupChatMember from "../modules/group-chat/group-chat-member.model.js";
 import GroupChatMessage from "../modules/group-chat/group-chat-message.model.js";
 
+/* ===================== TRANSPORT ===================== */
+import Driver from "../modules/transport/driver.model.js";
+import Vehicle from "../modules/transport/vehicle.model.js";
+import StudentTransport from "../modules/transport/student-transport.model.js";
+import Trip from "../modules/transport/trip.model.js";
+import TripLocation from "../modules/transport/trip-location.model.js";
+import TransportRequest from "../modules/transport/transport-request.model.js";
+
 
 const initAssociations = () => {
   /* ==================== SCHOOL ==================== */
@@ -264,6 +272,52 @@ const initAssociations = () => {
   GroupChat.hasMany(GroupChatMessage, { foreignKey: "group_chat_id" });
   GroupChatMessage.belongsTo(GroupChat, { foreignKey: "group_chat_id" });
   GroupChatMessage.belongsTo(User, { foreignKey: "sender_user_id", as: "Sender" });
+
+  /* ==================== TRANSPORT ==================== */
+  School.hasMany(Driver, { foreignKey: "school_id" });
+  Driver.belongsTo(School, { foreignKey: "school_id" });
+
+  User.hasOne(Driver, { foreignKey: "user_id" });
+  Driver.belongsTo(User, { foreignKey: "user_id" });
+
+  School.hasMany(Vehicle, { foreignKey: "school_id" });
+  Vehicle.belongsTo(School, { foreignKey: "school_id" });
+
+  Driver.hasOne(Vehicle, { foreignKey: "driver_id" });
+  Vehicle.belongsTo(Driver, { foreignKey: "driver_id", onDelete: "SET NULL" });
+
+  Student.hasOne(StudentTransport, { foreignKey: "student_id" });
+  StudentTransport.belongsTo(Student, { foreignKey: "student_id" });
+
+  Vehicle.hasMany(StudentTransport, { foreignKey: "vehicle_id" });
+  StudentTransport.belongsTo(Vehicle, { foreignKey: "vehicle_id" });
+
+  School.hasMany(StudentTransport, { foreignKey: "school_id" });
+  StudentTransport.belongsTo(School, { foreignKey: "school_id" });
+
+  School.hasMany(Trip, { foreignKey: "school_id" });
+  Trip.belongsTo(School, { foreignKey: "school_id" });
+
+  Driver.hasMany(Trip, { foreignKey: "driver_id" });
+  Trip.belongsTo(Driver, { foreignKey: "driver_id" });
+
+  Vehicle.hasMany(Trip, { foreignKey: "vehicle_id" });
+  Trip.belongsTo(Vehicle, { foreignKey: "vehicle_id" });
+
+  Trip.hasMany(TripLocation, { foreignKey: "trip_id", onDelete: "CASCADE" });
+  TripLocation.belongsTo(Trip, { foreignKey: "trip_id" });
+
+  School.hasMany(TransportRequest, { foreignKey: "school_id" });
+  TransportRequest.belongsTo(School, { foreignKey: "school_id" });
+
+  Student.hasMany(TransportRequest, { foreignKey: "student_id" });
+  TransportRequest.belongsTo(Student, { foreignKey: "student_id" });
+
+  Vehicle.hasMany(TransportRequest, { foreignKey: "current_vehicle_id" });
+  TransportRequest.belongsTo(Vehicle, { as: "CurrentVehicle", foreignKey: "current_vehicle_id" });
+
+  Vehicle.hasMany(TransportRequest, { foreignKey: "requested_vehicle_id" });
+  TransportRequest.belongsTo(Vehicle, { as: "RequestedVehicle", foreignKey: "requested_vehicle_id" });
 };
 
 initAssociations();

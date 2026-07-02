@@ -15,6 +15,7 @@ import { Server } from "socket.io";
 import { initGameSocket } from "./src/socket/game.socket.js";
 import { initGroupChatSocket } from "./src/socket/group-chat.socket.js";
 import { initNotificationSocket } from "./src/socket/notification.socket.js";
+import { initTransportSocket } from "./src/socket/transport.socket.js";
 
 
 const app = express();
@@ -65,6 +66,7 @@ const io = new Server(httpServer, {
 initGameSocket(io);
 initGroupChatSocket(io);
 initNotificationSocket(io);
+initTransportSocket(io);
 
 // MIDDLEWARES
 app.use(cors({
@@ -136,11 +138,18 @@ import notificationRoutes from "./src/modules/notifications/notification.routes.
 import groupChatRoutes from "./src/modules/group-chat/group-chat.routes.js";
 import gameRoutes from "./src/modules/game/game.routes.js";
 import quizRoutes from "./src/modules/quiz/quiz.routes.js";
+import transportRoutes from "./src/modules/transport/transport.routes.js";
 
 
 
 // auth
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 app.use("/api/auth", authRoutes);
+app.use("/api", transportRoutes);
 
 // attendance (MOVED UP to prevent teacherRoutes masking)
 app.use("/api", attendanceSummaryRoutes);
@@ -215,6 +224,7 @@ try {
 
   // Ensure new enum values exist in PostgreSQL database
   try {
+    await db.query("ALTER TYPE enum_users_role ADD VALUE IF NOT EXISTS 'driver'");
     await db.query("ALTER TYPE enum_ai_chat_logs_ai_type ADD VALUE IF NOT EXISTS 'question_paper'");
     await db.query("ALTER TYPE enum_ai_chat_logs_ai_type ADD VALUE IF NOT EXISTS 'lesson_summary'");
     console.log("DB ENUM values verified/added successfully");

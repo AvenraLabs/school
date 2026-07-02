@@ -12,7 +12,14 @@ import TimetableParentView from "./TimetableParentView";
 
 export default function TimetablePage() {
   const { user } = useAuth();
-  const { timetable, loading, error } = useTimetable();
+  const {
+    timetable,
+    loading,
+    error,
+    children,
+    selectedStudentId,
+    setSelectedStudentId,
+  } = useTimetable();
 
   if (loading) {
     return (
@@ -37,7 +44,14 @@ export default function TimetablePage() {
     return <TimetableTeacherView timetable={timetable} />;
 
   if (user.role === "parent")
-    return <TimetableParentView timetable={timetable} />;
+    return (
+      <TimetableParentView
+        timetable={timetable}
+        children={children}
+        selectedStudentId={selectedStudentId}
+        setSelectedStudentId={setSelectedStudentId}
+      />
+    );
 
   return null;
 }

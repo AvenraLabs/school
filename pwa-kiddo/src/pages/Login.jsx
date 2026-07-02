@@ -28,7 +28,7 @@ export default function Login() {
 
   useEffect(() => {
     if (!user?.role) return;
-    const allowed = ["student", "teacher", "parent"];
+    const allowed = ["student", "teacher", "parent", "driver"];
     if (!allowed.includes(user.role)) {
       setBlocked(true);
       logout();
@@ -41,6 +41,7 @@ export default function Login() {
     if (user.role === "student") return <Navigate to="/student/dashboard" replace />;
     if (user.role === "teacher") return <Navigate to="/teacher/dashboard" replace />;
     if (user.role === "parent") return <Navigate to="/parent/dashboard" replace />;
+    if (user.role === "driver") return <Navigate to="/driver/dashboard" replace />;
     return <Navigate to="/unauthorized" replace />;
   }
 

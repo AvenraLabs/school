@@ -28,6 +28,7 @@ import { ExamsManager } from './pages/SchoolAdmin/ExamsManager';
 import { ReportCards } from './pages/SchoolAdmin/ReportCards';
 import { AuditLogs } from './pages/SchoolAdmin/AuditLogs';
 import { SchoolRegistry } from './pages/SchoolAdmin/SchoolRegistry';
+import { TransportManager } from './pages/SchoolAdmin/TransportManager';
 
 import './App.css';
 
@@ -74,6 +75,7 @@ function App() {
               <Route path="/admin/approvals" element={<Approvals />} />
               <Route path="/admin/assignments" element={<TeacherAssignments />} />
               <Route path="/admin/timetables" element={<Timetables />} />
+              <Route path="/admin/transport" element={<TransportManager />} />
               <Route path="/admin/notifications" element={<Notifications />} />
               <Route path="/admin/exams" element={<ExamsManager />} />
               <Route path="/admin/report-cards" element={<ReportCards />} />

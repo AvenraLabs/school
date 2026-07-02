@@ -9,6 +9,7 @@ import {
   Palette,
   Logout,
   School,
+  DirectionsBus,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { Link, useNavigate } from "react-router-dom";
@@ -23,6 +24,7 @@ export default function ParentSidebar({ open, onClose }) {
     { label: "Diary", icon: <Book />, path: "/parent/diary" },
     { label: "Report Cards", icon: <ReceiptLong />, path: "/parent/report-cards" },
     { label: "Timetable", icon: <CalendarMonth />, path: "/parent/timetable" },
+    { label: "Transport Tracking", icon: <DirectionsBus />, path: "/parent/transport" },
     { label: "Themes", icon: <Palette />, path: "/parent/themes" },
     { label: "Profile", icon: <Person />, path: "/parent/profile" },
   ];

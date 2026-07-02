@@ -9,6 +9,7 @@ import {
   Palette,
   Logout,
   SmartToy,
+  DirectionsBus,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { Link, useNavigate } from "react-router-dom";
@@ -23,6 +24,7 @@ export default function StudentSidebar({ open, onClose }) {
     { label: "Exams", icon: <ReceiptLong />, path: "/student/report-cards" },
     { label: "Quiz", icon: <Quiz />, path: "/student/quiz" },
     { label: "AI Chat", icon: <SmartToy />, path: "/student/ai-chat" },
+    { label: "My Bus", icon: <DirectionsBus />, path: "/student/transport" },
     { label: "Themes", icon: <Palette />, path: "/student/themes" },
     { label: "Profile", icon: <Person />, path: "/student/profile" },
   ];

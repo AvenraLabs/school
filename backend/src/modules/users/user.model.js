@@ -1,7 +1,6 @@
 import { DataTypes } from "sequelize";
 import db from "../../config/db.js";
 
-
 const User = db.define(
   "user",
   {
@@ -24,7 +23,8 @@ const User = db.define(
         "school_admin",
         "teacher",
         "student",
-        "parent"
+        "parent",
+        "driver"
       ),
       allowNull: false,
     },
@@ -67,6 +67,7 @@ const User = db.define(
       allowNull: false,
       defaultValue: true,
     },
+
     refresh_token: {
       type: DataTypes.TEXT,
       allowNull: true,

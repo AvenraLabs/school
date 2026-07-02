@@ -29,7 +29,9 @@ export default function BottomNav() {
       ? "/student"
       : user.role === "teacher"
         ? "/teacher"
-        : "/parent";
+        : user.role === "driver"
+          ? "/driver"
+          : "/parent";
 
   const navItems = {
     student: [
@@ -51,6 +53,10 @@ export default function BottomNav() {
       { label: "Diary", icon: <Book />, path: `${base}/diary` },
       { label: "Chat", icon: <Chat />, path: `${base}/group-chat` },
       { label: "Profile", icon: <Person />, path: "SIDEBAR_PARENT" },
+    ],
+    driver: [
+      { label: "Home", icon: <Home />, path: `${base}/dashboard` },
+      { label: "Profile", icon: <Person />, path: `${base}/profile` },
     ],
   };
 

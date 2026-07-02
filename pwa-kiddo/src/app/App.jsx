@@ -5,6 +5,7 @@ import Login from "../pages/Login";
 import StudentApp from "../pages/StudentApp";
 import TeacherApp from "../pages/TeacherApp";
 import ParentApp from "../pages/ParentApp";
+import DriverApp from "../pages/DriverApp";
 import NotAuthorized from "../pages/NotAuthorized";
 
 import RequireAuth from "../auth/RequireAuth";
@@ -85,6 +86,19 @@ export default function App() {
                   <RequireApproval>
                     <ParentApp />
                   </RequireApproval>
+                </RequireRole>
+              </ForceProfileCompletion>
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/driver/*"
+          element={
+            <RequireAuth>
+              <ForceProfileCompletion>
+                <RequireRole roles={["driver"]}>
+                  <DriverApp />
                 </RequireRole>
               </ForceProfileCompletion>
             </RequireAuth>
