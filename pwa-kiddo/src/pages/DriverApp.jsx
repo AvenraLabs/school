@@ -10,8 +10,7 @@ import {
   CircularProgress,
   Paper,
   AppBar,
-  Toolbar,
-  IconButton
+  Toolbar
 } from "@mui/material";
 import {
   DirectionsBus,
@@ -19,20 +18,12 @@ import {
   Person,
   Logout,
   Speed,
-  CheckCircle,
   Sync,
   Lock
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import BottomNav from "../components/BottomNav";
-
-// Helper axios headers
-const getAuthHeaders = () => ({
-  headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-    "Content-Type": "application/json"
-  }
-});
+import api from "../api/axios";
 
 /* =========================================================
    1️⃣ DRIVER DASHBOARD VIEW
@@ -62,10 +53,9 @@ function DriverDashboard() {
 
   const fetchDriverVehicle = async () => {
     try {
-      const res = await fetch("/api/driver/transport/vehicle", getAuthHeaders());
-      const data = await res.json();
-      if (data.success) {
-        setVehicle(data.data);
+      const res = await api.get("/driver/transport/vehicle");
+      if (res.data?.success) {
+        setVehicle(res.data.data);
       }
     } catch (e) {
       console.error("Failed to load assigned vehicle", e);
@@ -75,24 +65,17 @@ function DriverDashboard() {
   };
 
   const checkActiveTrip = async () => {
-    // Check if there is an active trip on startup
     try {
-      const res = await fetch("/api/admin/transport/dashboard-stats", getAuthHeaders());
-      const data = await res.json();
-      if (data.success && data.data?.runningBuses) {
-        // Find if this driver is running a trip
-        const driverTrip = data.data.runningBuses.find(
-          (b) => Number(b.trip_id) && b.driver_name === user.name
-        );
-        if (driverTrip) {
-          setActiveTrip({
-            id: driverTrip.trip_id,
-            vehicle_name: driverTrip.vehicle_name,
-            trip_type: driverTrip.trip_type,
-            started_at: driverTrip.started_at
-          });
-          startGpsWatch(driverTrip.trip_id);
-        }
+      const res = await api.get("/driver/transport/active-trip");
+      if (res.data?.success && res.data.data) {
+        const driverTrip = res.data.data;
+        setActiveTrip({
+          id: driverTrip.id,
+          vehicle_id: driverTrip.vehicle_id,
+          trip_type: driverTrip.trip_type,
+          started_at: driverTrip.started_at
+        });
+        startGpsWatch(driverTrip.id);
       }
     } catch (e) {
       console.error(e);
@@ -102,18 +85,13 @@ function DriverDashboard() {
   const startTrip = async () => {
     if (!vehicle) return;
     try {
-      const res = await fetch("/api/driver/transport/trips/start", {
-        method: "POST",
-        body: JSON.stringify({
-          vehicle_id: vehicle.id,
-          trip_type: tripType
-        }),
-        ...getAuthHeaders()
+      const res = await api.post("/driver/transport/trips/start", {
+        vehicle_id: vehicle.id,
+        trip_type: tripType
       });
-      const data = await res.json();
-      if (data.success) {
-        setActiveTrip(data.data);
-        startGpsWatch(data.data.id);
+      if (res.data?.success) {
+        setActiveTrip(res.data.data);
+        startGpsWatch(res.data.data.id);
       }
     } catch (e) {
       console.error(e);
@@ -123,12 +101,8 @@ function DriverDashboard() {
   const stopTrip = async () => {
     if (!activeTrip) return;
     try {
-      const res = await fetch(`/api/driver/transport/trips/${activeTrip.id}/stop`, {
-        method: "POST",
-        ...getAuthHeaders()
-      });
-      const data = await res.json();
-      if (data.success) {
+      const res = await api.post(`/driver/transport/trips/${activeTrip.id}/stop`);
+      if (res.data?.success) {
         stopGpsWatch();
         setActiveTrip(null);
         setCurrentSpeed(0);
@@ -141,11 +115,10 @@ function DriverDashboard() {
   };
 
   const startGpsWatch = (tripId) => {
-    stopGpsWatch(); // Clear existing if any
+    stopGpsWatch();
     setGpsStatus("Connected");
     setLastSyncSeconds(0);
 
-    // Increment sync seconds counter
     lastSyncTimerRef.current = setInterval(() => {
       setLastSyncSeconds((s) => (s !== null ? s + 1 : null));
     }, 1000);
@@ -155,24 +128,18 @@ function DriverDashboard() {
         async (position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
-          const speedKmh = position.coords.speed ? position.coords.speed * 3.6 : 0; // Convert m/s to km/h
+          const speedKmh = position.coords.speed ? position.coords.speed * 3.6 : 0;
           const heading = position.coords.heading || 0;
 
           setCurrentSpeed(speedKmh);
 
-          // Post coordinates to backend
           try {
-            await fetch(`/api/driver/transport/trips/${tripId}/location`, {
-              method: "POST",
-              body: JSON.stringify({
-                latitude: lat,
-                longitude: lng,
-                speed: speedKmh,
-                heading: heading
-              }),
-              ...getAuthHeaders()
+            await api.post(`/driver/transport/trips/${tripId}/location`, {
+              latitude: lat,
+              longitude: lng,
+              speed: speedKmh,
+              heading: heading
             });
-            // Reset last sync timer
             setLastSyncSeconds(0);
           } catch (e) {
             console.error("GPS Sync failed", e);
@@ -210,7 +177,7 @@ function DriverDashboard() {
       {/* Header Info */}
       <Paper sx={{ p: 3, borderRadius: 3, mb: 3, background: "linear-gradient(135deg, #1e1b4b, #312e81)", color: "#fff" }}>
         <Typography variant="h6" fontWeight="bold">Good Morning,</Typography>
-        <Typography variant="h5" fontWeight="bold" sx={{ color: "#a5b4fc" }}>{user.name}</Typography>
+        <Typography variant="h5" fontWeight="bold" sx={{ color: "#a5b4fc" }}>{user.name || "Driver"}</Typography>
       </Paper>
 
       {/* Vehicle Info */}
@@ -235,7 +202,6 @@ function DriverDashboard() {
       {vehicle && (
         <Card sx={{ p: 3, borderRadius: 3, mb: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
           {!activeTrip ? (
-            // Trip Selection / Start
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Typography variant="subtitle2" color="textSecondary" fontWeight="bold">SELECT TRIP TYPE</Typography>
               <Box sx={{ display: "flex", gap: 2 }}>
@@ -269,9 +235,8 @@ function DriverDashboard() {
               </Button>
             </Box>
           ) : (
-            // Active Trip Metrics & Stop
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
-              <Box sx={{ display: "flex", justify: "space-between", alignItems: "center" }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Box>
                   <Typography variant="subtitle2" color="textSecondary" fontWeight="bold">ACTIVE TRIP</Typography>
                   <Typography variant="h6" fontWeight="bold" color="primary" sx={{ textTransform: "capitalize" }}>
@@ -330,7 +295,6 @@ function DriverDashboard() {
         </Card>
       )}
 
-      {/* Scoped CSS pulse animation */}
       <style>{`
         @keyframes pulse {
           0% { transform: scale(0.9); opacity: 0.7; }
@@ -362,15 +326,12 @@ function DriverProfile() {
 
   const fetchProfileDetails = async () => {
     try {
-      const vRes = await fetch("/api/driver/transport/vehicle", getAuthHeaders());
-      const vData = await vRes.json();
-      if (vData.success) setVehicle(vData.data);
+      const vRes = await api.get("/driver/transport/vehicle");
+      if (vRes.data?.success) setVehicle(vRes.data.data);
 
-      const dRes = await fetch("/api/admin/transport/drivers", getAuthHeaders());
-      const dData = await dRes.json();
-      if (dData.success) {
-        // Find this driver in listing
-        const drv = dData.data.find((d) => d.user_id === user.id);
+      const dRes = await api.get("/admin/transport/drivers");
+      if (dRes.data?.success) {
+        const drv = dRes.data.data.find((d) => d.user_id === user.id);
         if (drv) setDriverDetails(drv);
       }
     } catch (e) {
@@ -383,23 +344,18 @@ function DriverProfile() {
     setSavingPassword(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/auth/change-password", {
-        method: "POST",
-        body: JSON.stringify({
-          old_password: passwords.old,
-          new_password: passwords.newPassword
-        }),
-        ...getAuthHeaders()
+      const res = await api.post("/auth/change-password", {
+        old_password: passwords.old,
+        new_password: passwords.newPassword
       });
-      const data = await res.json();
-      if (res.ok) {
+      if (res.data?.success) {
         setMessage({ success: true, text: "Password changed successfully!" });
         setPasswords({ old: "", newPassword: "" });
       } else {
-        setMessage({ success: false, text: data.message || "Failed to change password" });
+        setMessage({ success: false, text: "Failed to change password" });
       }
     } catch (err) {
-      setMessage({ success: false, text: "Error syncing request" });
+      setMessage({ success: false, text: err.response?.data?.message || "Error syncing request" });
     } finally {
       setSavingPassword(false);
     }
@@ -416,9 +372,9 @@ function DriverProfile() {
       <Card sx={{ p: 3, borderRadius: 3, mb: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", text: "center", mb: 3 }}>
           <Box sx={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg, #4f46e5, #818cf8)", display: "flex", alignItems: "center", justify: "center", color: "#fff", fontSize: 24, fontWeight: "bold", mb: 1 }}>
-            {user.name[0].toUpperCase()}
+            {(user.name || "D")[0].toUpperCase()}
           </Box>
-          <Typography variant="h6" fontWeight="bold">{user.name}</Typography>
+          <Typography variant="h6" fontWeight="bold">{user.name || "Driver"}</Typography>
           <Typography variant="body2" color="textSecondary">Driver Profile</Typography>
         </Box>
 
@@ -519,11 +475,8 @@ function DriverProfile() {
    3️⃣ ROUTING ENTRY
    ========================================================= */
 export default function DriverApp() {
-  const navigate = useNavigate();
-
   return (
     <Box sx={{ bgcolor: "#fafafa", minHeight: "100vh" }}>
-      {/* App Bar */}
       <AppBar position="sticky" sx={{ background: "#ffffff", color: "#1e1b4b", boxShadow: "0 2px 4px rgba(0,0,0,0.03)" }}>
         <Toolbar sx={{ justifyContent: "center" }}>
           <Typography variant="h6" fontWeight="bold">Driver Portal</Typography>

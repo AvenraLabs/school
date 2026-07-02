@@ -123,6 +123,12 @@ router.get(
   controller.getDriverVehicle
 );
 
+router.get(
+  "/driver/transport/active-trip",
+  allowRoles("driver"),
+  controller.getDriverActiveTrip
+);
+
 router.post(
   "/driver/transport/trips/start",
   allowRoles("driver"),

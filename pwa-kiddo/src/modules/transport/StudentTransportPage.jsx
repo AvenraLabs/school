@@ -10,13 +10,7 @@ import {
   IconButton
 } from "@mui/material";
 import { DirectionsBus, Phone, ContactPhone, Info } from "@mui/icons-material";
-
-const getAuthHeaders = () => ({
-  headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-    "Content-Type": "application/json"
-  }
-});
+import api from "../../api/axios";
 
 export default function StudentTransportPage() {
   const [loading, setLoading] = useState(true);
@@ -28,10 +22,9 @@ export default function StudentTransportPage() {
 
   const fetchTransportMe = async () => {
     try {
-      const res = await fetch("/api/student/transport/me", getAuthHeaders());
-      const data = await res.json();
-      if (data.success && data.data) {
-        setTransportInfo(data.data);
+      const res = await api.get("/student/transport/me");
+      if (res.data?.success && res.data.data) {
+        setTransportInfo(res.data.data);
       }
     } catch (e) {
       console.error(e);
@@ -65,7 +58,7 @@ export default function StudentTransportPage() {
         </Card>
       ) : (
         <Card sx={{ p: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-          <Box sx={{ display: "flex", justify: "space-between", mb: 2 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               <DirectionsBus sx={{ color: "primary.main", fontSize: 28 }} />
               <Box>
@@ -75,7 +68,7 @@ export default function StudentTransportPage() {
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ textAlign: "right" }}>
+            <Box sx={{ text: "right" }}>
               <Typography variant="caption" color="textSecondary" fontWeight="bold">VEHICLE NO</Typography>
               <Typography variant="body2" fontWeight="bold" sx={{ fontFamily: "monospace" }}>
                 {transportInfo.vehicle?.vehicle_number}

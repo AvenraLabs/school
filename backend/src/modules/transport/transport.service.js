@@ -605,3 +605,13 @@ export const listTripsService = async ({ school_id, query }) => {
     order: [["started_at", "DESC"]],
   });
 };
+
+export const getDriverActiveTripService = async ({ school_id, driver_id }) => {
+  return Trip.findOne({
+    where: {
+      school_id,
+      driver_id,
+      status: "running"
+    }
+  });
+};

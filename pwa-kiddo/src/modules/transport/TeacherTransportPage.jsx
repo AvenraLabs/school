@@ -6,23 +6,12 @@ import {
   Box,
   CircularProgress,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Avatar,
+  Divider,
   Chip
 } from "@mui/material";
 import { DirectionsBus, Class, Person, Place } from "@mui/icons-material";
-
-const getAuthHeaders = () => ({
-  headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-    "Content-Type": "application/json"
-  }
-});
+import api from "../../api/axios";
 
 export default function TeacherTransportPage() {
   const [loading, setLoading] = useState(true);
@@ -34,10 +23,9 @@ export default function TeacherTransportPage() {
 
   const fetchClassTransport = async () => {
     try {
-      const res = await fetch("/api/teacher/transport/students", getAuthHeaders());
-      const data = await res.json();
-      if (data.success && data.data) {
-        setStudentTransportList(data.data);
+      const res = await api.get("/teacher/transport/students");
+      if (res.data?.success && res.data.data) {
+        setStudentTransportList(res.data.data);
       }
     } catch (e) {
       console.error(e);
@@ -95,7 +83,7 @@ export default function TeacherTransportPage() {
               <Divider sx={{ my: 1 }} />
 
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1 }}>
-                <Box sx={{ display: "flex", justify: "space-between", alignItems: "center" }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <Typography variant="caption" color="textSecondary" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                     <DirectionsBus sx={{ fontSize: 14 }} /> MAPPED BUS
                   </Typography>
@@ -104,7 +92,7 @@ export default function TeacherTransportPage() {
                   </Typography>
                 </Box>
 
-                <Box sx={{ display: "flex", justify: "space-between", alignItems: "center" }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <Typography variant="caption" color="textSecondary" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                     <Place sx={{ fontSize: 14 }} /> PICKUP POINT
                   </Typography>

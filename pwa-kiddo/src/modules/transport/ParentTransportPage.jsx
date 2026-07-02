@@ -6,36 +6,29 @@ import {
   Button,
   Box,
   CircularProgress,
-  Paper,
+  FormControl,
+  InputLabel,
   Select,
   MenuItem,
-  InputLabel,
-  FormControl,
-  TextField,
   Divider,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  TextField,
+  DialogActions,
+  IconButton
 } from "@mui/material";
 import {
   DirectionsBus,
   Phone,
-  LocationOn,
   Speed,
   Sync,
   ChangeCircle,
-  Warning
+  Warning,
+  CheckCircle
 } from "@mui/icons-material";
 import { getParentChildren } from "../parent-analytics/parent-analytics.api";
-
-// Helper headers
-const getAuthHeaders = () => ({
-  headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-    "Content-Type": "application/json"
-  }
-});
+import api from "../../api/axios";
 
 export default function ParentTransportPage() {
   const [children, setChildren] = useState([]);
@@ -68,13 +61,11 @@ export default function ParentTransportPage() {
     loadParentChildrenList();
   }, []);
 
-  // Fetch transport info when child selection changes
   useEffect(() => {
     if (!selectedStudentId) return;
     fetchTransportInfo();
   }, [selectedStudentId]);
 
-  // Handle live coordinates polling when an active trip is detected
   useEffect(() => {
     if (activeTrip) {
       startLocationPolling(activeTrip.id);
@@ -108,7 +99,7 @@ export default function ParentTransportPage() {
     document.head.appendChild(script);
   }, []);
 
-  // Render map marker when location updates
+  // Map markers
   useEffect(() => {
     if (!leafletLoaded || !mapContainerRef.current || !gpsLocation || !transportInfo) return;
 
@@ -132,7 +123,6 @@ export default function ParentTransportPage() {
         .openPopup();
     } else {
       mapRef.current.setView([lat, lng]);
-      // Remove old markers
       mapRef.current.eachLayer((layer) => {
         if (layer instanceof L.Marker) {
           mapRef.current.removeLayer(layer);
@@ -164,11 +154,10 @@ export default function ParentTransportPage() {
   const fetchTransportInfo = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/parent/transport/students/${selectedStudentId}`, getAuthHeaders());
-      const data = await res.json();
-      if (data.success && data.data) {
-        setTransportInfo(data.data.transport);
-        setActiveTrip(data.data.active_trip);
+      const res = await api.get(`/parent/transport/students/${selectedStudentId}`);
+      if (res.data?.success && res.data.data) {
+        setTransportInfo(res.data.data.transport);
+        setActiveTrip(res.data.data.active_trip);
       } else {
         setTransportInfo(null);
         setActiveTrip(null);
@@ -185,10 +174,9 @@ export default function ParentTransportPage() {
     const fetchLoc = async () => {
       setFetchingLocation(true);
       try {
-        const res = await fetch(`/api/parent/transport/trips/${tripId}/location`, getAuthHeaders());
-        const data = await res.json();
-        if (data.success && data.data) {
-          setGpsLocation(data.data);
+        const res = await api.get(`/parent/transport/trips/${tripId}/location`);
+        if (res.data?.success && res.data.data) {
+          setGpsLocation(res.data.data);
         }
       } catch (err) {
         console.error("Error loading coordinate trace", err);
@@ -212,18 +200,15 @@ export default function ParentTransportPage() {
     }
   };
 
-  // ── BUS CHANGE REQUEST ──
   const openRequestModal = async () => {
     setShowRequestModal(true);
     setRequestSuccess(false);
     setRequestForm({ requested_vehicle_id: "", pickup_point: "" });
 
-    // Load available vehicles list
     try {
-      const res = await fetch("/api/parent/transport/vehicles", getAuthHeaders());
-      const data = await res.json();
-      if (data.success) {
-        setVehiclesList(data.data || []);
+      const res = await api.get("/parent/transport/vehicles");
+      if (res.data?.success) {
+        setVehiclesList(res.data.data || []);
       }
     } catch (err) {
       console.error(err);
@@ -234,16 +219,12 @@ export default function ParentTransportPage() {
     e.preventDefault();
     setRequestLoading(true);
     try {
-      const res = await fetch("/api/parent/transport/requests", {
-        method: "POST",
-        body: JSON.stringify({
-          student_id: selectedStudentId,
-          requested_vehicle_id: Number(requestForm.requested_vehicle_id),
-          pickup_point: requestForm.pickup_point
-        }),
-        ...getAuthHeaders()
+      const res = await api.post("/parent/transport/requests", {
+        student_id: selectedStudentId,
+        requested_vehicle_id: Number(requestForm.requested_vehicle_id),
+        pickup_point: requestForm.pickup_point
       });
-      if (res.ok) {
+      if (res.data?.success) {
         setRequestSuccess(true);
         setTimeout(() => setShowRequestModal(false), 2000);
       }
@@ -264,7 +245,6 @@ export default function ParentTransportPage() {
 
   return (
     <Container maxWidth="xs" sx={{ pt: 3, pb: 10 }}>
-      {/* Student Selection */}
       {children.length > 0 && (
         <FormControl fullWidth size="small" sx={{ mb: 3 }}>
           <InputLabel>Select Child</InputLabel>
@@ -288,7 +268,6 @@ export default function ParentTransportPage() {
           <CircularProgress size={30} />
         </Box>
       ) : !transportInfo ? (
-        // Not Assigned state
         <Card sx={{ p: 4, borderRadius: 3, textAlign: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
           <Warning color="warning" sx={{ fontSize: 48, mb: 2 }} />
           <Typography variant="h6" fontWeight="bold" gutterBottom>No Bus Assigned</Typography>
@@ -300,9 +279,7 @@ export default function ParentTransportPage() {
           </Button>
         </Card>
       ) : (
-        // Transport Dashboard View
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          {/* Main Transport card */}
           <Card sx={{ p: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
               <Box>
@@ -321,7 +298,6 @@ export default function ParentTransportPage() {
 
             <Divider sx={{ my: 2 }} />
 
-            {/* Driver Details */}
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <Box>
                 <Typography variant="caption" color="textSecondary" fontWeight="bold">DRIVER</Typography>
@@ -345,10 +321,9 @@ export default function ParentTransportPage() {
             </Box>
           </Card>
 
-          {/* Active Trip Map Tracking */}
           {activeTrip ? (
             <Card sx={{ p: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-              <Box sx={{ display: "flex", justify: "space-between", alignItems: "center", mb: 2 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                 <Box>
                   <Typography variant="subtitle2" fontWeight="bold" color="success.main" className="flex items-center gap-1">
                     🟢 Bus is Live / Moving
@@ -359,7 +334,6 @@ export default function ParentTransportPage() {
                 </Box>
               </Box>
 
-              {/* Live coordinates parameters */}
               {gpsLocation && (
                 <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, mb: 2, p: 1.5, bg: "slate.50", border: "1px solid #f1f5f9", borderRadius: 2 }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -377,17 +351,15 @@ export default function ParentTransportPage() {
                 </Box>
               )}
 
-              {/* Map Holder */}
               <div
                 ref={mapContainerRef}
                 style={{ height: "260px", width: "100%", borderRadius: "12px", border: "1px solid #e2e8f0" }}
               ></div>
             </Card>
           ) : (
-            // Trip completed/not running today
             <Card sx={{ p: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Box sx={{ display: "flex", justify: "space-between", alignItems: "center" }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <Box>
                     <Typography variant="subtitle2" fontWeight="bold" color="textSecondary">
                       🔴 Trip Completed / Inactive
@@ -414,7 +386,7 @@ export default function ParentTransportPage() {
         </Box>
       )}
 
-      {/* ── CHANGE REQUEST DIALOG ── */}
+      {/* Request Modal */}
       <Dialog open={showRequestModal} onClose={() => !requestLoading && setShowRequestModal(false)} fullWidth maxWidth="xs" PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle sx={{ fontWeight: "bold" }}>Request Bus Change</DialogTitle>
         <DialogContent sx={{ pt: 1 }}>

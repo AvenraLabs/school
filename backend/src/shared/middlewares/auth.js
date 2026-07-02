@@ -67,6 +67,17 @@ export async function protect(req, res, next) {
       identity.section_id = student.section_id;
     }
 
+    if (user.role === "driver") {
+      const Driver = (await import("../../modules/transport/driver.model.js")).default;
+      const driver = await Driver.findOne({
+        where: { user_id: user.id, school_id: user.school_id },
+      });
+      if (!driver) {
+        throw new AppError("Driver profile not found", 401);
+      }
+      identity.driver_id = driver.id;
+    }
+
     req.user = identity;
 
     next();
