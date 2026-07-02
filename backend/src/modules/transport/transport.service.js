@@ -611,7 +611,7 @@ export const getDriverActiveTripService = async ({ school_id, driver_id }) => {
     where: {
       school_id,
       driver_id,
-      status: "running"
+      status: "active"
     }
   });
 };
