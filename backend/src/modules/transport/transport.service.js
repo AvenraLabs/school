@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import db from "../../config/db.js";
 import Driver from "./driver.model.js";
 import Vehicle from "./vehicle.model.js";
