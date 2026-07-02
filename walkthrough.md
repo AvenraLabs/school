@@ -9,6 +9,10 @@ We have successfully designed, implemented, and compiled the **Transport & Live 
 - **History Log Endpoint**: Added `GET /api/admin/transport/trips` to retrieve all historical trip logs.
 - **Parent Vehicle List**: Provided `GET /api/parent/transport/vehicles` to let parents query the list of active buses when submitting change requests.
 - **Admin GPS View Allowed**: Expanded authentication check on `GET /api/parent/transport/trips/:id/location` to allow `school_admin` access for admin-side live map rendering.
+- **Real-time Socket Broadcasting**:
+  - In `startTripService`, automatically broadcasts `trip:started` event containing vehicle and driver details to the student rooms (`student:${studentId}`) of all assigned students.
+  - In `stopTripService`, automatically broadcasts `trip:stopped` to the student rooms.
+  - In `postLocationService`, broadcasts `trip:location` coordinate updates to the trip's live channel (`trip:${tripId}`) in real-time.
 
 ---
 
@@ -16,7 +20,7 @@ We have successfully designed, implemented, and compiled the **Transport & Live 
 
 ### A. School Admin Panel (`adminpanel`)
 - **Sidebar Integration**: Appended a `"Transport"` navigation link mapped to the `Truck` icon under the **Operations** section in `Sidebar.jsx`.
-- **Unified Manager (`TransportManager.jsx`)**: Designed a clean tabbed panel with 6 sub-sections:
+- **Unified Manager (`TransportManager.jsx`)**: Designed a clean panel with 6 sub-sections styled with custom inline CSS objects (avoiding all dependency on Tailwind):
   1. *Dashboard*: Shows total vehicle/driver cards, active buses, and a daily trip counts progress summary.
   2. *Vehicles*: List, create, update, deactivate, and assign drivers to school buses.
   3. *Drivers*: Manage name, username, password, phone, and license numbers. Displays login hints on creation.
@@ -31,10 +35,14 @@ We have successfully designed, implemented, and compiled the **Transport & Live 
 - **Driver Profile**: Displays name, license, and assigned bus, and includes a password modification block.
 
 ### C. Parent PWA portal (`pwa-kiddo`)
-- **Sidebar Drawer**: Added a "Transport Tracking" link in `ParentSidebar.jsx`.
-- **Dashboard (`ParentTransportPage.jsx`)**:
-  - *Inactive Trip:* Displays driver name, phone numbers, last trip stats, and a **Request Bus Change** button triggering the approval modal.
-  - *Active Trip:* Embeds a live **Leaflet map** plotting coordinates and speed parameters updating dynamically every 5 seconds.
+- **Sidebar Drawer (`ParentSidebar.jsx`)**: Added the **Group Chat** link to the sidebar.
+- **Bottom Navigation (`BottomNav.jsx`)**: Swapped the bottom tab "Chat" link for a direct **Transport** shortcut.
+- **Real-Time GPS Dashboard (`ParentTransportPage.jsx`)**:
+  - Automatically joins the child's channel (`student:join`) and trip room (`trip:join`) over Socket.io.
+  - Listens for `trip:started`, `trip:stopped`, and `trip:location` to instantly transition UI state and update map markers without requiring page refreshes.
+- **Dashboard Clean-Up**:
+  - Removed "Quick Actions" container from the dashboard page to declutter parent landing screen.
+  - Standardized metrics card heights (`DashboardCard.jsx`) to `115px` with a flex-column layout to ensure even heights.
 
 ### D. Student/Teacher PWA portals (`pwa-kiddo`)
 - **Student View (`StudentTransportPage.jsx`)**: Displays read-only card with vehicle registration, driver details, and contact shortcuts.
@@ -46,4 +54,4 @@ We have successfully designed, implemented, and compiled the **Transport & Live 
 1. Both the backend database model synchronization and role ENUM alter-type queries executed successfully.
 2. Verified compiler validity:
    - **`adminpanel`** compiled successfully into static assets using `vite build`.
-   - **`pwa-kiddo`** build process successfully verified.
+   - **`pwa-kiddo`** build process successfully verified and output generated SW files cleanly.

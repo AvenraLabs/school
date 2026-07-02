@@ -328,9 +328,10 @@ export const getDriverVehicleService = async ({ school_id, driver_id }) => {
   return vehicle;
 };
 
-export const startTripService = async ({ school_id, driver_id, body }) => {
+export const startTripService = async ({ school_id, driver_id, body, io }) => {
   const vehicle = await Vehicle.findOne({
     where: { id: body.vehicle_id, driver_id, school_id },
+    include: [{ model: Driver, include: [{ model: User, attributes: ["name", "phone"] }] }]
   });
   if (!vehicle) throw new AppError("Vehicle not found or not assigned to you", 403);
 
@@ -340,7 +341,7 @@ export const startTripService = async ({ school_id, driver_id, body }) => {
     { where: { driver_id, status: "active" } }
   );
 
-  return Trip.create({
+  const trip = await Trip.create({
     school_id,
     driver_id,
     vehicle_id: body.vehicle_id,
@@ -348,18 +349,61 @@ export const startTripService = async ({ school_id, driver_id, body }) => {
     status: "active",
     started_at: new Date(),
   });
+
+  // Find all active students assigned to this vehicle
+  const students = await StudentTransport.findAll({
+    where: { vehicle_id: body.vehicle_id, school_id, is_active: true }
+  });
+
+  if (io && students.length > 0) {
+    students.forEach((st) => {
+      io.to(`student:${st.student_id}`).emit("trip:started", {
+        trip_id: trip.id,
+        vehicle_id: trip.vehicle_id,
+        trip_type: trip.trip_type,
+        started_at: trip.started_at,
+        vehicle: {
+          vehicle_name: vehicle.vehicle_name,
+          vehicle_number: vehicle.vehicle_number,
+          driver: {
+            user: {
+              name: vehicle.driver?.user?.name || "Driver",
+              phone: vehicle.driver?.user?.phone || null
+            }
+          }
+        }
+      });
+    });
+  }
+
+  return trip;
 };
 
-export const stopTripService = async ({ school_id, driver_id, id }) => {
+export const stopTripService = async ({ school_id, driver_id, id, io }) => {
   const trip = await Trip.findOne({
     where: { id, driver_id, school_id, status: "active" },
   });
   if (!trip) throw new AppError("Active trip not found", 404);
 
-  return trip.update({
+  const updated = await trip.update({
     status: "completed",
     ended_at: new Date(),
   });
+
+  // Find all active students assigned to this vehicle
+  const students = await StudentTransport.findAll({
+    where: { vehicle_id: trip.vehicle_id, school_id, is_active: true }
+  });
+
+  if (io && students.length > 0) {
+    students.forEach((st) => {
+      io.to(`student:${st.student_id}`).emit("trip:stopped", {
+        trip_id: trip.id
+      });
+    });
+  }
+
+  return updated;
 };
 
 export const postLocationService = async ({ school_id, driver_id, trip_id, body, io }) => {

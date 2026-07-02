@@ -199,6 +199,7 @@ export const startTrip = asyncHandler(async (req, res) => {
     school_id: req.user.school_id,
     driver_id: req.user.driver_id,
     body: req.body,
+    io: req.io,
   });
   res.json({
     success: true,
@@ -211,6 +212,7 @@ export const stopTrip = asyncHandler(async (req, res) => {
     school_id: req.user.school_id,
     driver_id: req.user.driver_id,
     id: Number(req.params.id),
+    io: req.io,
   });
   res.json({
     success: true,

@@ -29,6 +29,7 @@ import {
 } from "@mui/icons-material";
 import { getParentChildren } from "../parent-analytics/parent-analytics.api";
 import api from "../../api/axios";
+import { connectTransportSocket, getTransportSocket } from "./transport.socket";
 
 export default function ParentTransportPage() {
   const [children, setChildren] = useState([]);
@@ -39,7 +40,6 @@ export default function ParentTransportPage() {
   const [transportInfo, setTransportInfo] = useState(null);
   const [activeTrip, setActiveTrip] = useState(null);
   const [gpsLocation, setGpsLocation] = useState(null);
-  const [fetchingLocation, setFetchingLocation] = useState(false);
 
   // Vehicles list for request
   const [vehiclesList, setVehiclesList] = useState([]);
@@ -55,30 +55,77 @@ export default function ParentTransportPage() {
   const [leafletLoaded, setLeafletLoaded] = useState(false);
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
-  const pollIntervalRef = useRef(null);
 
+  // Fetch student analytics children list on mount
   useEffect(() => {
     loadParentChildrenList();
   }, []);
 
+  // Fetch initial transport data when child changes
   useEffect(() => {
     if (!selectedStudentId) return;
     fetchTransportInfo();
   }, [selectedStudentId]);
 
+  // Handle Socket connection and listeners
   useEffect(() => {
-    if (activeTrip) {
-      startLocationPolling(activeTrip.id);
-    } else {
-      stopLocationPolling();
-      setGpsLocation(null);
-    }
-    return () => {
-      stopLocationPolling();
-    };
-  }, [activeTrip]);
+    if (!selectedStudentId) return;
 
-  // Load Leaflet dynamically
+    const token = localStorage.getItem("token");
+    const socket = connectTransportSocket(token);
+
+    // Join the student's notification channel
+    socket.emit("student:join", { studentId: selectedStudentId });
+
+    // Join active trip tracker room if trip is active initially
+    if (activeTrip) {
+      socket.emit("trip:join", { tripId: activeTrip.id });
+    }
+
+    // Real-time Event Listeners
+    socket.on("trip:started", (data) => {
+      console.log("Trip started socket event:", data);
+      setActiveTrip({
+        id: data.trip_id,
+        trip_type: data.trip_type,
+        started_at: data.started_at
+      });
+      setTransportInfo({
+        vehicle: data.vehicle,
+        pickup_point: transportInfo?.pickup_point || ""
+      });
+      // Join coordinates tracking room
+      socket.emit("trip:join", { tripId: data.trip_id });
+    });
+
+    socket.on("trip:stopped", (data) => {
+      console.log("Trip stopped socket event:", data);
+      setActiveTrip(null);
+      setGpsLocation(null);
+      if (data.trip_id) {
+        socket.emit("trip:leave", { tripId: data.trip_id });
+      }
+    });
+
+    socket.on("trip:location", (data) => {
+      console.log("Trip location socket event:", data);
+      setGpsLocation(data);
+    });
+
+    return () => {
+      // Leave student channel
+      socket.emit("student:leave", { studentId: selectedStudentId });
+      if (activeTrip) {
+        socket.emit("trip:leave", { tripId: activeTrip.id });
+      }
+      // Remove listeners
+      socket.off("trip:started");
+      socket.off("trip:stopped");
+      socket.off("trip:location");
+    };
+  }, [selectedStudentId, activeTrip]);
+
+  // Leaflet map setup script
   useEffect(() => {
     if (window.L) {
       setLeafletLoaded(true);
@@ -99,7 +146,7 @@ export default function ParentTransportPage() {
     document.head.appendChild(script);
   }, []);
 
-  // Map markers
+  // Update Leaflet marker position
   useEffect(() => {
     if (!leafletLoaded || !mapContainerRef.current || !gpsLocation || !transportInfo) return;
 
@@ -166,37 +213,6 @@ export default function ParentTransportPage() {
       console.error(e);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const startLocationPolling = (tripId) => {
-    stopLocationPolling();
-    const fetchLoc = async () => {
-      setFetchingLocation(true);
-      try {
-        const res = await api.get(`/parent/transport/trips/${tripId}/location`);
-        if (res.data?.success && res.data.data) {
-          setGpsLocation(res.data.data);
-        }
-      } catch (err) {
-        console.error("Error loading coordinate trace", err);
-      } finally {
-        setFetchingLocation(false);
-      }
-    };
-
-    fetchLoc();
-    pollIntervalRef.current = setInterval(fetchLoc, 5000);
-  };
-
-  const stopLocationPolling = () => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-    if (mapRef.current) {
-      mapRef.current.remove();
-      mapRef.current = null;
     }
   };
 
@@ -325,7 +341,7 @@ export default function ParentTransportPage() {
             <Card sx={{ p: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                 <Box>
-                  <Typography variant="subtitle2" fontWeight="bold" color="success.main" className="flex items-center gap-1">
+                  <Typography variant="subtitle2" fontWeight="bold" color="success.main" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                     🟢 Bus is Live / Moving
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
@@ -335,7 +351,7 @@ export default function ParentTransportPage() {
               </Box>
 
               {gpsLocation && (
-                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, mb: 2, p: 1.5, bg: "slate.50", border: "1px solid #f1f5f9", borderRadius: 2 }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, mb: 2, p: 1.5, bg: "#f8fafc", border: "1px solid #f1f5f9", borderRadius: 2 }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                     <Speed sx={{ color: "action.active", fontSize: 18 }} />
                     <Typography variant="caption" fontWeight="bold">

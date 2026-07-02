@@ -8,6 +8,7 @@ import {
   Person,
   Timer,
   SmartToy,
+  DirectionsBus,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
@@ -51,7 +52,7 @@ export default function BottomNav() {
       { label: "Home", icon: <Home />, path: `${base}/dashboard` },
       { label: "Timetable", icon: <CalendarMonth />, path: `${base}/timetable` },
       { label: "Diary", icon: <Book />, path: `${base}/diary` },
-      { label: "Chat", icon: <Chat />, path: `${base}/group-chat` },
+      { label: "Transport", icon: <DirectionsBus />, path: `${base}/transport` },
       { label: "Profile", icon: <Person />, path: "SIDEBAR_PARENT" },
     ],
     driver: [
