@@ -222,7 +222,7 @@ try {
   await db.authenticate();
   console.log("DB connected");
 
-  await db.sync({ force: false, alter: true });
+  await db.sync({ force: true });
 
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server + Socket running on port ${PORT}`);
