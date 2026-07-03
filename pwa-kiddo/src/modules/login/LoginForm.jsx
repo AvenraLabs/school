@@ -47,7 +47,7 @@ export default function LoginForm({ onSuccess }) {
 
       <Stack spacing={2}>
         <TextField
-          label="Username"
+          label="Username or Mobile Number"
           {...register("username")}
           error={!!errors.username}
           helperText={errors.username?.message}

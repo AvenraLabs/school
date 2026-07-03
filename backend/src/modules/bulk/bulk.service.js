@@ -4,17 +4,16 @@ import Section from "../sections/section.model.js";
 import User from "../users/user.model.js";
 import Teacher from "../teachers/teacher.model.js";
 import Student from "../students/student.model.js";
-import Parent from "../parents/parent.model.js";
+
 import AppError from "../../shared/appError.js";
 
 const buildTeacherUsername = (schoolId, serial) =>
-  `TCH-${schoolId}-${String(serial).padStart(3, "0")}`;
+  `T${String(serial).padStart(5, "0")}`;
 
 const buildStudentUsername = (schoolId, sectionId, serial) =>
-  `STU-${schoolId}-${sectionId}-${String(serial).padStart(3, "0")}`;
+  `S${String(serial).padStart(5, "0")}`;
 
-const buildParentUsername = (schoolId, studentId) =>
-  `PAR-${schoolId}-${studentId}`;
+
 
 const defaultPassword = (username) => `${username}@123`;
 
@@ -34,7 +33,7 @@ export const bulkCreateDataService = async ({
       school_id,
       teachers: [],
       students: [],
-      parents: [],
+
       summary: {
         classes_created: 0,
         teachers_created: 0,
@@ -98,7 +97,7 @@ export const bulkCreateDataService = async ({
 
     /* ================================
        3️⃣ CREATE CLASSES, SECTIONS,
-           STUDENTS & PARENTS
+           STUDENTS
     ================================= */
     for (const classData of classEntries) {
       const [dbClass, classCreated] = await Class.findOrCreate({
@@ -185,40 +184,7 @@ export const bulkCreateDataService = async ({
             section: sectionData.name,
           });
 
-          /* ================================
-             CREATE PARENT (1:1 DEFAULT)
-          ================================= */
-          const parUsername = buildParentUsername(school_id, student.id);
 
-          const parUser = await User.create(
-            {
-              school_id,
-              role: "parent",
-              username: parUsername,
-              password: defaultPassword(parUsername),
-              is_active: true,
-              first_login: true,
-              name: `Parent of ${stuUser.name}`,
-            },
-            { transaction: t }
-          );
-
-          const parent = await Parent.create(
-            {
-              user_id: parUser.id,
-              student_id: student.id,
-              relation_type: "guardian",
-              approval_status: "pending",
-              is_active: true,
-            },
-            { transaction: t }
-          );
-
-          response.parents.push({
-            parent_id: parent.id,
-            username: parUsername,
-            student_id: student.id,
-          });
 
           response.summary.students_created++;
         }

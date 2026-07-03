@@ -15,7 +15,6 @@ import {
 import {
   getSchoolDirectory,
   getSectionRoster,
-  getParentsList,
   getStudentProfile,
   getStudentAttendanceLogs,
   getDashboardStats,
@@ -33,7 +32,7 @@ const router = express.Router();
 // Directory endpoints for school admins, super admins, and teachers
 router.get("/directory", protect, allowRoles("school_admin", "super_admin", "teacher"), getSchoolDirectory);
 router.get("/directory/sections/:sectionId", protect, allowRoles("school_admin", "super_admin", "teacher"), getSectionRoster);
-router.get("/directory/parents", protect, allowRoles("school_admin", "super_admin", "teacher"), getParentsList);
+
 router.get("/directory/students/:studentId", protect, allowRoles("school_admin", "super_admin", "teacher"), getStudentProfile);
 router.get("/directory/students/:studentId/attendance-logs", protect, allowRoles("school_admin", "super_admin", "teacher"), getStudentAttendanceLogs);
 router.get("/dashboard-stats", protect, allowRoles("school_admin", "super_admin"), getDashboardStats);

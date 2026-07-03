@@ -7,8 +7,8 @@ import User from "../modules/users/user.model.js";
 
 /* ===================== PEOPLE ===================== */
 import Teacher from "../modules/teachers/teacher.model.js";
-import Parent from "../modules/parents/parent.model.js";
 import Student from "../modules/students/student.model.js";
+import Family from "../modules/students/family.model.js";
 import TeacherClassSession from "../modules/teacher-class-sessions/teacher-class-session.model.js";
 import TeacherAssignment from "../modules/teacher-assignments/teacher-assignment.model.js";
 
@@ -45,7 +45,9 @@ import TokenTransaction from "../modules/tokens/token-transaction.model.js";
 import TokenPolicy from "../modules/tokens/token-policy.model.js";
 
 /* ===================== REPORT CARDS ===================== */
+import ExamMaster from "../modules/report-cards/exam-master.model.js";
 import Exam from "../modules/report-cards/exam.model.js";
+import ExamSubject from "../modules/report-cards/exam-subject.model.js";
 import ReportCard from "../modules/report-cards/report-card.model.js";
 import ReportCardMark from "../modules/report-cards/report-card-mark.model.js";
 
@@ -86,9 +88,6 @@ const initAssociations = () => {
   User.hasOne(Teacher, { foreignKey: "user_id" });
   Teacher.belongsTo(User, { foreignKey: "user_id" });
 
-  User.hasOne(Parent, { foreignKey: "user_id" });
-  Parent.belongsTo(User, { foreignKey: "user_id" });
-
   /* ==================== STUDENT (LEGACY – KEEP) ==================== */
   Student.belongsTo(School, { foreignKey: "school_id" });
   Student.belongsTo(Class, {
@@ -103,8 +102,18 @@ const initAssociations = () => {
   Student.hasMany(Attendance, { foreignKey: "student_id" });
 
   /* ==================== REPORT CARDS ==================== */
+  ExamMaster.belongsTo(School, { foreignKey: "school_id" });
+
   Exam.belongsTo(School, { foreignKey: "school_id" });
   Exam.belongsTo(Class, { foreignKey: "class_id" });
+  Exam.belongsTo(ExamMaster, { foreignKey: "exam_master_id", as: "master" });
+
+  ExamMaster.hasMany(Exam, { foreignKey: "exam_master_id" });
+
+  Exam.hasMany(ExamSubject, { foreignKey: "exam_id", as: "exam_subjects", onDelete: "CASCADE" });
+  ExamSubject.belongsTo(Exam, { foreignKey: "exam_id" });
+  ExamSubject.belongsTo(Subject, { foreignKey: "subject_id" });
+
   Exam.hasMany(ReportCard, { foreignKey: "exam_id" });
 
   ReportCard.belongsTo(School, { foreignKey: "school_id" });
@@ -125,9 +134,12 @@ const initAssociations = () => {
   });
 
 
-  /* ==================== STUDENT ↔ PARENT ==================== */
-  Student.hasMany(Parent, { foreignKey: "student_id" });
-  Parent.belongsTo(Student, { foreignKey: "student_id" });
+  /* ==================== FAMILY / SIBLINGS ==================== */
+  School.hasMany(Family, { foreignKey: "school_id" });
+  Family.belongsTo(School, { foreignKey: "school_id" });
+
+  Family.hasMany(Student, { foreignKey: "family_id" });
+  Student.belongsTo(Family, { foreignKey: "family_id" });
 
   /* ==================== TEACHER CLASS SESSION ==================== */
   TeacherClassSession.belongsTo(School, { foreignKey: "school_id" });

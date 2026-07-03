@@ -3,7 +3,7 @@ import Section from "../sections/section.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import Subject from "../subjects/subject.model.js";
 import Class from "../classes/classes.model.js";
-import Parent from "../parents/parent.model.js";
+
 import Student from "../students/student.model.js";
 import AppError from "../../shared/appError.js";
 import { triggerHomeworkNotification } from "../notifications/notification-trigger.service.js";
@@ -94,17 +94,6 @@ export const listHomeworkService = async ({
   if (user?.role === "student") {
     where.class_id = user.class_id;
     where.section_id = user.section_id;
-  } else if (user?.role === "parent") {
-    const parent = await Parent.findOne({
-      where: { user_id: user.id },
-      include: [{ model: Student, attributes: ["class_id", "section_id"] }],
-    });
-    const student = parent?.student || parent?.Student;
-    if (!student) {
-      return { count: 0, rows: [] };
-    }
-    where.class_id = student.class_id;
-    where.section_id = student.section_id;
   } else if (user?.role === "teacher") {
     const assignments = await TeacherAssignment.findAll({
       where: {

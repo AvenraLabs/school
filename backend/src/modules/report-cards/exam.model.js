@@ -27,14 +27,10 @@ const Exam = db.define(
       allowNull: false,
     },
 
-    start_date: {
-      type: DataTypes.DATEONLY,
+    exam_master_id: {
+      type: DataTypes.BIGINT,
       allowNull: true,
-    },
-
-    end_date: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
+      references: { model: "exam_masters", key: "id" },
     },
 
     is_locked: {
@@ -50,6 +46,7 @@ const Exam = db.define(
       { fields: ["school_id"] },
       { fields: ["class_id"] },
       { unique: true, fields: ["school_id", "class_id", "name"] },
+      { unique: true, fields: ["school_id", "class_id", "exam_master_id"] },
     ],
   }
 );

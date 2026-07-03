@@ -6,7 +6,6 @@ import { validate } from "../../shared/middlewares/validate.js";
 import { attendanceAnalyticsQuerySchema } from "./attendance.analytics.schema.js";
 import {
   getTeacherAttendanceAnalytics,
-  getParentAttendanceAnalytics,
 } from "./attendance.analytics.controller.js";
 
 const router = express.Router();
@@ -22,15 +21,6 @@ router.get(
   getTeacherAttendanceAnalytics
 );
 
-/* =========================
-   PARENT
-========================= */
-router.get(
-  "/parents/attendance/analytics",
-  protect,
-  allowRoles("parent"),
-  validate(attendanceAnalyticsQuerySchema),
-  getParentAttendanceAnalytics
-);
+
 
 export default router;

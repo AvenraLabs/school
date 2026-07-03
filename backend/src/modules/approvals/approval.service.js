@@ -4,7 +4,6 @@ import AppError from "../../shared/appError.js";
 
 import Student from "../students/student.model.js";
 import Teacher from "../teachers/teacher.model.js";
-import Parent from "../parents/parent.model.js";
 import User from "../users/user.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import Class from "../classes/classes.model.js";
@@ -129,53 +128,9 @@ export const getPendingTeacherApprovalsService = async ({
   });
 };
 
-/* =========================
-   ADMIN: PARENT PENDING
- ========================= */
-export const getPendingParentApprovalsService = async ({
-  school_id,
-  user,
-  query,
-}) => {
-  const scopedSchoolId = resolveSchoolId(school_id, user);
-  const { limit, offset } = getPagination(query);
-  const safeQuery = query || {};
-  const { from_date, to_date } = safeQuery;
-
-  const where = {
-    approval_status: "pending",
-  };
-
-  if (from_date || to_date) {
-    where.created_at = {};
-    if (from_date) where.created_at[Op.gte] = new Date(from_date);
-    if (to_date) where.created_at[Op.lte] = new Date(to_date);
-  }
-
-  return Parent.findAndCountAll({
-    where,
-    include: [
-      {
-        model: User,
-        required: true,
-        where: { school_id: scopedSchoolId },
-        attributes: ["id", "name", "username", "email", "phone", "avatar_url"],
-      },
-      {
-        model: Student,
-        include: [
-          { model: User, attributes: ["id", "name", "username"] },
-          { model: Class, attributes: ["id", "class_name"] },
-          { model: Section, attributes: ["id", "name"] },
-        ],
-      },
-    ],
-    limit,
-    offset,
-    distinct: true,
-    order: [["created_at", "DESC"]],
-  });
-};
+/* =========================================
+   NOTHING - parent approvals removed
+========================================= */
 
 /* =========================
    ACTION: APPROVE / REJECT
@@ -202,17 +157,13 @@ export const processApprovalAction = async ({
   let Model;
   if (normalizedType === "student") Model = Student;
   else if (normalizedType === "teacher") Model = Teacher;
-  else if (normalizedType === "parent") Model = Parent;
   else throw new AppError("Invalid approval type", 400);
 
   // 3. Find Entity
-  const include =
-    normalizedType === "parent" ? [{ model: User, attributes: ["school_id"] }] : undefined;
-  const entity = await Model.findByPk(id, include ? { include } : undefined);
+  const entity = await Model.findByPk(id);
   if (!entity) throw new AppError("Entity not found", 404);
 
-  const entitySchoolId =
-    normalizedType === "parent" ? (entity.user ?? entity.User)?.school_id : entity.school_id;
+  const entitySchoolId = entity.school_id;
 
   // 4. Permission Check (CRITICAL)
   if (user.role === "teacher") {

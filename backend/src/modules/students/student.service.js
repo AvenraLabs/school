@@ -2,11 +2,11 @@ import User from "../users/user.model.js";
 import Student from "./student.model.js";
 import Class from "../classes/classes.model.js";
 import Section from "../sections/section.model.js";
-import Parent from "../parents/parent.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import db from "../../config/db.js";
+import { autoLinkFamilyByPhone } from "./family.service.js";
 
 /* =========================
    ADMIN:  CREATE STDUENT
@@ -24,6 +24,7 @@ export const createStudentService = async ({
   father_name,
   mother_name,
   guardian_name,
+  guardian_phone,
   address,
   aadhar_no,
   father_occupation,
@@ -111,6 +112,7 @@ export const createStudentService = async ({
         father_name: father_name || null,
         mother_name: mother_name || null,
         guardian_name: guardian_name || null,
+        guardian_phone: guardian_phone || null,
         address: address || null,
         blood_group: blood_group || null,
         aadhar_no: aadhar_no || null,
@@ -123,30 +125,18 @@ export const createStudentService = async ({
       { transaction: t }
     );
 
-    const parentUsername = `PAR-${school_id}-${student.id}`;
-    const parentPassword = `${parentUsername}@123`;
-    const parentUser = await User.create(
-      {
-        role: "parent",
+    // Auto-link to existing family (or create one) by guardian_phone
+    if (guardian_phone) {
+      await autoLinkFamilyByPhone({
         school_id,
-        username: parentUsername,
-        password: parentPassword,
-        first_login: true,
-        is_active: true,
-        name: father_name || mother_name || guardian_name || `Parent of ${user.name}`,
-      },
-      { transaction: t }
-    );
-
-    await Parent.create(
-      {
-        user_id: parentUser.id,
+        guardian_phone,
         student_id: student.id,
-        relation_type: father_name ? "father" : mother_name ? "mother" : "guardian",
-        approval_status: "pending",
-      },
-      { transaction: t }
-    );
+        father_name,
+        mother_name,
+        address,
+        transaction: t,
+      });
+    }
 
     /**
      * 6️⃣ Return credential response for UI display
@@ -159,9 +149,6 @@ export const createStudentService = async ({
       section_id,
       admission_no: student.admission_no,
       password_hint: "username@123",
-      parent_username: parentUsername,
-      parent_password: parentPassword,
-      parent_password_hint: "username@123",
     };
   });
 };

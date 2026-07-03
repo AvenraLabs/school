@@ -19,9 +19,13 @@ import {
   EmojiEvents, 
   ArrowBack, 
   Book, 
-  Message,
-  School
+  Message
 } from "@mui/icons-material";
+
+const getExamName = (exam) => exam?.name || exam?.master?.name || exam?.exam_master?.name || "Exam Report";
+const getExamSlots = (exam) => [...(exam?.exam_subjects || exam?.examSubjects || [])]
+  .sort((a, b) => String(a.exam_date || '').localeCompare(String(b.exam_date || '')));
+const getSlotForMark = (exam, mark) => getExamSlots(exam).find((slot) => Number(slot.subject_id) === Number(mark.subject_id));
 
 export default function ReportCardPage() {
   const { id } = useParams();
@@ -67,7 +71,8 @@ export default function ReportCardPage() {
   const gradeInfo = getGrade(percentage);
 
   const studentName = rc.student?.user?.name || rc.Student?.User?.name || "Student";
-  const examName = rc.exam?.name || rc.Exam?.name || "Exam Report";
+  const exam = rc.exam || rc.Exam;
+  const examName = getExamName(exam);
 
   return (
     <Container maxWidth="sm" sx={{ mt: 3, mb: 6, px: 2 }}>
@@ -150,7 +155,8 @@ export default function ReportCardPage() {
           </Typography>
           <Stack spacing={1.5}>
             {marksList.map((m) => {
-              const subName = m.subject?.name || `Subject #${m.subject_id}`;
+              const slot = getSlotForMark(exam, m);
+              const subName = m.subject?.name || slot?.subject?.name || `Subject #${m.subject_id}`;
               const subPercentage = m.max_marks > 0 ? (m.marks_obtained / m.max_marks) * 100 : 0;
               const subGrade = getGrade(subPercentage);
 
@@ -200,6 +206,12 @@ export default function ReportCardPage() {
                       } 
                     }} 
                   />
+                  {slot && (
+                    <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary', fontSize: '0.72rem' }}>
+                      Date: {new Date(slot.exam_date).toLocaleDateString()}
+                      {slot.syllabus ? ` • Syllabus: ${slot.syllabus}` : ''}
+                    </Typography>
+                  )}
                 </Paper>
               );
             })}

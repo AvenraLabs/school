@@ -1,6 +1,8 @@
 import ReportCard from "./report-card.model.js";
 import ReportCardMark from "./report-card-mark.model.js";
 import Exam from "./exam.model.js";
+import ExamMaster from "./exam-master.model.js";
+import ExamSubject from "./exam-subject.model.js";
 import Student from "../students/student.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import { triggerReportCardNotification } from "../notifications/notification-trigger.service.js";
@@ -79,6 +81,21 @@ export const saveReportCardMarksService = async ({
     const exam = await Exam.findByPk(reportCard.exam_id, { transaction: t });
     if (exam?.is_locked) throw new AppError("EXAM_LOCKED", 400);
 
+    const scheduledSubjects = await ExamSubject.findAll({
+      where: { exam_id: reportCard.exam_id },
+      attributes: ["subject_id"],
+      transaction: t,
+    });
+    const scheduledSubjectIds = new Set(
+      scheduledSubjects.map((subject) => Number(subject.subject_id))
+    );
+    const invalidMark = marks.find(
+      (mark) => !scheduledSubjectIds.has(Number(mark.subject_id))
+    );
+    if (invalidMark) {
+      throw new AppError("SUBJECT_NOT_SCHEDULED_FOR_EXAM", 400);
+    }
+
     // Permission check for teachers
     if (user.role === "teacher") {
       const assignment = await TeacherAssignment.findOne({
@@ -136,7 +153,9 @@ export const publishReportCardService = async ({
 
   if (reportCard.published_at) throw new AppError("ALREADY_PUBLISHED", 400);
 
-  const exam = await Exam.findByPk(reportCard.exam_id);
+  const exam = await Exam.findByPk(reportCard.exam_id, {
+    include: [{ model: ExamMaster, as: "master", attributes: ["id", "name"] }],
+  });
   if (exam?.is_locked) throw new AppError("EXAM_LOCKED", 400);
 
   // Permission check for teachers
@@ -165,7 +184,7 @@ export const publishReportCardService = async ({
       school_id: student.school_id,
       teacher_user_id: user.id,
       student_name: (student.user ?? student.User)?.name ?? "Student",
-      exam_name: exam?.name || "Exam",
+      exam_name: exam?.name || exam?.master?.name || "Exam",
       class_id: student.class_id,
       section_id: student.section_id,
     });
@@ -191,6 +210,15 @@ export const getReportCardService = async ({ report_card_id }) => {
       },
       {
         model: Exam,
+        attributes: ["id", "name", "createdAt", "is_locked"],
+        include: [
+          { model: ExamMaster, as: "master", attributes: ["id", "name"] },
+          {
+            model: ExamSubject,
+            as: "exam_subjects",
+            include: [{ model: Subject, attributes: ["id", "name"] }],
+          },
+        ],
       },
       {
         model: Student,
@@ -211,7 +239,15 @@ export const listReportCardsService = async ({ student_id, school_id }) => {
     include: [
       {
         model: Exam,
-        attributes: ["id", "name", "start_date", "end_date"],
+        include: [
+          { model: ExamMaster, as: "master", attributes: ["id", "name"] },
+          {
+            model: ExamSubject,
+            as: "exam_subjects",
+            include: [{ model: Subject, attributes: ["id", "name"] }],
+          },
+        ],
+        attributes: ["id", "name", "createdAt", "is_locked"],
       },
       {
         model: ReportCardMark,
@@ -223,7 +259,7 @@ export const listReportCardsService = async ({ student_id, school_id }) => {
         ],
       },
     ],
-    order: [[Exam, "start_date", "DESC"]],
+    order: [[Exam, "createdAt", "DESC"]],
   }));
 };
 
@@ -233,6 +269,19 @@ export const getAcademicReportCardsService = async ({ school_id, class_id, exam_
     include: [
       {
         model: ReportCardMark,
+        include: [{ model: Subject, attributes: ["id", "name"] }],
+      },
+      {
+        model: Exam,
+        attributes: ["id", "name", "createdAt", "is_locked"],
+        include: [
+          { model: ExamMaster, as: "master", attributes: ["id", "name"] },
+          {
+            model: ExamSubject,
+            as: "exam_subjects",
+            include: [{ model: Subject, attributes: ["id", "name"] }],
+          },
+        ],
       },
     ],
   });

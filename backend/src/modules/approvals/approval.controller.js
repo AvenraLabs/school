@@ -1,7 +1,6 @@
 import {
   getPendingStudentApprovalsService,
   getPendingTeacherApprovalsService,
-  getPendingParentApprovalsService,
 } from "./approval.service.js";
 
 /* =========================
@@ -42,20 +41,6 @@ export const getAdminPendingApprovals = async (req, res, next) => {
           responseData.teachers = {
             total: teachers.count,
             items: teachers.rows,
-          };
-        })
-      );
-    }
-
-    if (!type || type === "parent") {
-      promises.push(
-        getPendingParentApprovalsService({
-          user: req.user,
-          query: req.query,
-        }).then((parents) => {
-          responseData.parents = {
-            total: parents.count,
-            items: parents.rows,
           };
         })
       );

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { bulkAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { generateBulkCredentialsPDF } from '../../utils/pdfGenerator';
@@ -34,6 +35,7 @@ const emptyClass = () => ({ name: '', sections: [emptySection()] });
 const emptySection = () => ({ name: '', students: '' });
 
 export function BulkSeeder() {
+  const navigate = useNavigate();
   const [classes, setClasses] = useState([emptyClass()]);
   const [teacherCount, setTeacherCount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -94,7 +96,6 @@ export function BulkSeeder() {
       { label: 'Sections',  val: s.sections_created, icon: BookOpen,     c: '#7c3aed', bg: '#f5f3ff' },
       { label: 'Students',  val: s.students_created, icon: GraduationCap,c: '#16a34a', bg: '#f0fdf4' },
       { label: 'Teachers',  val: s.teachers_created, icon: UserCog,      c: '#0284c7', bg: '#f0f9ff' },
-      { label: 'Parents',   val: s.parents_created,  icon: Users,        c: '#d97706', bg: '#fffbeb' },
     ].filter(i => i.val != null);
 
     return (
@@ -120,8 +121,8 @@ export function BulkSeeder() {
         </div>
 
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button style={{ ...btnPrimary, flex: 1 }} onClick={() => { generateBulkCredentialsPDF(result); toast.success('PDF downloaded'); }}>
-            <Download style={{ width: '16px', height: '16px' }} /> Download Credentials PDF
+          <button style={{ ...btnPrimary, flex: 1 }} onClick={() => navigate('/admin/login-roster')}>
+             View Login Roster
           </button>
           <button style={btnSecondary} onClick={() => { setResult(null); setClasses([emptyClass()]); setTeacherCount(''); }}>Reset</button>
         </div>
@@ -134,7 +135,6 @@ export function BulkSeeder() {
     { label: 'Sections',     val: totalSections,  icon: BookOpen,      c: '#7c3aed' },
     { label: 'Students',     val: totalStudents,  icon: GraduationCap, c: '#16a34a' },
     { label: 'Teachers',     val: tc,             icon: UserCog,       c: '#0284c7' },
-    { label: 'Parents (auto)',val: totalStudents,  icon: Users,         c: '#d97706' },
   ];
 
   return (
@@ -142,7 +142,6 @@ export function BulkSeeder() {
       {/* Header */}
       <div style={{ marginBottom: '28px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a' }}>Bulk Setup</h1>
-        <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '4px' }}>Create classes, sections, students and teachers in one go</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px', alignItems: 'start' }}>
@@ -175,7 +174,7 @@ export function BulkSeeder() {
                     style={{ ...input, flex: 1, background: 'transparent', border: 'none', height: '32px', padding: '0', fontWeight: 600, fontSize: '14px' }}
                     value={cls.name}
                     onChange={e => updateClass(ci, e.target.value)}
-                    placeholder="Enter class name (e.g. Class 6)"
+                    placeholder="Enter class name"
                   />
                   <button
                     style={iconBtn}
@@ -192,14 +191,14 @@ export function BulkSeeder() {
                 <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {cls.sections.map((sec, si) => (
                     <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '12px', color: '#94a3b8', width: '52px', flexShrink: 0 }}>Section</span>
+                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94a3b8', whiteSpace: 'nowrap', flexShrink: 0 }}>Section Name</span>
                       <input
                         style={{ ...input, width: '80px', textAlign: 'center', fontWeight: 600 }}
                         value={sec.name}
                         onChange={e => updateSection(ci, si, 'name', e.target.value)}
                         placeholder="A"
                       />
-                      <span style={{ fontSize: '12px', color: '#94a3b8', flexShrink: 0 }}>Students</span>
+                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94a3b8', flexShrink: 0, whiteSpace: 'nowrap' }}>Total Students</span>
                       <input
                         style={{ ...input, width: '90px', textAlign: 'center' }}
                         type="number" min="1" max="200"
@@ -234,8 +233,7 @@ export function BulkSeeder() {
                 <Users style={{ width: '18px', height: '18px' }} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>Teachers to create</div>
-                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Auto-generated credentials</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>Total Teachers</div>
               </div>
               <input
                 style={{ ...input, width: '90px', textAlign: 'center', fontWeight: 600 }}
@@ -266,7 +264,7 @@ export function BulkSeeder() {
 
           <div style={{ background: '#eef2ff', borderRadius: '10px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <span style={{ fontSize: '13px', fontWeight: 600, color: '#3730a3' }}>Total accounts</span>
-            <span style={{ fontSize: '18px', fontWeight: 800, color: '#4f46e5' }}>{(totalStudents * 2 + tc).toLocaleString()}</span>
+            <span style={{ fontSize: '18px', fontWeight: 800, color: '#4f46e5' }}>{(totalStudents + tc).toLocaleString()}</span>
           </div>
 
           <button style={{ ...btnPrimary, width: '100%' }} onClick={handleSubmit} disabled={loading || classes.length === 0}>

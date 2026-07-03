@@ -10,6 +10,7 @@ import { Notifications } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../modules/notifications/useNotifications";
+import SiblingSelector from "./SiblingSelector";
 
 export default function AppHeader() {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ export default function AppHeader() {
       ? "/student"
       : user?.role === "teacher"
         ? "/teacher"
-        : "/parent";
+        : "/student";
 
   function handleProfileClick() {
     if (!user) return;
@@ -32,10 +33,6 @@ export default function AppHeader() {
     }
     if (user.role === "student") {
       window.dispatchEvent(new Event("toggle-student-sidebar"));
-      return;
-    }
-    if (user.role === "parent") {
-      window.dispatchEvent(new Event("toggle-parent-sidebar"));
       return;
     }
     navigate(`${basePath}/profile`);
@@ -49,6 +46,7 @@ export default function AppHeader() {
         </Typography>
         {user && (
           <>
+            <SiblingSelector />
             <IconButton
               size="small"
               onClick={() => navigate(`${basePath}/notifications`)}

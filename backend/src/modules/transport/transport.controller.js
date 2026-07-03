@@ -235,11 +235,11 @@ export const postLocation = asyncHandler(async (req, res) => {
 });
 
 /* ==========================================
-   3️⃣ PARENT ONLY
+   3️⃣ STUDENT LIVE GPS & REQUESTS
    ========================================== */
 
-export const getParentStudentTransport = asyncHandler(async (req, res) => {
-  const result = await service.getParentStudentTransportService({
+export const getStudentTransport = asyncHandler(async (req, res) => {
+  const result = await service.getStudentTransportService({
     school_id: req.user.school_id,
     student_id: Number(req.params.student_id),
   });
@@ -249,8 +249,8 @@ export const getParentStudentTransport = asyncHandler(async (req, res) => {
   });
 });
 
-export const getParentTripLocation = asyncHandler(async (req, res) => {
-  const result = await service.getParentTripLocationService({
+export const getStudentTripLocation = asyncHandler(async (req, res) => {
+  const result = await service.getStudentTripLocationService({
     school_id: req.user.school_id,
     trip_id: Number(req.params.id),
   });
@@ -322,7 +322,7 @@ export const listTrips = asyncHandler(async (req, res) => {
   });
 });
 
-export const getParentVehicles = asyncHandler(async (req, res) => {
+export const getStudentVehicles = asyncHandler(async (req, res) => {
   const result = await service.listVehiclesService({
     school_id: req.user.school_id,
     query: { limit: 100 },

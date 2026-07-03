@@ -38,7 +38,7 @@ export function generateBulkCredentialsPDF(summary) {
     if (s.sections_created != null) { doc.text(`Sections Created: ${s.sections_created}`, 14, y); y += 5; }
     if (s.students_created != null) { doc.text(`Students Created: ${s.students_created}`, 14, y); y += 5; }
     if (s.teachers_created != null) { doc.text(`Teachers Created: ${s.teachers_created}`, 14, y); y += 5; }
-    if (s.parents_created != null) { doc.text(`Parents Created: ${s.parents_created}`, 14, y); y += 5; }
+
   }
 
   // Helper: check page break
@@ -116,36 +116,6 @@ export function generateBulkCredentialsPDF(summary) {
     });
   }
 
-  // Parents section
-  if (summary.parents && summary.parents.length > 0) {
-    y += 8;
-    checkPage(30);
-    doc.setDrawColor(200);
-    doc.line(14, y, pageWidth - 14, y);
-    y += 8;
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Parent Credentials', 14, y);
-    y += 8;
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setFillColor(245, 245, 245);
-    doc.rect(14, y - 4, pageWidth - 28, 7, 'F');
-    doc.text('Username', 16, y);
-    doc.text('Password', 80, y);
-    doc.text('Student', 140, y);
-    y += 8;
-
-    doc.setFont('helvetica', 'normal');
-    summary.parents.forEach((p) => {
-      checkPage();
-      doc.text(p.username || '—', 16, y);
-      doc.text(p.password_hint || `${p.username}@123`, 80, y);
-      doc.text(p.student_name || '—', 140, y);
-      y += 6;
-    });
-  }
 
   // Footer on every page
   const totalPages = doc.getNumberOfPages();
@@ -290,22 +260,16 @@ export function generateRosterPDF(data, filterLabel = '') {
             doc.text('Username', 28, y);
             doc.text('Password', 72, y);
             doc.text('Name', 116, y);
-            doc.text('Parent Username', 148, y);
-            doc.text('Parent Password', 182, y);
             y += 7;
 
             doc.setFont('helvetica', 'normal');
             sec.students.forEach((s) => {
               checkPage();
               const username = s.user?.username || s.username || '';
-              const parent = s.Parents?.[0] || s.parents?.[0];
-              const parentUsername = parent?.User?.username || parent?.user?.username || '';
               doc.text(String(s.roll_no || '—'), 16, y);
               doc.text(username || '—', 28, y);
               doc.text(username ? `${username}@123` : '—', 72, y);
               doc.text((s.user?.name || s.name || '—').substring(0, 18), 116, y);
-              doc.text(parentUsername || '—', 148, y);
-              doc.text(parentUsername ? `${parentUsername}@123` : '—', 182, y);
               y += 6;
             });
           }

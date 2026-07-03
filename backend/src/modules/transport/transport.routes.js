@@ -156,31 +156,31 @@ router.post(
 );
 
 /* ==========================================
-   3️⃣ PARENT ONLY: LIVE GPS & REQUESTS
+   3️⃣ STUDENT: LIVE GPS & REQUESTS
    ========================================== */
 router.get(
-  "/parent/transport/students/:student_id",
-  allowRoles("parent"),
-  controller.getParentStudentTransport
+  "/student/transport/students/:student_id",
+  allowRoles("student", "school_admin"),
+  controller.getStudentTransport
 );
 
 router.get(
-  "/parent/transport/trips/:id/location",
-  allowRoles("parent", "school_admin"),
-  controller.getParentTripLocation
+  "/student/transport/trips/:id/location",
+  allowRoles("student", "school_admin"),
+  controller.getStudentTripLocation
 );
 
 router.post(
-  "/parent/transport/requests",
-  allowRoles("parent"),
+  "/student/transport/requests",
+  allowRoles("student"),
   validate(schema.createRequestSchema),
   controller.createRequest
 );
 
 router.get(
-  "/parent/transport/vehicles",
-  allowRoles("parent"),
-  controller.getParentVehicles
+  "/student/transport/vehicles",
+  allowRoles("student"),
+  controller.getStudentVehicles
 );
 
 /* ==========================================

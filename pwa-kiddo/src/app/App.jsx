@@ -4,7 +4,6 @@ import { ErrorBoundary } from "react-error-boundary";
 import Login from "../pages/Login";
 import StudentApp from "../pages/StudentApp";
 import TeacherApp from "../pages/TeacherApp";
-import ParentApp from "../pages/ParentApp";
 import DriverApp from "../pages/DriverApp";
 import NotAuthorized from "../pages/NotAuthorized";
 
@@ -70,21 +69,6 @@ export default function App() {
                 <RequireRole roles={["teacher"]}>
                   <RequireApproval>
                     <TeacherApp />
-                  </RequireApproval>
-                </RequireRole>
-              </ForceProfileCompletion>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/parent/*"
-          element={
-            <RequireAuth>
-              <ForceProfileCompletion>
-                <RequireRole roles={["parent"]}>
-                  <RequireApproval>
-                    <ParentApp />
                   </RequireApproval>
                 </RequireRole>
               </ForceProfileCompletion>

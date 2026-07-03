@@ -51,7 +51,7 @@ export const listNotificationsForUserService = async ({
   if (user_role !== "school_admin") {
     const audienceFilter = { target_role: { [Op.in]: [user_role, "all"] } };
 
-    // Teachers should also see notifications they created (even if targeted to students/parents)
+    // Teachers should also see notifications they created (even if targeted to students)
     const audienceOrCreator =
       user_role === "teacher"
         ? { [Op.or]: [audienceFilter, { sender_user_id: user_id }] }

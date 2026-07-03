@@ -1,6 +1,6 @@
 import { Op, fn, col, literal } from "sequelize";
 import Attendance from "./attendance.model.js";
-import Parent from "../parents/parent.model.js";
+
 import AppError from "../../shared/appError.js";
 import TeacherClassSession from "../teacher-class-sessions/teacher-class-session.model.js";
 
@@ -65,61 +65,3 @@ export const getTeacherAttendanceAnalyticsService = async ({
   });
 };
 
-/* =========================
-   PARENT: ANALYTICS
-========================= */
-export const getParentAttendanceAnalyticsService = async ({
-  parent_user_id,
-  query,
-}) => {
-  const { from_date, to_date } = query || {};
-
-  const links = await Parent.findAll({
-    where: {
-      user_id: parent_user_id,
-      approval_status: "approved",
-    },
-    attributes: ["student_id"],
-  });
-
-  const studentIds = links.map((l) => l.student_id);
-  if (!studentIds.length) return [];
-
-  const where = {
-    student_id: studentIds,
-  };
-
-  if (from_date || to_date) {
-    where.date = {};
-    if (from_date) where.date[Op.gte] = from_date;
-    if (to_date) where.date[Op.lte] = to_date;
-  }
-
-  const stats = await Attendance.findAll({
-    where,
-    attributes: [
-      "student_id",
-      [fn("COUNT", col("id")), "total_days"],
-      [fn("SUM", literal(`CASE WHEN status = 'present' THEN 1 ELSE 0 END`)), "present_days"],
-      [fn("SUM", literal(`CASE WHEN status = 'absent' THEN 1 ELSE 0 END`)), "absent_days"],
-      [fn("SUM", literal(`CASE WHEN status = 'leave' THEN 1 ELSE 0 END`)), "leave_days"],
-    ],
-    group: ["student_id"],
-  });
-
-  return stats.map((row) => {
-    const total = Number(row.get("total_days"));
-    const present = Number(row.get("present_days"));
-
-    return {
-      student_id: row.student_id,
-      total_days: total,
-      present_days: present,
-      absent_days: Number(row.get("absent_days")),
-      leave_days: Number(row.get("leave_days")),
-      attendance_percentage: total
-        ? Number(((present / total) * 100).toFixed(2))
-        : 0,
-    };
-  });
-};

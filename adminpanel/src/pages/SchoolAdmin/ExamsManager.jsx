@@ -1,34 +1,96 @@
-import React, { useState, useEffect } from 'react';
-import { examsAPI, classesAPI } from '../../api';
+import React, { useEffect, useMemo, useState } from 'react';
+import { examsAPI, classesAPI, subjectsAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
-import { StatusBadge } from '../../components/common/StatusBadge';
 import { useToast } from '../../context/ToastContext';
-import { FileText, Plus, Lock, Unlock } from 'lucide-react';
+import {
+  BookOpen,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  FileText,
+  Lock,
+  Pencil,
+  Plus,
+  Trash2,
+  Unlock,
+} from 'lucide-react';
+import './ExamsManager.css';
+
+const getExamName = (exam) => exam?.name || exam?.master?.name || exam?.exam_master?.name || `Exam #${exam?.id}`;
+const getSubjectSlots = (exam) => [...(exam?.exam_subjects || exam?.examSubjects || [])]
+  .sort((a, b) => String(a.exam_date || '').localeCompare(String(b.exam_date || '')));
+const getSubjectName = (slot) => slot?.subject?.name || slot?.Subject?.name || `Subject #${slot?.subject_id}`;
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '—');
 
 export function ExamsManager() {
-  const [exams, setExams] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [exams, setExams] = useState([]);
+  const [scheduleExams, setScheduleExams] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ class_id: '', name: '', start_date: '', end_date: '' });
+  const [showCreateExam, setShowCreateExam] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [createForm, setCreateForm] = useState({ class_id: '', name: '' });
+  const [scheduleForm, setScheduleForm] = useState({
+    class_id: '',
+    exam_id: '',
+    subject_id: '',
+    exam_date: '',
+    syllabus: '',
+  });
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
-  useEffect(() => { loadClasses(); }, []);
-  useEffect(() => { if (selectedClass) loadExams(); }, [selectedClass]);
+  useEffect(() => {
+    loadClasses();
+    loadSubjects();
+  }, []);
+
+  useEffect(() => {
+    if (selectedClass) {
+      loadExams(selectedClass);
+    } else {
+      setExams([]);
+    }
+  }, [selectedClass]);
+
+  useEffect(() => {
+    if (scheduleForm.class_id) {
+      loadScheduleExams(scheduleForm.class_id);
+    } else {
+      setScheduleExams([]);
+    }
+  }, [scheduleForm.class_id]);
+
+  const selectedClassName = useMemo(
+    () => classes.find((item) => String(item.id) === String(selectedClass))?.class_name || '',
+    [classes, selectedClass]
+  );
 
   const loadClasses = async () => {
     try {
       const res = await classesAPI.list();
       setClasses(res.items || []);
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      toast.error('Failed to load classes');
+    }
   };
 
-  const loadExams = async () => {
+  const loadSubjects = async () => {
+    try {
+      const res = await subjectsAPI.list();
+      setSubjects(res.items || []);
+    } catch (e) {
+      toast.error('Failed to load subjects');
+    }
+  };
+
+  const loadExams = async (classId = selectedClass) => {
+    if (!classId) return;
     setLoading(true);
     try {
-      const res = await examsAPI.list(Number(selectedClass));
+      const res = await examsAPI.list(Number(classId));
       setExams(res.items || []);
     } catch (e) {
       toast.error('Failed to load exams');
@@ -37,16 +99,66 @@ export function ExamsManager() {
     }
   };
 
-  const handleCreate = async (e) => {
-    e.preventDefault();
+  const loadScheduleExams = async (classId) => {
+    try {
+      const res = await examsAPI.list(Number(classId));
+      setScheduleExams(res.items || []);
+      if (scheduleForm.exam_id && !(res.items || []).some((exam) => String(exam.id) === String(scheduleForm.exam_id))) {
+        setScheduleForm((prev) => ({ ...prev, exam_id: '' }));
+      }
+    } catch (e) {
+      setScheduleExams([]);
+      toast.error('Failed to load exams for this class');
+    }
+  };
+
+  const openCreateExam = () => {
+    setCreateForm({ class_id: selectedClass || '', name: '' });
+    setShowCreateExam(true);
+  };
+
+  const openSchedule = (exam = null, slot = null) => {
+    setScheduleForm({
+      class_id: exam?.class_id || selectedClass || '',
+      exam_id: exam?.id || '',
+      subject_id: slot?.subject_id || '',
+      exam_date: slot?.exam_date || '',
+      syllabus: slot?.syllabus || '',
+    });
+    setShowSchedule(true);
+  };
+
+  const handleCreateExam = async (event) => {
+    event.preventDefault();
     setSaving(true);
     try {
-      await examsAPI.create(Number(form.class_id), form.name, form.start_date || undefined, form.end_date || undefined);
-      toast.success('Exam created');
-      setShowCreate(false);
-      if (form.class_id === selectedClass) loadExams();
+      await examsAPI.create(Number(createForm.class_id), createForm.name.trim());
+      toast.success('Exam created for class');
+      setShowCreateExam(false);
+      if (String(createForm.class_id) === String(selectedClass)) await loadExams(createForm.class_id);
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed');
+      toast.error(e.response?.data?.message || 'Failed to create exam');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleScheduleSubject = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      await examsAPI.upsertSubject(
+        Number(scheduleForm.exam_id),
+        Number(scheduleForm.subject_id),
+        scheduleForm.exam_date,
+        scheduleForm.syllabus.trim() || null
+      );
+      toast.success('Test schedule saved');
+      setShowSchedule(false);
+      if (String(scheduleForm.class_id) === String(selectedClass)) await loadExams(scheduleForm.class_id);
+      await loadScheduleExams(scheduleForm.class_id);
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to save schedule');
     } finally {
       setSaving(false);
     }
@@ -56,95 +168,264 @@ export function ExamsManager() {
     try {
       await examsAPI.lock(exam.id, !exam.is_locked);
       toast.success(`Exam ${!exam.is_locked ? 'locked' : 'unlocked'}`);
-      loadExams();
+      await loadExams();
     } catch (e) {
-      toast.error('Failed');
+      toast.error(e.response?.data?.message || 'Failed to update exam');
+    }
+  };
+
+  const removeSubject = async (exam, slot) => {
+    try {
+      await examsAPI.removeSubject(exam.id, slot.subject_id);
+      toast.success('Subject schedule removed');
+      await loadExams();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to remove subject');
     }
   };
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="exams-page">
+      <div className="exams-header">
         <div>
-          <h1 className="page-title">Exams</h1>
-          <p className="page-subtitle">Create and manage exams</p>
+          <h1 className="exams-title">Exams</h1>
+          <p className="exams-subtitle">
+            Create exams per class, then schedule subject-wise tests with date and syllabus.
+          </p>
         </div>
-        <button onClick={() => { setShowCreate(true); setForm({ class_id: selectedClass || '', name: '', start_date: '', end_date: '' }); }} className="btn-primary">
-          <Plus className="w-4 h-4" /> Create Exam
-        </button>
+        <div className="exams-header-actions">
+          <button type="button" onClick={openCreateExam} className="exam-btn exam-btn-primary">
+            <Plus size={16} /> Create Exam
+          </button>
+          <button type="button" onClick={() => openSchedule()} className="exam-btn exam-btn-secondary">
+            <CalendarDays size={16} /> Schedule Test
+          </button>
+        </div>
       </div>
 
-      <div className="flex gap-3 mb-6">
-        <select className="select-field w-48" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
-          <option value="">Select Class</option>
-          {classes.map((c) => <option key={c.id} value={c.id}>{c.class_name}</option>)}
-        </select>
-      </div>
+      <section className="exam-toolbar">
+        <div>
+          <label className="exam-label">Class</label>
+          <select className="exam-select" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
+            <option value="">Select class</option>
+            {classes.map((item) => (
+              <option key={item.id} value={item.id}>{item.class_name}</option>
+            ))}
+          </select>
+        </div>
+        {selectedClassName && (
+          <div className="exam-toolbar-summary">
+            <CheckCircle2 size={18} />
+            <span>Viewing exams for <strong>{selectedClassName}</strong></span>
+          </div>
+        )}
+      </section>
 
       {!selectedClass ? (
-        <div className="card empty-state">
-          <FileText className="empty-state-icon" />
-          <p className="empty-state-title">Select a class</p>
-          <p className="empty-state-desc">Choose a class to view its exams</p>
+        <div className="exam-empty">
+          <FileText size={42} />
+          <h3>Select a class</h3>
+          <p>Choose a class to see exam cards and scheduled subject tests.</p>
         </div>
       ) : loading ? (
-        <div className="card p-8 text-center text-slate-400">Loading...</div>
+        <div className="exam-empty">
+          <ClipboardList size={42} />
+          <h3>Loading exams…</h3>
+          <p>Fetching class exam setup.</p>
+        </div>
+      ) : exams.length === 0 ? (
+        <div className="exam-empty">
+          <FileText size={42} />
+          <h3>No exams created</h3>
+          <p>Create an exam name for this class first, then schedule subject tests under it.</p>
+          <button type="button" onClick={openCreateExam} className="exam-btn exam-btn-primary">
+            <Plus size={16} /> Create first exam
+          </button>
+        </div>
       ) : (
-        <div className="card overflow-hidden">
-          {exams.length === 0 ? (
-            <div className="empty-state">
-              <FileText className="empty-state-icon" />
-              <p className="empty-state-title">No exams</p>
-            </div>
-          ) : (
-            <table className="data-table">
-              <thead><tr><th>Exam Name</th><th>Start Date</th><th>End Date</th><th>Status</th><th>Actions</th></tr></thead>
-              <tbody>
-                {exams.map((e) => (
-                  <tr key={e.id}>
-                    <td className="font-medium">{e.name}</td>
-                    <td>{e.start_date ? new Date(e.start_date).toLocaleDateString() : '—'}</td>
-                    <td>{e.end_date ? new Date(e.end_date).toLocaleDateString() : '—'}</td>
-                    <td><StatusBadge status={e.is_locked ? 'locked' : 'active'} /></td>
-                    <td>
-                      <button onClick={() => toggleLock(e)} className={`btn-sm ${e.is_locked ? 'btn-secondary' : 'btn-primary'}`}>
-                        {e.is_locked ? <><Unlock className="w-3.5 h-3.5" /> Unlock</> : <><Lock className="w-3.5 h-3.5" /> Lock</>}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        <div className="exam-card-grid">
+          {exams.map((exam) => {
+            const slots = getSubjectSlots(exam);
+            return (
+              <article key={exam.id} className="exam-card">
+                <div className="exam-card-top">
+                  <div className="exam-card-icon"><FileText size={22} /></div>
+                  <div className="exam-card-title-wrap">
+                    <h2>{getExamName(exam)}</h2>
+                    <p>{slots.length} scheduled subject{slots.length === 1 ? '' : 's'}</p>
+                  </div>
+                  <span className={`exam-status ${exam.is_locked ? 'exam-status-locked' : 'exam-status-active'}`}>
+                    {exam.is_locked ? 'Locked' : 'Active'}
+                  </span>
+                </div>
+
+                <div className="exam-schedule-list">
+                  {slots.length === 0 ? (
+                    <div className="exam-no-slots">
+                      <BookOpen size={20} />
+                      <span>No subject tests scheduled yet.</span>
+                    </div>
+                  ) : (
+                    slots.map((slot) => (
+                      <div key={slot.id || slot.subject_id} className="exam-slot-card">
+                        <div className="exam-slot-main">
+                          <div>
+                            <h3>{getSubjectName(slot)}</h3>
+                            <p><CalendarDays size={14} /> {formatDate(slot.exam_date)}</p>
+                          </div>
+                          {!exam.is_locked && (
+                            <div className="exam-slot-actions">
+                              <button type="button" onClick={() => openSchedule(exam, slot)} title="Edit schedule">
+                                <Pencil size={14} />
+                              </button>
+                              <button type="button" onClick={() => removeSubject(exam, slot)} title="Remove schedule">
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {slot.syllabus && (
+                          <div className="exam-syllabus">
+                            <span>Syllabus heading</span>
+                            <p>{slot.syllabus}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="exam-card-actions">
+                  <button type="button" onClick={() => openSchedule(exam)} disabled={exam.is_locked} className="exam-btn exam-btn-secondary">
+                    <Plus size={15} /> Add Subject Test
+                  </button>
+                  <button type="button" onClick={() => toggleLock(exam)} className="exam-btn exam-btn-ghost">
+                    {exam.is_locked ? <Unlock size={15} /> : <Lock size={15} />}
+                    {exam.is_locked ? 'Unlock' : 'Lock'}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
 
-      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Create Exam">
-        <form onSubmit={handleCreate} className="space-y-4">
+      <Modal isOpen={showCreateExam} onClose={() => setShowCreateExam(false)} title="Create Class Exam">
+        <form onSubmit={handleCreateExam} className="exam-modal-form">
           <div>
-            <label className="label">Class</label>
-            <select className="select-field" required value={form.class_id} onChange={(e) => setForm({ ...form, class_id: e.target.value })}>
+            <label className="exam-label">Class</label>
+            <select
+              className="exam-select"
+              required
+              value={createForm.class_id}
+              onChange={(e) => setCreateForm({ ...createForm, class_id: e.target.value })}
+            >
               <option value="">Select class</option>
-              {classes.map((c) => <option key={c.id} value={c.id}>{c.class_name}</option>)}
+              {classes.map((item) => (
+                <option key={item.id} value={item.id}>{item.class_name}</option>
+              ))}
             </select>
           </div>
           <div>
-            <label className="label">Exam Name</label>
-            <input className="input-field" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Mid-Term Exam" />
+            <label className="exam-label">Exam Name</label>
+            <input
+              className="exam-input"
+              required
+              value={createForm.name}
+              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              placeholder="e.g. Unit Test 1, Class Test, Half Yearly"
+            />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="exam-modal-actions">
+            <button type="button" onClick={() => setShowCreateExam(false)} className="exam-btn exam-btn-ghost">Cancel</button>
+            <button type="submit" disabled={saving || !createForm.name.trim()} className="exam-btn exam-btn-primary">
+              {saving ? 'Creating…' : 'Create Exam'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={showSchedule} onClose={() => setShowSchedule(false)} title="Schedule Subject Test">
+        <form onSubmit={handleScheduleSubject} className="exam-modal-form">
+          <div className="exam-form-grid">
             <div>
-              <label className="label">Start Date</label>
-              <input className="input-field" type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
+              <label className="exam-label">Class</label>
+              <select
+                className="exam-select"
+                required
+                value={scheduleForm.class_id}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, class_id: e.target.value, exam_id: '' })}
+              >
+                <option value="">Select class</option>
+                {classes.map((item) => (
+                  <option key={item.id} value={item.id}>{item.class_name}</option>
+                ))}
+              </select>
             </div>
             <div>
-              <label className="label">End Date</label>
-              <input className="input-field" type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+              <label className="exam-label">Exam</label>
+              <select
+                className="exam-select"
+                required
+                value={scheduleForm.exam_id}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, exam_id: e.target.value })}
+                disabled={!scheduleForm.class_id}
+              >
+                <option value="">Select exam</option>
+                {scheduleExams.map((exam) => (
+                  <option key={exam.id} value={exam.id}>{getExamName(exam)}</option>
+                ))}
+              </select>
             </div>
           </div>
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating...' : 'Create'}</button>
+
+          <div className="exam-form-grid">
+            <div>
+              <label className="exam-label">Subject</label>
+              <select
+                className="exam-select"
+                required
+                value={scheduleForm.subject_id}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, subject_id: e.target.value })}
+              >
+                <option value="">Select subject</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>{subject.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="exam-label">Exam Date</label>
+              <input
+                className="exam-input"
+                type="date"
+                required
+                value={scheduleForm.exam_date}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, exam_date: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="exam-label">Syllabus Heading</label>
+            <textarea
+              className="exam-textarea"
+              value={scheduleForm.syllabus}
+              onChange={(e) => setScheduleForm({ ...scheduleForm, syllabus: e.target.value })}
+              placeholder="e.g. Fractions and decimals, Chapter 3, Grammar: Tenses"
+              rows={3}
+            />
+          </div>
+
+          <div className="exam-modal-actions">
+            <button type="button" onClick={() => setShowSchedule(false)} className="exam-btn exam-btn-ghost">Cancel</button>
+            <button
+              type="submit"
+              disabled={saving || !scheduleForm.exam_id || !scheduleForm.subject_id || !scheduleForm.exam_date}
+              className="exam-btn exam-btn-primary"
+            >
+              {saving ? 'Saving…' : 'Save Schedule'}
+            </button>
           </div>
         </form>
       </Modal>

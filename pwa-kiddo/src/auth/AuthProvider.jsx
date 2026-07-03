@@ -35,7 +35,6 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // Validate token before using it
     if (!validateToken(storedToken)) {
       console.warn("Stored token is invalid, clearing session");
       localStorage.removeItem("token");
@@ -62,7 +61,6 @@ export function AuthProvider({ children }) {
     setupAxiosInterceptors({
       onLogout: logout,
       onTokenRefresh: (newToken) => {
-        // Future implementation for token refresh
         if (newToken && validateToken(newToken)) {
           const decoded = decodeToken(newToken);
           if (decoded && !isTokenExpired(decoded)) {
@@ -86,15 +84,11 @@ export function AuthProvider({ children }) {
         let res;
         if (user.role === "student") res = await api.get("/students/me");
         else if (user.role === "teacher") res = await api.get("/teachers/me");
-        else if (user.role === "parent") res = await api.get("/parents/parents/profile");
         else return;
 
         const data = res.data;
         const normalized = data?.user ? { ...data, ...data.user } : data;
-        const avatarUrl =
-          normalized?.avatar_url ||
-          normalized?.avatar ||
-          "";
+        const avatarUrl = normalized?.avatar_url || normalized?.avatar || "";
 
         if (!cancelled) {
           setUser((prev) => ({
@@ -123,25 +117,14 @@ export function AuthProvider({ children }) {
   function login(jwt) {
     try {
       setError(null);
-      
-      if (!jwt) {
-        throw new Error("No token provided");
-      }
 
-      if (!validateToken(jwt)) {
-        throw new Error("Invalid token format");
-      }
+      if (!jwt) throw new Error("No token provided");
+      if (!validateToken(jwt)) throw new Error("Invalid token format");
 
       const decoded = decodeToken(jwt);
 
-      if (!decoded || isTokenExpired(decoded)) {
-        throw new Error("Token is expired");
-      }
-
-      // Validate required fields
-      if (!decoded.id || !decoded.role) {
-        throw new Error("Token missing required fields");
-      }
+      if (!decoded || isTokenExpired(decoded)) throw new Error("Token is expired");
+      if (!decoded.id || !decoded.role) throw new Error("Token missing required fields");
 
       localStorage.setItem("token", jwt);
       setToken(jwt);
@@ -157,33 +140,22 @@ export function AuthProvider({ children }) {
   async function logout() {
     try {
       setError(null);
-      
-      // Call logout API if available
       await logoutApi();
     } catch (error) {
       console.warn("Logout API call failed:", error);
-      // Continue with local logout even if API call fails
     } finally {
-      // Always clear local state
       localStorage.removeItem("token");
       setToken(null);
       setUser(null);
     }
   }
 
-  // Token refresh function (for future use)
   async function refreshToken() {
     try {
       const currentToken = localStorage.getItem("token");
       if (!currentToken || !validateToken(currentToken)) {
         throw new Error("No valid token to refresh");
       }
-
-      // TODO: Implement when backend adds refresh endpoint
-      // const response = await refreshTokenApi(currentToken);
-      // return login(response.token);
-      
-      // For now, just validate current token
       const decoded = decodeToken(currentToken);
       if (decoded && !isTokenExpired(decoded)) {
         return decoded;
@@ -197,9 +169,21 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Switch to a sibling student account (no re-login)
+  async function switchStudent(targetStudentId) {
+    try {
+      const res = await api.post("/auth/switch-student", { target_student_id: targetStudentId });
+      const { token: newToken } = res.data;
+      return login(newToken);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Switch failed");
+      throw err;
+    }
+  }
+
   const value = {
-    user,                   // decoded JWT payload
-    token,                  // raw token
+    user,
+    token,
     isAuthenticated: !!user,
     loading,
     error,
@@ -207,6 +191,7 @@ export function AuthProvider({ children }) {
       setUser((prev) => (prev ? { ...prev, ...partial } : partial)),
     login,
     logout,
+    switchStudent,
     refreshToken,
     clearError: () => setError(null),
   };

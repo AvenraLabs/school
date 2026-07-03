@@ -155,14 +155,6 @@ export function SchoolAdminDashboard() {
       accent: '#10b981',
       bg: '#ecfdf5',
       hasApprovals: true
-    },
-    {
-      title: 'Parents',
-      key: 'parents',
-      icon: Users,
-      accent: '#f59e0b',
-      bg: '#fffbeb',
-      hasApprovals: true
     }
   ];
 
@@ -173,9 +165,6 @@ export function SchoolAdminDashboard() {
         <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
           {greeting}, {firstName} 👋
         </h1>
-        <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px' }}>
-          Here is the active registry status breakdown of your school.
-        </p>
       </div>
 
       {/* Grid containing the statistics */}

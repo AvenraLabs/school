@@ -17,7 +17,7 @@ export function StudentsManager() {
   const [showCreate, setShowCreate] = useState(false);
   const [showCredentials, setShowCredentials] = useState(null);
   const [showMove, setShowMove] = useState(null);
-  const [createForm, setCreateForm] = useState({ class_id: '', section_id: '' });
+  const [createForm, setCreateForm] = useState({ class_id: '', section_id: '', name: '', guardian_phone: '' });
   const [moveSection, setMoveSection] = useState('');
   const [saving, setSaving] = useState(false);
   const limit = 20;
@@ -50,7 +50,12 @@ export function StudentsManager() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await studentsAPI.create(Number(createForm.class_id), Number(createForm.section_id));
+      const res = await studentsAPI.create(
+        Number(createForm.class_id), 
+        Number(createForm.section_id),
+        createForm.name,
+        createForm.guardian_phone
+      );
       toast.success('Student created!');
       setShowCreate(false);
       const student = res.student || res.students?.[0];
@@ -101,7 +106,7 @@ export function StudentsManager() {
           <h1 className="page-title">Students</h1>
           <p className="page-subtitle">{total} students total</p>
         </div>
-        <button onClick={() => { setShowCreate(true); setCreateForm({ class_id: '', section_id: '' }); }} className="btn-primary">
+        <button onClick={() => { setShowCreate(true); setCreateForm({ class_id: '', section_id: '', name: '', guardian_phone: '' }); }} className="btn-primary">
           <Plus className="w-4 h-4" /> Create Student
         </button>
       </div>
@@ -135,7 +140,7 @@ export function StudentsManager() {
           <>
             <table className="data-table">
               <thead>
-                <tr><th>Roll No</th><th>Admission No</th><th>Username</th><th>Name</th><th>Class</th><th>Section</th><th>Status</th><th>Actions</th></tr>
+                <tr><th>Roll No</th><th>Admission No</th><th>Username</th><th>Name</th><th>Class</th><th>Section</th><th>Guardian Phone</th><th>Status</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {students.map((s) => (
@@ -146,6 +151,7 @@ export function StudentsManager() {
                     <td>{s.user?.name || '—'}</td>
                     <td>{s.class?.class_name || '—'}</td>
                     <td>{s.section?.name || '—'}</td>
+                    <td className="font-mono text-xs text-indigo-600">{s.guardian_phone || '—'}</td>
                     <td><StatusBadge status={s.is_active ? 'active' : 'inactive'} /></td>
                     <td>
                       <div className="flex items-center gap-1">
@@ -192,6 +198,14 @@ export function StudentsManager() {
                 <option key={s.id} value={s.id}>Section {s.name}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="label">Student Name (Optional)</label>
+            <input type="text" className="input-field" placeholder="Auto-generated if empty" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
+          </div>
+          <div>
+            <label className="label">Guardian Phone (Optional)</label>
+            <input type="text" className="input-field" placeholder="For Family Linking" value={createForm.guardian_phone} onChange={(e) => setCreateForm({ ...createForm, guardian_phone: e.target.value })} />
           </div>
           <div className="flex justify-end gap-3">
             <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button>

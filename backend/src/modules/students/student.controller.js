@@ -10,6 +10,7 @@ import {
   listStudentsForTeacherSectionService,
   listStudentOptionsService,
 } from "./student.service.js";
+import { getMySiblings } from "./family.controller.js";
 import Student from "./student.model.js";
 import User from "../users/user.model.js";
 
@@ -28,10 +29,14 @@ export const createStudent = asyncHandler(async (req, res) => {
     father_name: req.body.father_name,
     mother_name: req.body.mother_name,
     guardian_name: req.body.guardian_name,
+    guardian_phone: req.body.guardian_phone,
     address: req.body.address,
     aadhar_no: req.body.aadhar_no,
     father_occupation: req.body.father_occupation,
     mother_occupation: req.body.mother_occupation,
+    guardian_occupation: req.body.guardian_occupation,
+    emergency_contact: req.body.emergency_contact,
+    residential_status: req.body.residential_status,
     family_income: req.body.family_income,
     admission_no: req.body.admission_no,
   });
@@ -89,6 +94,9 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     guardian_name,
     father_occupation,
     mother_occupation,
+    guardian_occupation,
+    emergency_contact,
+    residential_status,
     address,
     family_income,
     avatar_url,
@@ -135,6 +143,9 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     guardian_name,
     father_occupation,
     mother_occupation,
+    guardian_occupation,
+    emergency_contact,
+    residential_status,
     address,
     family_income,
     approval_status: "pending",

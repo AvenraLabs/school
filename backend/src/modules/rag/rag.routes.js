@@ -5,7 +5,7 @@ import { ragRateLimit } from "../../shared/middlewares/rateLimit.js";
 
 const router = express.Router();
 
-// student / teacher / parent can all use this
+// student / teacher can all use this
 router.post("/ask", ragRateLimit, protect, askQuestion);
 
 

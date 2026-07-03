@@ -19,7 +19,7 @@ export const saveTimetable = asyncHandler(async (req, res) => {
   });
 });
 
-/* STUDENT / PARENT: VIEW SECTION TIMETABLE */
+/* STUDENT / ADMIN: VIEW SECTION TIMETABLE */
 export const getSectionTimetable = asyncHandler(async (req, res) => {
   const timetable = await getSectionTimetableService({
     school_id: req.user.school_id,

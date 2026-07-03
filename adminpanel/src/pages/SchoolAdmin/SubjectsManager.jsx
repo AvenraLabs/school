@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { subjectsAPI } from '../../api';
+import './Academic.css';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -71,58 +72,67 @@ export function SubjectsManager() {
   };
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="academic-page-container">
+      <div className="academic-page-header">
         <div>
-          <h1 className="page-title">Subjects</h1>
-          <p className="page-subtitle">Manage school subjects</p>
+          <h1 className="academic-title">Subjects</h1>
+          <p className="academic-subtitle">Manage school subjects</p>
         </div>
         <button onClick={() => { setShowAdd(true); setName(''); }} className="btn-primary">
           <Plus className="w-4 h-4" /> Add Subject
         </button>
       </div>
 
-      <div className="card overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-slate-400">Loading...</div>
-        ) : subjects.length === 0 ? (
-          <div className="empty-state">
-            <BookOpen className="empty-state-icon" />
-            <p className="empty-state-title">No subjects yet</p>
-            <p className="empty-state-desc">Add subjects for your school</p>
-          </div>
-        ) : (
-          <table className="data-table">
-            <thead><tr><th>Subject Name</th><th>ID</th><th>Actions</th></tr></thead>
-            <tbody>
-              {subjects.map((s) => (
-                <tr key={s.id}>
-                  <td className="font-medium text-slate-900">{s.name}</td>
-                  <td className="font-mono text-xs text-slate-400">{s.id}</td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => { setShowEdit(s); setName(s.name); }} className="btn-sm btn-secondary">
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => setDeleteTarget(s)} className="btn-sm btn-ghost text-rose-500">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {loading ? (
+        <div className="academic-empty">
+          <p className="academic-empty-desc">Loading subjects...</p>
+        </div>
+      ) : subjects.length === 0 ? (
+        <div className="academic-empty">
+          <BookOpen className="academic-empty-icon" />
+          <h2 className="academic-empty-title">No subjects yet</h2>
+          <p className="academic-empty-desc">Create subjects to assign to your classes.</p>
+        </div>
+      ) : (
+        <div className="subjects-grid">
+          {subjects.map((s) => (
+            <div key={s.id} className="academic-card subject-card">
+              <div>
+                <div className="subject-icon-wrap">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <h3 className="subject-name">{s.name}</h3>
+                <p className="subject-id">ID: {s.id}</p>
+              </div>
+              
+              <div className="subject-actions">
+                <button
+                  className="btn-card-action"
+                  title="Edit Subject"
+                  onClick={() => { setShowEdit(s); setName(s.name); }}
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button
+                  className="btn-card-action danger"
+                  title="Delete Subject"
+                  onClick={() => setDeleteTarget(s)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Add Subject">
-        <form onSubmit={handleAdd} className="space-y-4">
+        <form onSubmit={handleAdd} className="form-container">
           <div>
             <label className="label">Subject Name</label>
             <input className="input-field" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Mathematics" autoFocus />
           </div>
-          <div className="flex justify-end gap-3">
+          <div className="modal-actions">
             <button type="button" onClick={() => setShowAdd(false)} className="btn-secondary">Cancel</button>
             <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating...' : 'Create'}</button>
           </div>

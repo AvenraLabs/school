@@ -1,4 +1,5 @@
 export function isTimeOver(session) {
+  if (!session) return false;
   if (!session.started_at) return false;
 
   const endTime =

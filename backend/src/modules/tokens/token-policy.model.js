@@ -13,7 +13,6 @@ const TokenPolicy = db.define(
     role: {
       type: DataTypes.ENUM("student", "teacher"),
       allowNull: false,
-      unique: true,
     },
 
     monthly_tokens: {
@@ -32,7 +31,7 @@ const TokenPolicy = db.define(
     tableName: "token_policies",
     underscored: true,
     timestamps: true,
-    indexes: [{ fields: ["role"] }],
+    indexes: [{ unique: true, fields: ["role"] }],
   }
 );
 

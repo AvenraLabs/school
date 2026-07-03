@@ -2,7 +2,6 @@ import School from "./school.model.js";
 import User from "../users/user.model.js";
 import Student from "../students/student.model.js";
 import Teacher from "../teachers/teacher.model.js";
-import Parent from "../parents/parent.model.js";
 import Class from "../classes/classes.model.js";
 import Section from "../sections/section.model.js";
 import AppError from "../../shared/appError.js";
@@ -159,23 +158,14 @@ export const getSchoolStatsService = async ({ school_id, query = {} }) => {
   if (!school) throw new AppError("School not found", 404);
 
   const { limit, offset } = getPagination(query);
-  const role = query.role || null; // 'student' | 'teacher' | 'parent' | null
+  const role = query.role || null; // 'student' | 'teacher' | null
   const class_id = query.class_id ? Number(query.class_id) : null;
   const section_id = query.section_id ? Number(query.section_id) : null;
 
   // ── counts ──────────────────────────────────────────────────────────
-  const [studentCount, teacherCount, parentCount] = await Promise.all([
+  const [studentCount, teacherCount] = await Promise.all([
     Student.count({ where: { school_id } }),
     Teacher.count({ where: { school_id } }),
-    // parents linked via students in this school
-    Parent.count({
-      include: [{
-        model: Student,
-        where: { school_id },
-        required: true,
-        attributes: [],
-      }],
-    }),
   ]);
 
   // ── classes + sections for filter dropdowns ──────────────────────────
@@ -267,53 +257,12 @@ export const getSchoolStatsService = async ({ school_id, query = {} }) => {
     }
   }
 
-  if (!role || role === "parent") {
-    const studentWhere = { school_id };
-    if (class_id) studentWhere.class_id = class_id;
-    if (section_id) studentWhere.section_id = section_id;
-
-    const res = await Parent.findAndCountAll({
-      include: [{
-        model: Student,
-        where: studentWhere,
-        required: true,
-        attributes: ["id", "admission_no"],
-        include: [{ model: Class, attributes: ["class_name"] }, { model: Section, attributes: ["name"] }],
-      }, {
-        model: User,
-        attributes: ["id", "name", "username", "is_active"],
-      }],
-      limit: role ? limit : Math.min(limit, 20),
-      offset: role ? offset : 0,
-      order: [["id", "DESC"]],
-    });
-
-    const mapped = res.rows.map(p => ({
-      id: p.id,
-      user_id: p.user_id,
-      name: p.user?.name || "—",
-      username: p.user?.username || "—",
-      is_active: p.user?.is_active,
-      role: "parent",
-      relation: p.relation_type,
-      class: p.student?.class?.class_name || "—",
-      section: p.student?.section?.name || "—",
-    }));
-
-    if (role === "parent") {
-      users = mapped;
-      total = res.count;
-    } else {
-      users.push(...mapped.slice(0, 5));
-    }
-  }
-
-  if (!role) total = studentCount + teacherCount + parentCount;
+  if (!role) total = studentCount + teacherCount;
 
   return {
     success: true,
     school: { id: school.id, name: school.school_name, code: school.school_code },
-    counts: { students: studentCount, teachers: teacherCount, parents: parentCount },
+    counts: { students: studentCount, teachers: teacherCount },
     classes,
     total,
     items: users,

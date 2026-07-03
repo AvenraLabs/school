@@ -3,7 +3,6 @@ import Attendance from "./attendance.model.js";
 import {
   markAttendanceService,
   getTeacherAttendanceSummaryService,
-  getParentAttendanceSummaryService,
   getStudentAttendanceSummaryService,
 } from "./attendance.summary.service.js";
 
@@ -49,21 +48,6 @@ export const getTeacherAttendanceSummary = asyncHandler(async (req, res) => {
     school_id: req.user.school_id,
     query: req.query,
     teacher_id: req.user.teacher_id,
-  });
-
-  res.json({
-    total: result.count,
-    items: result.rows,
-  });
-});
-
-/* =========================
-   PARENT: SUMMARY
-========================= */
-export const getParentAttendanceSummary = asyncHandler(async (req, res) => {
-  const result = await getParentAttendanceSummaryService({
-    parent_user_id: req.user.id,
-    query: req.query,
   });
 
   res.json({

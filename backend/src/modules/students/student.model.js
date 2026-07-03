@@ -53,7 +53,7 @@ const Student = db.define(
 
     admission_no: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
 
     dob: DataTypes.DATEONLY,
@@ -85,6 +85,15 @@ const Student = db.define(
     family_income: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
+    },
+
+    guardian_occupation: DataTypes.STRING,
+    
+    emergency_contact: DataTypes.STRING,
+
+    residential_status: {
+      type: DataTypes.ENUM("dayscholar", "hosteler"),
+      defaultValue: "dayscholar",
     },
 
     is_active: {

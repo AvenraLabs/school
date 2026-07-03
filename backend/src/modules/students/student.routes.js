@@ -15,6 +15,7 @@ import {
   getMyProfile,
   assignStudentsToSection,
 } from "./student.controller.js";
+import familyRouter from "./family.routes.js";
 
 import {
   createStudentSchema,
@@ -35,6 +36,9 @@ router.post(
 );
 
 router.get("/me", protect, getMyProfile);
+
+/* family/siblings */
+router.use("/families", familyRouter);
 
 /* admin */
 router.post(

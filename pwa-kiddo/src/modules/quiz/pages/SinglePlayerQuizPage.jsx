@@ -28,6 +28,8 @@ export default function SinglePlayerQuizPage() {
   const [sessionId, setSessionId] = useState(null);
   const [playerId, setPlayerId] = useState(null);
   const [answers, setAnswers] = useState([]);
+  const [isAdvancing, setIsAdvancing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Setup Phase: Start Quiz
   async function handleStart() {
@@ -70,6 +72,9 @@ export default function SinglePlayerQuizPage() {
   // Playing Phase: Submit Answer
   async function handleAnswer(selectedIndex) {
     if (selectedIndex === null || selectedIndex === undefined) return;
+    if (isAdvancing || isSubmitting) return;
+
+    setIsAdvancing(true);
     setSelectedIndex(selectedIndex);
     const currentQ = questions[currentIndex];
     const isCorrect = selectedIndex === currentQ.correct_option_index;
@@ -86,9 +91,11 @@ export default function SinglePlayerQuizPage() {
       if (currentIndex < questions.length - 1) {
         setCurrentIndex(p => p + 1);
         setSelectedIndex(null);
+        setIsAdvancing(false);
       } else {
         try {
           if (playerId) {
+            setIsSubmitting(true);
             const submitRes = await submitSingleQuiz({
               playerId,
               answers: nextAnswers,
@@ -100,6 +107,8 @@ export default function SinglePlayerQuizPage() {
         } catch (err) {
           console.error(err);
         } finally {
+          setIsSubmitting(false);
+          setIsAdvancing(false);
           setGameState("result");
         }
       }
@@ -194,6 +203,9 @@ export default function SinglePlayerQuizPage() {
               setAnswers([]);
               setSessionId(null);
               setPlayerId(null);
+              setSelectedIndex(null);
+              setIsAdvancing(false);
+              setIsSubmitting(false);
             }}
           >
             Play Again
@@ -217,6 +229,7 @@ export default function SinglePlayerQuizPage() {
         question={questions[currentIndex]}
         onAnswer={handleAnswer}
         selectedIndex={selectedIndex}
+        disabled={isAdvancing || isSubmitting}
       />
     </Container>
   );

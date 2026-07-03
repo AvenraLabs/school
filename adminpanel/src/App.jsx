@@ -18,7 +18,7 @@ import { ClassesManager } from './pages/SchoolAdmin/ClassesManager';
 import { SubjectsManager } from './pages/SchoolAdmin/SubjectsManager';
 import { TeachersManager } from './pages/SchoolAdmin/TeachersManager';
 import { StudentsManager } from './pages/SchoolAdmin/StudentsManager';
-import { ParentsManager } from './pages/SchoolAdmin/ParentsManager';
+import { FamilyManager } from './pages/SchoolAdmin/FamilyManager';
 import { LoginRoster } from './pages/SchoolAdmin/LoginRoster';
 import { Approvals } from './pages/SchoolAdmin/Approvals';
 import { TeacherAssignments } from './pages/SchoolAdmin/TeacherAssignments';
@@ -70,7 +70,7 @@ function App() {
               <Route path="/admin/subjects" element={<SubjectsManager />} />
               <Route path="/admin/teachers" element={<TeachersManager />} />
               <Route path="/admin/students" element={<StudentsManager />} />
-              <Route path="/admin/parents" element={<ParentsManager />} />
+              <Route path="/admin/families" element={<FamilyManager />} />
               <Route path="/admin/login-roster" element={<LoginRoster />} />
               <Route path="/admin/approvals" element={<Approvals />} />
               <Route path="/admin/assignments" element={<TeacherAssignments />} />

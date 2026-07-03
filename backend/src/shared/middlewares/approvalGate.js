@@ -48,10 +48,6 @@ export const approvalGate = async (req, res, next) => {
     }
   }
 
-  // PARENTS are allowed basic access without approval
-  // (parent approval already handled at creation)
 
   next();
 };
-
-

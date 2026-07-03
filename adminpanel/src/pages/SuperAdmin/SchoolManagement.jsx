@@ -13,7 +13,6 @@ function RolePill({ role }) {
   const map = {
     student: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
     teacher: { bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe' },
-    parent:  { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
   };
   const s = map[role] || { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' };
   return (
@@ -31,7 +30,6 @@ function RolePill({ role }) {
 const ROLE_STYLES = {
   student: { activeBg: '#0284c7', activeBorder: '#0284c7', idleBg: '#fff', idleColor: '#0369a1', idleBorder: '#bae6fd', countBg: '#e0f2fe', countColor: '#0369a1', countActiveBg: 'rgba(255,255,255,0.2)', countActiveColor: '#fff' },
   teacher: { activeBg: '#7c3aed', activeBorder: '#7c3aed', idleBg: '#fff', idleColor: '#6d28d9', idleBorder: '#ddd6fe', countBg: '#ede9fe', countColor: '#6d28d9', countActiveBg: 'rgba(255,255,255,0.2)', countActiveColor: '#fff' },
-  parent:  { activeBg: '#059669', activeBorder: '#059669', idleBg: '#fff', idleColor: '#047857', idleBorder: '#a7f3d0', countBg: '#d1fae5', countColor: '#047857', countActiveBg: 'rgba(255,255,255,0.2)', countActiveColor: '#fff' },
 };
 
 const PAGE_SIZE = 20;
@@ -78,7 +76,6 @@ function SchoolStatsPanel({ school }) {
         {[
           { label: 'Students', roleKey: 'student', countKey: 'students', icon: GraduationCap },
           { label: 'Teachers', roleKey: 'teacher', countKey: 'teachers', icon: UserCog },
-          { label: 'Parents',  roleKey: 'parent',  countKey: 'parents',  icon: Users },
         ].map(({ label, roleKey, countKey, icon: Icon }) => {
           const active = role === roleKey;
           const s = ROLE_STYLES[roleKey];

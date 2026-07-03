@@ -4,6 +4,12 @@ import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../context/ToastContext';
 import { Award, Plus, Save, Send, Eye, Edit2 } from 'lucide-react';
 
+const getExamName = (exam) => exam?.name || exam?.master?.name || exam?.exam_master?.name || `Exam #${exam?.id}`;
+const getExamSubjectSlots = (exam) => [...(exam?.exam_subjects || exam?.examSubjects || [])]
+  .sort((a, b) => String(a.exam_date || '').localeCompare(String(b.exam_date || '')));
+const getSubjectName = (subject) => subject?.name || subject?.Subject?.name || subject?.subject?.name || `Subject #${subject?.subject_id || subject?.id}`;
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '—');
+
 export function ReportCards() {
   const [classes, setClasses] = useState([]);
   const [exams, setExams] = useState([]);
@@ -45,7 +51,14 @@ export function ReportCards() {
   };
 
   const loadExams = async () => {
-    try { const res = await examsAPI.list(Number(selectedClass)); setExams(res.items || []); } catch (e) { /* ignore */ }
+    try {
+      const res = await examsAPI.list(Number(selectedClass));
+      const items = res.items || [];
+      setExams(items);
+      if (selectedExam && !items.some((exam) => String(exam.id) === String(selectedExam))) {
+        setSelectedExam('');
+      }
+    } catch (e) { /* ignore */ }
   };
 
   const loadStudents = async () => {
@@ -106,6 +119,10 @@ export function ReportCards() {
         marks_obtained: Number(m.marks_obtained),
         max_marks: Number(m.max_marks),
       }));
+      if (validMarks.length === 0) {
+        toast.error('Enter marks for at least one scheduled subject');
+        return;
+      }
       await reportCardsAPI.setMarks(showMarks.id, validMarks);
       toast.success('Marks saved');
       setShowMarks(null);
@@ -141,11 +158,22 @@ export function ReportCards() {
 
   const openGradeMarks = (rc) => {
     setShowMarks(rc);
-    const prefilledMarks = subjects.map((sub) => {
-      const existing = (rc.report_card_marks || rc.marks || [])?.find((m) => Number(m.subject_id) === Number(sub.id));
+    const exam = exams.find((item) => Number(item.id) === Number(rc.exam_id)) || rc.exam || rc.Exam;
+    const scheduledSubjects = getExamSubjectSlots(exam);
+
+    if (scheduledSubjects.length === 0) {
+      toast.error('No subjects are scheduled for this exam yet');
+      setMarks([]);
+      return;
+    }
+
+    const prefilledMarks = scheduledSubjects.map((slot) => {
+      const existing = (rc.report_card_marks || rc.marks || [])?.find((m) => Number(m.subject_id) === Number(slot.subject_id));
       return {
-        subject_id: sub.id,
-        subject_name: sub.name,
+        subject_id: slot.subject_id,
+        subject_name: getSubjectName(slot.subject || slot),
+        exam_date: slot.exam_date,
+        syllabus: slot.syllabus || '',
         marks_obtained: existing ? String(existing.marks_obtained) : '',
         max_marks: existing ? String(existing.max_marks) : '100',
       };
@@ -158,6 +186,9 @@ export function ReportCards() {
     updated[idx][field] = value;
     setMarks(updated);
   };
+
+  const selectedExamDetails = exams.find((exam) => String(exam.id) === String(selectedExam));
+  const selectedExamSlots = getExamSubjectSlots(selectedExamDetails);
 
   return (
     <div>
@@ -181,10 +212,17 @@ export function ReportCards() {
           {selectedClass && (
             <select className="select-field w-48" value={selectedExam} onChange={(e) => setSelectedExam(e.target.value)}>
               <option value="">Select Exam</option>
-              {exams.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+              {exams.map((e) => <option key={e.id} value={e.id}>{getExamName(e)}</option>)}
             </select>
           )}
         </div>
+
+        {selectedExamDetails && (
+          <div className="mb-4 rounded-xl bg-indigo-50 border border-indigo-100 p-3 text-sm text-indigo-900">
+            <strong>{getExamName(selectedExamDetails)}</strong>
+            <span className="text-indigo-700"> has {selectedExamSlots.length} scheduled subject{selectedExamSlots.length === 1 ? '' : 's'}.</span>
+          </div>
+        )}
 
         {selectedClass && selectedExam && (
           <div className="mt-6 border-t border-slate-100 pt-6">
@@ -243,7 +281,8 @@ export function ReportCards() {
                             {rc && (rc.report_card_marks || rc.marks) && (rc.report_card_marks || rc.marks).length > 0 ? (
                               <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
                                 {(rc.report_card_marks || rc.marks).map((m) => {
-                                  const subjectName = subjects.find(sub => Number(sub.id) === Number(m.subject_id))?.name || `Sub #${m.subject_id}`;
+                                  const slot = selectedExamSlots.find((item) => Number(item.subject_id) === Number(m.subject_id));
+                                  const subjectName = m.subject?.name || slot?.subject?.name || subjects.find(sub => Number(sub.id) === Number(m.subject_id))?.name || `Sub #${m.subject_id}`;
                                   return (
                                     <span key={m.id} className="inline-block bg-slate-100 border border-slate-200 text-xs px-2 py-0.5 rounded-lg text-slate-700">
                                       {subjectName}: <strong>{m.marks_obtained}/{m.max_marks}</strong>
@@ -307,7 +346,7 @@ export function ReportCards() {
             <label className="label">Exam</label>
             <select className="select-field" required value={selectedExam} onChange={(e) => setSelectedExam(e.target.value)}>
               <option value="">Select</option>
-              {exams.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+              {exams.map((e) => <option key={e.id} value={e.id}>{getExamName(e)}</option>)}
             </select>
           </div>
           <div>
@@ -338,20 +377,35 @@ export function ReportCards() {
       {/* Enter Marks */}
       <Modal isOpen={!!showMarks} onClose={() => setShowMarks(null)} title="Enter Marks" maxWidth="max-w-2xl">
         <div className="space-y-3">
+          {marks.length === 0 && (
+            <div className="p-4 text-center text-sm text-slate-500 bg-slate-50 rounded-xl border border-slate-100">
+              Schedule subjects in the Exams module before entering marks.
+            </div>
+          )}
           {marks.map((m, idx) => (
-            <div key={m.subject_id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <span className="text-sm font-semibold text-slate-800 flex-1">{m.subject_name}</span>
-              <div className="flex items-center gap-2">
-                <input className="input-field w-24 text-center" type="number" placeholder="Marks" value={m.marks_obtained} onChange={(e) => updateMark(idx, 'marks_obtained', e.target.value)} />
-                <span className="text-slate-400">/</span>
-                <input className="input-field w-24 text-center bg-slate-100" type="number" value={m.max_marks} onChange={(e) => updateMark(idx, 'max_marks', e.target.value)} />
+            <div key={m.subject_id} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-slate-800">{m.subject_name}</div>
+                  <div className="text-xs text-slate-500">Date: {formatDate(m.exam_date)}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input className="input-field w-24 text-center" type="number" placeholder="Marks" value={m.marks_obtained} onChange={(e) => updateMark(idx, 'marks_obtained', e.target.value)} />
+                  <span className="text-slate-400">/</span>
+                  <input className="input-field w-24 text-center bg-slate-100" type="number" value={m.max_marks} onChange={(e) => updateMark(idx, 'max_marks', e.target.value)} />
+                </div>
               </div>
+              {m.syllabus && (
+                <div className="mt-2 text-xs text-slate-500">
+                  <span className="font-semibold">Syllabus:</span> {m.syllabus}
+                </div>
+              )}
             </div>
           ))}
         </div>
         <div className="flex justify-end gap-3 mt-5">
           <button onClick={() => setShowMarks(null)} className="btn-secondary">Cancel</button>
-          <button onClick={handleSaveMarks} disabled={saving} className="btn-primary">
+          <button onClick={handleSaveMarks} disabled={saving || marks.length === 0} className="btn-primary">
             <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Marks'}
           </button>
         </div>
@@ -363,11 +417,21 @@ export function ReportCards() {
           <div>
             <div className="space-y-2 mb-4">
               {(reportCard.report_card_marks || reportCard.marks)?.map((m, i) => {
-                const subjectName = subjects.find(sub => Number(sub.id) === Number(m.subject_id))?.name || `Subject #${m.subject_id}`;
+                const reportExam = reportCard.exam || reportCard.Exam || selectedExamDetails;
+                const slot = getExamSubjectSlots(reportExam).find((item) => Number(item.subject_id) === Number(m.subject_id));
+                const subjectName = m.subject?.name || slot?.subject?.name || subjects.find(sub => Number(sub.id) === Number(m.subject_id))?.name || `Subject #${m.subject_id}`;
                 return (
-                  <div key={i} className="flex justify-between p-2.5 bg-slate-50 rounded-lg text-sm border border-slate-100">
-                    <span className="font-medium text-slate-700">{subjectName}</span>
-                    <span className="font-mono font-semibold text-slate-900">{m.marks_obtained}/{m.max_marks}</span>
+                  <div key={i} className="p-2.5 bg-slate-50 rounded-lg text-sm border border-slate-100">
+                    <div className="flex justify-between">
+                      <span className="font-medium text-slate-700">{subjectName}</span>
+                      <span className="font-mono font-semibold text-slate-900">{m.marks_obtained}/{m.max_marks}</span>
+                    </div>
+                    {slot && (
+                      <div className="mt-1 text-xs text-slate-500">
+                        Date: {formatDate(slot.exam_date)}
+                        {slot.syllabus ? <> · Syllabus: {slot.syllabus}</> : null}
+                      </div>
+                    )}
                   </div>
                 );
               })}

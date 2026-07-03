@@ -310,8 +310,26 @@ export default function ProfileForm({
               <TextField label="Father's Occupation" fullWidth {...register("father_occupation")} />
               <TextField label="Mother's Occupation" fullWidth {...register("mother_occupation")} />
             </Stack>
-            <TextField label="Guardian Name" fullWidth {...register("guardian_name")} />
-            <TextField label="Family Income" type="number" fullWidth {...register("family_income")} />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: '100%' }}>
+              <TextField label="Guardian Name" fullWidth {...register("guardian_name")} />
+              <TextField label="Guardian Occupation" fullWidth {...register("guardian_occupation")} />
+            </Stack>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: '100%' }}>
+              <TextField label="Family Income" type="number" fullWidth {...register("family_income")} />
+              <TextField label="Emergency Contact" fullWidth {...register("emergency_contact")} />
+            </Stack>
+            <TextField
+                label="Residential Status"
+                select
+                fullWidth
+                defaultValue={profile?.residential_status || "dayscholar"}
+                SelectProps={{ native: true }}
+                InputLabelProps={{ shrink: true }}
+                {...register("residential_status")}
+              >
+                <option value="dayscholar">Day Scholar</option>
+                <option value="hosteler">Hosteler</option>
+            </TextField>
 
             <Typography variant="subtitle1" sx={{ alignSelf: 'start', fontWeight: 'bold', mt: 1 }}>
               Address

@@ -2,7 +2,7 @@
 
 export function initTransportSocket(io) {
   io.on("connection", (socket) => {
-    // Parent registers to listen for active student notifications
+    // Student app registers to listen for active student notifications
     socket.on("student:join", ({ studentId }) => {
       if (studentId) {
         socket.join(`student:${studentId}`);

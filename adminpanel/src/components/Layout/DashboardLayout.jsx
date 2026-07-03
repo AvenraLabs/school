@@ -45,7 +45,6 @@ export function DashboardLayout() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ textAlign: 'right' }}>
               <p style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', lineHeight: 1 }}>{displayName}</p>
-              <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px' }}>{roleLabel}</p>
             </div>
             <div style={{
               width: '34px', height: '34px', borderRadius: '50%',

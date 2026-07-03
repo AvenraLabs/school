@@ -53,10 +53,13 @@ export default function FirstLoginPage() {
     father_name: "",
     mother_name: "",
     guardian_name: "",
+    guardian_occupation: "",
     father_occupation: "",
     mother_occupation: "",
     family_income: "",
+    emergency_contact: "",
     address: "",
+    residential_status: "dayscholar",
 
     // Teacher Professional (if teacher)
     designation: "",
@@ -396,6 +399,13 @@ export default function FirstLoginPage() {
                 />
 
                 <TextField
+                  label="Guardian's Occupation (if applicable)"
+                  value={formData.guardian_occupation}
+                  onChange={(e) => handleInputChange("guardian_occupation", e.target.value)}
+                  fullWidth
+                />
+
+                <TextField
                   label="Family Annual Income"
                   type="number"
                   value={formData.family_income}
@@ -409,6 +419,26 @@ export default function FirstLoginPage() {
             {/* Student Contact Info */}
             {isStudent && activeStep === 2 && (
               <Stack spacing={2}>
+                <TextField
+                  label="Emergency Contact Number"
+                  value={formData.emergency_contact}
+                  onChange={(e) => handleInputChange("emergency_contact", e.target.value)}
+                  fullWidth
+                  required
+                />
+
+                <TextField
+                  select
+                  label="Residential Status"
+                  value={formData.residential_status}
+                  onChange={(e) => handleInputChange("residential_status", e.target.value)}
+                  fullWidth
+                  SelectProps={{ native: true }}
+                >
+                  <option value="dayscholar">Day Scholar</option>
+                  <option value="hosteler">Hosteler</option>
+                </TextField>
+
                 <TextField
                   label="Address"
                   value={formData.address}

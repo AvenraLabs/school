@@ -122,7 +122,7 @@ export function LoginPage() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. admin_school"
+                placeholder="Enter Username or Mobile Number"
                 required
                 autoFocus
                 disabled={loading}

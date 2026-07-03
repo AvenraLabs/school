@@ -16,6 +16,13 @@ export const authAPI = {
     });
     return response.data;
   },
+
+  resetUserPassword: async (userId, newPassword) => {
+    const response = await axiosInstance.patch(`/admin/users/${userId}/reset-password`, {
+      new_password: newPassword,
+    });
+    return response.data;
+  },
 };
 
 // School APIs (Super Admin)
@@ -66,10 +73,6 @@ export const schoolAPI = {
     return response.data;
   },
 
-  getParentsDirectory: async () => {
-    const response = await axiosInstance.get('/schools/directory/parents');
-    return response.data;
-  },
 
   getStudentProfile: async (studentId) => {
     const response = await axiosInstance.get(`/schools/directory/students/${studentId}`);
@@ -269,53 +272,6 @@ export const studentsAPI = {
   },
 };
 
-// Parents API
-export const parentsAPI = {
-  create: async (studentId, relationType) => {
-    const response = await axiosInstance.post('/parents/parents', {
-      student_id: studentId,
-      relation_type: relationType,
-    });
-    return response.data;
-  },
-
-  link: async (parentUserId, studentId, relationType) => {
-    const response = await axiosInstance.post('/parents/parents/link', {
-      parent_user_id: parentUserId,
-      student_id: studentId,
-      relation_type: relationType,
-    });
-    return response.data;
-  },
-
-  list: async (limit = 10, offset = 0, approvalStatus) => {
-    const params = { limit, offset };
-    if (approvalStatus) params.approval_status = approvalStatus;
-    const response = await axiosInstance.get('/parents/parents', { params });
-    return response.data;
-  },
-
-  getOptions: async () => {
-    const response = await axiosInstance.get('/parents/parents/options');
-    return response.data;
-  },
-
-  approve: async (id, action, rejectionReason) => {
-    const response = await axiosInstance.post(`/admin/parents/${id}/approve`, {
-      action,
-      rejection_reason: rejectionReason,
-    });
-    return response.data;
-  },
-
-  bulkApprove: async (parentIds, action) => {
-    const response = await axiosInstance.post('/admin/parents/bulk-approve', {
-      parent_ids: parentIds,
-      action,
-    });
-    return response.data;
-  },
-};
 
 // Bulk API
 export const bulkAPI = {
@@ -439,12 +395,11 @@ export const notificationsAPI = {
 
 // Exams API
 export const examsAPI = {
-  create: async (classId, name, startDate, endDate) => {
+  create: async (classId, name, subjects = []) => {
     const response = await axiosInstance.post('/exams', {
       class_id: classId,
       name,
-      start_date: startDate,
-      end_date: endDate,
+      subjects,
     });
     return response.data;
   },
@@ -460,6 +415,37 @@ export const examsAPI = {
     const response = await axiosInstance.post(`/exams/${id}/lock`, {
       is_locked: isLocked,
     });
+    return response.data;
+  },
+
+  // Add/update a single subject slot within an exam
+  upsertSubject: async (examId, subjectId, examDate, syllabus) => {
+    const response = await axiosInstance.put(`/exams/${examId}/subjects`, {
+      subject_id: subjectId,
+      exam_date: examDate,
+      syllabus,
+    });
+    return response.data;
+  },
+
+  removeSubject: async (examId, subjectId) => {
+    const response = await axiosInstance.delete(`/exams/${examId}/subjects/${subjectId}`);
+    return response.data;
+  },
+};
+
+// Exam Master API (reusable exam names)
+export const examMastersAPI = {
+  list: async () => {
+    const response = await axiosInstance.get('/exam-masters');
+    return response.data;
+  },
+  create: async (name) => {
+    const response = await axiosInstance.post('/exam-masters', { name });
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await axiosInstance.delete(`/exam-masters/${id}`);
     return response.data;
   },
 };

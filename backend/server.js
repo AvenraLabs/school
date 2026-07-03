@@ -100,24 +100,24 @@ import authRoutes from "./src/modules/auth/auth.routes.js";
 import schoolRoutes from "./src/modules/schools/school.routes.js";
 import studentRoutes from "./src/modules/students/student.routes.js";
 import teacherRoutes from "./src/modules/teachers/teacher.routes.js";
-import parentRoutes from "./src/modules/parents/parent.routes.js";
+
 import sectionRoutes from "./src/modules/sections/section.routes.js";
 import subjectRoutes from "./src/modules/subjects/subject.routes.js";
 import classRoutes from "./src/modules/classes/classes.routes.js";
 import timetableRoutes from "./src/modules/timetables/timetable.routes.js";
 import reportCardRoutes from "./src/modules/report-cards/report-card.routes.js";
 import examRoutes from "./src/modules/report-cards/exam.routes.js";
+import examMasterRoutes from "./src/modules/report-cards/exam-master.routes.js";
 import teacherDashboardRoutes from "./src/modules/teachers/teacher-dashboard.routes.js";
 
 import approvalRoutes from "./src/modules/approvals/approval.routes.js";
 import teacherApprovalRoutes from "./src/modules/teachers/teacher.approval.routes.js";
 import studentApprovalRoutes from "./src/modules/students/student.approval.routes.js";
-import parentApprovalRoutes from "./src/modules/parents/parent.approval.routes.js";
-import parentDashboardRoutes from "./src/modules/parents/parent.dashboard.routes.js";
+
 import studentDashboardRoutes from "./src/modules/students/student.dashboard.routes.js";
 import auditRoutes from "./src/modules/audit/audit.routes.js";
 
-import parentBulkRoutes from "./src/modules/parents/parent.bulk.routes.js";
+
 import teacherBulkRoutes from "./src/modules/teachers/teacher.bulk.routes.js";
 import studentBulkRoutes from "./src/modules/students/student.bulk.routes.js";
 import bulkRoutes from "./src/modules/bulk/bulk.routes.js";
@@ -164,24 +164,24 @@ app.use("/api/students", studentDashboardRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/teachers", teacherDashboardRoutes);
 app.use("/api/teachers", teacherRoutes);
-app.use("/api/parents", parentRoutes);
+
 app.use("/api/sections", sectionRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/classes", classRoutes);
 app.use("/api/timetables", timetableRoutes);
 app.use("/api/report-cards", reportCardRoutes);
 app.use("/api/exams", examRoutes);
+app.use("/api/exam-masters", examMasterRoutes);
 
 // approvals
 app.use("/api", approvalRoutes);
 app.use("/api", teacherApprovalRoutes);
 app.use("/api", studentApprovalRoutes);
-app.use("/api", parentApprovalRoutes);
-app.use("/api", parentDashboardRoutes);
+
 app.use("/api", auditRoutes);
 
 // bulk
-app.use("/api", parentBulkRoutes);
+
 app.use("/api", teacherBulkRoutes);
 app.use("/api", studentBulkRoutes);
 
@@ -222,19 +222,7 @@ try {
   await db.authenticate();
   console.log("DB connected");
 
-  // Ensure new enum values exist in PostgreSQL database
-  try {
-    await db.query("ALTER TYPE enum_users_role ADD VALUE IF NOT EXISTS 'driver'");
-    await db.query("ALTER TYPE enum_ai_chat_logs_ai_type ADD VALUE IF NOT EXISTS 'question_paper'");
-    await db.query("ALTER TYPE enum_ai_chat_logs_ai_type ADD VALUE IF NOT EXISTS 'lesson_summary'");
-    console.log("DB ENUM values verified/added successfully");
-  } catch (enumErr) {
-    console.log("Verification of DB ENUM values finished:", enumErr.message);
-  }
-
-
-
-  await db.sync({ force: false });
+  await db.sync({ force: false, alter: true });
 
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server + Socket running on port ${PORT}`);

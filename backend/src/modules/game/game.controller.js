@@ -17,6 +17,10 @@ function generateRoomCode(length = 6) {
 export const submitSinglePlayerQuiz = asyncHandler(async (req, res) => {
   const { playerId, answers } = req.body;
 
+  if (!playerId || !Array.isArray(answers)) {
+    throw new AppError("playerId and answers are required", 400);
+  }
+
   const player = await GameSessionPlayer.findByPk(playerId, {
     include: [{ model: GameSession }],
   });
@@ -25,16 +29,30 @@ export const submitSinglePlayerQuiz = asyncHandler(async (req, res) => {
     throw new AppError("Player not found", 404);
   }
 
-  if (player.status === "FINISHED") {
-    throw new AppError("Quiz already submitted", 409);
+  const session =
+    player.GameSession ||
+    player.game_session ||
+    (await GameSession.findByPk(player.session_id));
+
+  if (!session) {
+    throw new AppError("Game session not found", 404);
   }
 
-  const session = player.GameSession;
+  if (player.status === "FINISHED") {
+    const total = await PlayerAnswer.count({
+      where: { session_player_id: player.id },
+    });
 
-  // ⬅️ AUTHORITATIVE TIME CHECK
+    return res.json({
+      score: player.score ?? 0,
+      total: total || answers.length,
+      alreadySubmitted: true,
+    });
+  }
+
   if (isTimeOver(session)) {
     if (session.status !== "FINISHED") {
-      await session.update({ status: "FINISHED" });
+      await session.update({ status: "FINISHED", ended_at: new Date() });
     }
     throw new AppError("Time is over", 403);
   }
@@ -42,11 +60,22 @@ export const submitSinglePlayerQuiz = asyncHandler(async (req, res) => {
   let score = 0;
 
   await db.transaction(async (t) => {
+    await PlayerAnswer.destroy({
+      where: { session_player_id: playerId },
+      transaction: t,
+    });
+
     for (const ans of answers) {
-      const question = await QuizQuestion.findByPk(ans.questionId, { transaction: t });
+      const question = await QuizQuestion.findByPk(ans.questionId, {
+        transaction: t,
+      });
+
+      if (!question) {
+        throw new AppError("QUESTION_NOT_FOUND", 400);
+      }
 
       const isCorrect =
-        question.correct_option_index === ans.selectedIndex;
+        Number(question.correct_option_index) === Number(ans.selectedIndex);
 
       if (isCorrect) score++;
 
@@ -66,6 +95,14 @@ export const submitSinglePlayerQuiz = asyncHandler(async (req, res) => {
         score,
         status: "FINISHED",
         finished_at: new Date(),
+      },
+      { transaction: t }
+    );
+
+    await session.update(
+      {
+        status: "FINISHED",
+        ended_at: new Date(),
       },
       { transaction: t }
     );

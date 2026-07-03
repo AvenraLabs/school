@@ -2,9 +2,9 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import {
   LayoutDashboard, School, BarChart3, Coins,
-  Users, GraduationCap, UserCheck, BookOpen,
+  GraduationCap, UserCheck, BookOpen,
   ClipboardList, Calendar, Bell, FileText,
-  Award, ScrollText, LogOut, UserCog,
+  Award, LogOut, UserCog,
   Layers, X, Database, Sparkles, Truck,
 } from 'lucide-react';
 
@@ -29,7 +29,6 @@ const schoolAdminLinks = [
   { section: 'People' },
   { to: '/admin/teachers', icon: UserCog, label: 'Teachers' },
   { to: '/admin/students', icon: GraduationCap, label: 'Students' },
-  { to: '/admin/parents', icon: Users, label: 'Parents' },
   { to: '/admin/approvals', icon: UserCheck, label: 'Approvals' },
   { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },
   { section: 'Operations' },
@@ -40,8 +39,6 @@ const schoolAdminLinks = [
   { section: 'Assessment' },
   { to: '/admin/exams', icon: FileText, label: 'Exams' },
   { to: '/admin/report-cards', icon: Award, label: 'Report Cards' },
-  { section: 'System' },
-  { to: '/admin/audit-logs', icon: ScrollText, label: 'Audit Logs' },
 ];
 
 export function Sidebar({ isOpen, onClose }) {

@@ -21,7 +21,7 @@ const NotificationAck = db.define(
     },
 
     user_role: {
-      type: DataTypes.ENUM("teacher", "parent", "student"),
+      type: DataTypes.ENUM("teacher", "student"),
       allowNull: false,
     },
 

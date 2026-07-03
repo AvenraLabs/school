@@ -21,7 +21,7 @@ router.post(
   saveTimetable
 );
 
-// Student/Parent: View section timetable
+// Student/Admin: View section timetable
 router.get("/section", getSectionTimetable);
 
 // Teacher: View own timetable

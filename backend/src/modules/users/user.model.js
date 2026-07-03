@@ -23,7 +23,6 @@ const User = db.define(
         "school_admin",
         "teacher",
         "student",
-        "parent",
         "driver"
       ),
       allowNull: false,

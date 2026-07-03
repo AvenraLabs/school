@@ -21,16 +21,24 @@ import {
 } from 'lucide-react';
 import './SchoolRegistry.css';
 
+const getExamDisplayName = (exam) => exam?.name || exam?.master?.name || exam?.exam_master?.name || 'Exam';
+const getExamDateDisplay = (exam) => {
+  const slots = [...(exam?.exam_subjects || exam?.examSubjects || [])]
+    .sort((a, b) => String(a.exam_date || '').localeCompare(String(b.exam_date || '')));
+  if (slots.length === 0) return exam?.start_date || '';
+  if (slots.length === 1) return slots[0].exam_date;
+  return `${slots[0].exam_date} - ${slots[slots.length - 1].exam_date}`;
+};
+
 export function SchoolRegistry() {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
 
   // Nav states
-  const [activeMainTab, setActiveMainTab] = useState('classes'); // classes, teachers, parents
+  const [activeMainTab, setActiveMainTab] = useState('classes'); // classes, teachers
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [selectedSectionId, setSelectedSectionId] = useState(null);
-  const [activeSectionTab, setActiveSectionTab] = useState('students'); // students, teachers
 
   // Detail Drawer states
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -231,54 +239,9 @@ export function SchoolRegistry() {
     <div className="sr-page">
       {/* ── Page Header ── */}
       <div className="sr-header">
-        <div>
-          <h1 className="sr-header__title">
-            School Directory
-          </h1>
-          <p className="sr-header__subtitle">
-            Real-time management dashboard. Click cards to view classes, sections, students, and parent records.
-          </p>
-        </div>
-      </div>
-
-      {/* ── Stat Overview Chips ── */}
-      <div className="sr-stats">
-        <div className="sr-stat-chip">
-          <div className="sr-stat-chip__icon sr-stat-chip__icon--indigo">
-            <Layers style={{ width: 18, height: 18 }} />
-          </div>
-          <div>
-            <div className="sr-stat-chip__value">{classes.length}</div>
-            <div className="sr-stat-chip__label">Classes</div>
-          </div>
-        </div>
-        <div className="sr-stat-chip">
-          <div className="sr-stat-chip__icon sr-stat-chip__icon--emerald">
-            <GraduationCap style={{ width: 18, height: 18 }} />
-          </div>
-          <div>
-            <div className="sr-stat-chip__value">{data.total_students_count || 0}</div>
-            <div className="sr-stat-chip__label">Students</div>
-          </div>
-        </div>
-        <div className="sr-stat-chip">
-          <div className="sr-stat-chip__icon sr-stat-chip__icon--indigo">
-            <Briefcase style={{ width: 18, height: 18 }} />
-          </div>
-          <div>
-            <div className="sr-stat-chip__value">{teachers.length}</div>
-            <div className="sr-stat-chip__label">Teachers</div>
-          </div>
-        </div>
-        <div className="sr-stat-chip">
-          <div className="sr-stat-chip__icon sr-stat-chip__icon--amber">
-            <Users style={{ width: 18, height: 18 }} />
-          </div>
-          <div>
-            <div className="sr-stat-chip__value">{data.total_parents_count || 0}</div>
-            <div className="sr-stat-chip__label">Parents</div>
-          </div>
-        </div>
+        <h1 className="sr-header__title">
+          School Directory
+        </h1>
       </div>
 
       {/* ── Main Tab Navigation (Segmented Pill Group) ── */}
@@ -297,182 +260,116 @@ export function SchoolRegistry() {
           <Users style={{ width: 16, height: 16 }} />
           Teachers ({teachers.length})
         </button>
-        <button
-          onClick={() => setActiveMainTab('parents')}
-          className={`sr-tab ${activeMainTab === 'parents' ? 'sr-tab--active' : ''}`}
-        >
-          <Users style={{ width: 16, height: 16 }} />
-          Parents ({data.total_parents_count || 0})
-        </button>
       </div>
 
       {/* ── 1. CLASSES REGISTRY TAB ── */}
       {activeMainTab === 'classes' && (
-        <div className="sr-classes-tab">
-          {/* Class scroll horizontal deck */}
+        <div className="sr-classes-layout">
+          {/* Class Cards (Horizontal Deck) */}
           <div className="sr-class-deck">
-            <h2 className="sr-section-title">Select Class</h2>
-            <div className="sr-class-scroll">
-              {classes.map((c) => {
-                const isSelected = c.id === selectedClassId;
-                const studentCount = c.student_count || 0;
+            {classes.map((c) => {
+              const isClassSelected = c.id === selectedClassId;
+              return (
+                <div
+                  key={c.id}
+                  className={`sr-class-card ${isClassSelected ? 'sr-class-card--active' : ''}`}
+                  onClick={() => {
+                    setSelectedClassId(c.id);
+                    if (c.sections?.length > 0) {
+                      setSelectedSectionId(c.sections[0].id);
+                    } else {
+                      setSelectedSectionId(null);
+                    }
+                  }}
+                >
+                  <Layers style={{ width: 18, height: 18 }} />
+                  <span className="sr-class-card__name">{c.class_name}</span>
+                  <span className="sr-class-card__badge">{c.sections?.length || 0} Sec</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Section Pills (Shown if a class is selected) */}
+          {activeClass && activeClass.sections && activeClass.sections.length > 0 && (
+            <div className="sr-section-pills">
+              {activeClass.sections.map((sec) => {
+                const isSecSelected = sec.id === selectedSectionId;
                 return (
-                  <div
-                    key={c.id}
-                    onClick={() => {
-                      setSelectedClassId(c.id);
-                      if (c.sections?.length > 0) {
-                        setSelectedSectionId(c.sections[0].id);
-                      } else {
-                        setSelectedSectionId(null);
-                      }
-                    }}
-                    className={`sr-class-card ${isSelected ? 'sr-class-card--selected' : ''}`}
+                  <button
+                    key={sec.id}
+                    className={`sr-section-pill ${isSecSelected ? 'sr-section-pill--active' : ''}`}
+                    onClick={() => setSelectedSectionId(sec.id)}
                   >
-                    <div className="sr-class-card__top">
-                      <div className="sr-class-card__icon">
-                        <Layers style={{ width: 20, height: 20 }} />
-                      </div>
-                      <span className="sr-class-card__badge">
-                        {c.sections?.length || 0} Sec
-                      </span>
-                    </div>
-                    <h3 className="sr-class-card__name">{c.class_name}</h3>
-                    <p className="sr-class-card__count">{studentCount} Active Students</p>
-                  </div>
+                    Section {sec.name} ({sec.student_count || 0})
+                  </button>
                 );
               })}
             </div>
+          )}
+
+          {/* Main Content Area (Students Grid) */}
+          <div className="sr-main-content">
+            {activeSection ? (
+              <div className="sr-registry-panel">
+                <div className="sr-registry-panel__header">
+                  <div>
+                    <h3 className="sr-registry-panel__title">
+                      {activeClass.class_name} — Section {activeSection.name}
+                    </h3>
+                    <p className="sr-registry-panel__desc">
+                      Registered students in this section
+                    </p>
+                  </div>
+                </div>
+
+                {/* Roster content */}
+                {sectionLoading ? (
+                  <div className="sr-spinner-wrap" style={{ minHeight: '180px' }}>
+                    <div className="sr-spinner"></div>
+                  </div>
+                ) : (
+                  sectionStudents.length === 0 ? (
+                    <div className="sr-empty">
+                      No students registered in this section yet.
+                    </div>
+                  ) : (
+                    <div className="sr-grid">
+                      {sectionStudents.map((stud) => {
+                        const userObj = stud.user || stud.User || {};
+                        const studentName = userObj.name || 'Student';
+                        const cleanName = studentName.replace(/^(Student Class|Student)\s+/gi, '').trim() || 'Student';
+                        const parentNameRaw = stud.parents?.[0]?.user?.name || '—';
+                        const cleanParentName = parentNameRaw.replace(/^(Parent of Student Class|Parent of Student|Parent)\s+/gi, '').trim() || parentNameRaw;
+                        return (
+                          <div
+                            key={stud.id}
+                            onClick={() => setSelectedStudent(stud)}
+                            className="sr-person-row"
+                          >
+                            <div className="sr-person-row__avatar sr-person-row__avatar--student">
+                              {cleanName[0]?.toUpperCase() || 'S'}
+                            </div>
+                            <div className="sr-person-row__info">
+                              <h4 className="sr-person-row__name">{cleanName}</h4>
+                              <p className="sr-person-row__meta">Parent: {cleanParentName}</p>
+                            </div>
+                            <ChevronRight className="sr-person-row__chevron" style={{ width: 16, height: 16 }} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                )}
+              </div>
+            ) : (
+              <div className="sr-registry-panel">
+                <div className="sr-empty">
+                  Please select a class and section to view details.
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Section Selector Pills */}
-          {activeClass && activeClassSections.length > 0 && (
-            <div className="sr-sections">
-              <h2 className="sr-section-title">Sections</h2>
-              <div className="sr-section-pills">
-                {activeClassSections.map((sec) => {
-                  const isSelected = sec.id === selectedSectionId;
-                  const secStudentCount = sec.student_count || 0;
-                  return (
-                    <button
-                      key={sec.id}
-                      onClick={() => setSelectedSectionId(sec.id)}
-                      className={`sr-section-pill ${isSelected ? 'sr-section-pill--active' : ''}`}
-                    >
-                      <span>Section {sec.name}</span>
-                      <span className="sr-section-pill__count">
-                        {secStudentCount}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Registry Details for selected Class/Section */}
-          {activeSection ? (
-            <div className="sr-registry-panel">
-              <div className="sr-registry-panel__header">
-                <div>
-                  <h3 className="sr-registry-panel__title">
-                    {activeClass.class_name} — Section {activeSection.name}
-                  </h3>
-                  <p className="sr-registry-panel__desc">
-                    Assigned roster and active subject teachers
-                  </p>
-                </div>
-
-                <div className="sr-inner-tabs">
-                  <button
-                    onClick={() => setActiveSectionTab('students')}
-                    className={`sr-inner-tab ${activeSectionTab === 'students' ? 'sr-inner-tab--active' : ''}`}
-                  >
-                    Student Roster ({sectionStudents.length})
-                  </button>
-                  <button
-                    onClick={() => setActiveSectionTab('teachers')}
-                    className={`sr-inner-tab ${activeSectionTab === 'teachers' ? 'sr-inner-tab--active' : ''}`}
-                  >
-                    Subject Teachers ({sectionTeachers.length})
-                  </button>
-                </div>
-              </div>
-
-              {/* Roster content */}
-              {sectionLoading ? (
-                <div className="sr-spinner-wrap" style={{ minHeight: '180px' }}>
-                  <div className="sr-spinner"></div>
-                </div>
-              ) : activeSectionTab === 'students' ? (
-                sectionStudents.length === 0 ? (
-                  <div className="sr-empty">
-                    No students registered in this section yet.
-                  </div>
-                ) : (
-                  <div className="sr-grid">
-                    {sectionStudents.map((stud) => {
-                      const userObj = stud.user || stud.User || {};
-                      const studentName = userObj.name || 'Student';
-                      const cleanName = studentName.replace(/^(Student Class|Student)\s+/gi, '').trim() || 'Student';
-                      const parentNameRaw = stud.parents?.[0]?.user?.name || '—';
-                      const cleanParentName = parentNameRaw.replace(/^(Parent of Student Class|Parent of Student|Parent)\s+/gi, '').trim() || parentNameRaw;
-                      return (
-                        <div
-                          key={stud.id}
-                          onClick={() => setSelectedStudent(stud)}
-                          className="sr-person-row"
-                        >
-                          <div className="sr-person-row__avatar sr-person-row__avatar--student">
-                            {cleanName[0]?.toUpperCase() || 'S'}
-                          </div>
-                          <div className="sr-person-row__info">
-                            <h4 className="sr-person-row__name">{cleanName}</h4>
-                            <p className="sr-person-row__meta">Parent: {cleanParentName}</p>
-                          </div>
-                          <ChevronRight className="sr-person-row__chevron" style={{ width: 16, height: 16 }} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-              ) : (
-                sectionTeachers.length === 0 ? (
-                  <div className="sr-empty">
-                    No subject teachers assigned to this section yet.
-                  </div>
-                ) : (
-                  <div className="sr-grid">
-                    {sectionTeachers.map((teach) => {
-                      const userObj = teach.user || teach.User || {};
-                      const tAssignments = teach.teacher_assignments?.filter(ta => ta.class_id === selectedClassId && ta.section_id === selectedSectionId) || [];
-                      const subjects = tAssignments.map(ta => ta.subject?.name).filter(Boolean).join(', ');
-                      return (
-                        <div
-                          key={teach.id}
-                          onClick={() => setSelectedTeacher(teach)}
-                          className="sr-person-row"
-                        >
-                          <div className="sr-person-row__avatar sr-person-row__avatar--teacher">
-                            {userObj.name?.[0]?.toUpperCase() || 'T'}
-                          </div>
-                          <div className="sr-person-row__info">
-                            <h4 className="sr-person-row__name">{userObj.name}</h4>
-                            <p className="sr-person-row__meta">Subject: {subjects || '—'}</p>
-                          </div>
-                          <ChevronRight className="sr-person-row__chevron" style={{ width: 16, height: 16 }} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-              )}
-            </div>
-          ) : (
-            <div className="sr-empty sr-empty--bg">
-              No sections found for this class.
-            </div>
-          )}
         </div>
       )}
 
@@ -517,56 +414,6 @@ export function SchoolRegistry() {
         </div>
       )}
 
-      {/* ── 3. ALL PARENTS DIRECTORY TAB ── */}
-      {activeMainTab === 'parents' && (
-        parentsLoading ? (
-          <div className="sr-spinner-wrap" style={{ minHeight: '200px' }}>
-            <div className="sr-spinner"></div>
-          </div>
-        ) : parents.length === 0 ? (
-          <div className="sr-empty">No parents registered in the school directory yet.</div>
-        ) : (
-          <div className="sr-grid">
-            {parents.map((par) => {
-              const userObj = par.user || par.User || {};
-              const childUser = par.student?.user || par.student?.User || {};
-              const cleanChildName = childUser.name?.replace(/^(Student Class|Student)\s+/gi, '').trim() || 'Student';
-              return (
-                <div
-                  key={par.id}
-                  onClick={() => setSelectedParent(par)}
-                  className="sr-dir-card"
-                >
-                  <div className="sr-dir-card__profile">
-                    <div className="sr-dir-card__avatar">
-                      {userObj.name?.[0]?.toUpperCase() || 'P'}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 className="sr-dir-card__name">{userObj.name}</h3>
-                      <p className="sr-dir-card__email">{userObj.email || '—'}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="sr-dir-card__footer">
-                    <div className="sr-dir-card__stat">
-                      <span className="sr-dir-card__stat-label">CHILD</span>
-                      <span className="sr-dir-card__stat-value">
-                        {cleanChildName}
-                      </span>
-                    </div>
-                    <div className="sr-dir-card__stat sr-dir-card__stat--right">
-                      <span className="sr-dir-card__stat-label">CLASS</span>
-                      <span className="sr-dir-card__stat-value sr-dir-card__stat-value--accent">
-                        {par.student?.class?.class_name || '—'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )
-      )}
 
       {/* ── DETAIL DRAWERS ── */}
 
@@ -642,36 +489,7 @@ export function SchoolRegistry() {
                 </div>
               </div>
 
-              {/* Parent Profile linked — clickable to open parent drawer */}
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Linked Parents</h4>
-                {selectedStudent.parents?.length === 0 ? (
-                  <p className="sr-empty" style={{ padding: '16px 0' }}>No parents linked to this student profile.</p>
-                ) : (
-                  selectedStudent.parents.map((p) => {
-                    const pUser = p.user || p.User || {};
-                    return (
-                      <div
-                        key={p.id}
-                        className="sr-linked-person"
-                        onClick={() => openParentFromStudent(p)}
-                      >
-                        <div className="sr-linked-person__avatar sr-linked-person__avatar--parent">
-                          {pUser.name?.[0]?.toUpperCase() || 'P'}
-                        </div>
-                        <div className="sr-linked-person__info">
-                          <p className="sr-linked-person__name">{pUser.name}</p>
-                          <p className="sr-linked-person__username">@{pUser.username || '—'}</p>
-                        </div>
-                        <span className="sr-linked-person__relation">
-                          {p.relation_type || 'Parent'}
-                        </span>
-                        <ChevronRight className="sr-linked-person__arrow" style={{ width: 16, height: 16 }} />
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+
 
               {/* Attendance Statistics — clickable to open calendar */}
               <div className="sr-drawer-section">
@@ -747,8 +565,8 @@ export function SchoolRegistry() {
                   selectedStudent.report_cards.map((rc) => (
                     <div key={rc.id} className="sr-exam-card">
                       <div className="sr-exam-card__header">
-                        <span className="sr-exam-card__name">{rc.exam?.name || 'Exam'}</span>
-                        <span className="sr-exam-card__date">{rc.exam?.start_date}</span>
+                        <span className="sr-exam-card__name">{getExamDisplayName(rc.exam)}</span>
+                        <span className="sr-exam-card__date">{getExamDateDisplay(rc.exam)}</span>
                       </div>
                       <div className="sr-exam-card__marks">
                         {rc.report_card_marks?.map((m) => {

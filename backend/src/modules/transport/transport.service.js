@@ -436,10 +436,10 @@ export const postLocationService = async ({ school_id, driver_id, trip_id, body,
 };
 
 /* ==========================================
-   5️⃣ PARENT & STUDENT ACCESS
+   5️⃣ STUDENT ACCESS
    ========================================== */
 
-export const getParentStudentTransportService = async ({ school_id, student_id }) => {
+export const getStudentTransportService = async ({ school_id, student_id }) => {
   const transport = await StudentTransport.findOne({
     where: { student_id, school_id },
     include: [
@@ -467,7 +467,7 @@ export const getParentStudentTransportService = async ({ school_id, student_id }
   };
 };
 
-export const getParentTripLocationService = async ({ school_id, trip_id }) => {
+export const getStudentTripLocationService = async ({ school_id, trip_id }) => {
   const trip = await Trip.findOne({ where: { id: trip_id, school_id } });
   if (!trip) throw new AppError("Trip not found", 404);
 

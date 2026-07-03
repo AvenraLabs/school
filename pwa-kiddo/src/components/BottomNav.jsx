@@ -2,13 +2,10 @@ import { BottomNavigation, BottomNavigationAction, Paper } from "@mui/material";
 import {
   Home,
   CalendarMonth,
-  Book,
   Chat,
   School,
   Person,
   Timer,
-  SmartToy,
-  DirectionsBus,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
@@ -32,28 +29,21 @@ export default function BottomNav() {
         ? "/teacher"
         : user.role === "driver"
           ? "/driver"
-          : "/parent";
+          : "/student"; // fallback
 
   const navItems = {
     student: [
       { label: "Home", icon: <Home />, path: `${base}/dashboard` },
       { label: "Timetable", icon: <CalendarMonth />, path: `${base}/timetable` },
       { label: "Chat", icon: <Chat />, path: `${base}/group-chat` },
-      { label: "Profile", icon: <Person />, path: "SIDEBAR_STUDENT" }, // opens student sidebar
+      { label: "Profile", icon: <Person />, path: "SIDEBAR_STUDENT" },
     ],
     teacher: [
       { label: "Home", icon: <Home />, path: `${base}/dashboard` },
       { label: "Classes", icon: <School />, path: `${base}/timetable` },
       { label: "Sessions", icon: <Timer />, path: `${base}/class-sessions` },
       { label: "Chat", icon: <Chat />, path: `${base}/group-chat` },
-      { label: "Profile", icon: <Person />, path: "SIDEBAR_TRIGGER" }, // Special path to handle click
-    ],
-    parent: [
-      { label: "Home", icon: <Home />, path: `${base}/dashboard` },
-      { label: "Timetable", icon: <CalendarMonth />, path: `${base}/timetable` },
-      { label: "Diary", icon: <Book />, path: `${base}/diary` },
-      { label: "Transport", icon: <DirectionsBus />, path: `${base}/transport` },
-      { label: "Profile", icon: <Person />, path: "SIDEBAR_PARENT" },
+      { label: "Profile", icon: <Person />, path: "SIDEBAR_TRIGGER" },
     ],
     driver: [
       { label: "Home", icon: <Home />, path: `${base}/dashboard` },
@@ -79,16 +69,11 @@ export default function BottomNav() {
         value={value}
         onChange={(_, newValue) => {
           if (newValue === "SIDEBAR_TRIGGER") {
-            // Dispatch a custom event or use a callback if passed
             window.dispatchEvent(new Event("toggle-teacher-sidebar"));
             return;
           }
           if (newValue === "SIDEBAR_STUDENT") {
             window.dispatchEvent(new Event("toggle-student-sidebar"));
-            return;
-          }
-          if (newValue === "SIDEBAR_PARENT") {
-            window.dispatchEvent(new Event("toggle-parent-sidebar"));
             return;
           }
           setValue(newValue);

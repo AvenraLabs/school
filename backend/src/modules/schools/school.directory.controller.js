@@ -4,12 +4,14 @@ import Class from "../classes/classes.model.js";
 import Section from "../sections/section.model.js";
 import Student from "../students/student.model.js";
 import Teacher from "../teachers/teacher.model.js";
-import Parent from "../parents/parent.model.js";
+import Family from "../students/family.model.js";
 import User from "../users/user.model.js";
 import Attendance from "../attendance/attendance.model.js";
 import ReportCard from "../report-cards/report-card.model.js";
 import ReportCardMark from "../report-cards/report-card-mark.model.js";
 import Exam from "../report-cards/exam.model.js";
+import ExamMaster from "../report-cards/exam-master.model.js";
+import ExamSubject from "../report-cards/exam-subject.model.js";
 import Subject from "../subjects/subject.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import TeacherClassSession from "../teacher-class-sessions/teacher-class-session.model.js";
@@ -116,19 +118,8 @@ export const getSchoolDirectory = asyncHandler(async (req, res) => {
     return tJson;
   });
 
-  // Calculate overall counts for stats chips
   const totalStudentsCount = await Student.count({
     where: { school_id, approval_status: "approved", is_active: true }
-  });
-
-  const totalParentsCount = await Parent.count({
-    include: [
-      {
-        model: Student,
-        where: { school_id, approval_status: "approved" },
-        required: true
-      }
-    ]
   });
 
   res.json({
@@ -137,7 +128,6 @@ export const getSchoolDirectory = asyncHandler(async (req, res) => {
       classes: classesData,
       teachers: teachersData,
       total_students_count: totalStudentsCount,
-      total_parents_count: totalParentsCount
     }
   });
 });
@@ -155,13 +145,9 @@ export const getSectionRoster = asyncHandler(async (req, res) => {
         attributes: ["id", "name", "username", "email", "phone", "avatar_url", "is_active"]
       },
       {
-        model: Parent,
-        include: [
-          {
-            model: User,
-            attributes: ["id", "name", "username", "email", "phone", "avatar_url"]
-          }
-        ]
+        model: Family,
+        attributes: ["id", "father_name", "mother_name", "guardian_phone"],
+        required: false,
       }
     ]
   });
@@ -243,7 +229,15 @@ export const getSectionRoster = asyncHandler(async (req, res) => {
     include: [
       {
         model: Exam,
-        attributes: ["id", "name", "start_date"]
+        attributes: ["id", "name", "createdAt", "is_locked"],
+        include: [
+          { model: ExamMaster, as: "master", attributes: ["id", "name"] },
+          {
+            model: ExamSubject,
+            as: "exam_subjects",
+            include: [{ model: Subject, attributes: ["id", "name"] }],
+          },
+        ],
       },
       {
         model: ReportCardMark,
@@ -255,7 +249,7 @@ export const getSectionRoster = asyncHandler(async (req, res) => {
         ]
       }
     ],
-    order: [[Exam, "start_date", "DESC"]]
+    order: [[Exam, "createdAt", "DESC"]]
   }) : [];
 
   const reportCardMap = {};
@@ -281,33 +275,6 @@ export const getSectionRoster = asyncHandler(async (req, res) => {
   });
 });
 
-// 3. Fetch Parents List on activeParents tab switch
-export const getParentsList = asyncHandler(async (req, res) => {
-  const school_id = req.user.school_id;
-
-  const parents = await Parent.findAll({
-    include: [
-      {
-        model: User,
-        attributes: ["id", "name", "username", "email", "phone", "avatar_url", "is_active"]
-      },
-      {
-        model: Student,
-        where: { school_id, approval_status: "approved" },
-        include: [
-          { model: User, attributes: ["name"] },
-          { model: Class, attributes: ["class_name"] },
-          { model: Section, attributes: ["name"] }
-        ]
-      }
-    ]
-  });
-
-  res.json({
-    success: true,
-    data: parents.filter(p => p.student !== null)
-  });
-});
 
 // 4. Fetch Single Student Profile (drawer cross-linking)
 export const getStudentProfile = asyncHandler(async (req, res) => {
@@ -322,13 +289,9 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
         attributes: ["id", "name", "username", "email", "phone", "avatar_url", "is_active"]
       },
       {
-        model: Parent,
-        include: [
-          {
-            model: User,
-            attributes: ["id", "name", "username", "email", "phone", "avatar_url"]
-          }
-        ]
+        model: Family,
+        attributes: ["id", "father_name", "mother_name", "guardian_phone", "address"],
+        required: false,
       }
     ]
   });
@@ -408,7 +371,15 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
     include: [
       {
         model: Exam,
-        attributes: ["id", "name", "start_date"]
+        attributes: ["id", "name", "createdAt", "is_locked"],
+        include: [
+          { model: ExamMaster, as: "master", attributes: ["id", "name"] },
+          {
+            model: ExamSubject,
+            as: "exam_subjects",
+            include: [{ model: Subject, attributes: ["id", "name"] }],
+          },
+        ],
       },
       {
         model: ReportCardMark,
@@ -420,7 +391,7 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
         ]
       }
     ],
-    order: [[Exam, "start_date", "DESC"]]
+    order: [[Exam, "createdAt", "DESC"]]
   });
 
   res.json({
@@ -473,69 +444,16 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
   const sectionsInactive = await Section.count({ where: { school_id, is_active: false } });
 
   // 3. Teachers
-  const teachersActive = await Teacher.count({ where: { school_id, is_active: true } });
-  const teachersInactive = await Teacher.count({ where: { school_id, is_active: false } });
+  const teachersActive = await Teacher.count({ where: { school_id, is_active: true, approval_status: "approved" } });
+  const teachersInactive = await Teacher.count({ where: { school_id, is_active: false, approval_status: "approved" } });
   const teachersApproved = await Teacher.count({ where: { school_id, approval_status: "approved" } });
   const teachersPending = await Teacher.count({ where: { school_id, approval_status: "pending" } });
 
   // 4. Students
-  const studentsActive = await Student.count({ where: { school_id, is_active: true } });
-  const studentsInactive = await Student.count({ where: { school_id, is_active: false } });
+  const studentsActive = await Student.count({ where: { school_id, is_active: true, approval_status: "approved" } });
+  const studentsInactive = await Student.count({ where: { school_id, is_active: false, approval_status: "approved" } });
   const studentsApproved = await Student.count({ where: { school_id, approval_status: "approved" } });
   const studentsPending = await Student.count({ where: { school_id, approval_status: "pending" } });
-
-  // 5. Parents
-  const parentsActive = await Parent.count({
-    include: [
-      {
-        model: Student,
-        where: { school_id },
-        required: true
-      },
-      {
-        model: User,
-        where: { is_active: true },
-        required: true
-      }
-    ]
-  });
-
-  const parentsInactive = await Parent.count({
-    include: [
-      {
-        model: Student,
-        where: { school_id },
-        required: true
-      },
-      {
-        model: User,
-        where: { is_active: false },
-        required: true
-      }
-    ]
-  });
-
-  const parentsApproved = await Parent.count({
-    include: [
-      {
-        model: Student,
-        where: { school_id },
-        required: true
-      }
-    ],
-    where: { approval_status: "approved" }
-  });
-
-  const parentsPending = await Parent.count({
-    include: [
-      {
-        model: Student,
-        where: { school_id },
-        required: true
-      }
-    ],
-    where: { approval_status: "pending" }
-  });
 
   res.json({
     success: true,
@@ -555,7 +473,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         inactive: teachersInactive,
         approved: teachersApproved,
         pending: teachersPending,
-        total: teachersApproved + teachersPending // or total count
+        total: teachersApproved + teachersPending
       },
       students: {
         active: studentsActive,
@@ -563,15 +481,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         approved: studentsApproved,
         pending: studentsPending,
         total: studentsApproved + studentsPending
-      },
-      parents: {
-        active: parentsActive,
-        inactive: parentsInactive,
-        approved: parentsApproved,
-        pending: parentsPending,
-        total: parentsApproved + parentsPending
       }
     }
   });
 });
-

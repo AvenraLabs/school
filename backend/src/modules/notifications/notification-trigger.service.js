@@ -41,7 +41,7 @@ export const triggerHomeworkNotification = async ({
     sender_role: "teacher",
     title: "New Homework Assigned",
     message: `New homework has been assigned for ${subject_name}. Please check.`,
-    target_role: "all", // parents + students
+    target_role: "all", // students + teachers
     class_id,
     section_id,
   });
@@ -64,7 +64,7 @@ export const triggerReportCardNotification = async ({
     sender_role: "teacher",
     title: "Report Card Published",
     message: `Report card for ${student_name} (${exam_name}) has been published.`,
-    target_role: "parent", // parents only
+    target_role: "student", // students only
     class_id,
     section_id,
   });

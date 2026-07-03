@@ -51,7 +51,7 @@ export const publishReportCard = asyncHandler(async (req, res) => {
   });
 });
 
-/* VIEW (student / parent / teacher) */
+/* VIEW (student / teacher) */
 export const getReportCard = asyncHandler(async (req, res) => {
   const reportCard = await getReportCardService({
     report_card_id: req.params.id,
@@ -86,20 +86,6 @@ export const getReportCard = asyncHandler(async (req, res) => {
     }
   }
 
-  if (req.user.role === "parent") {
-    const Parent = (await import("../parents/parent.model.js")).default;
-    const link = await Parent.findOne({
-      where: {
-        user_id: req.user.id,
-        student_id: reportCard.student_id,
-        approval_status: "approved",
-      },
-    });
-
-    if (!link) {
-      throw new AppError("Forbidden", 403);
-    }
-  }
 
   if (req.user.role === "teacher") {
     const TeacherAssignment = (

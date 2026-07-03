@@ -15,8 +15,9 @@ export default function ExamCreationPage() {
     const [success, setSuccess] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
-        start_date: "",
-        end_date: "",
+        subject_id: "",
+        exam_date: "",
+        syllabus: "",
         class_id: "",
     });
 
@@ -25,12 +26,12 @@ export default function ExamCreationPage() {
         const load = async () => {
             try {
                 setAssignmentsLoading(true);
-                const res = await fetchAssignments();
-                const data = res?.data?.data ?? res?.data ?? [];
+                const assignmentRes = await fetchAssignments();
+                const data = assignmentRes?.data?.data ?? assignmentRes?.data ?? [];
                 if (!active) return;
                 setAssignments(Array.isArray(data) ? data : []);
             } catch (err) {
-                console.error("Failed to load assignments", err);
+                console.error("Failed to load exam setup", err);
                 if (!active) return;
                 setAssignments([]);
             } finally {
@@ -55,6 +56,20 @@ export default function ExamCreationPage() {
         return Array.from(map.values());
     }, [assignments]);
 
+    const subjectOptions = useMemo(() => {
+        const map = new Map();
+        assignments
+            .filter((a) => !formData.class_id || String(a.class_id) === String(formData.class_id))
+            .forEach((a) => {
+                const subjectId = a.subject_id;
+                const subjectName = a.Subject?.name || a.subject?.name || a.subject_name || subjectId;
+                if (subjectId && !map.has(subjectId)) {
+                    map.set(subjectId, { subject_id: subjectId, subject_name: subjectName });
+                }
+            });
+        return Array.from(map.values());
+    }, [assignments, formData.class_id]);
+
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
@@ -65,21 +80,27 @@ export default function ExamCreationPage() {
             setLoading(true);
             setError("");
             await createExam({
-                name: formData.name,
                 class_id: Number(formData.class_id),
-                start_date: formData.start_date,
-                end_date: formData.end_date,
+                name: formData.name.trim(),
+                subjects: [
+                    {
+                        subject_id: Number(formData.subject_id),
+                        exam_date: formData.exam_date,
+                        syllabus: formData.syllabus?.trim() || null,
+                    },
+                ],
             });
             setSuccess(true);
             setFormData({
                 name: "",
-                start_date: "",
-                end_date: "",
+                subject_id: "",
+                exam_date: "",
+                syllabus: "",
                 class_id: "",
             });
         } catch (err) {
             console.error("Failed to create exam", err);
-            setError("Failed to create exam");
+            setError(err.response?.data?.message || "Failed to create exam");
         } finally {
             setLoading(false);
         }
@@ -108,31 +129,44 @@ export default function ExamCreationPage() {
                             fullWidth
                             label="Exam Name"
                             name="name"
-                            placeholder="e.g., Mid-Term Mathematics"
+                            placeholder="e.g., Unit Test 1"
                             value={formData.name}
                             onChange={handleChange}
+                            helperText="Creates this exam for the selected class"
                         />
                     </Grid>
 
                     <Grid item xs={12} sm={6}>
                         <DatePickerField
-                            label="Start Date"
-                            value={formData.start_date}
+                            label="Exam Date"
+                            value={formData.exam_date}
                             onChange={(val) =>
-                                setFormData((prev) => ({ ...prev, start_date: val }))
+                                setFormData((prev) => ({ ...prev, exam_date: val }))
                             }
                         />
                     </Grid>
 
                     <Grid item xs={12} sm={6}>
-                        <DatePickerField
-                            label="End Date"
-                            value={formData.end_date}
-                            onChange={(val) =>
-                                setFormData((prev) => ({ ...prev, end_date: val }))
-                            }
-                            minDate={formData.start_date || undefined}
-                        />
+                        <TextField
+                            select
+                            required
+                            fullWidth
+                            label="Subject"
+                            name="subject_id"
+                            value={formData.subject_id}
+                            onChange={handleChange}
+                            disabled={!formData.class_id}
+                        >
+                            {!formData.class_id && <MenuItem value="">Select class first</MenuItem>}
+                            {formData.class_id && subjectOptions.length === 0 && (
+                                <MenuItem value="">No assigned subjects</MenuItem>
+                            )}
+                            {subjectOptions.map((subject) => (
+                                <MenuItem key={subject.subject_id} value={subject.subject_id}>
+                                    {subject.subject_name}
+                                </MenuItem>
+                            ))}
+                        </TextField>
                     </Grid>
 
                     <Grid item xs={12}>
@@ -142,7 +176,7 @@ export default function ExamCreationPage() {
                             label="Class"
                             name="class_id"
                             value={formData.class_id}
-                            onChange={handleChange}
+                            onChange={(event) => setFormData((prev) => ({ ...prev, class_id: event.target.value, subject_id: "" }))}
                             disabled={assignmentsLoading}
                             fullWidth
                             slotProps={{
@@ -180,16 +214,29 @@ export default function ExamCreationPage() {
                     </Grid>
 
                     <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            multiline
+                            minRows={3}
+                            label="Syllabus"
+                            name="syllabus"
+                            placeholder="e.g., Fractions, decimals, Chapter 3 exercises"
+                            value={formData.syllabus}
+                            onChange={handleChange}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12}>
                         <Button
                             type="submit"
                             variant="contained"
                             fullWidth
                             size="large"
-                            disabled={loading || !formData.class_id}
+                            disabled={loading || !formData.class_id || !formData.name.trim() || !formData.subject_id || !formData.exam_date}
                             startIcon={<Add />}
                             sx={{ mt: 2 }}
                         >
-                            {loading ? "Creating..." : "Schedule Exam"}
+                            {loading ? "Scheduling..." : "Schedule Subject"}
                         </Button>
                     </Grid>
                 </Grid>
@@ -201,7 +248,7 @@ export default function ExamCreationPage() {
                 anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
             >
                 <Alert severity="success" onClose={() => setSuccess(false)}>
-                    Exam created successfully
+                    Exam subject scheduled successfully
                 </Alert>
             </Snackbar>
         </Box>

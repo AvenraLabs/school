@@ -1,8 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { notificationsAPI, classesAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../context/ToastContext';
-import { Bell, Send, Eye, CheckCircle } from 'lucide-react';
+import {
+  Bell,
+  CheckCircle,
+  Clock3,
+  Eye,
+  GraduationCap,
+  Megaphone,
+  Search,
+  Send,
+  Sparkles,
+  Users,
+} from 'lucide-react';
+import './Notifications.css';
+
+const audienceMeta = {
+  all: { label: 'Everyone', icon: Users, tone: 'all' },
+  student: { label: 'Students', icon: GraduationCap, tone: 'student' },
+  teacher: { label: 'Teachers', icon: Users, tone: 'teacher' },
+};
+
+const formatDate = (value) => {
+  if (!value) return 'Just now';
+  return new Date(value).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
 
 export function Notifications() {
   const [notifications, setNotifications] = useState([]);
@@ -11,18 +39,23 @@ export function Notifications() {
   const [showCompose, setShowCompose] = useState(false);
   const [showAcks, setShowAcks] = useState(null);
   const [acks, setAcks] = useState(null);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all');
   const [form, setForm] = useState({ title: '', message: '', target_role: 'all', class_id: '', section_id: '' });
   const [sending, setSending] = useState(false);
   const toast = useToast();
 
-  useEffect(() => { loadNotifications(); loadClasses(); }, []);
+  useEffect(() => {
+    loadNotifications();
+    loadClasses();
+  }, []);
 
   const loadNotifications = async () => {
     try {
       const res = await notificationsAPI.list();
       setNotifications(res.items || []);
     } catch (e) {
-      toast.error('Failed to load');
+      toast.error('Failed to load notifications');
     } finally {
       setLoading(false);
     }
@@ -32,20 +65,28 @@ export function Notifications() {
     try {
       const res = await classesAPI.list();
       setClasses(res.items || []);
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      /* optional data */
+    }
   };
 
   const handleSend = async (e) => {
     e.preventDefault();
     setSending(true);
     try {
-      await notificationsAPI.create(form.title, form.message, form.target_role, form.class_id ? Number(form.class_id) : undefined, form.section_id ? Number(form.section_id) : undefined);
-      toast.success('Notification sent!');
+      await notificationsAPI.create(
+        form.title,
+        form.message,
+        form.target_role,
+        form.class_id ? Number(form.class_id) : undefined,
+        form.section_id ? Number(form.section_id) : undefined
+      );
+      toast.success('Notification sent');
       setShowCompose(false);
       setForm({ title: '', message: '', target_role: 'all', class_id: '', section_id: '' });
       loadNotifications();
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed');
+      toast.error(e.response?.data?.message || 'Failed to send notification');
     } finally {
       setSending(false);
     }
@@ -53,6 +94,7 @@ export function Notifications() {
 
   const viewAcks = async (notif) => {
     setShowAcks(notif);
+    setAcks(null);
     try {
       const res = await notificationsAPI.getAcknowledgements(notif.id);
       setAcks(res.data || { count: 0, rows: [] });
@@ -63,118 +105,181 @@ export function Notifications() {
 
   const selectedSections = classes.find((c) => String(c.id) === String(form.class_id))?.sections || [];
 
-  return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Notifications</h1>
-          <p className="page-subtitle">Send and manage announcements</p>
-        </div>
-        <button onClick={() => setShowCompose(true)} className="btn-primary">
-          <Send className="w-4 h-4" /> Compose
-        </button>
-      </div>
+  const filteredNotifications = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return notifications.filter((notification) => {
+      const role = notification.target_role || 'all';
+      const matchesRole = filter === 'all' || role === filter;
+      const matchesQuery = !normalizedQuery
+        || notification.title?.toLowerCase().includes(normalizedQuery)
+        || notification.message?.toLowerCase().includes(normalizedQuery);
+      return matchesRole && matchesQuery;
+    });
+  }, [filter, notifications, query]);
 
-      <div className="card overflow-hidden">
+  const stats = useMemo(() => ({
+    total: notifications.length,
+    student: notifications.filter((item) => item.target_role === 'student').length,
+    teacher: notifications.filter((item) => item.target_role === 'teacher').length,
+  }), [notifications]);
+
+  return (
+    <div className="notifications-page">
+      <section className="notifications-hero">
+        <div className="notifications-hero-copy">
+          <div className="notifications-kicker">
+            <Sparkles size={16} />
+            School announcements
+          </div>
+          <h1>Notifications</h1>
+          <p>Send clean, targeted updates to students, teachers, classes, and sections.</p>
+        </div>
+        <button onClick={() => setShowCompose(true)} className="notify-btn notify-btn-primary">
+          <Send size={18} />
+          Compose
+        </button>
+      </section>
+
+      <section className="notifications-stats">
+        <div className="notify-stat-card">
+          <span>Total Sent</span>
+          <strong>{stats.total}</strong>
+        </div>
+        <div className="notify-stat-card">
+          <span>Students</span>
+          <strong>{stats.student}</strong>
+        </div>
+        <div className="notify-stat-card">
+          <span>Teachers</span>
+          <strong>{stats.teacher}</strong>
+        </div>
+      </section>
+
+      <section className="notifications-toolbar">
+        <div className="notifications-search">
+          <Search size={18} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search title or message"
+          />
+        </div>
+        <div className="notifications-filters">
+          {['all', 'student', 'teacher'].map((role) => (
+            <button
+              key={role}
+              type="button"
+              className={filter === role ? 'active' : ''}
+              onClick={() => setFilter(role)}
+            >
+              {audienceMeta[role].label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="notifications-grid">
         {loading ? (
-          <div className="p-8 text-center text-slate-400">Loading...</div>
-        ) : notifications.length === 0 ? (
-          <div className="empty-state">
-            <Bell className="empty-state-icon" />
-            <p className="empty-state-title">No notifications</p>
-            <p className="empty-state-desc">Send your first announcement</p>
+          <div className="notifications-empty">Loading notifications...</div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="notifications-empty">
+            <Bell size={42} />
+            <strong>No notifications found</strong>
+            <span>Try a different filter or compose a new announcement.</span>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
-            {notifications.map((n) => (
-              <div key={n.id} className="p-4 hover:bg-slate-50 transition-colors">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-slate-900 text-sm">{n.title}</h4>
-                    <p className="text-sm text-slate-600 mt-1">{n.message}</p>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="badge-info capitalize">{n.target_role}</span>
-                      {n.created_at && (
-                        <span className="text-xs text-slate-400">{new Date(n.created_at).toLocaleString()}</span>
-                      )}
-                    </div>
+          filteredNotifications.map((notification) => {
+            const role = notification.target_role || 'all';
+            const meta = audienceMeta[role] || audienceMeta.all;
+            const AudienceIcon = meta.icon;
+            return (
+              <article key={notification.id} className="notification-card">
+                <div className="notification-card-top">
+                  <div className={`notification-icon ${meta.tone}`}>
+                    <AudienceIcon size={20} />
                   </div>
-                  <button onClick={() => viewAcks(n)} className="btn-sm btn-ghost">
-                    <Eye className="w-3.5 h-3.5" /> Acks
+                  <span className={`notification-chip ${meta.tone}`}>{meta.label}</span>
+                </div>
+                <h3>{notification.title}</h3>
+                <p>{notification.message}</p>
+                <div className="notification-card-meta">
+                  <span>
+                    <Clock3 size={14} />
+                    {formatDate(notification.created_at)}
+                  </span>
+                  <button type="button" onClick={() => viewAcks(notification)}>
+                    <Eye size={15} />
+                    Acks
                   </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              </article>
+            );
+          })
         )}
-      </div>
+      </section>
 
-      {/* Compose */}
       <Modal isOpen={showCompose} onClose={() => setShowCompose(false)} title="Compose Notification" maxWidth="max-w-xl">
-        <form onSubmit={handleSend} className="space-y-4">
-          <div>
-            <label className="label">Title</label>
-            <input className="input-field" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Notification title" />
-          </div>
-          <div>
-            <label className="label">Message</label>
-            <textarea className="input-field" style={{ minHeight: '120px', resize: 'vertical' }} required value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Write your message..." />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="label">Target Role</label>
-              <select className="select-field" value={form.target_role} onChange={(e) => setForm({ ...form, target_role: e.target.value })}>
-                <option value="all">All</option>
+        <form onSubmit={handleSend} className="notify-form">
+          <label>
+            <span>Title</span>
+            <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="New homework assigned" />
+          </label>
+          <label>
+            <span>Message</span>
+            <textarea required value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Write a short, clear message..." />
+          </label>
+          <div className="notify-form-grid">
+            <label>
+              <span>Target</span>
+              <select value={form.target_role} onChange={(e) => setForm({ ...form, target_role: e.target.value })}>
+                <option value="all">Everyone</option>
                 <option value="teacher">Teachers</option>
                 <option value="student">Students</option>
-                <option value="parent">Parents</option>
               </select>
-            </div>
-            <div>
-              <label className="label">Class (optional)</label>
-              <select className="select-field" value={form.class_id}
-                onChange={e => setForm({ ...form, class_id: e.target.value, section_id: '' })}>
-                <option value="">All</option>
-                {classes.map(c => <option key={c.id} value={c.id}>{c.class_name}</option>)}
+            </label>
+            <label>
+              <span>Class</span>
+              <select value={form.class_id} onChange={(e) => setForm({ ...form, class_id: e.target.value, section_id: '' })}>
+                <option value="">All classes</option>
+                {classes.map((item) => <option key={item.id} value={item.id}>{item.class_name}</option>)}
               </select>
-            </div>
-            <div>
-              <label className="label">Section (optional)</label>
-              <select className="select-field" value={form.section_id}
-                onChange={e => setForm({ ...form, section_id: e.target.value })}
-                disabled={!form.class_id}>
-                <option value="">All</option>
-                {selectedSections.map(s => <option key={s.id} value={s.id}>Section {s.name}</option>)}
+            </label>
+            <label>
+              <span>Section</span>
+              <select value={form.section_id} onChange={(e) => setForm({ ...form, section_id: e.target.value })} disabled={!form.class_id}>
+                <option value="">All sections</option>
+                {selectedSections.map((section) => <option key={section.id} value={section.id}>Section {section.name}</option>)}
               </select>
-            </div>
+            </label>
           </div>
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setShowCompose(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={sending} className="btn-primary">
-              <Send className="w-4 h-4" /> {sending ? 'Sending...' : 'Send'}
+          <div className="notify-form-actions">
+            <button type="button" onClick={() => setShowCompose(false)} className="notify-btn notify-btn-soft">Cancel</button>
+            <button type="submit" disabled={sending} className="notify-btn notify-btn-primary">
+              <Send size={16} />
+              {sending ? 'Sending...' : 'Send notification'}
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* Acknowledgements */}
-      <Modal isOpen={!!showAcks} onClose={() => { setShowAcks(null); setAcks(null); }} title={`Acknowledgements — ${showAcks?.title}`}>
+      <Modal isOpen={!!showAcks} onClose={() => { setShowAcks(null); setAcks(null); }} title={`Acknowledgements - ${showAcks?.title || ''}`}>
         {acks === null ? (
-          <div className="text-center text-slate-400 py-4">Loading...</div>
+          <div className="acks-empty">Loading acknowledgements...</div>
         ) : acks.rows?.length === 0 ? (
-          <div className="text-center text-slate-400 py-4">No acknowledgements yet</div>
+          <div className="acks-empty">No acknowledgements yet</div>
         ) : (
-          <div>
-            <p className="text-sm text-slate-600 mb-3"><strong>{acks.count}</strong> people acknowledged</p>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {(acks.rows || []).map((a, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                  <CheckCircle className="w-4 h-4 text-emerald-500" />
-                  <span className="text-sm">{a.user?.name || a.user?.username || `User #${a.user_id}`}</span>
-                  {a.acknowledged_at && <span className="text-xs text-slate-400 ml-auto">{new Date(a.acknowledged_at).toLocaleString()}</span>}
-                </div>
-              ))}
+          <div className="acks-panel">
+            <div className="acks-count">
+              <Megaphone size={16} />
+              <strong>{acks.count}</strong> people acknowledged
             </div>
+            {(acks.rows || []).map((ack, index) => (
+              <div key={index} className="ack-row">
+                <CheckCircle size={17} />
+                <span>{ack.user?.name || ack.user?.username || `User #${ack.user_id}`}</span>
+                {ack.acknowledged_at && <small>{formatDate(ack.acknowledged_at)}</small>}
+              </div>
+            ))}
           </div>
         )}
       </Modal>

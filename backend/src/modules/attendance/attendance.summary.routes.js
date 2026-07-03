@@ -12,7 +12,6 @@ import {
   markAttendance,
   getSessionAttendance,
   getTeacherAttendanceSummary,
-  getParentAttendanceSummary,
   getStudentAttendanceSummary,
 } from "./attendance.summary.controller.js";
 
@@ -44,16 +43,7 @@ router.get(
   getTeacherAttendanceSummary
 );
 
-/* =========================
-   PARENT
-========================= */
-router.get(
-  "/parents/attendance/summary",
-  protect,
-  allowRoles("parent"),
-  validate(attendanceSummarySchema),
-  getParentAttendanceSummary
-);
+
 
 /* =========================
    STUDENT

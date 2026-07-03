@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { classesAPI } from '../../api';
+import { classesAPI, authAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { generateRosterPDF } from '../../utils/pdfGenerator';
 import { Download, ClipboardList } from 'lucide-react';
@@ -11,6 +11,9 @@ export function LoginRoster() {
   const [filterClass, setFilterClass] = useState('');
   const [filterSection, setFilterSection] = useState('');
   const [loading, setLoading] = useState(true);
+  const [resetModal, setResetModal] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetting, setResetting] = useState(false);
   const toast = useToast();
 
   useEffect(() => { loadClasses(); loadRoster(); }, []);
@@ -19,23 +22,42 @@ export function LoginRoster() {
   const loadClasses = async () => {
     try {
       const res = await classesAPI.list();
-      setClasses(res.items || []);
+      setClasses(res.data || res.items || []);
     } catch (e) { /* ignore */ }
   };
 
   const loadRoster = async () => {
-    setLoading(true);
     try {
-      const res = await classesAPI.getLoginRoster(filterClass || undefined, filterSection || undefined);
+      setLoading(true);
+      const res = await classesAPI.getLoginRoster(filterClass, filterSection);
       setData(res.data || res);
     } catch (e) {
-      toast.error('Failed to load roster');
+      toast.error('Failed to load login roster');
     } finally {
       setLoading(false);
     }
   };
 
-  const selectedClassSections = classes.find((c) => String(c.id) === String(filterClass))?.sections || [];
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 4) {
+      toast.error('Password must be at least 4 characters');
+      return;
+    }
+    setResetting(true);
+    try {
+      await authAPI.resetUserPassword(resetModal.userId, newPassword);
+      toast.success(`Password for ${resetModal.name} reset successfully`);
+      setResetModal(null);
+      setNewPassword('');
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to reset password');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const selectedClassSections = classes.find(c => String(c.id) === String(filterClass))?.sections || [];
 
   const handleDownloadPDF = () => {
     if (data) {
@@ -127,7 +149,7 @@ export function LoginRoster() {
                 <h3 className="font-semibold text-slate-900">Teachers ({data.teachers.length})</h3>
               </div>
               <table className="data-table">
-                <thead><tr><th>Username</th><th>Password</th><th>Name</th><th>Employee ID</th></tr></thead>
+                <thead><tr><th>Username</th><th>Password</th><th>Name</th><th>Employee ID</th><th className="text-right">Actions</th></tr></thead>
                 <tbody>
                   {data.teachers.map((t, i) => {
                     const username = t.user?.username || t.username || '';
@@ -137,6 +159,14 @@ export function LoginRoster() {
                         <td className="font-mono text-xs">{username ? `${username}@123` : '—'}</td>
                         <td>{t.user?.name || t.name || '—'}</td>
                         <td className="font-mono text-xs">{t.employee_id || '—'}</td>
+                        <td className="text-right">
+                          <button 
+                            className="btn btn-secondary text-xs px-2 py-1 h-auto"
+                            onClick={() => setResetModal({ userId: t.user?.id || t.user_id, name: t.user?.name || t.name })}
+                          >
+                            Reset Password
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -158,20 +188,24 @@ export function LoginRoster() {
                   </div>
                   {sec.students && sec.students.length > 0 && (
                     <table className="data-table">
-                      <thead><tr><th>Roll No</th><th>Username</th><th>Password</th><th>Name</th><th>Parent Username</th><th>Parent Password</th></tr></thead>
+                      <thead><tr><th>Roll No</th><th>Username</th><th>Password</th><th>Name</th><th className="text-right">Actions</th></tr></thead>
                       <tbody>
                         {sec.students.map((s, si2) => {
                           const username = s.user?.username || s.username || '';
-                          const parent = s.Parents?.[0] || s.parents?.[0];
-                          const parentUsername = parent?.User?.username || parent?.user?.username || '';
                           return (
                             <tr key={si2}>
                               <td className="font-mono">{s.roll_no || '—'}</td>
                               <td className="font-mono text-xs">{username || '—'}</td>
                               <td className="font-mono text-xs">{username ? `${username}@123` : '—'}</td>
                               <td>{s.user?.name || s.name || '—'}</td>
-                              <td className="font-mono text-xs">{parentUsername || '—'}</td>
-                              <td className="font-mono text-xs">{parentUsername ? `${parentUsername}@123` : '—'}</td>
+                              <td className="text-right">
+                                <button 
+                                  className="btn btn-secondary text-xs px-2 py-1 h-auto"
+                                  onClick={() => setResetModal({ userId: s.user?.id || s.user_id, name: s.user?.name || s.name })}
+                                >
+                                  Reset Password
+                                </button>
+                              </td>
                             </tr>
                           );
                         })}
@@ -182,6 +216,39 @@ export function LoginRoster() {
               ))}
             </div>
           ))}
+        </div>
+      )}
+
+      {resetModal && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="font-semibold text-slate-900">Reset Password</h3>
+              <button onClick={() => setResetModal(null)} className="text-slate-400 hover:text-slate-600">&times;</button>
+            </div>
+            <form onSubmit={handleResetPassword} className="p-4 space-y-4">
+              <p className="text-sm text-slate-600">
+                Set a new password for <strong className="text-slate-900">{resetModal.name}</strong>.
+              </p>
+              <div>
+                <input
+                  type="text"
+                  className="input-field w-full"
+                  placeholder="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoFocus
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" className="btn btn-secondary" onClick={() => setResetModal(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={resetting}>
+                  {resetting ? 'Saving...' : 'Save Password'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

@@ -50,7 +50,7 @@ export function AuditLogs() {
           <option value="">All Entity Types</option>
           <option value="student">Student</option>
           <option value="teacher">Teacher</option>
-          <option value="parent">Parent</option>
+
         </select>
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-500">From:</span>

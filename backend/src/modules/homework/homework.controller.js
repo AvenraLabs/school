@@ -23,7 +23,7 @@ export const createHomework = asyncHandler(async (req, res) => {
   });
 });
 
-/* LIST (teacher / parent / student) */
+/* LIST (teacher / student) */
 export const listHomework = asyncHandler(async (req, res) => {
   const result = await listHomeworkService({
     user: req.user,

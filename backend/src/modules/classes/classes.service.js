@@ -3,7 +3,7 @@ import Class from "./classes.model.js";
 import Section from "../sections/section.model.js";
 import Teacher from "../teachers/teacher.model.js";
 import Student from "../students/student.model.js";
-import Parent from "../parents/parent.model.js";
+
 import User from "../users/user.model.js";
 
 export const createClassService = async ({
@@ -122,19 +122,6 @@ export const getLoginRosterService = async ({ school_id, query }) => {
                   model: User,
                   required: true,
                   attributes: ["id", "username", "name", "is_active"],
-                },
-                {
-                  model: Parent,
-                  required: false,
-                  attributes: ["id", "relation_type", "approval_status"],
-                  include: [
-                    {
-                      model: User,
-                      required: true,
-                      where: { school_id },
-                      attributes: ["id", "username", "name", "is_active"],
-                    },
-                  ],
                 },
               ],
             },

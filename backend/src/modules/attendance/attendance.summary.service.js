@@ -1,7 +1,7 @@
 import { Op } from "sequelize";
 import Attendance from "./attendance.model.js";
 import Student from "../students/student.model.js";
-import Parent from "../parents/parent.model.js";
+
 import User from "../users/user.model.js";
 import Class from "../classes/classes.model.js";
 import Section from "../sections/section.model.js";
@@ -104,49 +104,6 @@ export const getTeacherAttendanceSummaryService = async ({
         include: [
           { model: User, attributes: ["id", "name"] },
         ],
-      },
-    ],
-    limit,
-    offset,
-    order: [["created_at", "DESC"]],
-  });
-};
-
-/* =========================
-   PARENT: ATTENDANCE SUMMARY
-========================= */export const getParentAttendanceSummaryService = async ({
-  parent_user_id,
-  query,
-}) => {
-  const { limit, offset } = getPagination(query);
-  const { from_date, to_date } = query || {};
-
-  const links = await Parent.findAll({
-    where: { user_id: parent_user_id, approval_status: "approved" },
-    attributes: ["student_id"],
-  });
-
-  const studentIds = links.map((l) => l.student_id);
-  if (!studentIds.length) return { count: 0, rows: [] };
-
-  const sessionWhere = {};
-
-  if (from_date || to_date) {
-    sessionWhere.started_at = {};
-    if (from_date) sessionWhere.started_at[Op.gte] = from_date;
-    if (to_date) sessionWhere.started_at[Op.lte] = to_date;
-  }
-
-  return Attendance.findAndCountAll({
-    where: { student_id: studentIds },
-    include: [
-      {
-        model: TeacherClassSession,
-        where: sessionWhere,
-      },
-      {
-        model: Student,
-        include: [{ model: User, attributes: ["id", "name"] }],
       },
     ],
     limit,

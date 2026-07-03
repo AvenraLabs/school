@@ -29,22 +29,6 @@ export const listNotifications = asyncHandler(async (req, res) => {
     if (req.user.section_id) sectionIds = [req.user.section_id];
   }
 
-  if (req.user.role === "parent") {
-    const Parent = (await import("../parents/parent.model.js")).default;
-    const Student = (await import("../students/student.model.js")).default;
-
-    const links = await Parent.findAll({
-      where: { user_id: req.user.id, approval_status: "approved" },
-      include: [{ model: Student, attributes: ["class_id", "section_id"] }],
-    });
-
-    classIds = links
-      .map((l) => (l.student ?? l.Student)?.class_id)
-      .filter((v) => v !== undefined && v !== null);
-    sectionIds = links
-      .map((l) => (l.student ?? l.Student)?.section_id)
-      .filter((v) => v !== undefined && v !== null);
-  }
 
   if (req.user.role === "teacher") {
     const TeacherAssignment = (await import("../teacher-assignments/teacher-assignment.model.js")).default;

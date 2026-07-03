@@ -27,9 +27,10 @@ import {
   Warning,
   CheckCircle
 } from "@mui/icons-material";
-import { getParentChildren } from "../parent-analytics/parent-analytics.api";
 import api from "../../api/axios";
 import { connectTransportSocket, getTransportSocket } from "./transport.socket";
+
+const getParentChildren = async () => ({ data: { data: [] } });
 
 export default function ParentTransportPage() {
   const [children, setChildren] = useState([]);

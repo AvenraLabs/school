@@ -10,18 +10,19 @@ import {
   Card,
   CardContent,
   Avatar,
-  Stack
+  Stack,
+  Chip,
+  LinearProgress
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import {
-  Menu as MenuIcon,
   Notifications as NotifIcon,
-  EmojiEvents, // for Tokens
-  FactCheck, // for Attendance
-  Assignment, // for Homework
-  ChevronRight,
-  Timer,
-  School
+  EmojiEvents,
+  FactCheck,
+  AutoGraph,
+  Book,
+  TrendingUp,
+  WarningAmber
 } from "@mui/icons-material";
 import { fetchStudentDashboard, fetchParentDashboard, fetchTeacherDashboard } from "./dashboard.api";
 import { useAuth } from "../../auth/AuthProvider";
@@ -224,6 +225,23 @@ export default function DashboardPage() {
   };
 
   const studentName = data?.student?.name || user?.name || "Student";
+  const attendance = metrics.attendance || { percentage: 0, weekly: {}, monthly: {} };
+  const aiTokens = metrics.ai_tokens || { remaining: 0, used: 0, total: 0 };
+  const performance = metrics.performance || {};
+  const trend = performance.trend || [];
+  const subjectAverages = performance.subject_averages || [];
+  const latestExam = performance.latest_exam;
+  const focusSubject = performance.focus_subject;
+  const strongSubject = performance.strong_subject;
+  const weakSyllabus = performance.weak_syllabus;
+  const compactStatSx = {
+    p: 1.35,
+    bgcolor: 'rgba(255,255,255,0.14)',
+    backdropFilter: 'blur(10px)',
+    color: 'white',
+    borderRadius: 3,
+    border: '1px solid rgba(255,255,255,0.12)',
+  };
 
   return (
     <Box sx={{ pb: 2, bgcolor: 'background.default' }}>
@@ -239,7 +257,7 @@ export default function DashboardPage() {
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)'
         }}
       >
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2.2 }}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <Avatar src={user.avatar_url} sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
               {studentName[0]}
@@ -253,107 +271,179 @@ export default function DashboardPage() {
         {/* Stats Grid */}
         <Grid container spacing={2}>
           <Grid item xs={6}>
-            <Paper
-              sx={{
-                p: 2,
-                bgcolor: 'rgba(255,255,255,0.15)',
-                backdropFilter: 'blur(10px)',
-                color: 'white',
-                borderRadius: 3
-              }}
-            >
+            <Paper sx={compactStatSx}>
               <Typography variant="caption" sx={{ opacity: 0.8 }}>Attendance</Typography>
-              <Stack direction="row" alignItems="flex-end" spacing={0.5}>
-                <Typography variant="h4" fontWeight="bold">
-                  {metrics.attendance.percentage}%
+              <Stack direction="row" alignItems="center" spacing={0.7}>
+                <Typography variant="h6" fontWeight={950}>
+                  {attendance.percentage}%
                 </Typography>
-                <FactCheck sx={{ fontSize: 20, opacity: 0.8, mb: 1 }} />
+                <FactCheck sx={{ fontSize: 18, opacity: 0.8 }} />
               </Stack>
+              <Typography variant="caption" sx={{ opacity: 0.74 }}>
+                Month {attendance.monthly?.percentage ?? 0}%
+              </Typography>
             </Paper>
           </Grid>
           <Grid item xs={6}>
-            <Paper
-              sx={{
-                p: 2,
-                bgcolor: 'rgba(255,255,255,0.15)',
-                backdropFilter: 'blur(10px)',
-                color: 'white',
-                borderRadius: 3
-              }}
-            >
+            <Paper sx={compactStatSx}>
               <Typography variant="caption" sx={{ opacity: 0.8 }}>AI Tokens</Typography>
-              <Stack direction="row" alignItems="flex-end" spacing={0.5}>
-                <Typography variant="h4" fontWeight="bold">
-                  {metrics.ai_tokens.remaining}/{metrics.ai_tokens.total}
+              <Stack direction="row" alignItems="center" spacing={0.7}>
+                <Typography variant="h6" fontWeight={950}>
+                  {aiTokens.remaining}
                 </Typography>
-                <EmojiEvents sx={{ fontSize: 20, opacity: 0.8, mb: 1 }} />
+                <EmojiEvents sx={{ fontSize: 18, opacity: 0.8 }} />
               </Stack>
               <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                Used: {metrics.ai_tokens.used ?? 0}
+                Used {aiTokens.used ?? 0} / {aiTokens.total ?? 0}
               </Typography>
             </Paper>
           </Grid>
         </Grid>
       </Box>
 
-      {/* Quick Actions / Content */}
       <Container sx={{ mt: 3 }}>
-        <Typography variant="h6" fontWeight="bold" gutterBottom>
-          Quick Actions
-        </Typography>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.6 }}>
+          <Box>
+            <Typography variant="h6" fontWeight={900}>
+              Learning Analytics
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Small signals that help parents and students act early.
+            </Typography>
+          </Box>
+        </Stack>
 
         <Grid container spacing={2}>
           <Grid item xs={12}>
-            <Card
-              sx={{ borderRadius: 4, display: 'flex', alignItems: 'center', p: 2, cursor: 'pointer' }}
-              onClick={() => navigate('/student/diary')}
-            >
-              <Avatar sx={{ bgcolor: '#E1F5FE', color: '#039BE5', mr: 2 }}>
-                <Assignment />
-              </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle1" fontWeight="bold">Homework</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {metrics.homework_pending} pending assignments
-                </Typography>
-              </Box>
-              <ChevronRight color="action" />
+            <Card sx={{ borderRadius: 4, boxShadow: '0 10px 28px rgba(15,23,42,0.06)' }}>
+              <CardContent>
+                <Stack direction="row" alignItems="center" spacing={1.4}>
+                  <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.12), color: 'primary.main' }}>
+                    <AutoGraph />
+                  </Avatar>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle1" fontWeight={900}>
+                      {latestExam ? latestExam.name : 'No published exam yet'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Latest score {latestExam ? `${latestExam.percentage}% (${latestExam.obtained}/${latestExam.max_marks})` : 'will appear after report card publish'}
+                    </Typography>
+                  </Box>
+                  {latestExam && <Chip color="primary" label={`${latestExam.percentage}%`} sx={{ fontWeight: 900 }} />}
+                </Stack>
+              </CardContent>
             </Card>
           </Grid>
 
           <Grid item xs={12}>
-            <Card
-              sx={{ borderRadius: 4, display: 'flex', alignItems: 'center', p: 2, cursor: 'pointer' }}
-              onClick={() => navigate('/student/ai-chat')}
-            >
-              <Avatar sx={{ bgcolor: '#F3E5F5', color: '#8E24AA', mr: 2 }}>
-                <EmojiEvents />
-              </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle1" fontWeight="bold">Ask AI Tutor</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Helps with your studies
-                </Typography>
-              </Box>
-              <ChevronRight color="action" />
+            <Card sx={{ borderRadius: 4, boxShadow: 'none', border: `1px solid ${alpha(theme.palette.divider, 0.9)}` }}>
+              <CardContent>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.4 }}>
+                  <TrendingUp color="primary" />
+                  <Typography variant="subtitle1" fontWeight={900}>Exam Trend</Typography>
+                </Stack>
+                {trend.length > 0 ? (
+                  <Stack direction="row" alignItems="flex-end" spacing={1} sx={{ height: 92 }}>
+                    {trend.map((item) => (
+                      <Box key={`${item.id}-${item.date}`} sx={{ flex: 1, textAlign: 'center' }}>
+                        <Box
+                          sx={{
+                            height: `${Math.max(10, item.percentage)}%`,
+                            minHeight: 10,
+                            borderRadius: '10px 10px 4px 4px',
+                            background: `linear-gradient(180deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                          }}
+                        />
+                        <Typography variant="caption" sx={{ display: 'block', mt: 0.5, fontWeight: 800 }}>
+                          {item.percentage}%
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">Trend starts after the first published report card.</Typography>
+                )}
+              </CardContent>
             </Card>
           </Grid>
 
           <Grid item xs={12}>
-            <Card
-              sx={{ borderRadius: 4, display: 'flex', alignItems: 'center', p: 2, cursor: 'pointer' }}
-              onClick={() => navigate('/student/report-cards')}
-            >
-              <Avatar sx={{ bgcolor: '#E8F5E9', color: '#2E7D32', mr: 2 }}>
-                <Assignment />
-              </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle1" fontWeight="bold">Report Cards</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  View your exam results
-                </Typography>
-              </Box>
-              <ChevronRight color="action" />
+            <Card sx={{ borderRadius: 4, boxShadow: 'none', border: `1px solid ${alpha(theme.palette.warning.main, 0.22)}`, bgcolor: alpha(theme.palette.warning.main, 0.05) }}>
+              <CardContent>
+                <Stack direction="row" alignItems="flex-start" spacing={1.4}>
+                  <Avatar sx={{ bgcolor: alpha(theme.palette.warning.main, 0.14), color: 'warning.dark' }}>
+                    <WarningAmber />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={900}>Needs Attention</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {focusSubject ? `${focusSubject.subject} average is ${focusSubject.percentage}% across ${focusSubject.tests} test(s).` : 'Subject focus will appear after marks are published.'}
+                    </Typography>
+                    {weakSyllabus?.syllabus && (
+                      <Chip
+                        size="small"
+                        icon={<Book />}
+                        label={`${weakSyllabus.subject}: ${weakSyllabus.syllabus}`}
+                        sx={{ mt: 1, maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                      />
+                    )}
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Card sx={{ borderRadius: 4, boxShadow: 'none', border: `1px solid ${alpha(theme.palette.divider, 0.9)}` }}>
+              <CardContent>
+                <Typography variant="subtitle1" fontWeight={900} sx={{ mb: 1 }}>Attendance Check</Typography>
+                {[
+                  ['This week', attendance.weekly?.percentage ?? 0, attendance.weekly],
+                  ['This month', attendance.monthly?.percentage ?? 0, attendance.monthly],
+                ].map(([label, percentage, period]) => (
+                  <Box key={label} sx={{ mb: 1.2 }}>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" fontWeight={800}>{label}</Typography>
+                      <Typography variant="body2" color="text.secondary">{percentage}% · {period?.present ?? 0}/{period?.total ?? 0}</Typography>
+                    </Stack>
+                    <LinearProgress
+                      variant="determinate"
+                      value={percentage}
+                      sx={{ mt: 0.7, height: 7, borderRadius: 7 }}
+                    />
+                  </Box>
+                ))}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Card sx={{ borderRadius: 4, boxShadow: 'none', border: `1px solid ${alpha(theme.palette.divider, 0.9)}` }}>
+              <CardContent>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                  <Typography variant="subtitle1" fontWeight={900}>Subject Overview</Typography>
+                  {strongSubject && <Chip size="small" color="success" label={`Best: ${strongSubject.subject}`} />}
+                </Stack>
+                <Stack spacing={1.2}>
+                  {subjectAverages.length > 0 ? subjectAverages.slice(0, 5).map((subject) => (
+                    <Box key={subject.subject}>
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography variant="body2" fontWeight={800}>{subject.subject}</Typography>
+                        <Typography variant="body2" color="text.secondary">{subject.percentage}%</Typography>
+                      </Stack>
+                      <LinearProgress
+                        variant="determinate"
+                        value={subject.percentage}
+                        sx={{ mt: 0.6, height: 7, borderRadius: 7 }}
+                      />
+                    </Box>
+                  )) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Subject analytics will appear after published marks.
+                    </Typography>
+                  )}
+                </Stack>
+              </CardContent>
             </Card>
           </Grid>
         </Grid>
