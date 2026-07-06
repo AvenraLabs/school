@@ -366,13 +366,14 @@ export const teacherAssignmentsAPI = {
 
 // Notifications API
 export const notificationsAPI = {
-  create: async (title, message, targetRole, classId, sectionId) => {
+  create: async (title, message, targetRole, classId, sectionId, sendWhatsApp) => {
     const response = await axiosInstance.post('/notifications', {
       title,
       message,
       target_role: targetRole,
       class_id: classId,
       section_id: sectionId,
+      send_whatsapp: sendWhatsApp,
     });
     return response.data;
   },

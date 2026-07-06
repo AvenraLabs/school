@@ -6,6 +6,7 @@ import {
   getTeacherAttendanceSummaryService,
   getStudentAttendanceSummaryService,
 } from "./attendance.summary.service.js";
+import * as whatsappService from "../whatsapp/whatsapp.service.js";
 
 /* =========================
    TEACHER: MARK
@@ -16,6 +17,17 @@ export const markAttendance = asyncHandler(async (req, res) => {
     school_id: req.user.school_id,
     ...req.body,
   });
+
+  // Call WhatsApp service for absent students in the background
+  const records = req.body.records || [];
+  const dateStr = req.body.date;
+  const absentRecords = records.filter((r) => r.status === "absent");
+  for (const record of absentRecords) {
+    whatsappService.sendAbsentAlert({
+      id: record.student_id,
+      date: dateStr,
+    }).catch((err) => console.error("WhatsApp absent alert background error:", err));
+  }
 
   res.status(201).json({
     success: true,

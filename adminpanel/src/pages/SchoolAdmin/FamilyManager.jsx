@@ -252,9 +252,10 @@ export function FamilyManager() {
               <label className="form-label">Guardian Phone <span className="text-indigo-500">(key for linking)</span></label>
               <input
                 className="input"
+                maxLength={10}
                 value={form.guardian_phone}
-                onChange={(e) => setForm({ ...form, guardian_phone: e.target.value })}
-                placeholder="e.g. 9876543210"
+                onChange={(e) => setForm({ ...form, guardian_phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                placeholder="10 Digit Mobile Number"
               />
             </div>
             {!editingFamily && (

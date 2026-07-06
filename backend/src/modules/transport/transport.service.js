@@ -14,6 +14,7 @@ import Class from "../classes/classes.model.js";
 import Section from "../sections/section.model.js";
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
+import { cleanTo10Digits } from "../../shared/utils/phoneUtils.js";
 
 /* ==========================================
    1️⃣ DRIVER ACTIONS (CRUD)
@@ -53,7 +54,7 @@ export const createDriverService = async ({ school_id, body }) => {
         username: body.username,
         password: body.password, // Plain text matching auth service pattern
         name: body.name,
-        phone: body.phone,
+        phone: body.phone ? cleanTo10Digits(body.phone) : null,
         first_login: false, // Bypass stepper for driver accounts
       },
       { transaction: t }
@@ -93,7 +94,7 @@ export const updateDriverService = async ({ school_id, id, body }) => {
 
     const userUpdates = {};
     if (body.name !== undefined) userUpdates.name = body.name;
-    if (body.phone !== undefined) userUpdates.phone = body.phone;
+    if (body.phone !== undefined) userUpdates.phone = body.phone ? cleanTo10Digits(body.phone) : null;
     if (body.is_active !== undefined) userUpdates.is_active = body.is_active;
 
     if (Object.keys(userUpdates).length > 0) {

@@ -1,6 +1,7 @@
 import asyncHandler from "../../shared/asyncHandler.js";
 import jwt from "jsonwebtoken";
 import AppError from "../../shared/appError.js";
+import { cleanTo10Digits } from "../../shared/utils/phoneUtils.js";
 import {
  createStudentService,
   listStudentsService,
@@ -114,8 +115,10 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     }
   }
 
+  let cleanedPhone = phone;
   if (phone) {
-    const existingPhone = await User.findOne({ where: { phone } });
+    cleanedPhone = cleanTo10Digits(phone);
+    const existingPhone = await User.findOne({ where: { phone: cleanedPhone } });
     if (existingPhone && existingPhone.id !== req.user.id) {
       throw new AppError("Phone already in use", 400);
     }
@@ -123,7 +126,7 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
 
   const userUpdates = {};
   if (name !== undefined) userUpdates.name = name;
-  if (phone !== undefined) userUpdates.phone = phone;
+  if (phone !== undefined) userUpdates.phone = cleanedPhone || null;
   if (req.body.email !== undefined) userUpdates.email = req.body.email;
   if (avatar_url !== undefined) userUpdates.avatar_url = avatar_url || null;
   if (req.user.first_login && name !== undefined) {

@@ -52,6 +52,7 @@ import ReportCardMark from "../modules/report-cards/report-card-mark.model.js";
 /* ===================== MISC ===================== */
 import Notification from "../modules/notifications/notification.model.js";
 import NotificationAck from "../modules/notifications/notification-ack.model.js";
+import WhatsappLog from "../modules/whatsapp/whatsapp-log.model.js";
 
 /* ===================== GROUP CHAT ===================== */
 import GroupChat from "../modules/group-chat/group-chat.model.js";
@@ -256,6 +257,10 @@ const initAssociations = () => {
   Notification.hasMany(NotificationAck, {
     foreignKey: "notification_id",
   });
+
+  /* ==================== WHATSAPP LOGS ==================== */
+  School.hasMany(WhatsappLog, { foreignKey: "school_id" });
+  WhatsappLog.belongsTo(School, { foreignKey: "school_id" });
 
   /* ==================== GROUP CHAT ==================== */
   GroupChat.hasMany(GroupChatMember, { foreignKey: "group_chat_id" });

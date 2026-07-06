@@ -1172,7 +1172,7 @@ export function TransportManager() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Phone Number</label>
-            <input type="text" required value={driverForm.phone} onChange={e => setDriverForm({ ...driverForm, phone: e.target.value })} style={styles.input} placeholder="e.g. 9876543210" />
+            <input type="text" required maxLength={10} value={driverForm.phone} onChange={e => setDriverForm({ ...driverForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} style={styles.input} placeholder="10 Digit Mobile Number" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Driving License Number</label>

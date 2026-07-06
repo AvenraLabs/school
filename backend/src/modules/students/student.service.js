@@ -7,6 +7,7 @@ import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import db from "../../config/db.js";
 import { autoLinkFamilyByPhone } from "./family.service.js";
+import { cleanTo10Digits } from "../../shared/utils/phoneUtils.js";
 
 /* =========================
    ADMIN:  CREATE STDUENT
@@ -92,7 +93,7 @@ export const createStudentService = async ({
         is_active: true,
         name: name || "Student",
         email: email || null,
-        phone: phone || null,
+        phone: phone ? cleanTo10Digits(phone) : null,
       },
       { transaction: t }
     );
@@ -112,7 +113,7 @@ export const createStudentService = async ({
         father_name: father_name || null,
         mother_name: mother_name || null,
         guardian_name: guardian_name || null,
-        guardian_phone: guardian_phone || null,
+        guardian_phone: guardian_phone ? cleanTo10Digits(guardian_phone) : null,
         address: address || null,
         blood_group: blood_group || null,
         aadhar_no: aadhar_no || null,

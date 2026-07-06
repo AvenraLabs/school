@@ -41,7 +41,7 @@ export function Notifications() {
   const [acks, setAcks] = useState(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
-  const [form, setForm] = useState({ title: '', message: '', target_role: 'all', class_id: '', section_id: '' });
+  const [form, setForm] = useState({ title: '', message: '', target_role: 'all', class_id: '', section_id: '', send_whatsapp: false });
   const [sending, setSending] = useState(false);
   const toast = useToast();
 
@@ -79,11 +79,12 @@ export function Notifications() {
         form.message,
         form.target_role,
         form.class_id ? Number(form.class_id) : undefined,
-        form.section_id ? Number(form.section_id) : undefined
+        form.section_id ? Number(form.section_id) : undefined,
+        form.send_whatsapp
       );
       toast.success('Notification sent');
       setShowCompose(false);
-      setForm({ title: '', message: '', target_role: 'all', class_id: '', section_id: '' });
+      setForm({ title: '', message: '', target_role: 'all', class_id: '', section_id: '', send_whatsapp: false });
       loadNotifications();
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to send notification');
@@ -250,6 +251,18 @@ export function Notifications() {
                 <option value="">All sections</option>
                 {selectedSections.map((section) => <option key={section.id} value={section.id}>Section {section.name}</option>)}
               </select>
+            </label>
+          </div>
+          <div className="notify-whatsapp-option" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0 8px' }}>
+            <input
+              type="checkbox"
+              id="send_whatsapp"
+              checked={form.send_whatsapp || false}
+              onChange={(e) => setForm({ ...form, send_whatsapp: e.target.checked })}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <label htmlFor="send_whatsapp" style={{ fontSize: '14px', fontWeight: '500', cursor: 'pointer', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              Send via WhatsApp
             </label>
           </div>
           <div className="notify-form-actions">

@@ -3,15 +3,37 @@ import {
   createNotificationService,
   listNotificationsForUserService,
 } from "./notification.service.js";
+import * as whatsappService from "../whatsapp/whatsapp.service.js";
 
 /* ADMIN / TEACHER: CREATE */
 export const createNotification = asyncHandler(async (req, res) => {
+  const { send_whatsapp, ...notificationData } = req.body;
+
   const notification = await createNotificationService({
     school_id: req.user.school_id,
     sender_user_id: req.user.id,
     sender_role: req.user.role,
-    ...req.body,
+    ...notificationData,
   });
+
+  if (send_whatsapp) {
+    // Resolve and send in the background
+    whatsappService.resolveAnnouncementRecipients({
+      school_id: req.user.school_id,
+      target_role: notificationData.target_role,
+      class_id: notificationData.class_id ? Number(notificationData.class_id) : undefined,
+      section_id: notificationData.section_id ? Number(notificationData.section_id) : undefined,
+    }).then((recipientList) => {
+      return whatsappService.sendAnnouncement(
+        recipientList,
+        notificationData.title,
+        notificationData.message,
+        req.user.school_id
+      );
+    }).catch((err) => {
+      console.error("WhatsApp announcement background error:", err);
+    });
+  }
 
   res.status(201).json({
     success: true,

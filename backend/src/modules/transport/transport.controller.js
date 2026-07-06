@@ -1,5 +1,6 @@
 import asyncHandler from "../../shared/asyncHandler.js";
 import * as service from "./transport.service.js";
+import * as whatsappService from "../whatsapp/whatsapp.service.js";
 
 /* ==========================================
    1️⃣ ADMIN ONLY
@@ -201,6 +202,12 @@ export const startTrip = asyncHandler(async (req, res) => {
     body: req.body,
     io: req.io,
   });
+
+  // Call WhatsApp service in the background
+  whatsappService.sendBusTripStarted(req.body.vehicle_id).catch((err) =>
+    console.error("WhatsApp bus trip started alert background error:", err)
+  );
+
   res.json({
     success: true,
     data: result,
@@ -214,6 +221,14 @@ export const stopTrip = asyncHandler(async (req, res) => {
     id: Number(req.params.id),
     io: req.io,
   });
+
+  // Call WhatsApp service in the background
+  if (result && result.vehicle_id) {
+    whatsappService.sendBusTripEnded(result.vehicle_id).catch((err) =>
+      console.error("WhatsApp bus trip ended alert background error:", err)
+    );
+  }
+
   res.json({
     success: true,
     data: result,

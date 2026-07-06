@@ -9,6 +9,7 @@ export const createNotificationSchema = z.object({
 
   class_id: z.number().int().positive().optional(),
   section_id: z.number().int().positive().optional(),
+  send_whatsapp: z.boolean().optional(),
 });
 
 

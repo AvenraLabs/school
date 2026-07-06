@@ -205,7 +205,7 @@ export function StudentsManager() {
           </div>
           <div>
             <label className="label">Guardian Phone (Optional)</label>
-            <input type="text" className="input-field" placeholder="For Family Linking" value={createForm.guardian_phone} onChange={(e) => setCreateForm({ ...createForm, guardian_phone: e.target.value })} />
+            <input type="text" className="input-field" placeholder="10 Digit Mobile Number" maxLength={10} value={createForm.guardian_phone} onChange={(e) => setCreateForm({ ...createForm, guardian_phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} />
           </div>
           <div className="flex justify-end gap-3">
             <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button>

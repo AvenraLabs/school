@@ -9,6 +9,7 @@ import {
 } from "./teacher.service.js";
 import Teacher from "./teacher.model.js";
 import User from "../users/user.model.js";
+import { cleanTo10Digits } from "../../shared/utils/phoneUtils.js";
 
 /* ADMIN: CREATE */
 export const createTeacher = asyncHandler(async (req, res) => {
@@ -91,8 +92,10 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
     }
   }
 
+  let cleanedPhone = phone;
   if (phone) {
-    const existingPhone = await User.findOne({ where: { phone } });
+    cleanedPhone = cleanTo10Digits(phone);
+    const existingPhone = await User.findOne({ where: { phone: cleanedPhone } });
     if (existingPhone && existingPhone.id !== req.user.id) {
       throw new AppError("Phone already in use", 400);
     }
@@ -101,7 +104,7 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
   // Update User details
   const userUpdates = {};
   if (name !== undefined) userUpdates.name = name;
-  if (phone !== undefined) userUpdates.phone = phone;
+  if (phone !== undefined) userUpdates.phone = cleanedPhone || null;
   if (email !== undefined) userUpdates.email = email;
   if (avatar_url !== undefined) userUpdates.avatar_url = avatar_url || null;
   if (req.user.first_login && name !== undefined) {
