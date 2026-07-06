@@ -96,6 +96,10 @@ export default function ProfilePage() {
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      const target = basePath ? `${basePath}/dashboard` : "/";
+      setTimeout(() => {
+        navigate(target, { replace: true });
+      }, 1000);
     } catch (err) {
       const msg =
         err?.response?.data?.message || err?.message || "Failed to update password.";

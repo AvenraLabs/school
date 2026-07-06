@@ -3,13 +3,12 @@ import {
   FactCheck,
   Book,
   ReceiptLong,
-  Quiz,
   Person,
   Close,
   Palette,
   Logout,
-  SmartToy,
-  DirectionsBus,
+  CalendarMonth,
+  Chat,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { Link, useNavigate } from "react-router-dom";
@@ -20,11 +19,10 @@ export default function StudentSidebar({ open, onClose }) {
 
   const menuItems = [
     { label: "Attendance", icon: <FactCheck />, path: "/student/attendance" },
-    { label: "Diary", icon: <Book />, path: "/student/diary" },
+    { label: "Classes", icon: <CalendarMonth />, path: "/student/timetable" },
+    { label: "Chat", icon: <Chat />, path: "/student/group-chat" },
+    { label: "Homework", icon: <Book />, path: "/student/diary" },
     { label: "Exams", icon: <ReceiptLong />, path: "/student/report-cards" },
-    { label: "Quiz", icon: <Quiz />, path: "/student/quiz" },
-    { label: "AI Chat", icon: <SmartToy />, path: "/student/ai-chat" },
-    { label: "My Bus", icon: <DirectionsBus />, path: "/student/transport" },
     { label: "Themes", icon: <Palette />, path: "/student/themes" },
     { label: "Profile", icon: <Person />, path: "/student/profile" },
   ];

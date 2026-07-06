@@ -184,6 +184,7 @@ export default function ProfileForm({
 
           {hasAvatar && (
             <IconButton
+              type="button"
               onClick={handleAvatarDelete}
               disabled={uploading || saving}
               color="error"

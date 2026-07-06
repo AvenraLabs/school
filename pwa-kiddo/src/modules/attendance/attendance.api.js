@@ -9,6 +9,9 @@ export const getParentAttendanceSummary = (params = {}) =>
 export const getStudentAttendanceSummary = (params = {}) =>
   api.get("/students/attendance/summary", { params });
 
+export const getDailyAttendance = (params = {}) =>
+  api.get("/teachers/attendance/daily", { params });
+
 export const markAttendance = (data) =>
   api.post("/teachers/attendance", data);
 
@@ -17,3 +20,9 @@ export const getTeacherAttendanceAnalytics = (params = {}) =>
 
 export const getParentAttendanceAnalytics = (params = {}) =>
   api.get("/parents/attendance/analytics", { params });
+
+export const listAllClasses = () =>
+  api.get("/classes");
+
+export const listSectionsForClass = (classId) =>
+  api.get(`/sections/classes/${classId}/sections`);

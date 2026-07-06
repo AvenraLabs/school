@@ -1,9 +1,19 @@
-import { Box, Paper, Typography, Avatar, useTheme } from "@mui/material";
-import { SmartToy, Person } from "@mui/icons-material";
+import { Box, Paper, Typography, Avatar, useTheme, IconButton, Stack } from "@mui/material";
+import { SmartToy, Person, VolumeUp, VolumeOff } from "@mui/icons-material";
+import { useSpeechSynthesis } from "../../../speech/useSpeechSynthesis";
 
 export default function MessageBubble({ message, userAvatar }) {
     const theme = useTheme();
     const isAi = message.role === "ai" || message.role === "assistant";
+    const { speak, stop, isPlaying } = useSpeechSynthesis();
+
+    const handleSpeakToggle = () => {
+        if (isPlaying) {
+            stop();
+        } else {
+            speak(message.text || message.content);
+        }
+    };
 
     return (
         <Box
@@ -46,16 +56,37 @@ export default function MessageBubble({ message, userAvatar }) {
                         : theme.palette.primary.contrastText,
                 }}
             >
-                <Typography
-                    variant="body1"
-                    sx={{
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                        lineHeight: 1.6,
-                    }}
-                >
-                    {message.text || message.content}
-                </Typography>
+                <Stack direction="row" spacing={1.5} alignItems="flex-start" justifyContent="space-between">
+                    <Typography
+                        variant="body1"
+                        sx={{
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                            lineHeight: 1.6,
+                            flex: 1,
+                        }}
+                    >
+                        {message.text || message.content}
+                    </Typography>
+                    {isAi && (
+                        <IconButton
+                            size="small"
+                            onClick={handleSpeakToggle}
+                            sx={{
+                                color: isPlaying ? theme.palette.primary.main : theme.palette.text.secondary,
+                                alignSelf: "flex-start",
+                                mt: -0.5,
+                                mr: -1,
+                                "&:hover": {
+                                    bgcolor: theme.palette.action.hover,
+                                },
+                            }}
+                            title={isPlaying ? "Stop listening" : "Listen to answer"}
+                        >
+                            {isPlaying ? <VolumeOff fontSize="small" /> : <VolumeUp fontSize="small" />}
+                        </IconButton>
+                    )}
+                </Stack>
 
                 {isAi && message.sources && message.sources.length > 0 && (
                     <Box

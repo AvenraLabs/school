@@ -16,22 +16,22 @@ const DAY_COLORS = {
 
 /* ── shared inline styles ── */
 const st = {
-  pageHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' },
-  pageTitle:  { fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0 },
-  pageSubtitle: { fontSize: '13px', color: '#94a3b8', marginTop: '4px' },
+  pageHeader: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '18px' },
+  pageTitle:  { fontSize: '28px', fontWeight: 850, letterSpacing: '-0.03em', color: '#0f172a', margin: 0 },
+  pageSubtitle: { fontSize: '14px', color: '#64748b', marginTop: '6px', lineHeight: 1.55 },
 
   selectRow: { display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' },
   selectWrap: { display: 'flex', flexDirection: 'column', gap: '4px' },
   selectLabel: { fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' },
   select: {
     height: '42px', padding: '0 36px 0 14px', fontSize: '14px', fontWeight: 500,
-    color: '#0f172a', border: '1px solid #e2e8f0', borderRadius: '10px',
+    color: '#0f172a', border: '1px solid #dbe3ef', borderRadius: '12px',
     background: '#fff', outline: 'none', cursor: 'pointer', minWidth: '180px',
     appearance: 'none',
     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', backgroundSize: '18px',
+    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', backgroundSize: '20px',
   },
-  selectFocus: { borderColor: '#6366f1', boxShadow: '0 0 0 3px rgba(99,102,241,0.15)' },
+  selectFocus: { borderColor: '#6366f1', boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.12)' },
 
   emptyCard: {
     background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0',
@@ -105,8 +105,8 @@ const st = {
     display: 'inline-flex', alignItems: 'center', gap: '6px',
     height: '38px', padding: '0 18px', borderRadius: '10px',
     fontSize: '13px', fontWeight: 600,
-    background: '#4f46e5', color: '#fff', border: 'none',
-    cursor: 'pointer', boxShadow: '0 2px 8px rgba(99,102,241,0.3)',
+    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none',
+    cursor: 'pointer', boxShadow: '0 10px 24px rgba(79, 70, 229, 0.22)',
   },
   btnAddPeriod: {
     display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -294,7 +294,7 @@ export function Timetables() {
   const selectedSectionName = selectedSections.find(s => String(s.id) === String(selectedSection))?.name || '';
 
   return (
-    <div>
+    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
       {/* Header */}
       <div style={st.pageHeader}>
         <div>

@@ -149,9 +149,9 @@ export default function TeacherUpcomingClasses() {
                       bgcolor: '#10b981',
                       '&:hover': { bgcolor: '#059669', boxShadow: 'none' }
                     }}
-                    onClick={() => navigate('/teacher/class-sessions')}
+                    onClick={() => navigate(`/teacher/attendance?class_id=${c.class_id}&section_id=${c.section_id}`)}
                   >
-                    Start
+                    Attendance
                   </Button>
                 </Box>
               </Box>

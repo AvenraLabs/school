@@ -49,77 +49,98 @@ export default function ThemePage() {
         Choose the look & feel that works best for you. Stored locally per device.
       </Typography>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={3} justifyContent="center" sx={{ mt: 1 }}>
         {presets.map((preset) => {
           const isActive = mode === preset.key;
+          const primaryColor = themeMap[preset.key]?.palette?.primary?.main || "#4f46e5";
+          
           return (
-            <Grid item xs={6} key={preset.key}>
-              <Paper
+            <Grid item xs={4} key={preset.key} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Box
                 onClick={() => setMode(preset.key)}
                 sx={{
-                  p: 1.5,
-                  borderRadius: 3,
+                  width: 72,
+                  height: 72,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   cursor: "pointer",
-                  border: isActive ? "2px solid" : "1px solid",
-                  borderColor: isActive ? "primary.main" : "divider",
-                  boxShadow: isActive ? "0 6px 18px rgba(0,0,0,0.12)" : "none",
+                  border: "2px solid",
+                  borderColor: isActive ? primaryColor : "transparent",
+                  transition: "all 0.25s ease",
+                  p: 0.5,
+                  "&:hover": {
+                    transform: "scale(1.05)",
+                  }
                 }}
               >
                 <Box
                   sx={{
-                    height: 64,
-                    borderRadius: 2,
+                    width: "100%",
+                    height: "100%",
+                    borderRadius: "50%",
                     background: preset.gradient,
-                    mb: 1.5,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                   }}
-                />
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <Typography variant="subtitle2" fontWeight={600}>
-                    {preset.label}
-                  </Typography>
-                  {isActive && <Check fontSize="small" color="primary" />}
-                </Stack>
-              </Paper>
+                >
+                  {isActive && <Check sx={{ color: "#ffffff", fontSize: "1.4rem" }} />}
+                </Box>
+              </Box>
+              <Typography variant="caption" fontWeight="bold" sx={{ mt: 1, color: isActive ? "text.primary" : "text.secondary" }}>
+                {preset.label}
+              </Typography>
             </Grid>
           );
         })}
 
-        <Grid item xs={12}>
-          <Paper
+        {/* Custom Pick Color Circle */}
+        <Grid item xs={4} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Box
             onClick={() => setCustomOpen(true)}
             sx={{
-              p: 2,
-              borderRadius: 3,
-              cursor: "pointer",
-              border: mode === "custom" ? "2px solid" : "1px dashed",
-              borderColor: mode === "custom" ? "primary.main" : "divider",
+              width: 72,
+              height: 72,
+              borderRadius: "50%",
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "center",
+              cursor: "pointer",
+              border: "2px solid",
+              borderColor: mode === "custom" ? customColor : "transparent",
+              transition: "all 0.25s ease",
+              p: 0.5,
+              "&:hover": {
+                transform: "scale(1.05)",
+              }
             }}
           >
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Box
-                sx={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: "50%",
-                  background: customColor,
-                  border: "1px solid",
-                  borderColor: "divider",
-                }}
-              />
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Custom color
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Pick your own accent
-                </Typography>
-              </Box>
-            </Stack>
-            <Palette color="action" />
-          </Paper>
+            <Box
+              sx={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "50%",
+                background: customColor || "#e0e0e0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                border: !customColor ? "2px dashed rgba(0,0,0,0.15)" : "none",
+              }}
+            >
+              {mode === "custom" ? (
+                <Check sx={{ color: "#ffffff", fontSize: "1.4rem" }} />
+              ) : (
+                <Palette sx={{ color: customColor ? "#ffffff" : "text.secondary", fontSize: "1.2rem" }} />
+              )}
+            </Box>
+          </Box>
+          <Typography variant="caption" fontWeight="bold" sx={{ mt: 1, color: mode === "custom" ? "text.primary" : "text.secondary" }}>
+            Custom
+          </Typography>
         </Grid>
       </Grid>
 

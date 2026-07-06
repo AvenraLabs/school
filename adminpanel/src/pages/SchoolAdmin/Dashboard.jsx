@@ -159,10 +159,10 @@ export function SchoolAdminDashboard() {
   ];
 
   return (
-    <div style={{ padding: '4px' }}>
+    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
       {/* Greeting */}
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+      <div style={{ marginBottom: '28px' }}>
+        <h1 className="page-title">
           {greeting}, {firstName} 👋
         </h1>
       </div>

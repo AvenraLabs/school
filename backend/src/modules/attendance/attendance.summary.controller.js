@@ -2,6 +2,7 @@ import asyncHandler from "../../shared/asyncHandler.js";
 import Attendance from "./attendance.model.js";
 import {
   markAttendanceService,
+  getDailyAttendanceService,
   getTeacherAttendanceSummaryService,
   getStudentAttendanceSummaryService,
 } from "./attendance.summary.service.js";
@@ -23,20 +24,20 @@ export const markAttendance = asyncHandler(async (req, res) => {
 });
 
 /* =========================
-   TEACHER: GET SESSION ATTENDANCE RECORDS
+   TEACHER: GET DAILY ATTENDANCE RECORDS
 ========================= */
-export const getSessionAttendance = asyncHandler(async (req, res) => {
-  const { sessionId } = req.params;
-  const records = await Attendance.findAll({
-    where: {
-      teacher_class_session_id: sessionId,
-      school_id: req.user.school_id,
-    },
-    attributes: ["student_id", "status"],
+export const getDailyAttendance = asyncHandler(async (req, res) => {
+  const { class_id, section_id, date } = req.query;
+  const result = await getDailyAttendanceService({
+    school_id: req.user.school_id,
+    class_id: Number(class_id),
+    section_id: Number(section_id),
+    date,
+    user: req.user,
   });
   res.json({
     success: true,
-    records,
+    ...result,
   });
 });
 

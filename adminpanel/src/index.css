@@ -57,6 +57,29 @@ input, select, textarea {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+select {
+  height: 42px;
+  padding: 0 13px;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background-color: #ffffff;
+  color: #0f172a;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-size: 1.25rem;
+  background-repeat: no-repeat;
+  padding-right: 2.5rem;
+}
+select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -73,7 +96,18 @@ input, select, textarea {
 
 /* Utilities */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .btn:active {
@@ -81,82 +115,215 @@ input, select, textarea {
 }
 
 .btn-primary {
-  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out bg-indigo-600 text-white shadow-sm shadow-indigo-200;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  color: #ffffff;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.22);
 }
 .btn-primary:hover {
-  @apply bg-indigo-700 shadow-md shadow-indigo-200;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(79, 70, 229, 0.3);
 }
 .btn-primary:active { transform: scale(0.97); }
 
 .btn-secondary {
-  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out bg-white text-slate-700 border border-slate-200 shadow-sm;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  color: #3730a3;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
 }
 .btn-secondary:hover {
-  @apply bg-slate-50 border-slate-300;
+  transform: translateY(-1px);
+  background: #e0e7ff;
 }
 .btn-secondary:active { transform: scale(0.97); }
 
 .btn-danger {
-  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out bg-rose-600 text-white shadow-sm shadow-rose-200;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  background: #e11d48;
+  color: white;
 }
-.btn-danger:hover { @apply bg-rose-700; }
+.btn-danger:hover { background: #be123c; transform: translateY(-1px); }
 .btn-danger:active { transform: scale(0.97); }
 
 .btn-success {
-  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out bg-emerald-600 text-white shadow-sm shadow-emerald-200;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  background: #059669;
+  color: white;
 }
-.btn-success:hover { @apply bg-emerald-700; }
+.btn-success:hover { background: #047857; transform: translateY(-1px); }
 .btn-success:active { transform: scale(0.97); }
 
 .btn-ghost {
-  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ease-out bg-transparent text-slate-600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
 }
-.btn-ghost:hover { @apply bg-slate-100 text-slate-800; }
+.btn-ghost:hover {
+  transform: translateY(-1px);
+  background: #f8fafc;
+}
 .btn-ghost:active { transform: scale(0.97); }
 
 .btn-sm {
-  @apply px-3.5 py-2 text-xs rounded-lg;
+  @apply px-3 py-1.5 text-xs rounded-lg;
+  min-height: 32px !important;
 }
 .btn-lg {
   @apply px-7 py-3.5 text-base rounded-xl;
+  min-height: 48px !important;
 }
 
 /* Card */
 @utility card {
-  @apply bg-white rounded-2xl shadow-sm border border-slate-200/60;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
 .card-hover {
-  @apply bg-white rounded-2xl shadow-sm border border-slate-200/60 transition-all duration-200;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
 }
 .card-hover:hover {
-  @apply shadow-md border-slate-200 -translate-y-0.5;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
 
 /* Input */
 @utility input-field {
-  @apply w-full px-4 py-3 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 placeholder-slate-400 transition-all duration-200;
-  min-height: 44px;
-  color: #1e293b;
-  caret-color: #1e293b;
+  width: 100%;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  height: 42px;
+  padding: 0 13px;
 }
 .input-field:focus {
-  @apply outline-none ring-2 ring-indigo-500/20 border-indigo-400;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
 }
 .input-field:disabled {
   @apply bg-slate-50 text-slate-400 cursor-not-allowed;
 }
 
 .select-field {
-  @apply input-field appearance-none bg-no-repeat cursor-pointer;
+  width: 100%;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  height: 42px;
+  padding: 0 13px;
+  appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
   background-position: right 0.75rem center;
   background-size: 1.25rem;
+  background-repeat: no-repeat;
   padding-right: 2.5rem;
+  cursor: pointer;
+}
+.select-field:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
 }
 
 .label {
-  @apply block text-sm font-medium text-slate-700 mb-2;
+  display: block;
+  margin-bottom: 7px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Page Headers */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.page-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 28px;
+  font-weight: 850;
+  letter-spacing: -0.03em;
+}
+.page-subtitle {
+  margin: 6px 0 0;
+  max-width: 620px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 /* Tables */

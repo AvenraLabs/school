@@ -290,6 +290,7 @@ export default function FirstLoginPage() {
 
                     {hasAvatar && (
                       <IconButton
+                        type="button"
                         onClick={handleAvatarDelete}
                         disabled={uploading}
                         color="error"

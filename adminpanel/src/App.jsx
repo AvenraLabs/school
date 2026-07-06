@@ -5,11 +5,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { DashboardLayout } from './components/Layout/DashboardLayout';
 import { LoginPage } from './pages/Login/LoginPage';
 
-// Super Admin Pages
-import { SuperAdminDashboard } from './pages/SuperAdmin/Dashboard';
-import { SchoolManagement } from './pages/SuperAdmin/SchoolManagement';
-import { AIAnalytics } from './pages/SuperAdmin/AIAnalytics';
-import { TokenManagement } from './pages/SuperAdmin/TokenManagement';
+// Super Admin — single unified page
+import { SuperAdminPage } from './pages/SuperAdmin/SuperAdminPage';
 
 // School Admin Pages
 import { SchoolAdminDashboard } from './pages/SchoolAdmin/Dashboard';
@@ -41,19 +38,17 @@ function App() {
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
 
-            {/* Super Admin */}
+            {/* Super Admin — single unified page, no DashboardLayout (has its own top bar) */}
             <Route
+              path="/super-admin"
               element={
                 <ProtectedRoute allowedRoles={['super_admin']}>
-                  <DashboardLayout />
+                  <SuperAdminPage />
                 </ProtectedRoute>
               }
-            >
-              <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
-              <Route path="/super-admin/schools" element={<SchoolManagement />} />
-              <Route path="/super-admin/analytics" element={<AIAnalytics />} />
-              <Route path="/super-admin/tokens" element={<TokenManagement />} />
-            </Route>
+            />
+            {/* Redirect any old bookmarked sub-routes */}
+            <Route path="/super-admin/*" element={<Navigate to="/super-admin" replace />} />
 
             {/* School Admin */}
             <Route

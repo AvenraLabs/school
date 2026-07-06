@@ -25,17 +25,15 @@ export default function CreateHomeworkDialog({ open, onClose, onSuccess }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const getTomorrowDate = () => {
-        const d = new Date();
-        d.setDate(d.getDate() + 1);
-        return d.toISOString().split("T")[0];
+    const getTodayDate = () => {
+        return new Date().toISOString().split("T")[0];
     };
 
     const [formData, setFormData] = useState({
         class_section: "", // "classId,sectionId"
         subject_id: "",
         teacher_assignment_id: "",
-        homework_date: getTomorrowDate(),
+        homework_date: getTodayDate(),
         description: "",
     });
 
@@ -43,7 +41,7 @@ export default function CreateHomeworkDialog({ open, onClose, onSuccess }) {
         if (!open) return;
         setFormData((prev) => ({
             ...prev,
-            homework_date: getTomorrowDate(),
+            homework_date: getTodayDate(),
         }));
     }, [open]);
 
@@ -164,7 +162,7 @@ export default function CreateHomeworkDialog({ open, onClose, onSuccess }) {
         setFormData({ ...formData, [name]: value });
     };
 
-    const minDueDate = getTomorrowDate();
+    const minDueDate = getTodayDate();
 
     const handleSubmit = async () => {
         if (

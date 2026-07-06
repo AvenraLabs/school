@@ -33,7 +33,7 @@ export default function TimetableStudentView({ timetable }) {
   return (
     <Container sx={{ mt: 2 }}>
       <Typography variant="h5" fontWeight="bold" gutterBottom>
-        My Timetable
+        Classes
       </Typography>
 
       <Tabs

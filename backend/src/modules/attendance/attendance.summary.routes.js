@@ -6,11 +6,12 @@ import { validate } from "../../shared/middlewares/validate.js";
 import {
   markAttendanceSchema,
   attendanceSummarySchema,
+  dailyAttendanceQuerySchema,
 } from "./attendance.summary.schema.js";
 
 import {
   markAttendance,
-  getSessionAttendance,
+  getDailyAttendance,
   getTeacherAttendanceSummary,
   getStudentAttendanceSummary,
 } from "./attendance.summary.controller.js";
@@ -18,32 +19,31 @@ import {
 const router = express.Router();
 
 /* =========================
-   TEACHER
+   TEACHER / ADMIN
 ========================= */
 router.post(
   "/teachers/attendance",
   protect,
-  allowRoles("teacher"),
+  allowRoles("teacher", "school_admin"),
   validate(markAttendanceSchema),
   markAttendance
 );
 
 router.get(
-  "/teachers/attendance/session/:sessionId",
+  "/teachers/attendance/daily",
   protect,
-  allowRoles("teacher"),
-  getSessionAttendance
+  allowRoles("teacher", "school_admin"),
+  validate(dailyAttendanceQuerySchema),
+  getDailyAttendance
 );
 
 router.get(
   "/teachers/attendance/summary",
   protect,
-  allowRoles("teacher"),
+  allowRoles("teacher", "school_admin"),
   validate(attendanceSummarySchema),
   getTeacherAttendanceSummary
 );
-
-
 
 /* =========================
    STUDENT

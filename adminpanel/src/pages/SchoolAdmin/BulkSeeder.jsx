@@ -15,8 +15,8 @@ const input = {
 const btnPrimary = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
   height: '44px', padding: '0 20px', borderRadius: '12px', fontSize: '14px', fontWeight: 600,
-  background: 'linear-gradient(135deg, #1a1350, #4338ca)', color: '#fff',
-  border: 'none', cursor: 'pointer', boxShadow: '0 4px 16px rgba(99,102,241,0.25)',
+  background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff',
+  border: 'none', cursor: 'pointer', boxShadow: '0 10px 24px rgba(79, 70, 229, 0.22)',
 };
 const btnSecondary = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
@@ -138,10 +138,13 @@ export function BulkSeeder() {
   ];
 
   return (
-    <div>
+    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
       {/* Header */}
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a' }}>Bulk Setup</h1>
+      <div className="page-header" style={{ marginBottom: '28px' }}>
+        <div>
+          <h1 className="page-title">Bulk Setup</h1>
+          <p className="page-subtitle">Configure school classrooms, sections, students, and teachers in one click</p>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px', alignItems: 'start' }}>

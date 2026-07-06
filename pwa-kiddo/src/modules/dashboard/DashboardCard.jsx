@@ -1,8 +1,9 @@
 import { Card, CardContent, Typography, Avatar } from "@mui/material";
 
-export default function DashboardCard({ title, value, subtitle, icon, iconColor, iconBg }) {
+export default function DashboardCard({ title, value, subtitle, icon, iconColor, iconBg, onClick }) {
   return (
     <Card
+      onClick={onClick}
       sx={{
         width: "100%",
         height: "100%",
@@ -11,10 +12,11 @@ export default function DashboardCard({ title, value, subtitle, icon, iconColor,
         borderRadius: "16px",
         border: "1px solid rgba(0,0,0,0.05)",
         boxShadow: "0 2px 8px rgba(0,0,0,0.01)",
+        cursor: onClick ? "pointer" : "default",
         transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
         "&:hover": {
           transform: "translateY(-3px)",
-          boxShadow: "0 8px 16px rgba(0,0,0,0.06)",
+          boxShadow: onClick ? "0 8px 20px rgba(0,0,0,0.10)" : "0 8px 16px rgba(0,0,0,0.06)",
           borderColor: "rgba(0,0,0,0.08)"
         }
       }}

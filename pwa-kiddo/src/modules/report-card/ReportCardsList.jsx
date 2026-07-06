@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
     Alert,
     Avatar,
@@ -144,47 +144,65 @@ export default function ReportCardsList() {
     }
 
     return (
-        <Container maxWidth="sm" sx={{ mt: 2.5, mb: 8, px: 2 }}>
+        <Container maxWidth="sm" sx={{ mt: 2.5, mb: 10, px: 2 }}>
             <Stack spacing={2.5}>
                 <Box>
                     <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: "-0.04em", color: "text.primary" }}>
                         Exams & Progress
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Your marks, syllabus notes, and subject-wise progress in one place.
+                        Your marks, syllabus notes, and subject-wise progress.
                     </Typography>
                 </Box>
 
                 {error && <Alert severity="error" sx={{ borderRadius: 3 }}>{error}</Alert>}
 
-                <Paper
-                    sx={{
-                        p: 2,
-                        borderRadius: 4,
-                        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(theme.palette.secondary?.main || theme.palette.primary.dark, 0.08)})`,
-                        border: `1px solid ${alpha(theme.palette.primary.main, 0.14)}`,
-                        boxShadow: "none",
-                    }}
-                >
-                    <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
-                        <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 40, height: 40 }}>
-                            <Insights />
-                        </Avatar>
-                        <Box>
-                            <Typography variant="subtitle1" fontWeight={900}>Performance snapshot</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {latest ? `${getExamName(latest.exam)} • ${latest.percentage}%` : "No published marks yet"}
-                            </Typography>
-                        </Box>
-                    </Stack>
-                    <Stack direction="row" spacing={1} sx={{ overflowX: "auto", pb: 0.5 }}>
-                        <Chip icon={<EmojiEvents />} label={latest ? `Latest ${latest.percentage}%` : "Latest pending"} />
-                        <Chip icon={<TrendingUp />} color="success" variant="outlined" label={strongSubject ? `Strong: ${strongSubject.subject}` : "Strong subject pending"} />
-                        <Chip icon={<AutoGraph />} color="warning" variant="outlined" label={focusSubject ? `Focus: ${focusSubject.subject}` : "Focus pending"} />
-                    </Stack>
-                </Paper>
+                {/* Performance Snapshot */}
+                <Card sx={{ borderRadius: '20px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 12px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
+                    <Box sx={{
+                        px: 2.5, pt: 2.5, pb: 1.5,
+                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary?.main || theme.palette.primary.dark} 100%)`,
+                        color: 'white',
+                    }}>
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                            <Insights sx={{ fontSize: 18, opacity: 0.85 }} />
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.7rem' }}>Performance Snapshot</Typography>
+                        </Stack>
+                        <Typography variant="h4" fontWeight={950} sx={{ lineHeight: 1.1 }}>
+                            {latest ? `${latest.percentage}%` : "â€”"}
+                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                            {latest ? `Latest: ${getExamName(latest.exam)}` : "No published marks yet"}
+                        </Typography>
+                    </Box>
+                    <Box sx={{ px: 2.5, py: 2 }}>
+                        <Stack direction="row" spacing={1.5}>
+                            <Box sx={{ flex: 1, p: 1.5, borderRadius: '12px', bgcolor: alpha(theme.palette.success.main, 0.07), border: `1px solid ${alpha(theme.palette.success.main, 0.15)}` }}>
+                                <Stack direction="row" spacing={0.6} alignItems="center" sx={{ mb: 0.3 }}>
+                                    <TrendingUp sx={{ fontSize: 14, color: 'success.main' }} />
+                                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>Best Subject</Typography>
+                                </Stack>
+                                <Typography variant="body2" fontWeight={900} noWrap color="success.dark">
+                                    {strongSubject ? strongSubject.subject : "â€”"}
+                                </Typography>
+                                {strongSubject && <Typography variant="caption" color="text.secondary">{strongSubject.percentage}% avg</Typography>}
+                            </Box>
+                            <Box sx={{ flex: 1, p: 1.5, borderRadius: '12px', bgcolor: alpha(theme.palette.warning.main, 0.07), border: `1px solid ${alpha(theme.palette.warning.main, 0.15)}` }}>
+                                <Stack direction="row" spacing={0.6} alignItems="center" sx={{ mb: 0.3 }}>
+                                    <AutoGraph sx={{ fontSize: 14, color: 'warning.main' }} />
+                                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>Needs Focus</Typography>
+                                </Stack>
+                                <Typography variant="body2" fontWeight={900} noWrap color="warning.dark">
+                                    {focusSubject && focusSubject !== strongSubject ? focusSubject.subject : "â€”"}
+                                </Typography>
+                                {focusSubject && focusSubject !== strongSubject && <Typography variant="caption" color="text.secondary">{focusSubject.percentage}% avg</Typography>}
+                            </Box>
+                        </Stack>
+                    </Box>
+                </Card>
 
-                <Stack direction="row" spacing={1.2} sx={{ overflowX: "auto", pb: 0.5 }}>
+                {/* Exam List */}
+                <Stack spacing={1.5}>
                     {summaries.map(({ exam, percentage, published }) => {
                         const isSelected = Number(selectedExamId) === Number(exam.id);
                         return (
@@ -192,156 +210,171 @@ export default function ReportCardsList() {
                                 key={exam.id}
                                 onClick={() => setSelectedExamId(exam.id)}
                                 sx={{
-                                    minWidth: 172,
-                                    borderRadius: 4,
+                                    borderRadius: '16px',
                                     cursor: "pointer",
                                     border: "1px solid",
-                                    borderColor: isSelected ? theme.palette.primary.main : alpha(theme.palette.divider, 0.8),
-                                    bgcolor: isSelected ? alpha(theme.palette.primary.main, 0.08) : "background.paper",
-                                    boxShadow: isSelected ? `0 12px 26px ${alpha(theme.palette.primary.main, 0.16)}` : "none",
+                                    borderColor: isSelected ? theme.palette.primary.main : 'rgba(0,0,0,0.06)',
+                                    bgcolor: isSelected ? alpha(theme.palette.primary.main, 0.04) : "background.paper",
+                                    boxShadow: isSelected ? `0 4px 20px ${alpha(theme.palette.primary.main, 0.14)}` : '0 1px 4px rgba(0,0,0,0.03)',
+                                    transition: 'all 0.2s ease',
+                                    overflow: 'hidden',
                                 }}
                             >
-                                <CardContent sx={{ p: 1.75, "&:last-child": { pb: 1.75 } }}>
-                                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                                        <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.primary.main, 0.12), color: "primary.main" }}>
-                                            <School sx={{ fontSize: 18 }} />
-                                        </Avatar>
-                                        <Chip
-                                            size="small"
-                                            label={published ? "Published" : "Pending"}
-                                            color={published ? "success" : "default"}
-                                            variant={published ? "filled" : "outlined"}
-                                            sx={{ height: 22, fontSize: "0.68rem", fontWeight: 800 }}
-                                        />
+                                <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                                    <Stack direction="row" alignItems="center" spacing={1.5}>
+                                        <Box sx={{ width: 4, borderRadius: 2, alignSelf: 'stretch', minHeight: 44, bgcolor: isSelected ? theme.palette.primary.main : 'rgba(0,0,0,0.1)' }} />
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                                <Typography variant="body2" fontWeight={900} noWrap>{getExamName(exam)}</Typography>
+                                                <Chip
+                                                    size="small"
+                                                    label={published ? "Published" : "Pending"}
+                                                    color={published ? "success" : "default"}
+                                                    variant={published ? "filled" : "outlined"}
+                                                    sx={{ height: 20, fontSize: "0.65rem", fontWeight: 800, ml: 1 }}
+                                                />
+                                            </Stack>
+                                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mt: 0.4 }}>
+                                                <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: 'text.disabled' }}>
+                                                    <CalendarToday sx={{ fontSize: 12 }} />
+                                                    <Typography variant="caption" color="text.secondary">{getExamDateSummary(exam)}</Typography>
+                                                </Stack>
+                                                {published && percentage !== null && (
+                                                    <Typography variant="caption" fontWeight={900} color="primary.main">{percentage}%</Typography>
+                                                )}
+                                            </Stack>
+                                        </Box>
                                     </Stack>
-                                    <Typography variant="subtitle2" fontWeight={900} noWrap>{getExamName(exam)}</Typography>
-                                    <Stack direction="row" spacing={0.6} alignItems="center" sx={{ mt: 0.4, color: "text.secondary" }}>
-                                        <CalendarToday sx={{ fontSize: 13 }} />
-                                        <Typography variant="caption">{getExamDateSummary(exam)}</Typography>
-                                    </Stack>
-                                    <Typography variant="h6" fontWeight={950} color={published ? "primary.main" : "text.disabled"} sx={{ mt: 1 }}>
-                                        {published && percentage !== null ? `${percentage}%` : "—"}
-                                    </Typography>
                                 </CardContent>
                             </Card>
                         );
                     })}
                 </Stack>
 
+                {/* Selected Exam Detail */}
                 {selectedExam && selectedSummary && (
-                    <Paper sx={{ p: 2, borderRadius: 4, boxShadow: "0 10px 30px rgba(15,23,42,0.06)" }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
-                            <Box>
-                                <Typography variant="overline" sx={{ color: "text.secondary", fontWeight: 900 }}>
-                                    Selected Exam
-                                </Typography>
-                                <Typography variant="h6" sx={{ fontWeight: 950, letterSpacing: "-0.03em" }}>
-                                    {getExamName(selectedExam)}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {getExamDateSummary(selectedExam)}
-                                </Typography>
-                            </Box>
-                            {selectedSummary.published ? (
-                                <Chip
-                                    label={`${selectedSummary.percentage}% • ${selectedGrade.label}`}
-                                    sx={{ bgcolor: selectedGrade.bg, color: selectedGrade.text, fontWeight: 900 }}
-                                />
-                            ) : (
-                                <Chip icon={<Lock />} label="Report pending" variant="outlined" />
-                            )}
-                        </Stack>
-
-                        {selectedSummary.published ? (
-                            <Stack spacing={1.4}>
-                                <Box>
-                                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                        <Typography variant="body2" fontWeight={900}>Overall Score</Typography>
-                                        <Typography variant="body2" fontWeight={900}>
-                                            {selectedSummary.obtained}/{selectedSummary.maxMarks}
-                                        </Typography>
+                    <Card sx={{ borderRadius: '20px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+                        {/* Exam Header */}
+                        <Box sx={{ px: 2.5, pt: 2.5, pb: 2, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.disabled', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.65rem' }}>
+                                        Selected Exam
+                                    </Typography>
+                                    <Typography variant="h6" sx={{ fontWeight: 950, letterSpacing: "-0.03em", mt: 0.3 }} noWrap>
+                                        {getExamName(selectedExam)}
+                                    </Typography>
+                                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.3 }}>
+                                        <CalendarToday sx={{ fontSize: 12, color: 'text.disabled' }} />
+                                        <Typography variant="caption" color="text.secondary">{getExamDateSummary(selectedExam)}</Typography>
                                     </Stack>
-                                    <LinearProgress
-                                        variant="determinate"
-                                        value={clamp(selectedSummary.percentage || 0)}
-                                        sx={{
-                                            mt: 0.8,
-                                            height: 8,
-                                            borderRadius: 8,
-                                            bgcolor: alpha(selectedGrade.color, 0.12),
-                                            "& .MuiLinearProgress-bar": { bgcolor: selectedGrade.color },
-                                        }}
-                                    />
                                 </Box>
-
-                                <Typography variant="subtitle2" sx={{ display: "flex", alignItems: "center", gap: 0.7, fontWeight: 900 }}>
-                                    <Book sx={{ fontSize: 18, color: "primary.main" }} />
-                                    Subject marks
-                                </Typography>
-                                {selectedMarks.map((mark) => {
-                                    const slot = getSlotForMark(selectedExam, mark);
-                                    const subject = mark.subject?.name || slot?.subject?.name || `Subject #${mark.subject_id}`;
-                                    const percentage = mark.max_marks > 0 ? Math.round((mark.marks_obtained / mark.max_marks) * 100) : 0;
-                                    const grade = getGrade(percentage);
-                                    return (
-                                        <Paper key={mark.id} variant="outlined" sx={{ p: 1.5, borderRadius: 3 }}>
-                                            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                                <Typography variant="body2" fontWeight={900}>{subject}</Typography>
-                                                <Chip size="small" label={`${mark.marks_obtained}/${mark.max_marks}`} sx={{ bgcolor: grade.bg, color: grade.text, fontWeight: 900 }} />
-                                            </Stack>
-                                            <LinearProgress
-                                                variant="determinate"
-                                                value={clamp(percentage)}
-                                                sx={{
-                                                    my: 1,
-                                                    height: 6,
-                                                    borderRadius: 6,
-                                                    bgcolor: alpha(grade.color, 0.12),
-                                                    "& .MuiLinearProgress-bar": { bgcolor: grade.color },
-                                                }}
-                                            />
-                                            <Stack spacing={0.4}>
-                                                {slot?.exam_date && (
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        Date: {new Date(slot.exam_date).toLocaleDateString()}
-                                                    </Typography>
-                                                )}
-                                                {slot?.syllabus && (
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        Syllabus: {slot.syllabus}
-                                                    </Typography>
-                                                )}
-                                            </Stack>
-                                        </Paper>
-                                    );
-                                })}
-
-                                {selectedSummary.reportCard?.remarks && (
-                                    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 3, bgcolor: alpha(theme.palette.info.main, 0.06) }}>
-                                        <Typography variant="subtitle2" sx={{ display: "flex", alignItems: "center", gap: 0.7, fontWeight: 900 }}>
-                                            <Message sx={{ fontSize: 17, color: "info.main" }} />
-                                            Teacher Remarks
+                                {selectedSummary.published ? (
+                                    <Box sx={{ textAlign: 'center', ml: 2, flexShrink: 0 }}>
+                                        <Box sx={{
+                                            width: 60, height: 60, borderRadius: '50%',
+                                            bgcolor: selectedGrade.bg,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            border: `2px solid ${selectedGrade.color}`,
+                                        }}>
+                                            <Typography variant="h6" fontWeight={950} sx={{ color: selectedGrade.text, lineHeight: 1 }}>{selectedGrade.label}</Typography>
+                                        </Box>
+                                        <Typography variant="caption" fontWeight={900} sx={{ color: selectedGrade.text, display: 'block', mt: 0.5 }}>
+                                            {selectedSummary.percentage}%
                                         </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                            {selectedSummary.reportCard.remarks}
-                                        </Typography>
-                                    </Paper>
+                                    </Box>
+                                ) : (
+                                    <Chip icon={<Lock />} label="Pending" variant="outlined" size="small" sx={{ ml: 2 }} />
                                 )}
                             </Stack>
+
+                            {/* Overall score bar */}
+                            {selectedSummary.published && (
+                                <Box sx={{ mt: 2 }}>
+                                    <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.8 }}>
+                                        <Typography variant="caption" fontWeight={800} color="text.secondary">Overall Score</Typography>
+                                        <Typography variant="caption" fontWeight={900}>{selectedSummary.obtained} / {selectedSummary.maxMarks}</Typography>
+                                    </Stack>
+                                    <Box sx={{ height: 8, borderRadius: 8, bgcolor: alpha(selectedGrade.color, 0.12), overflow: 'hidden' }}>
+                                        <Box sx={{ height: '100%', width: `${clamp(selectedSummary.percentage || 0)}%`, bgcolor: selectedGrade.color, borderRadius: 8, transition: 'width 0.6s ease' }} />
+                                    </Box>
+                                </Box>
+                            )}
+                        </Box>
+
+                        {/* Subject Marks */}
+                        {selectedSummary.published ? (
+                            <Box sx={{ px: 2.5, pt: 2, pb: 2.5 }}>
+                                <Stack direction="row" alignItems="center" spacing={0.8} sx={{ mb: 1.5 }}>
+                                    <Book sx={{ fontSize: 16, color: 'primary.main' }} />
+                                    <Typography variant="subtitle2" fontWeight={900}>Subject Marks</Typography>
+                                </Stack>
+                                <Stack spacing={1.2}>
+                                    {selectedMarks.map((mark) => {
+                                        const slot = getSlotForMark(selectedExam, mark);
+                                        const subject = mark.subject?.name || slot?.subject?.name || `Subject #${mark.subject_id}`;
+                                        const pct = mark.max_marks > 0 ? Math.round((mark.marks_obtained / mark.max_marks) * 100) : 0;
+                                        const grade = getGrade(pct);
+                                        return (
+                                            <Box key={mark.id} sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(0,0,0,0.015)', border: '1px solid rgba(0,0,0,0.04)' }}>
+                                                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                        <Typography variant="body2" fontWeight={900} noWrap>{subject}</Typography>
+                                                        {slot?.exam_date && (
+                                                            <Typography variant="caption" color="text.disabled">
+                                                                {new Date(slot.exam_date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                    <Stack direction="row" spacing={0.8} alignItems="center" sx={{ ml: 1, flexShrink: 0 }}>
+                                                        <Typography variant="body2" fontWeight={900}>{mark.marks_obtained}<Typography component="span" variant="caption" color="text.secondary">/{mark.max_marks}</Typography></Typography>
+                                                        <Box sx={{ px: 1, py: 0.3, borderRadius: '6px', bgcolor: grade.bg }}>
+                                                            <Typography variant="caption" fontWeight={900} sx={{ color: grade.text }}>{grade.label}</Typography>
+                                                        </Box>
+                                                    </Stack>
+                                                </Stack>
+                                                {/* Inline progress bar */}
+                                                <Box sx={{ height: 5, borderRadius: 5, bgcolor: alpha(grade.color, 0.1), overflow: 'hidden' }}>
+                                                    <Box sx={{ height: '100%', width: `${clamp(pct)}%`, bgcolor: grade.color, borderRadius: 5, transition: 'width 0.5s ease' }} />
+                                                </Box>
+                                                {slot?.syllabus && (
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.8, fontStyle: 'italic' }}>
+                                                        {slot.syllabus}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        );
+                                    })}
+                                </Stack>
+
+                                {/* Teacher Remarks */}
+                                {selectedSummary.reportCard?.remarks && (
+                                    <Box sx={{ mt: 2, p: 1.5, borderRadius: '12px', bgcolor: alpha(theme.palette.info.main, 0.05), border: `1px solid ${alpha(theme.palette.info.main, 0.15)}` }}>
+                                        <Stack direction="row" spacing={0.8} alignItems="center" sx={{ mb: 0.6 }}>
+                                            <Message sx={{ fontSize: 15, color: 'info.main' }} />
+                                            <Typography variant="caption" fontWeight={800} color="info.dark" sx={{ textTransform: 'uppercase', letterSpacing: '0.4px', fontSize: '0.65rem' }}>Teacher Remarks</Typography>
+                                        </Stack>
+                                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                                            {selectedSummary.reportCard.remarks}
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </Box>
                         ) : (
-                            <Box sx={{ py: 4, textAlign: "center" }}>
-                                <Avatar sx={{ mx: "auto", mb: 1.2, bgcolor: alpha(theme.palette.text.disabled, 0.12), color: "text.disabled" }}>
-                                    <Lock />
-                                </Avatar>
+                            <Box sx={{ py: 5, textAlign: "center", px: 3 }}>
+                                <Box sx={{ width: 56, height: 56, borderRadius: '50%', bgcolor: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5 }}>
+                                    <Lock sx={{ color: 'text.disabled', fontSize: 24 }} />
+                                </Box>
                                 <Typography variant="subtitle1" fontWeight={900}>Marks not published yet</Typography>
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                                     Once the teacher publishes this report card, your marks will appear here.
                                 </Typography>
                             </Box>
                         )}
-                    </Paper>
+                    </Card>
                 )}
             </Stack>
         </Container>
     );
 }
+

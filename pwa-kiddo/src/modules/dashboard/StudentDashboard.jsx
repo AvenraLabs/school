@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Container, Typography, Grid, CircularProgress, Alert } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import DashboardCard from "./DashboardCard";
 import { fetchStudentDashboard } from "./dashboard.api";
 
 export default function StudentDashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
@@ -69,6 +71,7 @@ export default function StudentDashboard() {
             title="Attendance"
             value={attendancePercent}
             subtitle="Overall"
+            onClick={() => navigate("/student/attendance")}
           />
         </Grid>
 

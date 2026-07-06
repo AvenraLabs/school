@@ -36,7 +36,7 @@ export function AuditLogs() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div>
+    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title">Audit Logs</h1>

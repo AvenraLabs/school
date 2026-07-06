@@ -16,14 +16,12 @@ const DiaryPage = lazy(() => import("../modules/diary/DiaryPage"));
 const NotificationsPage = lazy(() => import("../modules/notifications/NotificationsPage"));
 const GroupChatPage = lazy(() => import("../modules/group-chat/GroupChatPage"));
 const GroupChatRoomPage = lazy(() => import("../modules/group-chat/GroupChatRoomPage"));
-const ClassSessionPage = lazy(() => import("../modules/teacher-class-sessions/pages/ClassSessionPage"));
+const TeacherAttendancePage = lazy(() => import("../modules/attendance/TeacherAttendancePage"));
 const ApprovalsPage = lazy(() => import("../modules/approvals/pages/ApprovalsPage"));
 const ExamCreationPage = lazy(() => import("../modules/exams/pages/ExamCreationPage"));
-const AssignedClassesPage = lazy(() => import("../modules/teacher-assignments/pages/AssignedClassesPage"));
 const ReportCardEntryPage = lazy(() => import("../modules/report-card/pages/ReportCardEntryPage"));
 const TeacherAIToolsPage = lazy(() => import("../modules/ai-tools/TeacherAIToolsPage"));
 const ThemePage = lazy(() => import("../modules/theme/ThemePage"));
-const TeacherTransportPage = lazy(() => import("../modules/transport/TeacherTransportPage"));
 
 // Quiz pages
 const QuizLobbyPage = lazy(() => import("../modules/quiz/pages/QuizLobbyPage"));
@@ -57,14 +55,12 @@ export default function TeacherApp() {
               <Route path="diary" element={<DiaryPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
 
-              <Route path="class-sessions" element={<ClassSessionPage />} />
+              <Route path="attendance" element={<TeacherAttendancePage />} />
               <Route path="approvals" element={<ApprovalsPage />} />
               <Route path="exams/create" element={<ExamCreationPage />} />
-              <Route path="assigned-classes" element={<AssignedClassesPage />} />
               <Route path="report-cards/entry" element={<ReportCardEntryPage />} />
               <Route path="ai-tools" element={<TeacherAIToolsPage />} />
               <Route path="themes" element={<ThemePage />} />
-              <Route path="transport" element={<TeacherTransportPage />} />
 
               <Route path="group-chat" element={<GroupChatPage />} />
               <Route path="group-chat/:id" element={<GroupChatRoomPage />} />

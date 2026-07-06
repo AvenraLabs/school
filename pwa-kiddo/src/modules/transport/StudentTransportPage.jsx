@@ -32,9 +32,11 @@ import {
 import api from "../../api/axios";
 import { connectTransportSocket } from "./transport.socket";
 import { useAuth } from "../../auth/AuthProvider";
+import { alpha, useTheme } from "@mui/material/styles";
 
 export default function StudentTransportPage() {
   const { user } = useAuth();
+  const theme = useTheme();
   const [loading, setLoading] = useState(true);
   const [transportInfo, setTransportInfo] = useState(null);
   const [activeTrip, setActiveTrip] = useState(null);
@@ -201,7 +203,14 @@ export default function StudentTransportPage() {
 
   return (
     <Container maxWidth="xs" sx={{ pt: 3, pb: 10 }}>
-      <Paper sx={{ p: 3, borderRadius: 3, mb: 3, background: "linear-gradient(135deg, #4f46e5, #818cf8)", color: "#fff" }}>
+      <Paper sx={{
+        p: 3,
+        borderRadius: '20px',
+        mb: 3,
+        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary?.main || theme.palette.primary.dark} 100%)`,
+        color: "#fff",
+        boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.25)}`,
+      }}>
         <Typography variant="h6" fontWeight="bold">My School Bus</Typography>
         <Typography variant="body2" sx={{ opacity: 0.85 }}>View assigned transport and live location</Typography>
       </Paper>
@@ -256,7 +265,7 @@ export default function StudentTransportPage() {
                   component="a"
                   href={`tel:${transportInfo.vehicle.driver.user.phone}`}
                   color="primary"
-                  sx={{ bgcolor: "indigo.50", p: 1.5 }}
+                  sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), p: 1.5, '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.18) } }}
                 >
                   <Phone />
                 </IconButton>

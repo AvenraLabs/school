@@ -22,16 +22,6 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 
 
-//env validation
-// const requiredEnv = ['TTS_SERVICE_URL'];
-
-// for (const key of requiredEnv) {
-//   if (!process.env[key]) {
-//     throw new Error(`Missing required env: ${key}`);
-//   }
-// }
-
-
 // HTTP + SOCKET SERVER
 
 const httpServer = createServer(app);
@@ -132,7 +122,6 @@ import tokenRoutes from "./src/modules/tokens/token.routes.js";
 
 // teacher planning & tracking
 import teacherAssignmentRoutes from "./src/modules/teacher-assignments/teacher-assignment.routes.js";
-import teacherClassSessionRoutes from "./src/modules/teacher-class-sessions/teacher-class-session.routes.js";
 import homeworkRoutes from "./src/modules/homework/homework.routes.js";
 import notificationRoutes from "./src/modules/notifications/notification.routes.js";
 import groupChatRoutes from "./src/modules/group-chat/group-chat.routes.js";
@@ -202,7 +191,6 @@ app.use("/api/quiz", quizRoutes);
 
 // teacher planning & tracking
 app.use("/api/teacher-assignments", teacherAssignmentRoutes);
-app.use("/api/teacher-class-sessions", teacherClassSessionRoutes);
 app.use("/api/homework", homeworkRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/group-chat", groupChatRoutes);
@@ -217,10 +205,53 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 
+async function runDbMigrations() {
+  console.log("Running DB migrations...");
+  try {
+    // Clean up duplicate attendance data (keep only latest per student/date)
+    await db.query(`
+      DELETE FROM attendances a USING attendances b
+      WHERE a.id < b.id AND a.student_id = b.student_id AND a.date = b.date;
+    `);
+  } catch (err) {
+    console.log("Note: Duplicate data cleanup skipped or failed:", err.message);
+  }
+
+  try {
+    // Drop legacy constraints and indexes
+    await db.query(`
+      ALTER TABLE attendances DROP CONSTRAINT IF EXISTS attendances_student_id_teacher_class_session_id_key;
+    `);
+    await db.query(`
+      DROP INDEX IF EXISTS attendances_student_id_teacher_class_session_id;
+    `);
+  } catch (err) {
+    console.log("Note: Dropping legacy unique constraints skipped or failed:", err.message);
+  }
+
+  try {
+    // Alter columns to make class session optional and add audit columns
+    await db.query(`
+      ALTER TABLE attendances ALTER COLUMN teacher_class_session_id DROP NOT NULL;
+    `);
+    await db.query(`
+      ALTER TABLE attendances ADD COLUMN IF NOT EXISTS created_by BIGINT REFERENCES users(id) ON DELETE SET NULL;
+    `);
+    await db.query(`
+      ALTER TABLE attendances ADD COLUMN IF NOT EXISTS updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL;
+    `);
+  } catch (err) {
+    console.log("Note: Altering columns skipped or failed:", err.message);
+  }
+  console.log("DB migrations completed.");
+}
+
 // START SERVER
 try {
   await db.authenticate();
   console.log("DB connected");
+
+  await runDbMigrations();
 
   await db.sync({ force: false });
 

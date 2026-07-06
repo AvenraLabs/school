@@ -236,22 +236,15 @@ export function SchoolRegistry() {
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="sr-page">
-      {/* ── Page Header ── */}
-      <div className="sr-header">
-        <h1 className="sr-header__title">
-          School Directory
-        </h1>
-      </div>
-
+    <div className="sr-page" style={{ paddingTop: '8px' }}>
       {/* ── Main Tab Navigation (Segmented Pill Group) ── */}
-      <div className="sr-tabs">
+      <div className="sr-tabs" style={{ marginBottom: '16px' }}>
         <button
           onClick={() => setActiveMainTab('classes')}
           className={`sr-tab ${activeMainTab === 'classes' ? 'sr-tab--active' : ''}`}
         >
-          <Layers style={{ width: 16, height: 16 }} />
-          Classes Registry
+          <GraduationCap style={{ width: 16, height: 16 }} />
+          Students
         </button>
         <button
           onClick={() => setActiveMainTab('teachers')}
@@ -312,14 +305,11 @@ export function SchoolRegistry() {
           <div className="sr-main-content">
             {activeSection ? (
               <div className="sr-registry-panel">
-                <div className="sr-registry-panel__header">
+                <div className="sr-registry-panel__header" style={{ borderBottom: 'none', paddingBottom: '0px' }}>
                   <div>
-                    <h3 className="sr-registry-panel__title">
-                      {activeClass.class_name} — Section {activeSection.name}
+                    <h3 className="sr-registry-panel__title" style={{ fontSize: '24px', fontWeight: 900 }}>
+                      {activeClass.class_name.replace(/class\s+/gi, '')}-{activeSection.name}
                     </h3>
-                    <p className="sr-registry-panel__desc">
-                      Registered students in this section
-                    </p>
                   </div>
                 </div>
 
@@ -339,20 +329,27 @@ export function SchoolRegistry() {
                         const userObj = stud.user || stud.User || {};
                         const studentName = userObj.name || 'Student';
                         const cleanName = studentName.replace(/^(Student Class|Student)\s+/gi, '').trim() || 'Student';
-                        const parentNameRaw = stud.parents?.[0]?.user?.name || '—';
+                        const parentNameRaw = stud.parents?.[0]?.user?.name || '';
                         const cleanParentName = parentNameRaw.replace(/^(Parent of Student Class|Parent of Student|Parent)\s+/gi, '').trim() || parentNameRaw;
+                        const avatarUrl = userObj.avatar_url;
                         return (
                           <div
                             key={stud.id}
                             onClick={() => setSelectedStudent(stud)}
                             className="sr-person-row"
                           >
-                            <div className="sr-person-row__avatar sr-person-row__avatar--student">
-                              {cleanName[0]?.toUpperCase() || 'S'}
+                            <div className="sr-person-row__avatar sr-person-row__avatar--student" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {avatarUrl ? (
+                                <img src={avatarUrl} alt={cleanName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                cleanName[0]?.toUpperCase() || 'S'
+                              )}
                             </div>
                             <div className="sr-person-row__info">
                               <h4 className="sr-person-row__name">{cleanName}</h4>
-                              <p className="sr-person-row__meta">Parent: {cleanParentName}</p>
+                              {cleanParentName && cleanParentName !== '—' && (
+                                <p className="sr-person-row__meta">Parent: {cleanParentName}</p>
+                              )}
                             </div>
                             <ChevronRight className="sr-person-row__chevron" style={{ width: 16, height: 16 }} />
                           </div>
@@ -432,8 +429,12 @@ export function SchoolRegistry() {
             <div className="sr-drawer__body">
               {/* Header profile details */}
               <div className="sr-profile-header">
-                <div className="sr-profile-header__avatar">
-                  {(selectedStudent.user?.name || 'S')[0].toUpperCase()}
+                <div className="sr-profile-header__avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {selectedStudent.user?.avatar_url ? (
+                    <img src={selectedStudent.user.avatar_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    (selectedStudent.user?.name || 'S')[0].toUpperCase()
+                  )}
                 </div>
                 <div>
                   <h3 className="sr-profile-header__name">
@@ -487,6 +488,62 @@ export function SchoolRegistry() {
                     <span className="sr-info-grid__value">{selectedStudent.address || '—'}</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Linked Parent Details */}
+              <div className="sr-drawer-section">
+                <h4 className="sr-drawer-section__title">Parent / Guardian Details</h4>
+                {(!selectedStudent.parents || selectedStudent.parents.length === 0) ? (
+                  <p className="sr-empty" style={{ padding: '8px 0' }}>No parent information linked.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {selectedStudent.parents.map((p, idx) => {
+                      const parentUser = p.user || p.User || {};
+                      const pName = parentUser.name || '—';
+                      const pPhone = parentUser.phone || '—';
+                      const pEmail = parentUser.email || '—';
+                      const relation = p.relation_type || 'Parent';
+                      return (
+                        <div key={p.id || idx} style={{
+                          padding: '12px 14px',
+                          background: 'var(--sr-slate-50)',
+                          border: '1px solid var(--sr-slate-100)',
+                          borderRadius: 'var(--sr-radius-md)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--sr-slate-800)' }}>{pName}</span>
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: '700',
+                              padding: '2px 8px',
+                              background: 'var(--sr-primary-faint)',
+                              color: 'var(--sr-primary)',
+                              borderRadius: '4px',
+                              textTransform: 'capitalize'
+                            }}>{relation}</span>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: 'var(--sr-slate-600)' }}>
+                            {pPhone && pPhone !== '—' && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Phone style={{ width: 12, height: 12, color: 'var(--sr-slate-400)' }} />
+                                <span>{pPhone}</span>
+                              </div>
+                            )}
+                            {pEmail && pEmail !== '—' && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Mail style={{ width: 12, height: 12, color: 'var(--sr-slate-400)' }} />
+                                <span>{pEmail}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
 

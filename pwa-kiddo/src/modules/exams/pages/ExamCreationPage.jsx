@@ -1,20 +1,26 @@
-import { Typography, Paper, TextField, Button, Box, Grid, MenuItem, Alert, CircularProgress, Snackbar } from "@mui/material";
+import { Typography, Paper, TextField, Button, Box, Grid, MenuItem, Alert, CircularProgress, Snackbar, Container } from "@mui/material";
 import { Add } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import api from "../../../api/axios";
 import DatePickerField from "../../../components/DatePickerField";
 
-const createExam = (data) => api.post("/exams", data);
 const fetchAssignments = () => api.get("/teacher-assignments/teacher/me");
 
 export default function ExamCreationPage() {
     const [loading, setLoading] = useState(false);
     const [assignmentsLoading, setAssignmentsLoading] = useState(false);
     const [assignments, setAssignments] = useState([]);
+    
+    // Existing exams state
+    const [exams, setExams] = useState([]);
+    const [examsLoading, setExamsLoading] = useState(false);
+    const [selectedExamId, setSelectedExamId] = useState("");
+    const [newExamName, setNewExamName] = useState("");
+
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
+    
     const [formData, setFormData] = useState({
-        name: "",
         subject_id: "",
         exam_date: "",
         syllabus: "",
@@ -43,6 +49,38 @@ export default function ExamCreationPage() {
             active = false;
         };
     }, []);
+
+    // Fetch exams whenever class changes
+    useEffect(() => {
+        if (!formData.class_id) {
+            setExams([]);
+            setSelectedExamId("");
+            return;
+        }
+
+        let active = true;
+        const loadExams = async () => {
+            try {
+                setExamsLoading(true);
+                const res = await api.get("/exams", { params: { class_id: formData.class_id } });
+                const data = res?.data?.items || res?.data?.data || [];
+                if (!active) return;
+                setExams(data);
+                setSelectedExamId("");
+                setNewExamName("");
+            } catch (err) {
+                console.error("Failed to load exams for class", err);
+                if (!active) return;
+                setExams([]);
+            } finally {
+                if (active) setExamsLoading(false);
+            }
+        };
+        loadExams();
+        return () => {
+            active = false;
+        };
+    }, [formData.class_id]);
 
     const classOptions = useMemo(() => {
         const map = new Map();
@@ -79,74 +117,201 @@ export default function ExamCreationPage() {
         try {
             setLoading(true);
             setError("");
-            await createExam({
-                class_id: Number(formData.class_id),
-                name: formData.name.trim(),
-                subjects: [
-                    {
-                        subject_id: Number(formData.subject_id),
-                        exam_date: formData.exam_date,
-                        syllabus: formData.syllabus?.trim() || null,
-                    },
-                ],
-            });
+
+            if (!formData.class_id) {
+                setError("Please select a Class.");
+                setLoading(false);
+                return;
+            }
+            if (!selectedExamId) {
+                setError("Please select an Exam / Test.");
+                setLoading(false);
+                return;
+            }
+            if (selectedExamId === "new" && !newExamName.trim()) {
+                setError("Please enter a name for the new exam.");
+                setLoading(false);
+                return;
+            }
+            if (!formData.subject_id) {
+                setError("Please select a Subject.");
+                setLoading(false);
+                return;
+            }
+            if (!formData.exam_date) {
+                setError("Please select an Exam Date.");
+                setLoading(false);
+                return;
+            }
+
+            if (selectedExamId === "new") {
+                // 1. Create a new exam with the subject scheduled (backend POST /exams accepts subjects array)
+                await api.post("/exams", {
+                    class_id: Number(formData.class_id),
+                    name: newExamName.trim(),
+                    subjects: [
+                        {
+                            subject_id: Number(formData.subject_id),
+                            exam_date: formData.exam_date,
+                            syllabus: formData.syllabus?.trim() || null,
+                        },
+                    ],
+                });
+            } else {
+                // 2. Schedule a subject on an existing exam via PUT /exams/:id/subjects
+                await api.put(`/exams/${selectedExamId}/subjects`, {
+                    subject_id: Number(formData.subject_id),
+                    exam_date: formData.exam_date,
+                    syllabus: formData.syllabus?.trim() || null,
+                });
+            }
+
             setSuccess(true);
             setFormData({
-                name: "",
                 subject_id: "",
                 exam_date: "",
                 syllabus: "",
                 class_id: "",
             });
+            setSelectedExamId("");
+            setNewExamName("");
         } catch (err) {
-            console.error("Failed to create exam", err);
-            setError(err.response?.data?.message || "Failed to create exam");
+            console.error("Failed to schedule exam subject", err);
+            setError(err.response?.data?.message || "Failed to schedule exam subject");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Box sx={{ py: 4, px: 2, width: "100%" }}>
-            <Typography variant="h4" sx={{ mb: 4, fontWeight: 'bold' }}>
-                Create New Exam
+        <Container maxWidth="sm" sx={{ mt: 3, pb: 12 }}>
+            <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: "text.primary" }}>
+                Schedule Exam
             </Typography>
 
             <Paper
                 component="form"
                 onSubmit={handleSubmit}
-                sx={{ p: 4, borderRadius: 2, width: "100%" }}
+                sx={{
+                    p: { xs: 2.5, sm: 3 },
+                    borderRadius: 4,
+                    border: "1px solid rgba(0,0,0,0.06)",
+                    boxShadow: "none",
+                    bgcolor: "background.paper",
+                    overflow: "hidden"
+                }}
             >
-                <Grid container spacing={3} sx={{ width: "100%" }}>
+                <Grid container spacing={2.5}>
                     {error && (
-                        <Grid item xs={12}>
-                            <Alert severity="error">{error}</Alert>
+                        <Grid size={12}>
+                            <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>
                         </Grid>
                     )}
-                    <Grid item xs={12}>
+
+                    {/* Class Dropdown */}
+                    <Grid size={12}>
                         <TextField
+                            select
                             required
                             fullWidth
-                            label="Exam Name"
-                            name="name"
-                            placeholder="e.g., Unit Test 1"
-                            value={formData.name}
-                            onChange={handleChange}
-                            helperText="Creates this exam for the selected class"
-                        />
+                            label="Class"
+                            name="class_id"
+                            value={formData.class_id}
+                            onChange={(event) => setFormData((prev) => ({ ...prev, class_id: event.target.value, subject_id: "" }))}
+                            disabled={assignmentsLoading}
+                            slotProps={{
+                                select: {
+                                    displayEmpty: true,
+                                    renderValue: (selected) => {
+                                        if (!selected) return "Select Class";
+                                        const match = classOptions.find(
+                                            (c) => String(c.class_id) === String(selected)
+                                        );
+                                        return match ? `Class ${match.class_name}` : `Class ${selected}`;
+                                    },
+                                },
+                            }}
+                            InputLabelProps={{ shrink: true }}
+                        >
+                            {assignmentsLoading && (
+                                <MenuItem value="">
+                                    <CircularProgress size={18} sx={{ mr: 1 }} />
+                                    Loading classes...
+                                </MenuItem>
+                            )}
+                            {!assignmentsLoading && classOptions.length === 0 && (
+                                <MenuItem value="">No assigned classes</MenuItem>
+                            )}
+                            {classOptions.map((c) => (
+                                <MenuItem key={c.class_id} value={c.class_id}>
+                                    Class {c.class_name}
+                                </MenuItem>
+                            ))}
+                        </TextField>
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
-                        <DatePickerField
-                            label="Exam Date"
-                            value={formData.exam_date}
-                            onChange={(val) =>
-                                setFormData((prev) => ({ ...prev, exam_date: val }))
-                            }
-                        />
+                    {/* Exam Dropdown */}
+                    <Grid size={12}>
+                        <TextField
+                            select
+                            required
+                            fullWidth
+                            label="Exam"
+                            name="exam_id"
+                            value={selectedExamId}
+                            onChange={(e) => setSelectedExamId(e.target.value)}
+                            disabled={!formData.class_id || examsLoading}
+                            InputLabelProps={{ shrink: true }}
+                            slotProps={{
+                                select: {
+                                    displayEmpty: true,
+                                    renderValue: (selected) => {
+                                        if (!selected) return "Select Exam / Test";
+                                        if (selected === "new") return "+ Create New Exam...";
+                                        const match = exams.find((exam) => String(exam.id) === String(selected));
+                                        return match ? match.name : selected;
+                                    },
+                                },
+                            }}
+                        >
+                            {!formData.class_id && <MenuItem value="">Select Class First</MenuItem>}
+                            {examsLoading && (
+                                <MenuItem value="">
+                                    <CircularProgress size={18} sx={{ mr: 1 }} />
+                                    Loading exams...
+                                </MenuItem>
+                            )}
+                            {formData.class_id && !examsLoading && (
+                                <MenuItem value="new" sx={{ fontWeight: "bold", color: "primary.main" }}>
+                                    + Create New Exam...
+                                </MenuItem>
+                            )}
+                            {exams.map((exam) => (
+                                <MenuItem key={exam.id} value={exam.id} disabled={exam.is_locked}>
+                                    {exam.name} {exam.is_locked ? "(Locked)" : ""}
+                                </MenuItem>
+                            ))}
+                        </TextField>
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
+                    {/* New Exam Name Input */}
+                    {selectedExamId === "new" && (
+                        <Grid size={12}>
+                            <TextField
+                                required
+                                fullWidth
+                                label="New Exam Name"
+                                name="newExamName"
+                                placeholder="e.g., Unit Test 1, Half Yearly"
+                                value={newExamName}
+                                onChange={(e) => setNewExamName(e.target.value)}
+                                helperText="This will create a new exam group for this class."
+                            />
+                        </Grid>
+                    )}
+
+                    {/* Subject Dropdown */}
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             select
                             required
@@ -156,8 +321,21 @@ export default function ExamCreationPage() {
                             value={formData.subject_id}
                             onChange={handleChange}
                             disabled={!formData.class_id}
+                            InputLabelProps={{ shrink: true }}
+                            slotProps={{
+                                select: {
+                                    displayEmpty: true,
+                                    renderValue: (selected) => {
+                                        if (!selected) return "Select Subject";
+                                        const match = subjectOptions.find(
+                                            (s) => String(s.subject_id) === String(selected)
+                                        );
+                                        return match ? match.subject_name : selected;
+                                    },
+                                },
+                            }}
                         >
-                            {!formData.class_id && <MenuItem value="">Select class first</MenuItem>}
+                            {!formData.class_id && <MenuItem value="">Select Class First</MenuItem>}
                             {formData.class_id && subjectOptions.length === 0 && (
                                 <MenuItem value="">No assigned subjects</MenuItem>
                             )}
@@ -169,88 +347,66 @@ export default function ExamCreationPage() {
                         </TextField>
                     </Grid>
 
-                    <Grid item xs={12}>
-                        <TextField
-                            select
-                            required
-                            label="Class"
-                            name="class_id"
-                            value={formData.class_id}
-                            onChange={(event) => setFormData((prev) => ({ ...prev, class_id: event.target.value, subject_id: "" }))}
-                            disabled={assignmentsLoading}
-                            fullWidth
-                            slotProps={{
-                                select: {
-                                    displayEmpty: true,
-                                    renderValue: (selected) => {
-                                        if (!selected) return "Select your class";
-                                        const match = classOptions.find(
-                                            (c) => String(c.class_id) === String(selected)
-                                        );
-                                        return match ? `Class ${match.class_name}` : `Class ${selected}`;
-                                    },
-                                },
-                            }}
-                            InputLabelProps={{ shrink: true }}
-                            sx={{ width: "100%", "& .MuiInputBase-root": { width: "100%" } }}
-                        >
-                            {assignmentsLoading && (
-                                <MenuItem value="">
-                                    <CircularProgress size={18} sx={{ mr: 1 }} />
-                                    Loading classes...
-                                </MenuItem>
-                            )}
-                            {!assignmentsLoading && classOptions.length === 0 && (
-                                <MenuItem value="">
-                                    No assigned classes
-                                </MenuItem>
-                            )}
-                            {classOptions.map((c) => (
-                                <MenuItem key={c.class_id} value={c.class_id}>
-                                    Class {c.class_name}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                    {/* Exam Date Picker */}
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <DatePickerField
+                            label="Exam Date"
+                            value={formData.exam_date}
+                            onChange={(val) =>
+                                setFormData((prev) => ({ ...prev, exam_date: val }))
+                            }
+                            size="medium"
+                        />
                     </Grid>
 
-                    <Grid item xs={12}>
+                    {/* Syllabus multiline input */}
+                    <Grid size={12}>
                         <TextField
                             fullWidth
                             multiline
                             minRows={3}
                             label="Syllabus"
                             name="syllabus"
-                            placeholder="e.g., Fractions, decimals, Chapter 3 exercises"
+                            placeholder="e.g., Chapter 1 to 3, Grammar rules"
                             value={formData.syllabus}
                             onChange={handleChange}
                         />
                     </Grid>
 
-                    <Grid item xs={12}>
+                    {/* Submit Button */}
+                    <Grid size={12}>
                         <Button
                             type="submit"
                             variant="contained"
                             fullWidth
                             size="large"
-                            disabled={loading || !formData.class_id || !formData.name.trim() || !formData.subject_id || !formData.exam_date}
+                            disabled={loading}
                             startIcon={<Add />}
-                            sx={{ mt: 2 }}
+                            sx={{
+                                mt: 1,
+                                py: 1.5,
+                                borderRadius: 3,
+                                textTransform: "none",
+                                fontWeight: "bold",
+                                fontSize: "16px",
+                            }}
                         >
-                            {loading ? "Scheduling..." : "Schedule Subject"}
+                            {loading ? "Scheduling..." : "Schedule Subject Test"}
                         </Button>
                     </Grid>
                 </Grid>
             </Paper>
+
             <Snackbar
                 open={success}
                 autoHideDuration={2500}
                 onClose={() => setSuccess(false)}
                 anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
             >
-                <Alert severity="success" onClose={() => setSuccess(false)}>
+                <Alert severity="success" onClose={() => setSuccess(false)} sx={{ borderRadius: 2 }}>
                     Exam subject scheduled successfully
                 </Alert>
             </Snackbar>
-        </Box>
+        </Container>
     );
 }

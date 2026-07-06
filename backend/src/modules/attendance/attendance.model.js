@@ -16,7 +16,7 @@ const Attendance = db.define("attendance", {
 
   teacher_class_session_id: {
     type: DataTypes.BIGINT,
-    allowNull: false,
+    allowNull: true,
     references: { model: "teacher_class_sessions", key: "id" },
   },
 
@@ -50,7 +50,19 @@ const Attendance = db.define("attendance", {
 
   marked_by: {
     type: DataTypes.BIGINT, // user_id
-    allowNull: false,
+    allowNull: true,
+    references: { model: "users", key: "id" },
+  },
+
+  created_by: {
+    type: DataTypes.BIGINT,
+    allowNull: true,
+    references: { model: "users", key: "id" },
+  },
+
+  updated_by: {
+    type: DataTypes.BIGINT,
+    allowNull: true,
     references: { model: "users", key: "id" },
   },
 }, {
@@ -60,13 +72,12 @@ const Attendance = db.define("attendance", {
   indexes: [
     {
       unique: true,
-      fields: ["student_id", "teacher_class_session_id"],
+      fields: ["student_id", "date"],
     },
     { fields: ["school_id"] },
     { fields: ["class_id"] },
     { fields: ["section_id"] },
     { fields: ["date"] },
-    { fields: ["teacher_class_session_id"] },
     { fields: ["student_id"] },
   ],
 });

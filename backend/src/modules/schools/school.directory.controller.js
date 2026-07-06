@@ -14,7 +14,6 @@ import ExamMaster from "../report-cards/exam-master.model.js";
 import ExamSubject from "../report-cards/exam-subject.model.js";
 import Subject from "../subjects/subject.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
-import TeacherClassSession from "../teacher-class-sessions/teacher-class-session.model.js";
 
 // 1. Optimized Main Init Endpoint (Structure & Teachers list only)
 export const getSchoolDirectory = asyncHandler(async (req, res) => {
@@ -97,24 +96,9 @@ export const getSchoolDirectory = asyncHandler(async (req, res) => {
     ]
   });
 
-  // Sessions count for teachers
-  const sessionStats = await TeacherClassSession.findAll({
-    where: { school_id },
-    attributes: [
-      "teacher_id",
-      [fn("COUNT", col("id")), "total_sessions"]
-    ],
-    group: ["teacher_id"]
-  });
-
-  const sessionsMap = {};
-  sessionStats.forEach(row => {
-    sessionsMap[row.teacher_id] = Number(row.get("total_sessions"));
-  });
-
   const teachersData = teachers.map(t => {
     const tJson = t.toJSON();
-    tJson.total_sessions = sessionsMap[t.id] || 0;
+    tJson.total_sessions = 0;
     return tJson;
   });
 
@@ -181,46 +165,9 @@ export const getSectionRoster = asyncHandler(async (req, res) => {
     };
   });
 
-  // Overall Subject-wise count stats for drawer preview
-  const attendanceLogs = studentIds.length ? await Attendance.findAll({
-    where: { school_id, student_id: studentIds },
-    attributes: ["student_id", "status"],
-    include: [
-      {
-        model: TeacherClassSession,
-        attributes: ["id"],
-        include: [
-          {
-            model: TeacherAssignment,
-            attributes: ["id"],
-            include: [
-              {
-                model: Subject,
-                attributes: ["name"]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }) : [];
-
-  const subjectStatsMap = {};
-  attendanceLogs.forEach(row => {
-    const sid = row.student_id;
-    const subjectName = row.teacher_class_session?.teacher_assignment?.subject?.name || "General";
-    if (!subjectStatsMap[sid]) subjectStatsMap[sid] = {};
-    if (!subjectStatsMap[sid][subjectName]) {
-      subjectStatsMap[sid][subjectName] = { present: 0, total: 0 };
-    }
-    subjectStatsMap[sid][subjectName].total += 1;
-    if (row.status === "present") {
-      subjectStatsMap[sid][subjectName].present += 1;
-    }
-  });
-
+  // Since subject-wise attendance is removed, subject_stats is empty
   Object.keys(attendanceMap).forEach(sid => {
-    attendanceMap[sid].subject_stats = subjectStatsMap[sid] || {};
+    attendanceMap[sid].subject_stats = {};
   });
 
   // Report Cards
@@ -329,41 +276,7 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
     attendanceMap.absent_days = Number(row.get("absent_days"));
     attendanceMap.percentage = total ? Number(((present / total) * 100).toFixed(2)) : 0;
 
-    const attendanceLogs = await Attendance.findAll({
-      where: { school_id, student_id: studentId },
-      attributes: ["student_id", "status"],
-      include: [
-        {
-          model: TeacherClassSession,
-          attributes: ["id"],
-          include: [
-            {
-              model: TeacherAssignment,
-              attributes: ["id"],
-              include: [
-                {
-                  model: Subject,
-                  attributes: ["name"]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    });
-
-    const subjectStats = {};
-    attendanceLogs.forEach(row => {
-      const subjectName = row.teacher_class_session?.teacher_assignment?.subject?.name || "General";
-      if (!subjectStats[subjectName]) {
-        subjectStats[subjectName] = { present: 0, total: 0 };
-      }
-      subjectStats[subjectName].total += 1;
-      if (row.status === "present") {
-        subjectStats[subjectName].present += 1;
-      }
-    });
-    attendanceMap.subject_stats = subjectStats;
+    attendanceMap.subject_stats = {};
   }
 
   const reportCards = await ReportCard.findAll({

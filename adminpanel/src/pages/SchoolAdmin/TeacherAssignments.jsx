@@ -6,11 +6,11 @@ import { UserCog, ChevronDown, ChevronRight, UserPlus, X, Check } from 'lucide-r
 /* ── plain CSS styles ── */
 const s = {
   pageHeader: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: '24px', flexWrap: 'wrap', gap: '12px',
+    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+    marginBottom: '24px', flexWrap: 'wrap', gap: '18px',
   },
-  pageTitle: { fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0 },
-  pageSubtitle: { fontSize: '13px', color: '#94a3b8', marginTop: '4px' },
+  pageTitle: { fontSize: '28px', fontWeight: 850, letterSpacing: '-0.03em', color: '#0f172a', margin: 0 },
+  pageSubtitle: { fontSize: '14px', color: '#64748b', marginTop: '6px', lineHeight: 1.55 },
 
   classCard: {
     background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0',
@@ -290,7 +290,7 @@ export function TeacherAssignments() {
 
   if (loading) {
     return (
-      <div>
+      <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
         <div style={s.pageHeader}>
           <div>
             <h1 style={s.pageTitle}>Class Incharge Allocation</h1>
@@ -303,7 +303,7 @@ export function TeacherAssignments() {
   }
 
   return (
-    <div>
+    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
       <div style={s.pageHeader}>
         <div>
           <h1 style={s.pageTitle}>Class Incharge Allocation</h1>

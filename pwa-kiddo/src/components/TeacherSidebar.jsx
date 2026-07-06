@@ -10,6 +10,7 @@ import {
     Palette,
     Logout,
     DirectionsBus,
+    Chat,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { Link, useNavigate } from "react-router-dom";
@@ -30,11 +31,10 @@ export default function TeacherSidebar({ open, onClose }) {
     };
 
     const menuItems = [
-        { label: "Assigned Classes", icon: <School />, path: "/teacher/assigned-classes" },
-        { label: "Diary & Homework", icon: <Book />, path: "/teacher/diary" },
+        { label: "Classes", icon: <School />, path: "/teacher/timetable" },
+        { label: "Chat", icon: <Chat />, path: "/teacher/group-chat" },
         { label: "Approvals", icon: <Assignment />, path: "/teacher/approvals" },
         { label: "Exams & Reports", icon: <Assessment />, path: "/teacher/exams/create" },
-        { label: "Student Transport", icon: <DirectionsBus />, path: "/teacher/transport" },
         { label: "AI Tools", icon: <AutoAwesome />, path: "/teacher/ai-tools" },
         { label: "Themes", icon: <Palette />, path: "/teacher/themes" },
         { label: "Profile", icon: <Person />, path: "/teacher/profile" },

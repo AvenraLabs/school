@@ -54,7 +54,7 @@ export const themes = {
     palette: {
       mode: "light",
       primary: { main: "#0f766e" },
-      secondary: { main: "#f97316" },
+      secondary: { main: "#10b981" },
       background: {
         default: "#ecfdf3",
         paper: "#ffffff",
@@ -102,7 +102,7 @@ export const themes = {
 };
 
 export const AVAILABLE_THEMES = Object.keys(themes);
-export const DEFAULT_THEME = "light";
+export const DEFAULT_THEME = "forest";
 
 function buildCustomTheme(primaryColor) {
   return createTheme({

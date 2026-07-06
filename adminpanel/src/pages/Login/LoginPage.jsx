@@ -27,7 +27,7 @@ export function LoginPage() {
       );
       const user = JSON.parse(jsonPayload);
       login(user, response.token);
-      if (user.role === 'super_admin') navigate('/super-admin/dashboard');
+      if (user.role === 'super_admin') navigate('/super-admin');
       else if (user.role === 'school_admin') navigate('/admin/dashboard');
       else setError('Access denied. Only admins can log in here.');
     } catch (err) {

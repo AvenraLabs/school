@@ -1,51 +1,44 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  LayoutDashboard, School, BarChart3, Coins,
+  LayoutDashboard, School,
   GraduationCap, UserCheck, BookOpen,
   ClipboardList, Calendar, Bell, FileText,
   Award, LogOut, UserCog,
   Layers, X, Database, Sparkles, Truck,
 } from 'lucide-react';
 
-const superAdminLinks = [
-  { section: 'Overview' },
-  { to: '/super-admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { section: 'Management' },
-  { to: '/super-admin/schools', icon: School, label: 'School Management' },
-  { section: 'Analytics & Tokens' },
-  { to: '/super-admin/analytics', icon: BarChart3, label: 'AI Analytics' },
-  { to: '/super-admin/tokens', icon: Coins, label: 'Token Management' },
-];
+// Super admin no longer uses the sidebar — it has its own top-bar layout (SuperAdminPage).
+// This sidebar is exclusively for school_admin.
 
 const schoolAdminLinks = [
   { section: 'Overview' },
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/admin/directory', icon: School, label: 'School Registry' },
-  { to: '/admin/bulk-seeder', icon: Database, label: 'Bulk Seeder' },
-  { section: 'Academic' },
-  { to: '/admin/classes', icon: Layers, label: 'Classes & Sections' },
-  { to: '/admin/subjects', icon: BookOpen, label: 'Subjects' },
-  { section: 'People' },
-  { to: '/admin/teachers', icon: UserCog, label: 'Teachers' },
-  { to: '/admin/students', icon: GraduationCap, label: 'Students' },
-  { to: '/admin/approvals', icon: UserCheck, label: 'Approvals' },
-  { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },
   { section: 'Operations' },
   { to: '/admin/transport', icon: Truck, label: 'Transport' },
-  { to: '/admin/assignments', icon: ClipboardList, label: 'Class Incharge Appointment' },
+  { section: 'People & Academics' },
+  { to: '/admin/teachers', icon: UserCog, label: 'Teachers' },
+  { to: '/admin/assignments', icon: ClipboardList, label: 'Teacher allocation' },
+  { to: '/admin/students', icon: GraduationCap, label: 'Students' },
+  { to: '/admin/approvals', icon: UserCheck, label: 'Approvals' },
+  { to: '/admin/subjects', icon: BookOpen, label: 'Subjects' },
   { to: '/admin/timetables', icon: Calendar, label: 'Timetables' },
+  { section: 'Assessment & Notifications' },
   { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
-  { section: 'Assessment' },
   { to: '/admin/exams', icon: FileText, label: 'Exams' },
   { to: '/admin/report-cards', icon: Award, label: 'Report Cards' },
+  { section: 'System Setup & Onboarding' },
+  { to: '/admin/bulk-seeder', icon: Database, label: 'Bulk Seeder' },
+  { to: '/admin/classes', icon: Layers, label: 'Classes & Sections' },
+  { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },
 ];
 
 export function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const links = user?.role === 'super_admin' ? superAdminLinks : schoolAdminLinks;
+  const links = schoolAdminLinks;
   const displayName = user?.name || user?.username || 'Admin';
   const initial = displayName[0].toUpperCase();
   const roleLabel = user?.role === 'super_admin' ? 'Super Admin' : 'School Admin';
@@ -53,6 +46,12 @@ export function Sidebar({ isOpen, onClose }) {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleLinkClick = () => {
+    if (window.innerWidth < 1024) {
+      onClose();
+    }
   };
 
   return (
@@ -68,15 +67,13 @@ export function Sidebar({ isOpen, onClose }) {
       <aside
         className={`
           fixed top-0 left-0 bottom-0 z-50 flex flex-col
-          lg:static lg:translate-x-0 lg:z-auto
-          transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:relative lg:translate-x-0 lg:z-auto
+          transition-all duration-300 ease-in-out
+          ${isOpen ? 'translate-x-0 w-[260px] min-w-[260px]' : '-translate-x-full lg:w-0 lg:min-w-0 lg:overflow-hidden'}
         `}
         style={{
-          width: '260px',
-          minWidth: '260px',
           background: 'linear-gradient(180deg, #0f0c29 0%, #1e1b4b 60%, #1a1740 100%)',
-          borderRight: '1px solid rgba(255,255,255,0.07)',
+          borderRight: isOpen ? '1px solid rgba(255,255,255,0.07)' : 'none',
         }}
       >
 
@@ -86,6 +83,7 @@ export function Sidebar({ isOpen, onClose }) {
           style={{
             padding: '20px 20px 18px',
             borderBottom: '1px solid rgba(255,255,255,0.07)',
+            width: '260px', // Maintain static header width to prevent text squishing during transitions
           }}
         >
           <div className="flex items-center gap-3">
@@ -111,8 +109,8 @@ export function Sidebar({ isOpen, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="lg:hidden flex items-center justify-center rounded-lg transition-colors"
-            style={{ width: '30px', height: '30px', color: 'rgba(148,163,184,0.6)' }}
+            className="flex items-center justify-center rounded-lg transition-colors hover:bg-white/10"
+            style={{ width: '30px', height: '30px', color: 'rgba(148,163,184,0.6)', cursor: 'pointer' }}
           >
             <X style={{ width: '16px', height: '16px' }} />
           </button>
@@ -150,7 +148,7 @@ export function Sidebar({ isOpen, onClose }) {
                 key={item.to}
                 to={item.to}
                 end={item.to.endsWith('dashboard')}
-                onClick={onClose}
+                onClick={handleLinkClick}
                 className={({ isActive }) =>
                   isActive ? 'nav-link-active' : 'nav-link-idle'
                 }

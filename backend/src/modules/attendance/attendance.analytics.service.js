@@ -1,8 +1,8 @@
 import { Op, fn, col, literal } from "sequelize";
 import Attendance from "./attendance.model.js";
-
 import AppError from "../../shared/appError.js";
-import TeacherClassSession from "../teacher-class-sessions/teacher-class-session.model.js";
+import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
+import Class from "../classes/classes.model.js";
 
 /* =========================
    TEACHER: ANALYTICS
@@ -27,13 +27,28 @@ export const getTeacherAttendanceAnalyticsService = async ({
   }
 
   if (teacher_id) {
-    const sessions = await TeacherClassSession.findAll({
-      where: { school_id, teacher_id },
+    const assignments = await TeacherAssignment.findAll({
+      where: { school_id, teacher_id, is_active: true },
+      attributes: ["class_id", "section_id"],
+    });
+
+    const classTeacherClasses = await Class.findAll({
+      where: { school_id, class_teacher_id: teacher_id, is_active: true },
       attributes: ["id"],
     });
-    const sessionIds = sessions.map((s) => s.id);
-    if (!sessionIds.length) return [];
-    where.teacher_class_session_id = { [Op.in]: sessionIds };
+
+    const classIds = [
+      ...new Set([
+        ...assignments.map((a) => Number(a.class_id)),
+        ...classTeacherClasses.map((c) => Number(c.id)),
+      ]),
+    ];
+
+    if (classIds.length === 0) {
+      return [];
+    }
+
+    where.class_id = { [Op.in]: classIds };
   }
 
   const stats = await Attendance.findAll({

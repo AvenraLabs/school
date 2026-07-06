@@ -1,11 +1,12 @@
 import { BottomNavigation, BottomNavigationAction, Paper } from "@mui/material";
 import {
   Home,
-  CalendarMonth,
-  Chat,
-  School,
+  Quiz,
+  SmartToy,
+  DirectionsBus,
   Person,
-  Timer,
+  HowToReg,
+  Book,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
@@ -34,15 +35,15 @@ export default function BottomNav() {
   const navItems = {
     student: [
       { label: "Home", icon: <Home />, path: `${base}/dashboard` },
-      { label: "Timetable", icon: <CalendarMonth />, path: `${base}/timetable` },
-      { label: "Chat", icon: <Chat />, path: `${base}/group-chat` },
+      { label: "Quiz", icon: <Quiz />, path: `${base}/quiz` },
+      { label: "AI Chat", icon: <SmartToy />, path: `${base}/ai-chat` },
+      { label: "My Bus", icon: <DirectionsBus />, path: `${base}/transport` },
       { label: "Profile", icon: <Person />, path: "SIDEBAR_STUDENT" },
     ],
     teacher: [
       { label: "Home", icon: <Home />, path: `${base}/dashboard` },
-      { label: "Classes", icon: <School />, path: `${base}/timetable` },
-      { label: "Sessions", icon: <Timer />, path: `${base}/class-sessions` },
-      { label: "Chat", icon: <Chat />, path: `${base}/group-chat` },
+      { label: "Attendance", icon: <HowToReg />, path: `${base}/attendance` },
+      { label: "Homework", icon: <Book />, path: `${base}/diary` },
       { label: "Profile", icon: <Person />, path: "SIDEBAR_TRIGGER" },
     ],
     driver: [
