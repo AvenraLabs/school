@@ -9,6 +9,7 @@ import AppError from "../../shared/appError.js";
 import { triggerHomeworkNotification } from "../notifications/notification-trigger.service.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import { Op } from "sequelize";
+import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 
 export const createHomeworkService = async ({
   user,
@@ -49,9 +50,12 @@ export const createHomeworkService = async ({
     throw new AppError("FORBIDDEN", 403);
   }
 
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+
   // 4️⃣ Create homework
   const homework = await Homework.create({
     school_id,
+    academic_year_id: academicYearId,
     class_id,
     section_id,
     teacher_assignment_id: assignment.id,
@@ -83,7 +87,8 @@ export const listHomeworkService = async ({
 }) => {
   const { limit, offset } = getPagination(query);
 
-  const where = { school_id };
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+  const where = { school_id, academic_year_id: academicYearId };
   if (date) where.homework_date = date;
   if (created_date) {
     const start = new Date(`${created_date}T00:00:00`);

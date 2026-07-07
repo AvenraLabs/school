@@ -398,12 +398,7 @@ export function SchoolRegistry() {
                       {teach.teacher_assignments?.length || 0} assigned
                     </span>
                   </div>
-                  <div className="sr-dir-card__stat sr-dir-card__stat--right">
-                    <span className="sr-dir-card__stat-label">SESSIONS</span>
-                    <span className="sr-dir-card__stat-value sr-dir-card__stat-value--accent">
-                      {teach.total_sessions} conducted
-                    </span>
-                  </div>
+
                 </div>
               </div>
             );
@@ -726,18 +721,7 @@ export function SchoolRegistry() {
                 )}
               </div>
 
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Activity Stats</h4>
-                <div className="sr-activity-stat">
-                  <div className="sr-activity-stat__circle">
-                    {selectedTeacher.total_sessions}
-                  </div>
-                  <div>
-                    <p className="sr-activity-stat__label">Timetable Sessions Conducted</p>
-                    <p className="sr-activity-stat__desc">Sum of finished sessions found in registry logs.</p>
-                  </div>
-                </div>
-              </div>
+
             </div>
           </div>
         </div>

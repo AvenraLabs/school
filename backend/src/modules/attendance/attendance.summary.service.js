@@ -8,6 +8,7 @@ import Section from "../sections/section.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
+import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 
 /* Helper to check if a user is authorized to mark or view attendance */
 async function checkAttendancePermission({ user, school_id, class_id, section_id }) {
@@ -52,8 +53,8 @@ export const getDailyAttendanceService = async ({
   }
 
   // 2. Fetch active students in class and section
-  const students = await Student.findAll({
-    where: { school_id, class_id, section_id, is_active: true, approval_status: "approved" },
+  const students = await Student.scope("active").findAll({
+    where: { school_id, class_id, section_id },
     include: [
       { model: User, attributes: ["id", "name", "avatar_url"] },
     ],
@@ -63,9 +64,11 @@ export const getDailyAttendanceService = async ({
     ],
   });
 
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+
   // 3. Fetch attendance records for this date
   const records = await Attendance.findAll({
-    where: { school_id, class_id, section_id, date },
+    where: { school_id, class_id, section_id, date, academic_year_id: academicYearId },
   });
 
   let lastUpdatedBy = null;
@@ -118,6 +121,8 @@ export const markAttendanceService = async ({
     throw new AppError("FORBIDDEN", 403);
   }
 
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+
   // 2️⃣ Perform database writes inside a transaction
   await db.transaction(async (t) => {
     for (const { student_id, status } of records) {
@@ -140,7 +145,7 @@ export const markAttendanceService = async ({
 
       // Upsert record
       const existing = await Attendance.findOne({
-        where: { school_id, student_id, date },
+        where: { school_id, student_id, date, academic_year_id: academicYearId },
         transaction: t,
       });
 
@@ -156,6 +161,7 @@ export const markAttendanceService = async ({
         await Attendance.create(
           {
             school_id,
+            academic_year_id: academicYearId,
             class_id,
             section_id,
             student_id,
@@ -185,7 +191,8 @@ export const getTeacherAttendanceSummaryService = async ({
   const { limit, offset } = getPagination(query);
   const { from_date, to_date, class_id, section_id } = query || {};
 
-  const where = { school_id };
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+  const where = { school_id, academic_year_id: academicYearId };
 
   if (class_id) where.class_id = Number(class_id);
   if (section_id) where.section_id = Number(section_id);
@@ -249,7 +256,8 @@ export const getStudentAttendanceSummaryService = async ({
   const student = await Student.findOne({ where: { user_id: student_user_id } });
   if (!student) throw new AppError("Student profile not found", 404);
 
-  const where = { student_id: student.id };
+  const academicYearId = await getCurrentAcademicYearId(student.school_id);
+  const where = { student_id: student.id, academic_year_id: academicYearId };
 
   if (from_date || to_date) {
     where.date = {};

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Alert,
     Avatar,
@@ -103,7 +103,7 @@ export default function ReportCardsList() {
             obtained,
             maxMarks,
             percentage,
-            published: Boolean(reportCard?.published_at),
+            published: Boolean(reportCard && (reportCard.report_card_marks || reportCard.marks || []).length > 0),
         };
     }), [exams, reportCards]);
 
@@ -172,7 +172,7 @@ export default function ReportCardsList() {
                             {latest ? `${latest.percentage}%` : "â€”"}
                         </Typography>
                         <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                            {latest ? `Latest: ${getExamName(latest.exam)}` : "No published marks yet"}
+                            {latest ? `Latest: ${getExamName(latest.exam)}` : "No graded marks yet"}
                         </Typography>
                     </Box>
                     <Box sx={{ px: 2.5, py: 2 }}>
@@ -228,7 +228,7 @@ export default function ReportCardsList() {
                                                 <Typography variant="body2" fontWeight={900} noWrap>{getExamName(exam)}</Typography>
                                                 <Chip
                                                     size="small"
-                                                    label={published ? "Published" : "Pending"}
+                                                    label={published ? "Graded" : "Pending"}
                                                     color={published ? "success" : "default"}
                                                     variant={published ? "filled" : "outlined"}
                                                     sx={{ height: 20, fontSize: "0.65rem", fontWeight: 800, ml: 1 }}
@@ -365,9 +365,9 @@ export default function ReportCardsList() {
                                 <Box sx={{ width: 56, height: 56, borderRadius: '50%', bgcolor: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5 }}>
                                     <Lock sx={{ color: 'text.disabled', fontSize: 24 }} />
                                 </Box>
-                                <Typography variant="subtitle1" fontWeight={900}>Marks not published yet</Typography>
+                                <Typography variant="subtitle1" fontWeight={900}>Marks not graded yet</Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                    Once the teacher publishes this report card, your marks will appear here.
+                                    Once the teacher grades this report card, your marks will appear here.
                                 </Typography>
                             </Box>
                         )}

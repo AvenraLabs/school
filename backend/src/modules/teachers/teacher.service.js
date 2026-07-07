@@ -99,9 +99,22 @@ export const createTeacherService = async ({
 
 export const listTeachersService = async ({ school_id, query }) => {
   const { limit, offset } = getPagination(query);
+  const where = { school_id };
+
+  if (query?.status) {
+    where.status = query.status;
+  } else {
+    where.status = "ACTIVE";
+  }
+
+  if (query?.approval_status) {
+    where.approval_status = query.approval_status;
+  } else {
+    where.approval_status = "approved";
+  }
 
   return Teacher.findAndCountAll({
-    where: { school_id },
+    where,
     limit,
     offset,
     include: [
@@ -119,7 +132,7 @@ export const listTeachersService = async ({ school_id, query }) => {
 ========================= */
 export const listTeacherOptionsService = async ({ school_id }) => {
   return Teacher.findAll({
-    where: { school_id },
+    where: { school_id, status: "ACTIVE", approval_status: "approved" },
     include: [
       {
         model: User,
@@ -136,6 +149,7 @@ export const listTeacherOptionsService = async ({ school_id }) => {
 ========================= */
 export const updateTeacherStatusService = async ({
   teacher_id,
+  status,
   is_active,
   school_id,
 }) => {
@@ -147,13 +161,37 @@ export const updateTeacherStatusService = async ({
     throw new AppError("Teacher not found", 404);
   }
 
-  teacher.is_active = is_active;
-  await teacher.save();
+  return db.transaction(async (t) => {
+    if (status !== undefined) {
+      teacher.status = status;
+      teacher.is_active = status === "ACTIVE";
 
-  await User.update(
-    { is_active },
-    { where: { id: teacher.user_id } }
-  );
+      if (status !== "ACTIVE") {
+        if (db.models.teacher_assignment) {
+          await db.models.teacher_assignment.update(
+            { is_active: false, is_class_teacher: false },
+            { where: { teacher_id, school_id }, transaction: t }
+          );
+        }
+      }
+    } else if (is_active !== undefined) {
+      teacher.is_active = is_active;
+      if (!is_active) {
+        if (db.models.teacher_assignment) {
+          await db.models.teacher_assignment.update(
+            { is_active: false, is_class_teacher: false },
+            { where: { teacher_id, school_id }, transaction: t }
+          );
+        }
+      }
+    }
+    await teacher.save({ transaction: t });
 
-  return teacher;
+    await User.update(
+      { is_active: teacher.is_active },
+      { where: { id: teacher.user_id }, transaction: t }
+    );
+
+    return teacher;
+  });
 };

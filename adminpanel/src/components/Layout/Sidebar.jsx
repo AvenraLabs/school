@@ -29,6 +29,7 @@ const schoolAdminLinks = [
   { to: '/admin/exams', icon: FileText, label: 'Exams' },
   { to: '/admin/report-cards', icon: Award, label: 'Report Cards' },
   { section: 'System Setup & Onboarding' },
+  { to: '/admin/academic-year', icon: Calendar, label: 'Academic Year' },
   { to: '/admin/bulk-seeder', icon: Database, label: 'Bulk Seeder' },
   { to: '/admin/classes', icon: Layers, label: 'Classes & Sections' },
   { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },

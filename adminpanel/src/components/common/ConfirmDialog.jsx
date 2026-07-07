@@ -6,17 +6,73 @@ export function ConfirmDialog({ isOpen, onClose, onConfirm, title, message, conf
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
-        <div className="p-6 text-center">
-          <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${danger ? 'bg-rose-100' : 'bg-amber-100'}`}>
-            <AlertTriangle className={`w-7 h-7 ${danger ? 'text-rose-600' : 'text-amber-600'}`} />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
-          <p className="text-sm text-slate-500">{message}</p>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', width: '100%' }}>
+        <div className="modal-header" style={{ borderBottom: 'none', paddingBottom: '0' }}>
+          <h3 className="text-lg font-semibold text-slate-900" style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>{title}</h3>
+          <button
+            onClick={onClose}
+            style={{
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '8px',
+              color: '#94a3b8',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <div className="flex items-center gap-3 p-6 pt-2">
-          <button onClick={onClose} className="btn-secondary flex-1" disabled={loading}>Cancel</button>
-          <button onClick={onConfirm} className={`${danger ? 'btn-danger' : 'btn-primary'} flex-1`} disabled={loading}>
+        
+        <div className="modal-body" style={{ textAlign: 'center', padding: '16px 24px 20px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            backgroundColor: danger ? '#ffe4e6' : '#fef3c7',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px'
+          }}>
+            <AlertTriangle style={{
+              width: '24px',
+              height: '24px',
+              color: danger ? '#e11d48' : '#d97706'
+            }} />
+          </div>
+          <p style={{
+            fontSize: '14px',
+            color: '#475569',
+            lineHeight: '1.5',
+            margin: 0
+          }}>
+            {message}
+          </p>
+        </div>
+
+        <div className="modal-footer" style={{ borderTop: 'none', paddingTop: '0', display: 'flex', gap: '12px' }}>
+          <button
+            onClick={onClose}
+            className="btn-secondary"
+            style={{ flex: 1, minHeight: '40px', fontWeight: 600 }}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className={danger ? 'btn-danger' : 'btn-primary'}
+            style={{ flex: 1, minHeight: '40px', fontWeight: 600 }}
+            disabled={loading}
+          >
             {loading ? 'Processing...' : confirmText}
           </button>
         </div>

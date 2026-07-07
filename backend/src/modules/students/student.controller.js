@@ -74,10 +74,13 @@ export const moveStudent = asyncHandler(async (req, res) => {
 
 /* ADMIN: STATUS */
 export const updateStudentStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status, reason } = req.body;
   const student = await updateStudentStatusService({
-    student_id: req.params.id,
-    is_active: req.body.is_active,
     school_id: req.user.school_id,
+    student_id: id,
+    status,
+    reason,
   });
   res.json({ message: "Status updated", student });
 });
@@ -239,3 +242,5 @@ export const listStudentsForTeacherSection = asyncHandler(async (req, res) => {
     items: result,
   });
 });
+
+

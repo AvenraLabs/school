@@ -54,7 +54,8 @@ export const moveStudentSchema = z.object({
 
 /* admin: status */
 export const updateStudentStatusSchema = z.object({
-  is_active: z.boolean(),
+  status: z.enum(["ACTIVE", "TRANSFERRED", "DROPPED", "GRADUATED"]),
+  reason: z.string().optional(),
 });
 
 

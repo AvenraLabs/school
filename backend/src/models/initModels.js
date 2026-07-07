@@ -68,6 +68,10 @@ import Trip from "../modules/transport/trip.model.js";
 import TripLocation from "../modules/transport/trip-location.model.js";
 import TransportRequest from "../modules/transport/transport-request.model.js";
 
+/* ===================== ACADEMIC YEARS & STATUS ===================== */
+import AcademicYear from "../modules/academic-years/academic-year.model.js";
+import StudentEnrollment from "../modules/students/student-enrollment.model.js";
+
 
 const initAssociations = () => {
   /* ==================== SCHOOL ==================== */
@@ -322,6 +326,22 @@ const initAssociations = () => {
 
   Vehicle.hasMany(TransportRequest, { foreignKey: "requested_vehicle_id" });
   TransportRequest.belongsTo(Vehicle, { as: "RequestedVehicle", foreignKey: "requested_vehicle_id" });
+
+  /* ==================== ACADEMIC YEARS & ENROLLMENTS ==================== */
+  School.hasMany(AcademicYear, { foreignKey: "school_id", onDelete: "CASCADE" });
+  AcademicYear.belongsTo(School, { foreignKey: "school_id" });
+
+  Student.hasMany(StudentEnrollment, { foreignKey: "student_id", onDelete: "CASCADE" });
+  StudentEnrollment.belongsTo(Student, { foreignKey: "student_id" });
+
+  AcademicYear.hasMany(StudentEnrollment, { foreignKey: "academic_year_id", onDelete: "CASCADE" });
+  StudentEnrollment.belongsTo(AcademicYear, { foreignKey: "academic_year_id" });
+
+  Class.hasMany(StudentEnrollment, { foreignKey: "class_id", onDelete: "CASCADE" });
+  StudentEnrollment.belongsTo(Class, { foreignKey: "class_id" });
+
+  Section.hasMany(StudentEnrollment, { foreignKey: "section_id", onDelete: "CASCADE" });
+  StudentEnrollment.belongsTo(Section, { foreignKey: "section_id" });
 };
 
 initAssociations();

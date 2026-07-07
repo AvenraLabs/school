@@ -12,6 +12,12 @@ export function StatusBadge({ status, size = 'default' }) {
     draft: 'badge-pending',
     true: 'badge-active',
     false: 'badge-inactive',
+    transferred: 'badge-info',
+    dropped: 'badge-rejected',
+    graduated: 'badge-approved',
+    resigned: 'badge-inactive',
+    retired: 'badge-info',
+    terminated: 'badge-rejected',
   };
 
   const labelMap = {
@@ -26,10 +32,10 @@ export function StatusBadge({ status, size = 'default' }) {
   return (
     <span className={`${className} ${size === 'sm' ? 'text-[10px] px-2 py-0.5' : ''}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${
-        key === 'active' || key === 'approved' || key === 'true' || key === 'published' ? 'bg-emerald-500' :
+        key === 'active' || key === 'approved' || key === 'true' || key === 'published' || key === 'graduated' ? 'bg-emerald-500' :
         key === 'pending' || key === 'draft' ? 'bg-amber-500' :
-        key === 'rejected' ? 'bg-rose-500' :
-        key === 'inactive' || key === 'false' ? 'bg-slate-400' :
+        key === 'rejected' || key === 'dropped' || key === 'terminated' ? 'bg-rose-500' :
+        key === 'inactive' || key === 'false' || key === 'resigned' ? 'bg-slate-400' :
         'bg-indigo-500'
       }`} />
       {label}

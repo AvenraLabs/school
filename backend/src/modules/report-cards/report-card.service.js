@@ -10,6 +10,7 @@ import db from "../../config/db.js";
 import AppError from "../../shared/appError.js";
 import User from "../users/user.model.js";
 import Subject from "../subjects/subject.model.js";
+import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 
 /* =========================
    CREATE (DRAFT)
@@ -27,7 +28,7 @@ export const createReportCardService = async ({
 
   if (exam.is_locked) throw new AppError("EXAM_LOCKED", 400);
 
-  const student = await Student.findOne({
+  const student = await Student.scope("active").findOne({
     where: { id: student_id, school_id },
   });
   if (!student) throw new AppError("STUDENT_NOT_FOUND", 404);
@@ -50,11 +51,14 @@ export const createReportCardService = async ({
   });
   if (exists) throw new AppError("REPORT_CARD_EXISTS", 409);
 
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+
   const reportCard = await ReportCard.create({
     student_id,
     class_id: student.class_id,
     exam_id,
     school_id,
+    academic_year_id: academicYearId,
   });
 
   return reportCard;
@@ -66,11 +70,17 @@ export const createReportCardService = async ({
 export const saveReportCardMarksService = async ({
   report_card_id,
   marks,
+  remarks,
   user,
 }) => {
   return db.transaction(async (t) => {
     const reportCard = await ReportCard.findByPk(report_card_id, {
-      include: [{ model: Student }],
+      include: [
+        {
+          model: Student,
+          include: [{ model: User, attributes: ["name"] }],
+        },
+      ],
       transaction: t
     });
     if (!reportCard) throw new AppError("REPORT_CARD_NOT_FOUND", 404);
@@ -78,7 +88,10 @@ export const saveReportCardMarksService = async ({
       throw new AppError("FORBIDDEN", 403);
     }
 
-    const exam = await Exam.findByPk(reportCard.exam_id, { transaction: t });
+    const exam = await Exam.findByPk(reportCard.exam_id, {
+      include: [{ model: ExamMaster, as: "master", attributes: ["id", "name"] }],
+      transaction: t
+    });
     if (exam?.is_locked) throw new AppError("EXAM_LOCKED", 400);
 
     const scheduledSubjects = await ExamSubject.findAll({
@@ -124,6 +137,25 @@ export const saveReportCardMarksService = async ({
         marks_obtained: m.marks_obtained,
         max_marks: m.max_marks,
       }, { transaction: t });
+    }
+
+    if (remarks !== undefined) {
+      reportCard.remarks = remarks;
+    }
+    reportCard.published_at = reportCard.published_at || new Date();
+    await reportCard.save({ transaction: t });
+
+    // Trigger notification
+    const student = reportCard.student;
+    if (student) {
+      triggerReportCardNotification({
+        school_id: student.school_id,
+        teacher_user_id: user.id,
+        student_name: (student.user ?? student.User)?.name ?? "Student",
+        exam_name: exam?.name || exam?.master?.name || "Exam",
+        class_id: student.class_id,
+        section_id: student.section_id,
+      }).catch((err) => console.error("Notification trigger failed:", err));
     }
 
     return true;
@@ -234,8 +266,9 @@ export const getReportCardService = async ({ report_card_id }) => {
 };
 
 export const listReportCardsService = async ({ student_id, school_id }) => {
+  const academicYearId = await getCurrentAcademicYearId(school_id);
   return toList(ReportCard.findAll({
-    where: { student_id, school_id },
+    where: { student_id, school_id, academic_year_id: academicYearId },
     include: [
       {
         model: Exam,

@@ -178,10 +178,11 @@ export const teachersAPI = {
     return response.data;
   },
 
-  list: async (limit = 10, offset = 0) => {
-    const response = await axiosInstance.get('/teachers', {
-      params: { limit, offset },
-    });
+  list: async (limit = 10, offset = 0, status, approvalStatus) => {
+    const params = { limit, offset };
+    if (status) params.status = status;
+    if (approvalStatus) params.approval_status = approvalStatus;
+    const response = await axiosInstance.get('/teachers', { params });
     return response.data;
   },
 
@@ -190,9 +191,10 @@ export const teachersAPI = {
     return response.data;
   },
 
-  updateStatus: async (id, isActive) => {
+  updateStatus: async (id, status, reason) => {
     const response = await axiosInstance.patch(`/teachers/${id}/status`, {
-      is_active: isActive,
+      status,
+      reason,
     });
     return response.data;
   },
@@ -224,10 +226,12 @@ export const studentsAPI = {
     return response.data;
   },
 
-  list: async (limit = 10, offset = 0, classId, sectionId) => {
+  list: async (limit = 10, offset = 0, classId, sectionId, status, approvalStatus) => {
     const params = { limit, offset };
     if (classId) params.class_id = classId;
     if (sectionId) params.section_id = sectionId;
+    if (status) params.status = status;
+    if (approvalStatus) params.approval_status = approvalStatus;
     const response = await axiosInstance.get('/students', { params });
     return response.data;
   },
@@ -247,9 +251,10 @@ export const studentsAPI = {
     return response.data;
   },
 
-  updateStatus: async (id, isActive) => {
+  updateStatus: async (id, status, reason) => {
     const response = await axiosInstance.patch(`/students/${id}/status`, {
-      is_active: isActive,
+      status,
+      reason,
     });
     return response.data;
   },
@@ -461,9 +466,10 @@ export const reportCardsAPI = {
     return response.data;
   },
 
-  setMarks: async (id, marks) => {
+  setMarks: async (id, marks, remarks) => {
     const response = await axiosInstance.post(`/report-cards/${id}/marks`, {
       marks,
+      remarks,
     });
     return response.data;
   },
@@ -641,6 +647,29 @@ export const transportAPI = {
   },
   processRequest: async (id, action, rejection_reason) => {
     const response = await axiosInstance.post(`/admin/transport/requests/${id}/${action}`, { rejection_reason });
+    return response.data;
+  },
+};
+
+export const academicYearsAPI = {
+  list: async () => {
+    const response = await axiosInstance.get('/academic-years');
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await axiosInstance.post('/academic-years', data);
+    return response.data;
+  },
+  setCurrent: async (id) => {
+    const response = await axiosInstance.patch(`/academic-years/${id}/current`);
+    return response.data;
+  },
+  getPreview: async (data) => {
+    const response = await axiosInstance.post('/academic-years/preview', data);
+    return response.data;
+  },
+  promote: async (data) => {
+    const response = await axiosInstance.post('/academic-years/promote', data);
     return response.data;
   },
 };

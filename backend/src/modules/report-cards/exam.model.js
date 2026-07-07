@@ -16,6 +16,12 @@ const Exam = db.define(
       references: { model: "schools", key: "id" },
     },
 
+    academic_year_id: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+      references: { model: "academic_years", key: "id" },
+    },
+
     class_id: {
       type: DataTypes.BIGINT,
       allowNull: false,

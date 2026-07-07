@@ -42,7 +42,17 @@ export const bulkCreateDataService = async ({
     };
 
     /* ================================
-       1️⃣ CREATE TEACHERS
+       1️⃣ PREFETCH USERNAMES FOR INSTANT MEMORY SEARCH
+    ================================= */
+    const existingUsers = await User.findAll({
+      where: { school_id },
+      attributes: ["username"],
+      transaction: t,
+    });
+    const usernameSet = new Set(existingUsers.map((u) => u.username));
+
+    /* ================================
+       2️⃣ CREATE TEACHERS
     ================================= */
     const existingTeacherCount = await Teacher.count({
       where: { school_id },
@@ -50,8 +60,18 @@ export const bulkCreateDataService = async ({
     });
 
     for (let i = 1; i <= teacher_count; i++) {
-      const serial = existingTeacherCount + i;
-      const username = buildTeacherUsername(school_id, serial);
+      let isUnique = false;
+      let serial = existingTeacherCount + i;
+      let username = "";
+      while (!isUnique) {
+        username = buildTeacherUsername(school_id, serial);
+        if (!usernameSet.has(username)) {
+          isUnique = true;
+          usernameSet.add(username);
+        } else {
+          serial++;
+        }
+      }
 
       const user = await User.create(
         {
@@ -118,16 +138,17 @@ export const bulkCreateDataService = async ({
       }
 
       for (const sectionData of classData.sections) {
+        const sectionNameCapital = String(sectionData.name || "").trim().toUpperCase();
         const [dbSection] = await Section.findOrCreate({
           where: {
             school_id,
             class_id: dbClass.id,
-            name: sectionData.name,
+            name: sectionNameCapital,
           },
           defaults: {
             school_id,
             class_id: dbClass.id,
-            name: sectionData.name,
+            name: sectionNameCapital,
             is_active: true,
           },
           transaction: t,
@@ -144,12 +165,18 @@ export const bulkCreateDataService = async ({
         });
 
         for (let i = 1; i <= sectionData.students; i++) {
-          const serial = existingStudentCount + response.summary.students_created + 1;
-          const stuUsername = buildStudentUsername(
-            school_id,
-            dbSection.id,
-            serial
-          );
+          let isUnique = false;
+          let serial = existingStudentCount + response.summary.students_created + 1;
+          let stuUsername = "";
+          while (!isUnique) {
+            stuUsername = buildStudentUsername(school_id, dbSection.id, serial);
+            if (!usernameSet.has(stuUsername)) {
+              isUnique = true;
+              usernameSet.add(stuUsername);
+            } else {
+              serial++;
+            }
+          }
 
           const stuUser = await User.create(
             {
@@ -159,7 +186,7 @@ export const bulkCreateDataService = async ({
               password: defaultPassword(stuUsername),
               is_active: true,
               first_login: true,
-              name: `Student ${classData.name}${sectionData.name}-${i}`,
+              name: `Student ${classData.name}${sectionNameCapital}-${i}`,
             },
             { transaction: t }
           );
@@ -181,7 +208,7 @@ export const bulkCreateDataService = async ({
             student_id: student.id,
             username: stuUsername,
             class: classData.name,
-            section: sectionData.name,
+            section: sectionNameCapital,
           });
 
 

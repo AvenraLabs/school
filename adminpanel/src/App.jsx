@@ -26,6 +26,7 @@ import { ReportCards } from './pages/SchoolAdmin/ReportCards';
 import { AuditLogs } from './pages/SchoolAdmin/AuditLogs';
 import { SchoolRegistry } from './pages/SchoolAdmin/SchoolRegistry';
 import { TransportManager } from './pages/SchoolAdmin/TransportManager';
+import { AcademicYearManager } from './pages/SchoolAdmin/AcademicYearManager';
 
 import './App.css';
 
@@ -74,6 +75,7 @@ function App() {
               <Route path="/admin/notifications" element={<Notifications />} />
               <Route path="/admin/exams" element={<ExamsManager />} />
               <Route path="/admin/report-cards" element={<ReportCards />} />
+              <Route path="/admin/academic-year" element={<AcademicYearManager />} />
               <Route path="/admin/audit-logs" element={<AuditLogs />} />
             </Route>
 

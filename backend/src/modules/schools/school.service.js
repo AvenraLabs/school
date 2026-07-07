@@ -4,6 +4,7 @@ import Student from "../students/student.model.js";
 import Teacher from "../teachers/teacher.model.js";
 import Class from "../classes/classes.model.js";
 import Section from "../sections/section.model.js";
+import WhatsappLog from "../whatsapp/whatsapp-log.model.js";
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import { Op } from "sequelize";
@@ -163,9 +164,10 @@ export const getSchoolStatsService = async ({ school_id, query = {} }) => {
   const section_id = query.section_id ? Number(query.section_id) : null;
 
   // ── counts ──────────────────────────────────────────────────────────
-  const [studentCount, teacherCount] = await Promise.all([
+  const [studentCount, teacherCount, whatsappCount] = await Promise.all([
     Student.count({ where: { school_id } }),
     Teacher.count({ where: { school_id } }),
+    WhatsappLog.count({ where: { school_id } }),
   ]);
 
   // ── classes + sections for filter dropdowns ──────────────────────────
@@ -262,7 +264,7 @@ export const getSchoolStatsService = async ({ school_id, query = {} }) => {
   return {
     success: true,
     school: { id: school.id, name: school.school_name, code: school.school_code },
-    counts: { students: studentCount, teachers: teacherCount },
+    counts: { students: studentCount, teachers: teacherCount, whatsapp: whatsappCount },
     classes,
     total,
     items: users,

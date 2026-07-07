@@ -66,6 +66,12 @@ const Teacher = db.define(
       defaultValue: true,
     },
 
+    status: {
+      type: DataTypes.ENUM("ACTIVE", "RESIGNED", "RETIRED", "TERMINATED"),
+      allowNull: false,
+      defaultValue: "ACTIVE",
+    },
+
     approved_by: {
       type: DataTypes.BIGINT,
       allowNull: true,
@@ -88,6 +94,15 @@ const Teacher = db.define(
   {
     tableName: "teachers",
     underscored: true,
+    scopes: {
+      active: {
+        where: {
+          status: "ACTIVE",
+          approval_status: "approved",
+          is_active: true,
+        }
+      }
+    },
     indexes: [
       { fields: ["school_id"] },
       { fields: ["user_id"] },

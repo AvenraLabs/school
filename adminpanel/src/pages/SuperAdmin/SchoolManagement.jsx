@@ -105,6 +105,24 @@ function SchoolStatsPanel({ school }) {
             </button>
           );
         })}
+
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          padding: '8px 16px', borderRadius: '12px', border: '1px solid #cbd5e1',
+          background: '#fff',
+          color: '#0ea5e9',
+          fontSize: '14px', fontWeight: 600,
+        }}>
+          💬 WhatsApp Sent:
+          <span style={{
+            marginLeft: '2px', padding: '1px 6px', borderRadius: '999px',
+            fontSize: '12px', fontWeight: 700,
+            background: '#e0f2fe',
+            color: '#0369a1',
+          }}>
+            {data?.counts?.whatsapp ?? '0'}
+          </span>
+        </div>
       </div>
 
       {/* Filters — class + section side by side */}

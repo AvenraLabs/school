@@ -13,6 +13,7 @@ import ReportCardMark from "../report-cards/report-card-mark.model.js";
 import Exam from "../report-cards/exam.model.js";
 import ExamSubject from "../report-cards/exam-subject.model.js";
 import Subject from "../subjects/subject.model.js";
+import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 
 const toYmd = (date) => {
     const value = new Date(date);
@@ -33,10 +34,12 @@ const getExamPrimaryDate = (exam, fallback) => {
 };
 
 const buildPerformanceAnalytics = async (student) => {
+    const academicYearId = await getCurrentAcademicYearId(student.school_id);
     const reportCards = await ReportCard.findAll({
         where: {
             student_id: student.id,
             school_id: student.school_id,
+            academic_year_id: academicYearId,
             published_at: { [Op.ne]: null },
         },
         include: [
@@ -132,13 +135,16 @@ export const getStudentDashboardService = async ({ student_user_id }) => {
         throw new AppError("Student profile not found", 404);
     }
 
+    const academicYearId = await getCurrentAcademicYearId(student.school_id);
+
     // 1. Attendance Percentage
     const totalDays = await Attendance.count({
-        where: { student_id: student.id },
+        where: { student_id: student.id, academic_year_id: academicYearId },
     });
     const presentDays = await Attendance.count({
         where: {
             student_id: student.id,
+            academic_year_id: academicYearId,
             status: 'present'
         },
     });
@@ -155,12 +161,14 @@ export const getStudentDashboardService = async ({ student_user_id }) => {
     const weeklyTotal = await Attendance.count({
         where: {
             student_id: student.id,
+            academic_year_id: academicYearId,
             date: { [Op.between]: [toYmd(weekStart), todayStr] },
         },
     });
     const weeklyPresent = await Attendance.count({
         where: {
             student_id: student.id,
+            academic_year_id: academicYearId,
             status: "present",
             date: { [Op.between]: [toYmd(weekStart), todayStr] },
         },
@@ -168,12 +176,14 @@ export const getStudentDashboardService = async ({ student_user_id }) => {
     const monthlyTotal = await Attendance.count({
         where: {
             student_id: student.id,
+            academic_year_id: academicYearId,
             date: { [Op.between]: [toYmd(monthStart), todayStr] },
         },
     });
     const monthlyPresent = await Attendance.count({
         where: {
             student_id: student.id,
+            academic_year_id: academicYearId,
             status: "present",
             date: { [Op.between]: [toYmd(monthStart), todayStr] },
         },

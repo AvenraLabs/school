@@ -14,6 +14,14 @@ const styles = {
     color: '#0f172a', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
   },
   label: { display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' },
+  formActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '10px',
+    marginTop: '16px',
+    borderTop: '1px solid #e2e8f0',
+    paddingTop: '12px',
+  },
 };
 
 export function ClassesManager() {
@@ -103,7 +111,7 @@ export function ClassesManager() {
 
     setSaving(true);
     try {
-      await sectionsAPI.create(showAddSection.id, newSectionName);
+      await sectionsAPI.create(showAddSection.id, normalizedNewName);
       toast.success('Section created');
       setShowAddSection(null);
       setNewSectionName('');
@@ -241,8 +249,8 @@ export function ClassesManager() {
             />
           </div>
           <div style={styles.formActions}>
-            <button type="button" onClick={() => setShowAddClass(false)} style={styles.btnSecondary}>Cancel</button>
-            <button type="submit" disabled={saving} style={styles.btnPrimary}>
+            <button type="button" onClick={() => setShowAddClass(false)} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={saving} className="btn-primary">
               {saving ? 'Creating...' : 'Create Class'}
             </button>
           </div>
@@ -262,8 +270,8 @@ export function ClassesManager() {
             />
           </div>
           <div style={styles.formActions}>
-            <button type="button" onClick={() => setShowEditClass(null)} style={styles.btnSecondary}>Cancel</button>
-            <button type="submit" disabled={saving} style={styles.btnPrimary}>
+            <button type="button" onClick={() => setShowEditClass(null)} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={saving} className="btn-primary">
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
@@ -289,8 +297,8 @@ export function ClassesManager() {
             />
           </div>
           <div style={styles.formActions}>
-            <button type="button" onClick={() => setShowAddSection(null)} style={styles.btnSecondary}>Cancel</button>
-            <button type="submit" disabled={saving} style={styles.btnPrimary}>
+            <button type="button" onClick={() => setShowAddSection(null)} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={saving} className="btn-primary">
               {saving ? 'Creating...' : 'Create Section'}
             </button>
           </div>

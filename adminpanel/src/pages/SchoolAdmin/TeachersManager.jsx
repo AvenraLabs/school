@@ -13,15 +13,33 @@ export function TeachersManager() {
   const [page, setPage] = useState(0);
   const [showCredentials, setShowCredentials] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // States for Status Scoping & Registry Action Handlers
+  const [activeTab, setActiveTab] = useState('ACTIVE');
+  const [showStatusModal, setShowStatusModal] = useState(null);
+  const [targetStatus, setTargetStatus] = useState('');
+  const [statusReason, setStatusReason] = useState('');
+
   const limit = 20;
   const toast = useToast();
 
-  useEffect(() => { loadTeachers(); }, [page]);
+  useEffect(() => { loadTeachers(); }, [page, activeTab]);
 
   const loadTeachers = async () => {
     setLoading(true);
     try {
-      const res = await teachersAPI.list(limit, page * limit);
+      let status = undefined;
+      let approval_status = undefined;
+      if (activeTab === 'ACTIVE') {
+        status = 'ACTIVE';
+        approval_status = 'approved';
+      } else if (activeTab === 'PENDING') {
+        approval_status = 'pending';
+      } else {
+        status = activeTab; // RESIGNED, RETIRED, TERMINATED
+      }
+      const res = await teachersAPI.list(limit, page * limit, status, approval_status);
       setTeachers(res.items || []);
       setTotal(res.total || 0);
     } catch (e) {
@@ -49,13 +67,33 @@ export function TeachersManager() {
     }
   };
 
-  const toggleStatus = async (teacher) => {
+  const openStatusModal = (teacher, status) => {
+    setShowStatusModal(teacher);
+    setTargetStatus(status);
+    setStatusReason('');
+  };
+
+  const handleStatusSubmit = async () => {
+    setSaving(true);
     try {
-      await teachersAPI.updateStatus(teacher.id, !teacher.is_active);
-      toast.success(`Teacher ${!teacher.is_active ? 'activated' : 'deactivated'}`);
+      await teachersAPI.updateStatus(showStatusModal.id, targetStatus, statusReason);
+      toast.success(`Teacher status updated to ${targetStatus}`);
+      setShowStatusModal(null);
       loadTeachers();
     } catch (e) {
-      toast.error('Failed to update');
+      toast.error('Failed to update status');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStatusUpdateDirect = async (teacher, status) => {
+    try {
+      await teachersAPI.updateStatus(teacher.id, status, '');
+      toast.success(`Teacher reactivated to ACTIVE`);
+      loadTeachers();
+    } catch (e) {
+      toast.error('Failed to reactivate teacher');
     }
   };
 
@@ -76,6 +114,23 @@ export function TeachersManager() {
         <button onClick={handleCreate} disabled={creating} className="btn-primary">
           <Plus className="w-4 h-4" /> {creating ? 'Creating...' : 'Create Teacher'}
         </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-slate-100 pb-px">
+        {['ACTIVE', 'PENDING', 'RESIGNED', 'RETIRED', 'TERMINATED'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => { setActiveTab(tab); setPage(0); }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === tab
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+          >
+            {tab.charAt(0) + tab.slice(1).toLowerCase().replace('_', ' ')}
+          </button>
+        ))}
       </div>
 
       <div className="card overflow-hidden">
@@ -100,11 +155,29 @@ export function TeachersManager() {
                     <td className="font-mono text-xs">{t.user?.username || '—'}</td>
                     <td>{t.user?.name || '—'}</td>
                     <td><StatusBadge status={t.approval_status || 'pending'} /></td>
-                    <td><StatusBadge status={t.is_active ? 'active' : 'inactive'} /></td>
+                    <td><StatusBadge status={t.status || (t.is_active ? 'ACTIVE' : 'INACTIVE')} /></td>
                     <td>
-                      <button onClick={() => toggleStatus(t)} className={`btn-sm ${t.is_active ? 'btn-secondary' : 'btn-success'}`}>
-                        {t.is_active ? 'Deactivate' : 'Activate'}
-                      </button>
+                      <div className="flex items-center gap-1">
+                        {activeTab === 'ACTIVE' ? (
+                          <>
+                            <button onClick={() => openStatusModal(t, 'RESIGNED')} className="btn-sm btn-secondary">
+                              Resign
+                            </button>
+                            <button onClick={() => openStatusModal(t, 'RETIRED')} className="btn-sm btn-secondary">
+                              Retire
+                            </button>
+                            <button onClick={() => openStatusModal(t, 'TERMINATED')} className="btn-sm btn-ghost text-red-600 hover:text-red-800">
+                              Terminate
+                            </button>
+                          </>
+                        ) : (
+                          activeTab !== 'PENDING' && (
+                            <button onClick={() => handleStatusUpdateDirect(t, 'ACTIVE')} className="btn-sm btn-success">
+                              Reactivate
+                            </button>
+                          )
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -155,6 +228,30 @@ export function TeachersManager() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Update Teacher Status Confirmation */}
+      <Modal isOpen={!!showStatusModal} onClose={() => setShowStatusModal(null)} title={`Confirm ${targetStatus}`}>
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Are you sure you want to change the status of <strong>{showStatusModal?.user?.name || showStatusModal?.user?.username}</strong> to <strong>{targetStatus}</strong>?
+          </p>
+          <div>
+            <label className="label">Reason / Remarks (Optional)</label>
+            <textarea
+              className="input-field min-h-[80px] py-2"
+              placeholder="Provide a reason for this status change..."
+              value={statusReason}
+              onChange={(e) => setStatusReason(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setShowStatusModal(null)} className="btn-secondary">Cancel</button>
+            <button onClick={handleStatusSubmit} className="btn-primary" disabled={saving}>
+              {saving ? 'Updating...' : 'Confirm'}
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

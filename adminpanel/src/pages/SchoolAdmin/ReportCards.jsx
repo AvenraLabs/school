@@ -123,7 +123,7 @@ export function ReportCards() {
         toast.error('Enter marks for at least one scheduled subject');
         return;
       }
-      await reportCardsAPI.setMarks(showMarks.id, validMarks);
+      await reportCardsAPI.setMarks(showMarks.id, validMarks, remarks);
       toast.success('Marks saved');
       setShowMarks(null);
       await loadReportCards(selectedClass, selectedExam);
@@ -158,6 +158,7 @@ export function ReportCards() {
 
   const openGradeMarks = (rc) => {
     setShowMarks(rc);
+    setRemarks(rc.remarks || '');
     const exam = exams.find((item) => Number(item.id) === Number(rc.exam_id)) || rc.exam || rc.Exam;
     const scheduledSubjects = getExamSubjectSlots(exam);
 
@@ -262,13 +263,13 @@ export function ReportCards() {
                           <td className="font-mono text-slate-600 text-sm">{s.roll_no || '—'}</td>
                           <td>
                             {rc ? (
-                              rc.published_at ? (
+                              (rc.report_card_marks || rc.marks || []).length > 0 ? (
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                  Published
+                                  Graded
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-                                  Draft
+                                  Not Graded
                                 </span>
                               )
                             ) : (
@@ -303,16 +304,9 @@ export function ReportCards() {
                                   <button onClick={() => viewReportCard(rc.id)} className="btn-sm btn-secondary flex items-center gap-1">
                                     <Eye className="w-3.5 h-3.5" /> View
                                   </button>
-                                  {!rc.published_at && (
-                                    <>
-                                      <button onClick={() => openGradeMarks(rc)} className="btn-sm btn-primary flex items-center gap-1">
-                                        <Edit2 className="w-3.5 h-3.5" /> Grade
-                                      </button>
-                                      <button onClick={() => handlePublish(rc.id)} className="btn-sm btn-success flex items-center gap-1">
-                                        <Send className="w-3.5 h-3.5" /> Publish
-                                      </button>
-                                    </>
-                                  )}
+                                  <button onClick={() => openGradeMarks(rc)} className="btn-sm btn-primary flex items-center gap-1">
+                                    <Edit2 className="w-3.5 h-3.5" /> Grade
+                                  </button>
                                 </>
                               ) : (
                                 <button onClick={() => handleQuickCreate(s.id)} className="btn-sm btn-success flex items-center gap-1">
@@ -403,6 +397,10 @@ export function ReportCards() {
             </div>
           ))}
         </div>
+        <div className="mt-4 border-t border-slate-100 pt-3">
+          <label className="label">Remarks (optional)</label>
+          <textarea className="input-field" value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Teacher remarks..." />
+        </div>
         <div className="flex justify-end gap-3 mt-5">
           <button onClick={() => setShowMarks(null)} className="btn-secondary">Cancel</button>
           <button onClick={handleSaveMarks} disabled={saving || marks.length === 0} className="btn-primary">
@@ -436,21 +434,9 @@ export function ReportCards() {
                 );
               })}
             </div>
-            {!reportCard.published_at && (
-              <div className="space-y-3 border-t border-slate-100 pt-4">
-                <div>
-                  <label className="label">Remarks (optional)</label>
-                  <textarea className="input-field" value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Teacher remarks..." />
-                </div>
-                <button onClick={() => handlePublish(showView)} className="btn-primary w-full justify-center">
-                  <Send className="w-4 h-4" /> Publish Report Card
-                </button>
-              </div>
-            )}
-            {reportCard.published_at && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 text-sm text-emerald-800">
-                ✅ This report card has been published.
-                {reportCard.remarks && <p className="mt-2 font-medium bg-white/50 p-2 rounded border border-emerald-100">Remarks: {reportCard.remarks}</p>}
+            {reportCard.remarks && (
+              <div className="mt-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-900">
+                <strong>Remarks:</strong> {reportCard.remarks}
               </div>
             )}
           </div>

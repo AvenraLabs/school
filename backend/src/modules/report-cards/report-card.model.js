@@ -32,6 +32,12 @@ const ReportCard = db.define(
       allowNull: false,
       references: { model: "schools", key: "id" },
     },
+
+    academic_year_id: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+      references: { model: "academic_years", key: "id" },
+    },
     remarks: {
       type: DataTypes.TEXT,
       allowNull: true,

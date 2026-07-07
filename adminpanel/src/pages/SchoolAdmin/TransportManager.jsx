@@ -292,6 +292,25 @@ export function TransportManager() {
   useEffect(() => {
     if (activeTab !== 'active-trips' && !showMapModal) return;
 
+    // Add pulse animation style to document head if not already present
+    if (!document.getElementById("leaflet-pulse-style")) {
+      const style = document.createElement("style");
+      style.id = "leaflet-pulse-style";
+      style.innerHTML = `
+        @keyframes marker-pulse {
+          0% {
+            transform: scale(0.6);
+            opacity: 0.9;
+          }
+          100% {
+            transform: scale(2.2);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
     if (window.L) {
       setLeafletLoaded(true);
       return;
@@ -299,11 +318,11 @@ export function TransportManager() {
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    link.href = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
     document.head.appendChild(link);
 
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
     script.async = true;
     script.onload = () => {
       setLeafletLoaded(true);
@@ -453,11 +472,15 @@ export function TransportManager() {
     e.preventDefault();
     try {
       if (selectedDriver) {
-        await transportAPI.updateDriver(selectedDriver.id, {
+        const payload = {
           name: driverForm.name,
           phone: driverForm.phone,
           license_number: driverForm.license_number
-        });
+        };
+        if (driverForm.password) {
+          payload.password = driverForm.password;
+        }
+        await transportAPI.updateDriver(selectedDriver.id, payload);
         toast.success('Driver profile updated');
       } else {
         const res = await transportAPI.createDriver(driverForm);
@@ -472,7 +495,7 @@ export function TransportManager() {
       loadDrivers();
       loadTabData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to register driver');
+      toast.error(err.response?.data?.message || 'Failed to save driver');
     }
   };
 
@@ -588,15 +611,55 @@ export function TransportManager() {
     const lat = Number(mapLocation.latitude);
     const lng = Number(mapLocation.longitude);
 
+    // Create a beautiful custom pulsing SVG bus icon
+    const busIcon = L.divIcon({
+      html: `
+        <div style="
+          position: relative;
+          width: 36px;
+          height: 36px;
+          background: #1976d2;
+          border: 2px solid #ffffff;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        ">
+          <div style="
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            width: 36px;
+            height: 36px;
+            border: 2px solid #1976d2;
+            border-radius: 50%;
+            animation: marker-pulse 1.8s infinite ease-out;
+            pointer-events: none;
+          "></div>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="#ffffff">
+            <path d="M4 16c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h10v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-3.5c0-3.5-3.58-4.5-8-4.5s-8 1-8 4.5V16zm1.5-4c-.83 0-1.5-.67-1.5-1.5S4.67 9 5.5 9 7 9.67 7 10.5 6.33 12 5.5 12zm13 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM18 4H6V2h12v2z"/>
+          </svg>
+        </div>
+      `,
+      className: 'custom-bus-marker',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+      popupAnchor: [0, -18]
+    });
+
     if (!mapRef.current) {
       const map = L.map(mapContainerRef.current).setView([lat, lng], 15);
       mapRef.current = map;
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+      // Use premium CartoDB Positron map tiles instead of default OpenStreetMap tiles
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
       }).addTo(map);
 
-      L.marker([lat, lng]).addTo(map).bindPopup(`<b>${showMapModal.vehicle_name}</b><br/>Driver: ${showMapModal.driver_name}`).openPopup();
+      L.marker([lat, lng], { icon: busIcon }).addTo(map).bindPopup(`<b>${showMapModal.vehicle_name}</b><br/>Driver: ${showMapModal.driver_name}`).openPopup();
     } else {
       mapRef.current.setView([lat, lng]);
       mapRef.current.eachLayer((layer) => {
@@ -604,7 +667,7 @@ export function TransportManager() {
           mapRef.current.removeLayer(layer);
         }
       });
-      L.marker([lat, lng]).addTo(mapRef.current).bindPopup(`<b>${showMapModal.vehicle_name}</b><br/>Driver: ${showMapModal.driver_name}`).openPopup();
+      L.marker([lat, lng], { icon: busIcon }).addTo(mapRef.current).bindPopup(`<b>${showMapModal.vehicle_name}</b><br/>Driver: ${showMapModal.driver_name}`).openPopup();
     }
   }, [leafletLoaded, mapLocation, showMapModal]);
 
@@ -1152,9 +1215,14 @@ export function TransportManager() {
       </Modal>
 
       {/* Driver Form Modal */}
-      <Modal isOpen={showDriverModal} onClose={() => setShowDriverModal(false)} title={selectedDriver ? 'Edit Driver License' : 'Add Driver'}>
+      <Modal isOpen={showDriverModal} onClose={() => setShowDriverModal(false)} title={selectedDriver ? 'Edit Driver' : 'Add Driver'}>
         <form onSubmit={handleDriverSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: '320px' }}>
-          {!selectedDriver && (
+          {selectedDriver ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Reset Password (leave blank to keep current)</label>
+              <input type="password" value={driverForm.password} onChange={e => setDriverForm({ ...driverForm, password: e.target.value })} style={styles.input} placeholder="Enter new password (optional)" />
+            </div>
+          ) : (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Login Username</label>

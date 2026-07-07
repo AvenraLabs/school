@@ -52,6 +52,9 @@ export async function protect(req, res, next) {
       if (!teacher) {
         throw new AppError("Teacher profile not found", 401);
       }
+      if (teacher.status !== "ACTIVE") {
+        throw new AppError("Teacher profile is inactive", 401);
+      }
       identity.teacher_id = teacher.id;
     }
 
@@ -61,6 +64,9 @@ export async function protect(req, res, next) {
       });
       if (!student) {
         throw new AppError("Student profile not found", 401);
+      }
+      if (student.status !== "ACTIVE") {
+        throw new AppError("Student profile is inactive", 401);
       }
       identity.student_id = student.id;
       identity.class_id = student.class_id;

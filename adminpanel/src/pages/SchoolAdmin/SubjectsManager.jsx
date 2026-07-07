@@ -33,7 +33,8 @@ export function SubjectsManager() {
     e.preventDefault();
     setSaving(true);
     try {
-      await subjectsAPI.create(name);
+      const formattedName = name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
+      await subjectsAPI.create(formattedName);
       toast.success('Subject created');
       setShowAdd(false);
       setName('');
@@ -49,7 +50,8 @@ export function SubjectsManager() {
     e.preventDefault();
     setSaving(true);
     try {
-      await subjectsAPI.update(showEdit.id, name);
+      const formattedName = name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
+      await subjectsAPI.update(showEdit.id, formattedName);
       toast.success('Subject updated');
       setShowEdit(null);
       loadSubjects();

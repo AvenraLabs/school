@@ -9,6 +9,7 @@ import Subject from "../subjects/subject.model.js";
 import User from "../users/user.model.js";
 import Teacher from "../teachers/teacher.model.js";
 import AppError from "../../shared/appError.js";
+import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 
 /* =====================================================
    CREATE / UPDATE SECTION TIMETABLE
@@ -22,6 +23,8 @@ export const saveTimetableService = async ({
   day_of_week,
   entries,
 }) => {
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+
   return db.transaction(async (t) => {
     /**
      * 1️⃣ Validate section
@@ -61,7 +64,7 @@ export const saveTimetableService = async ({
      * 3️⃣ Remove existing timetable for that day
      */
     await Timetable.destroy({
-      where: { school_id, class_id, section_id, day_of_week },
+      where: { school_id, class_id, section_id, day_of_week, academic_year_id: academicYearId },
       transaction: t,
     });
 
@@ -118,6 +121,7 @@ export const saveTimetableService = async ({
       await Timetable.create(
         {
           school_id,
+          academic_year_id: academicYearId,
           class_id,
           section_id,
           day_of_week,
@@ -144,8 +148,9 @@ export const getSectionTimetableService = async ({
   class_id,
   section_id,
 }) => {
+  const academicYearId = await getCurrentAcademicYearId(school_id);
   const rows = await Timetable.findAll({
-    where: { school_id, class_id, section_id },
+    where: { school_id, class_id, section_id, academic_year_id: academicYearId },
     include: [
       {
         model: TeacherAssignment,
@@ -206,7 +211,9 @@ export const getTeacherTimetableService = async ({
   school_id,
   teacher_id,
 }) => {
+  const academicYearId = await getCurrentAcademicYearId(school_id);
   const rows = await Timetable.findAll({
+    where: { academic_year_id: academicYearId },
     include: [
       {
         model: TeacherAssignment,

@@ -73,10 +73,16 @@ export default function StudentTransportPage() {
       socket.emit("trip:join", { tripId: activeTrip.id });
     }
 
-    socket.on("trip:started", (data) => {
+    socket.on("trip:started", async (data) => {
       setActiveTrip({ id: data.trip_id, trip_type: data.trip_type, started_at: data.started_at });
       setTransportInfo(prev => ({ ...prev, vehicle: data.vehicle }));
       socket.emit("trip:join", { tripId: data.trip_id });
+      try {
+        const locRes = await api.get(`/student/transport/trips/${data.trip_id}/location`);
+        if (locRes.data?.success && locRes.data.data) {
+          setGpsLocation(locRes.data.data);
+        }
+      } catch { /* ignore */ }
     });
 
     socket.on("trip:stopped", (data) => {
@@ -100,13 +106,32 @@ export default function StudentTransportPage() {
 
   // Leaflet map loader
   useEffect(() => {
+    // Add pulse animation style to document head if not already present
+    if (!document.getElementById("leaflet-pulse-style")) {
+      const style = document.createElement("style");
+      style.id = "leaflet-pulse-style";
+      style.innerHTML = `
+        @keyframes marker-pulse {
+          0% {
+            transform: scale(0.6);
+            opacity: 0.9;
+          }
+          100% {
+            transform: scale(2.2);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
     if (window.L) { setLeafletLoaded(true); return; }
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    link.href = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css";
     document.head.appendChild(link);
     const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.src = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js";
     script.async = true;
     script.onload = () => setLeafletLoaded(true);
     document.head.appendChild(script);
@@ -120,13 +145,54 @@ export default function StudentTransportPage() {
     const lat = Number(gpsLocation.latitude);
     const lng = Number(gpsLocation.longitude);
 
+    // Create a beautiful custom pulsing SVG bus icon
+    const busIcon = L.divIcon({
+      html: `
+        <div style="
+          position: relative;
+          width: 36px;
+          height: 36px;
+          background: #1976d2;
+          border: 2px solid #ffffff;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        ">
+          <div style="
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            width: 36px;
+            height: 36px;
+            border: 2px solid #1976d2;
+            border-radius: 50%;
+            animation: marker-pulse 1.8s infinite ease-out;
+            pointer-events: none;
+          "></div>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="#ffffff">
+            <path d="M4 16c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h10v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-3.5c0-3.5-3.58-4.5-8-4.5s-8 1-8 4.5V16zm1.5-4c-.83 0-1.5-.67-1.5-1.5S4.67 9 5.5 9 7 9.67 7 10.5 6.33 12 5.5 12zm13 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM18 4H6V2h12v2z"/>
+          </svg>
+        </div>
+      `,
+      className: 'custom-bus-marker',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+      popupAnchor: [0, -18]
+    });
+
     if (!mapRef.current) {
       const map = L.map(mapContainerRef.current).setView([lat, lng], 15);
       mapRef.current = map;
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors"
+      // Use premium CartoDB Positron map tiles instead of default OpenStreetMap tiles
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
       }).addTo(map);
-      L.marker([lat, lng])
+      
+      L.marker([lat, lng], { icon: busIcon })
         .addTo(map)
         .bindPopup(`<b>${transportInfo.vehicle?.vehicle_name || "Bus"}</b><br/>Driver: ${transportInfo.vehicle?.driver?.user?.name || "Driver"}`)
         .openPopup();
@@ -135,7 +201,7 @@ export default function StudentTransportPage() {
       mapRef.current.eachLayer((layer) => {
         if (layer instanceof L.Marker) mapRef.current.removeLayer(layer);
       });
-      L.marker([lat, lng])
+      L.marker([lat, lng], { icon: busIcon })
         .addTo(mapRef.current)
         .bindPopup(`<b>${transportInfo.vehicle?.vehicle_name || "Bus"}</b><br/>Driver: ${transportInfo.vehicle?.driver?.user?.name || "Driver"}`)
         .openPopup();
@@ -155,7 +221,16 @@ export default function StudentTransportPage() {
             const liveRes = await api.get(`/student/transport/students/${studentId}`);
             if (liveRes.data?.success && liveRes.data.data) {
               setTransportInfo(liveRes.data.data.transport);
-              setActiveTrip(liveRes.data.data.active_trip);
+              const trip = liveRes.data.data.active_trip;
+              setActiveTrip(trip);
+              if (trip) {
+                try {
+                  const locRes = await api.get(`/student/transport/trips/${trip.id}/location`);
+                  if (locRes.data?.success && locRes.data.data) {
+                    setGpsLocation(locRes.data.data);
+                  }
+                } catch { /* ignore location fetch error */ }
+              }
             }
           } catch { /* ignore live fetch error */ }
         }
@@ -310,10 +385,31 @@ export default function StudentTransportPage() {
                 </Box>
               )}
 
-              <div
-                ref={mapContainerRef}
-                style={{ height: "260px", width: "100%", borderRadius: "12px", border: "1px solid #e2e8f0" }}
-              ></div>
+              {!gpsLocation ? (
+                <Box sx={{
+                  height: "260px",
+                  width: "100%",
+                  borderRadius: "12px",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor: "grey.50",
+                  gap: 1.5,
+                  mt: 2
+                }}>
+                  <CircularProgress size={32} />
+                  <Typography variant="body2" color="textSecondary" fontWeight="medium">
+                    Waiting for bus GPS location...
+                  </Typography>
+                </Box>
+              ) : (
+                <div
+                  ref={mapContainerRef}
+                  style={{ height: "260px", width: "100%", borderRadius: "12px", border: "1px solid #e2e8f0", marginTop: "16px" }}
+                ></div>
+              )}
             </Card>
           ) : (
             <Card sx={{ p: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>

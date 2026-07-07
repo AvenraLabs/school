@@ -6,6 +6,7 @@ import Class from "../classes/classes.model.js";
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import db from "../../config/db.js";
+import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 
 /* =========================
    CREATE EXAM with subjects
@@ -25,10 +26,12 @@ export const createExamService = async ({
   });
   if (!cls) throw new AppError("CLASS_NOT_FOUND", 404);
 
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+
   return db.transaction(async (t) => {
     const [exam, created] = await Exam.findOrCreate({
-      where: { school_id, class_id, name: normalizedName },
-      defaults: { school_id, class_id, name: normalizedName },
+      where: { school_id, class_id, name: normalizedName, academic_year_id: academicYearId },
+      defaults: { school_id, class_id, name: normalizedName, academic_year_id: academicYearId },
       transaction: t,
     });
 
@@ -124,8 +127,10 @@ export const listExamsByClassService = async ({
 }) => {
   const { limit, offset } = getPagination(query || {});
 
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+
   return Exam.findAndCountAll({
-    where: { school_id, class_id },
+    where: { school_id, class_id, academic_year_id: academicYearId },
     include: [
       { model: ExamMaster, as: "master", attributes: ["id", "name"] },
       {

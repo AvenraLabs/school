@@ -5,7 +5,8 @@ const emptyToUndefined = (val) => (val === "" ? undefined : val);
 
 /* admin: status */
 export const updateTeacherStatusSchema = z.object({
-  is_active: z.boolean(),
+  status: z.enum(["ACTIVE", "RESIGNED", "RETIRED", "TERMINATED"]),
+  reason: z.string().optional(),
 });
 
 /* teacher: complete profile */

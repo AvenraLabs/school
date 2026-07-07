@@ -96,6 +96,7 @@ export const updateDriverService = async ({ school_id, id, body }) => {
     if (body.name !== undefined) userUpdates.name = body.name;
     if (body.phone !== undefined) userUpdates.phone = body.phone ? cleanTo10Digits(body.phone) : null;
     if (body.is_active !== undefined) userUpdates.is_active = body.is_active;
+    if (body.password !== undefined && body.password !== "") userUpdates.password = body.password;
 
     if (Object.keys(userUpdates).length > 0) {
       await User.update(userUpdates, {

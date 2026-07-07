@@ -16,6 +16,7 @@ export const updateDriverSchema = z.object({
     phone: z.string().min(6).optional(),
     license_number: z.string().min(1).optional(),
     is_active: z.boolean().optional(),
+    password: z.string().min(6).optional(),
   }),
 });
 

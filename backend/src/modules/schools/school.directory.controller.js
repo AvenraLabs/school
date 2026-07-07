@@ -14,6 +14,7 @@ import ExamMaster from "../report-cards/exam-master.model.js";
 import ExamSubject from "../report-cards/exam-subject.model.js";
 import Subject from "../subjects/subject.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
+import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 
 // 1. Optimized Main Init Endpoint (Structure & Teachers list only)
 export const getSchoolDirectory = asyncHandler(async (req, res) => {
@@ -36,8 +37,8 @@ export const getSchoolDirectory = asyncHandler(async (req, res) => {
   });
 
   // Calculate Student Count per Class & Section
-  const studentCounts = await Student.findAll({
-    where: { school_id, approval_status: "approved", is_active: true },
+  const studentCounts = await Student.scope("active").findAll({
+    where: { school_id },
     attributes: [
       "class_id",
       "section_id",
@@ -69,7 +70,7 @@ export const getSchoolDirectory = asyncHandler(async (req, res) => {
   });
 
   // Fetch all Teachers, profiles, and assignments
-  const teachers = await Teacher.findAll({
+  const teachers = await Teacher.scope("active").findAll({
     where: { school_id },
     include: [
       {
@@ -102,8 +103,8 @@ export const getSchoolDirectory = asyncHandler(async (req, res) => {
     return tJson;
   });
 
-  const totalStudentsCount = await Student.count({
-    where: { school_id, approval_status: "approved", is_active: true }
+  const totalStudentsCount = await Student.scope("active").count({
+    where: { school_id }
   });
 
   res.json({
@@ -121,8 +122,8 @@ export const getSectionRoster = asyncHandler(async (req, res) => {
   const school_id = req.user.school_id;
   const { sectionId } = req.params;
 
-  const students = await Student.findAll({
-    where: { school_id, section_id: sectionId, approval_status: "approved" },
+  const students = await Student.scope("active").findAll({
+    where: { school_id, section_id: sectionId },
     include: [
       {
         model: User,
@@ -137,10 +138,11 @@ export const getSectionRoster = asyncHandler(async (req, res) => {
   });
 
   const studentIds = students.map(s => s.id);
+  const academicYearId = await getCurrentAcademicYearId(school_id);
 
   // Overall Attendance stats
   const attendanceStats = studentIds.length ? await Attendance.findAll({
-    where: { school_id, student_id: studentIds },
+    where: { school_id, student_id: studentIds, academic_year_id: academicYearId },
     attributes: [
       "student_id",
       [fn("COUNT", col("id")), "total_days"],
@@ -247,8 +249,10 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: "Student profile not found." });
   }
 
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+
   const attendanceStats = await Attendance.findAll({
-    where: { school_id, student_id: studentId },
+    where: { school_id, student_id: studentId, academic_year_id: academicYearId },
     attributes: [
       "student_id",
       [fn("COUNT", col("id")), "total_days"],
@@ -322,8 +326,10 @@ export const getStudentAttendanceLogs = asyncHandler(async (req, res) => {
   const school_id = req.user.school_id;
   const { studentId } = req.params;
 
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+
   const attendanceLogs = await Attendance.findAll({
-    where: { school_id, student_id: studentId },
+    where: { school_id, student_id: studentId, academic_year_id: academicYearId },
     attributes: ["student_id", "date", "status"],
     order: [["date", "ASC"]],
   });

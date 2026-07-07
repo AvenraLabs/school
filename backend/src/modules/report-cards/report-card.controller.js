@@ -28,6 +28,7 @@ export const saveReportCardMarks = asyncHandler(async (req, res) => {
   await saveReportCardMarksService({
     report_card_id: Number(req.params.id),
     marks: req.body.marks,
+    remarks: req.body.remarks,
     user: req.user,
   });
 

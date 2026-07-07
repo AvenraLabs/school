@@ -24,12 +24,11 @@ export const getHomeworkSummaryService = async ({
   const results = [];
 
   for (const hw of homeworks) {
-    const totalStudents = await Student.count({
+    const totalStudents = await Student.scope("active").count({
       where: {
         school_id,
         class_id: hw.class_id,
         section_id: hw.section_id,
-        is_active: true,
       },
     });
 
@@ -66,12 +65,11 @@ export const getHomeworkStudentStatusService = async ({
     return null;
   }
 
-  const students = await Student.findAll({
+  const students = await Student.scope("active").findAll({
     where: {
       school_id,
       class_id: homework.class_id,
       section_id: homework.section_id,
-      is_active: true,
     },
     attributes: ["id", "roll_no"],
     include: [{ model: User, attributes: ["name"] }],

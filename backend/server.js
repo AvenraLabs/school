@@ -128,6 +128,7 @@ import groupChatRoutes from "./src/modules/group-chat/group-chat.routes.js";
 import gameRoutes from "./src/modules/game/game.routes.js";
 import quizRoutes from "./src/modules/quiz/quiz.routes.js";
 import transportRoutes from "./src/modules/transport/transport.routes.js";
+import academicYearRoutes from "./src/modules/academic-years/academic-year.routes.js";
 
 
 
@@ -161,6 +162,7 @@ app.use("/api/timetables", timetableRoutes);
 app.use("/api/report-cards", reportCardRoutes);
 app.use("/api/exams", examRoutes);
 app.use("/api/exam-masters", examMasterRoutes);
+app.use("/api/academic-years", academicYearRoutes);
 
 // approvals
 app.use("/api", approvalRoutes);
@@ -242,6 +244,120 @@ async function runDbMigrations() {
     `);
   } catch (err) {
     console.log("Note: Altering columns skipped or failed:", err.message);
+  }
+
+  /* ==========================================================================
+     TEMPORARY DEVELOPMENT MIGRATION (ACADEMIC YEAR & STATUS MANAGEMENT)
+     Note: This is for local development phase and should be removed/replaced
+     with standard migrations prior to production deployment.
+     ========================================================================== */
+  try {
+    console.log("Running temporary Academic Year migrations...");
+    // 1. Add status column to students and teachers
+    await db.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';`);
+    await db.query(`ALTER TABLE teachers ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';`);
+
+    // 2. Add academic_year_id column to yearly tables
+    await db.query(`ALTER TABLE attendances ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
+    await db.query(`ALTER TABLE timetables ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
+    await db.query(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
+    await db.query(`ALTER TABLE report_cards ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
+    await db.query(`ALTER TABLE homeworks ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
+
+    // 3. Create academic_years table if not exists (so we can insert initial values)
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS academic_years (
+        id BIGSERIAL PRIMARY KEY,
+        school_id BIGINT NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        is_current BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (school_id, name)
+      );
+    `);
+
+    // 4. Create student_enrollments table if not exists
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS student_enrollments (
+        id BIGSERIAL PRIMARY KEY,
+        student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+        academic_year_id BIGINT NOT NULL REFERENCES academic_years(id) ON DELETE CASCADE,
+        class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+        section_id BIGINT NOT NULL REFERENCES sections(id) ON DELETE CASCADE,
+        roll_no INTEGER,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (student_id, academic_year_id)
+      );
+    `);
+
+    // 5. Get all schools and initialize default academic year and enrollments
+    const [schools] = await db.query(`SELECT id FROM schools;`);
+    for (const school of schools) {
+      const schoolId = school.id;
+      // Find or create default academic year "2026-2027"
+      const [existingYears] = await db.query(
+        `SELECT id FROM academic_years WHERE school_id = :schoolId AND is_current = true LIMIT 1;`,
+        { replacements: { schoolId } }
+      );
+
+      let yearId;
+      if (existingYears.length > 0) {
+        yearId = existingYears[0].id;
+      } else {
+        const [result] = await db.query(
+          `INSERT INTO academic_years (school_id, name, start_date, end_date, is_current)
+           VALUES (:schoolId, '2026-2027', '2026-06-01', '2027-05-31', true)
+           RETURNING id;`,
+          { replacements: { schoolId } }
+        );
+        yearId = result[0].id;
+      }
+
+      // Update yearly tables to link to this yearId if null
+      await db.query(`UPDATE attendances SET academic_year_id = :yearId WHERE school_id = :schoolId AND academic_year_id IS NULL;`, { replacements: { yearId, schoolId } });
+      await db.query(`UPDATE timetables SET academic_year_id = :yearId WHERE school_id = :schoolId AND academic_year_id IS NULL;`, { replacements: { yearId, schoolId } });
+      await db.query(`UPDATE exams SET academic_year_id = :yearId WHERE school_id = :schoolId AND academic_year_id IS NULL;`, { replacements: { yearId, schoolId } });
+      await db.query(`UPDATE report_cards SET academic_year_id = :yearId WHERE school_id = :schoolId AND academic_year_id IS NULL;`, { replacements: { yearId, schoolId } });
+      await db.query(`UPDATE homeworks SET academic_year_id = :yearId WHERE school_id = :schoolId AND academic_year_id IS NULL;`, { replacements: { yearId, schoolId } });
+
+      // Create student enrollments from student placements
+      const [students] = await db.query(
+        `SELECT id, class_id, section_id, roll_no FROM students WHERE school_id = :schoolId AND approval_status = 'approved';`,
+        { replacements: { schoolId } }
+      );
+      for (const student of students) {
+        if (student.class_id && student.section_id) {
+          // Check if enrollment exists
+          const [enrollments] = await db.query(
+            `SELECT id FROM student_enrollments WHERE student_id = :studentId AND academic_year_id = :yearId LIMIT 1;`,
+            { replacements: { studentId: student.id, yearId } }
+          );
+          if (enrollments.length === 0) {
+            await db.query(
+              `INSERT INTO student_enrollments (student_id, academic_year_id, class_id, section_id, roll_no)
+               VALUES (:studentId, :yearId, :classId, :sectionId, :rollNo)
+               ON CONFLICT (student_id, academic_year_id) DO NOTHING;`,
+              {
+                replacements: {
+                  studentId: student.id,
+                  yearId,
+                  classId: student.class_id,
+                  sectionId: student.section_id,
+                  rollNo: student.roll_no,
+                },
+              }
+            );
+          }
+        }
+      }
+    }
+    console.log("Academic Year development migrations completed successfully.");
+  } catch (err) {
+    console.log("Note: Temporary Academic Year migrations failed or skipped:", err.message);
   }
   console.log("DB migrations completed.");
 }

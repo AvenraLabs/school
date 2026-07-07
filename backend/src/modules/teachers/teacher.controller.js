@@ -55,10 +55,13 @@ export const listTeacherOptions = asyncHandler(async (req, res) => {
 
 /* ADMIN: STATUS */
 export const updateTeacherStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status, reason } = req.body;
   const teacher = await updateTeacherStatusService({
-    teacher_id: req.params.id,
-    is_active: req.body.is_active,
     school_id: req.user.school_id,
+    teacher_id: id,
+    status,
+    reason,
   });
 
   res.json({ message: "Status updated", teacher });
@@ -167,3 +170,5 @@ export const getMyProfile = asyncHandler(async (req, res) => {
     avatar_url: user.avatar_url || "",
   });
 });
+
+

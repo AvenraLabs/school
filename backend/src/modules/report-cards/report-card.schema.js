@@ -17,6 +17,7 @@ export const saveReportCardMarksSchema = z.object({
       })
     )
     .min(1),
+  remarks: z.string().optional(),
 });
 
 /* teacher: publish */

@@ -102,6 +102,12 @@ const Student = db.define(
       defaultValue: true,
     },
 
+    status: {
+      type: DataTypes.ENUM("ACTIVE", "TRANSFERRED", "DROPPED", "GRADUATED"),
+      allowNull: false,
+      defaultValue: "ACTIVE",
+    },
+
     approval_status: {
       type: DataTypes.ENUM("pending", "approved", "rejected"),
       allowNull: false,
@@ -128,6 +134,15 @@ const Student = db.define(
   {
     tableName: "students",
     underscored: true,
+    scopes: {
+      active: {
+        where: {
+          status: "ACTIVE",
+          approval_status: "approved",
+          is_active: true,
+        }
+      }
+    },
     indexes: [
       { fields: ["school_id"] },
       { fields: ["class_id"] },

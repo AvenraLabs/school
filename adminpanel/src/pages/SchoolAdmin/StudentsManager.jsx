@@ -20,11 +20,18 @@ export function StudentsManager() {
   const [createForm, setCreateForm] = useState({ class_id: '', section_id: '', name: '', guardian_phone: '' });
   const [moveSection, setMoveSection] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // New States for Status Scoping & Registry Action Handlers
+  const [activeTab, setActiveTab] = useState('ACTIVE');
+  const [showStatusModal, setShowStatusModal] = useState(null);
+  const [targetStatus, setTargetStatus] = useState('');
+  const [statusReason, setStatusReason] = useState('');
+
   const limit = 20;
   const toast = useToast();
 
   useEffect(() => { loadClasses(); }, []);
-  useEffect(() => { loadStudents(); }, [page, filterClass, filterSection]);
+  useEffect(() => { loadStudents(); }, [page, filterClass, filterSection, activeTab]);
 
   const loadClasses = async () => {
     try {
@@ -36,7 +43,24 @@ export function StudentsManager() {
   const loadStudents = async () => {
     setLoading(true);
     try {
-      const res = await studentsAPI.list(limit, page * limit, filterClass || undefined, filterSection || undefined);
+      let status = undefined;
+      let approval_status = undefined;
+      if (activeTab === 'ACTIVE') {
+        status = 'ACTIVE';
+        approval_status = 'approved';
+      } else if (activeTab === 'PENDING') {
+        approval_status = 'pending';
+      } else {
+        status = activeTab; // TRANSFERRED, DROPPED, GRADUATED
+      }
+      const res = await studentsAPI.list(
+        limit,
+        page * limit,
+        filterClass || undefined,
+        filterSection || undefined,
+        status,
+        approval_status
+      );
       setStudents(res.items || []);
       setTotal(res.total || 0);
     } catch (e) {
@@ -85,13 +109,33 @@ export function StudentsManager() {
     }
   };
 
-  const toggleStatus = async (student) => {
+  const openStatusModal = (student, status) => {
+    setShowStatusModal(student);
+    setTargetStatus(status);
+    setStatusReason('');
+  };
+
+  const handleStatusSubmit = async () => {
+    setSaving(true);
     try {
-      await studentsAPI.updateStatus(student.id, !student.is_active);
-      toast.success(`Student ${!student.is_active ? 'activated' : 'deactivated'}`);
+      await studentsAPI.updateStatus(showStatusModal.id, targetStatus, statusReason);
+      toast.success(`Student status updated to ${targetStatus}`);
+      setShowStatusModal(null);
       loadStudents();
     } catch (e) {
-      toast.error('Failed');
+      toast.error('Failed to update status');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStatusUpdateDirect = async (student, status) => {
+    try {
+      await studentsAPI.updateStatus(student.id, status, '');
+      toast.success(`Student reactivated to ACTIVE`);
+      loadStudents();
+    } catch (e) {
+      toast.error('Failed to reactivate student');
     }
   };
 
@@ -109,6 +153,23 @@ export function StudentsManager() {
         <button onClick={() => { setShowCreate(true); setCreateForm({ class_id: '', section_id: '', name: '', guardian_phone: '' }); }} className="btn-primary">
           <Plus className="w-4 h-4" /> Create Student
         </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-slate-100 pb-px">
+        {['ACTIVE', 'PENDING', 'TRANSFERRED', 'DROPPED', 'GRADUATED'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => { setActiveTab(tab); setPage(0); }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === tab
+                ? 'border-indigo-600 text-indigo-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+          >
+            {tab.charAt(0) + tab.slice(1).toLowerCase().replace('_', ' ')}
+          </button>
+        ))}
       </div>
 
       {/* Filters */}
@@ -152,15 +213,28 @@ export function StudentsManager() {
                     <td>{s.class?.class_name || '—'}</td>
                     <td>{s.section?.name || '—'}</td>
                     <td className="font-mono text-xs text-indigo-600">{s.guardian_phone || '—'}</td>
-                    <td><StatusBadge status={s.is_active ? 'active' : 'inactive'} /></td>
+                    <td><StatusBadge status={s.status || (s.is_active ? 'ACTIVE' : 'INACTIVE')} /></td>
                     <td>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => toggleStatus(s)} className={`btn-sm ${s.is_active ? 'btn-secondary' : 'btn-success'}`}>
-                          {s.is_active ? 'Deactivate' : 'Activate'}
-                        </button>
-                        <button onClick={() => { setShowMove(s); setMoveSection(''); }} className="btn-sm btn-ghost" title="Move section">
-                          <ArrowRightLeft className="w-3.5 h-3.5" />
-                        </button>
+                        {activeTab === 'ACTIVE' ? (
+                          <>
+                            <button onClick={() => openStatusModal(s, 'TRANSFERRED')} className="btn-sm btn-secondary">
+                              Transfer
+                            </button>
+                            <button onClick={() => openStatusModal(s, 'DROPPED')} className="btn-sm btn-ghost text-red-600 hover:text-red-800">
+                              Drop
+                            </button>
+                            <button onClick={() => { setShowMove(s); setMoveSection(''); }} className="btn-sm btn-ghost" title="Move section">
+                              <ArrowRightLeft className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          activeTab !== 'PENDING' && (
+                            <button onClick={() => handleStatusUpdateDirect(s, 'ACTIVE')} className="btn-sm btn-success">
+                              Reactivate
+                            </button>
+                          )
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -246,6 +320,30 @@ export function StudentsManager() {
           <div className="flex justify-end gap-3">
             <button onClick={() => setShowMove(null)} className="btn-secondary">Cancel</button>
             <button onClick={handleMove} disabled={!moveSection} className="btn-primary">Move</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Update Student Status Confirmation */}
+      <Modal isOpen={!!showStatusModal} onClose={() => setShowStatusModal(null)} title={`Confirm ${targetStatus}`}>
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Are you sure you want to change the status of <strong>{showStatusModal?.user?.name || showStatusModal?.user?.username}</strong> to <strong>{targetStatus}</strong>?
+          </p>
+          <div>
+            <label className="label">Reason / Remarks (Optional)</label>
+            <textarea
+              className="input-field min-h-[80px] py-2"
+              placeholder="Provide a reason for this status change..."
+              value={statusReason}
+              onChange={(e) => setStatusReason(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setShowStatusModal(null)} className="btn-secondary">Cancel</button>
+            <button onClick={handleStatusSubmit} className="btn-primary" disabled={saving}>
+              {saving ? 'Updating...' : 'Confirm'}
+            </button>
           </div>
         </div>
       </Modal>

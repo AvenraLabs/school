@@ -68,7 +68,7 @@ export function BulkSeeder() {
         if (!sec.students || Number(sec.students) < 1) { toast.error('All sections need a student count'); return; }
       }
     }
-    if (!teacherCount || tc < 1) { toast.error('Enter teacher count'); return; }
+    if (teacherCount === '' || teacherCount === null || teacherCount === undefined || tc < 0) { toast.error('Enter teacher count'); return; }
 
     setLoading(true);
     try {

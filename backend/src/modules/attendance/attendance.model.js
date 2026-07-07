@@ -14,6 +14,12 @@ const Attendance = db.define("attendance", {
     references: { model: "schools", key: "id" },
   },
 
+  academic_year_id: {
+    type: DataTypes.BIGINT,
+    allowNull: true,
+    references: { model: "academic_years", key: "id" },
+  },
+
   teacher_class_session_id: {
     type: DataTypes.BIGINT,
     allowNull: true,

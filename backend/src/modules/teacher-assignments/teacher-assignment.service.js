@@ -46,28 +46,24 @@ export async function assignTeacher({
     throw new AppError("SUBJECT_NOT_FOUND", 404);
   }
 
-  // Check for existing assignment
-  if (subjectId) {
-    // Subject assignment: same teacher + section + subject
-    const exists = await TeacherAssignment.findOne({
-      where: {
-        school_id: schoolId,
-        teacher_id: teacherId,
-        section_id: sectionId,
-        subject_id: subjectId,
-        is_active: true,
-      },
-    });
+  // Check for existing assignment (including inactive ones)
+  const existing = await TeacherAssignment.findOne({
+    where: {
+      school_id: schoolId,
+      teacher_id: teacherId,
+      section_id: sectionId,
+      subject_id: subjectId || null,
+    },
+  });
 
-    if (exists) {
-      throw new AppError(
-        "Teacher already assigned to this subject in this section",
-        409
-      );
-    }
+  if (existing && existing.is_active) {
+    throw new AppError(
+      "Teacher already assigned to this subject in this section",
+      409
+    );
   }
 
-  // If trying to set as class teacher, check if section already has a class teacher
+  // If trying to set as class teacher, check if section already has an active class teacher
   if (isClassTeacher) {
     const existingClassTeacher = await TeacherAssignment.findOne({
       where: {
@@ -78,12 +74,20 @@ export async function assignTeacher({
       },
     });
 
-    if (existingClassTeacher) {
+    if (existingClassTeacher && (!existing || existingClassTeacher.id !== existing.id)) {
       throw new AppError(
         "This section already has a class teacher assigned",
         409
       );
     }
+  }
+
+  if (existing) {
+    existing.is_active = true;
+    existing.is_class_teacher = isClassTeacher;
+    existing.class_id = classId; // align in case it changed
+    await existing.save();
+    return existing;
   }
 
   const createData = {

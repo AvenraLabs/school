@@ -3,6 +3,7 @@ import Attendance from "./attendance.model.js";
 import AppError from "../../shared/appError.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import Class from "../classes/classes.model.js";
+import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 
 /* =========================
    TEACHER: ANALYTICS
@@ -14,7 +15,8 @@ export const getTeacherAttendanceAnalyticsService = async ({
 }) => {
   const { from_date, to_date, class_id, section_id, student_id } = query || {};
 
-  const where = { school_id };
+  const academicYearId = await getCurrentAcademicYearId(school_id);
+  const where = { school_id, academic_year_id: academicYearId };
 
   if (class_id) where.class_id = Number(class_id);
   if (section_id) where.section_id = Number(section_id);

@@ -165,6 +165,18 @@ export const listStudentsService = async ({ school_id, query }) => {
   if (query?.class_id) where.class_id = Number(query.class_id);
   if (query?.section_id) where.section_id = Number(query.section_id);
 
+  if (query?.status) {
+    where.status = query.status;
+  } else {
+    where.status = "ACTIVE";
+  }
+
+  if (query?.approval_status) {
+    where.approval_status = query.approval_status;
+  } else {
+    where.approval_status = "approved";
+  }
+
   return Student.findAndCountAll({
     where,
     limit,
@@ -186,6 +198,18 @@ export const listStudentOptionsService = async ({ school_id, query }) => {
 
   if (query?.class_id) where.class_id = Number(query.class_id);
   if (query?.section_id) where.section_id = Number(query.section_id);
+
+  if (query?.status) {
+    where.status = query.status;
+  } else {
+    where.status = "ACTIVE";
+  }
+
+  if (query?.approval_status) {
+    where.approval_status = query.approval_status;
+  } else {
+    where.approval_status = "approved";
+  }
 
   return Student.findAll({
     where,
@@ -256,18 +280,39 @@ export const moveStudentService = async ({
    ADMIN: STATUS
 ========================= */
 export const updateStudentStatusService = async ({
-  student_id,
-  is_active,
   school_id,
+  student_id,
+  status,
+  reason = null,
 }) => {
   const student = await Student.findOne({
     where: { id: student_id, school_id },
   });
   if (!student) throw new AppError("Student not found", 404);
 
-  student.is_active = is_active;
-  await student.save();
-  return student;
+  const isActive = status === "ACTIVE";
+
+  return db.transaction(async (t) => {
+    student.status = status;
+    student.is_active = isActive;
+    await student.save({ transaction: t });
+
+    await User.update(
+      { is_active: isActive },
+      { where: { id: student.user_id }, transaction: t }
+    );
+
+    if (!isActive) {
+      if (db.models.student_transport) {
+        await db.models.student_transport.update(
+          { is_active: false },
+          { where: { student_id, school_id }, transaction: t }
+        );
+      }
+    }
+
+    return student;
+  });
 };
 
 
@@ -326,3 +371,5 @@ export const assignStudentsToSectionService = async ({
     return { success: true };
   });
 };
+
+
