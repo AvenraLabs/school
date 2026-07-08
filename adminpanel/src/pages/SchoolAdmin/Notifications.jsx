@@ -132,8 +132,8 @@ export function Notifications() {
             <Sparkles size={16} />
             School announcements
           </div>
-          <h1>Notifications</h1>
-          <p>Send clean, targeted updates to students, teachers, classes, and sections.</p>
+          <h1>Announcements</h1>
+          <p>Send clean, targeted announcements to students, teachers, classes, and sections.</p>
         </div>
         <button onClick={() => setShowCompose(true)} className="notify-btn notify-btn-primary">
           <Send size={18} />
@@ -219,7 +219,7 @@ export function Notifications() {
         )}
       </section>
 
-      <Modal isOpen={showCompose} onClose={() => setShowCompose(false)} title="Compose Notification" maxWidth="max-w-xl">
+      <Modal isOpen={showCompose} onClose={() => setShowCompose(false)} title="Compose Announcement" maxWidth="max-w-xl">
         <form onSubmit={handleSend} className="notify-form">
           <label>
             <span>Title</span>
@@ -269,7 +269,7 @@ export function Notifications() {
             <button type="button" onClick={() => setShowCompose(false)} className="notify-btn notify-btn-soft">Cancel</button>
             <button type="submit" disabled={sending} className="notify-btn notify-btn-primary">
               <Send size={16} />
-              {sending ? 'Sending...' : 'Send notification'}
+              {sending ? 'Sending...' : 'Send announcement'}
             </button>
           </div>
         </form>

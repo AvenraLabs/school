@@ -1,4 +1,5 @@
 import { Card, CardContent, Typography, Stack, Box, Chip, Button, Divider } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { useEffect, useState } from "react";
 import { getMyTeacherTimetable } from "../teacher-timetable/teacherTimetable.api";
 import { AccessTime, School, ArrowForward, CalendarMonth } from "@mui/icons-material";
@@ -48,7 +49,7 @@ export default function TeacherUpcomingClasses() {
         overflow: 'hidden'
       }}
     >
-      <CardContent sx={{ p: 2.5 }}>
+      <CardContent sx={{ p: { xs: 1.75, sm: 2.5 } }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <CalendarMonth sx={{ color: 'primary.main', fontSize: '1.25rem' }} />
@@ -61,14 +62,14 @@ export default function TeacherUpcomingClasses() {
             size="small" 
             sx={{ 
               fontWeight: 800, 
-              bgcolor: 'rgba(16, 185, 129, 0.1)', 
-              color: '#10b981', 
+              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12), 
+              color: 'primary.main', 
               fontSize: '0.7rem',
               height: 20
             }} 
           />
         </Box>
-
+ 
         <Stack spacing={2} sx={{ mt: 1 }}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
@@ -93,22 +94,22 @@ export default function TeacherUpcomingClasses() {
                     display: 'flex', 
                     justifyContent: 'space-between', 
                     alignItems: 'center',
-                    gap: 1.5
+                    gap: { xs: 1, sm: 1.5 }
                   }}
                 >
-                  <Box sx={{ display: 'flex', gap: 1.5, flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, flex: 1, minWidth: 0 }}>
                     {/* Left vertical status line */}
                     <Box 
                       sx={{ 
                         width: 4, 
                         borderRadius: 2, 
-                        bgcolor: '#10b981', 
+                        bgcolor: 'primary.main', 
                         alignSelf: 'stretch' 
                       }} 
                     />
                     
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 900, color: 'text.primary', fontSize: '0.92rem', mb: 0.3 }}>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography variant="body2" noWrap sx={{ fontWeight: 900, color: 'text.primary', fontSize: { xs: '0.85rem', sm: '0.92rem' }, mb: 0.3 }}>
                         {c.subject?.name || "Subject"}
                       </Typography>
                       
@@ -128,13 +129,13 @@ export default function TeacherUpcomingClasses() {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: 'text.secondary' }}>
                           <AccessTime sx={{ fontSize: 13 }} />
                           <Typography variant="caption" sx={{ fontSize: '0.72rem', fontWeight: 600 }}>
-                            {formatTime(c.start_time)} - {formatTime(c.end_time)}
+                            {formatTime(c.start_time)}
                           </Typography>
                         </Box>
                       </Box>
                     </Box>
                   </Box>
-
+ 
                   <Button
                     variant="contained"
                     size="small"
@@ -142,12 +143,11 @@ export default function TeacherUpcomingClasses() {
                     sx={{ 
                       borderRadius: '8px', 
                       fontWeight: 800, 
-                      fontSize: '0.68rem', 
-                      py: 0.6,
-                      px: 1.5,
+                      fontSize: { xs: '0.62rem', sm: '0.68rem' }, 
+                      py: { xs: 0.5, sm: 0.6 },
+                      px: { xs: 1, sm: 1.5 },
                       boxShadow: 'none',
-                      bgcolor: '#10b981',
-                      '&:hover': { bgcolor: '#059669', boxShadow: 'none' }
+                      flexShrink: 0
                     }}
                     onClick={() => navigate(`/teacher/attendance?class_id=${c.class_id}&section_id=${c.section_id}`)}
                   >
@@ -164,12 +164,12 @@ export default function TeacherUpcomingClasses() {
         <Box sx={{ display: 'flex', justifyContent: 'center' }}>
           <Button
             size="small"
+            color="primary"
             endIcon={<ArrowForward sx={{ fontSize: '10px' }} />}
             onClick={() => navigate('/teacher/timetable')}
             sx={{ 
               fontWeight: 800, 
               fontSize: '0.75rem',
-              color: '#10b981',
               textTransform: 'none',
               mt: 0.5
             }}

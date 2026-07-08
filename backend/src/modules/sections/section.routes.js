@@ -22,7 +22,7 @@ const router = express.Router();
 router.post(
   "/",
   protect,
-  allowRoles("school_admin"),
+  allowRoles("school_admin", "super_admin"),
   validate(createSectionSchema),
   createSection
 );
@@ -30,14 +30,14 @@ router.post(
 router.get(
   "/classes/:class_id/sections",
   protect,
-  allowRoles("school_admin", "teacher"),
+  allowRoles("school_admin", "teacher", "super_admin"),
   listSections
 );
 
 router.patch(
   "/:id/status",
   protect,
-  allowRoles("school_admin"),
+  allowRoles("school_admin", "super_admin"),
   validate(updateSectionStatusSchema),
   updateSectionStatus
 );

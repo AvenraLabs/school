@@ -88,6 +88,8 @@ app.get("/", (req, res) => {
 // ROUTES
 import authRoutes from "./src/modules/auth/auth.routes.js";
 import schoolRoutes from "./src/modules/schools/school.routes.js";
+import lostFoundRoutes from "./src/modules/lost-found/lost-found.routes.js";
+import feedbackRoutes from "./src/modules/feedback/feedback.routes.js";
 import studentRoutes from "./src/modules/students/student.routes.js";
 import teacherRoutes from "./src/modules/teachers/teacher.routes.js";
 
@@ -149,11 +151,13 @@ app.use("/api/attendance", attendanceSummaryRoutes);
 app.use("/api/attendance", attendanceAnalyticsRoutes);
 
 // core
-app.use("/api/schools", schoolRoutes);
-app.use("/api/students", studentDashboardRoutes);
-app.use("/api/students", studentRoutes);
-app.use("/api/teachers", teacherDashboardRoutes);
-app.use("/api/teachers", teacherRoutes);
+  app.use("/api/schools", schoolRoutes);
+  app.use("/api/students", studentDashboardRoutes);
+  app.use("/api/students", studentRoutes);
+  app.use("/api/teachers", teacherDashboardRoutes);
+  app.use("/api/teachers", teacherRoutes);
+  app.use("/api/lost-found", lostFoundRoutes);
+  app.use("/api/feedback", feedbackRoutes);
 
 app.use("/api/sections", sectionRoutes);
 app.use("/api/subjects", subjectRoutes);

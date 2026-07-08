@@ -6,33 +6,37 @@ import {
   ClipboardList, Calendar, Bell, FileText,
   Award, LogOut, UserCog,
   Layers, X, Database, Sparkles, Truck,
+  Search, MessageSquare, Info
 } from 'lucide-react';
 
 // Super admin no longer uses the sidebar — it has its own top-bar layout (SuperAdminPage).
 // This sidebar is exclusively for school_admin.
 
 const schoolAdminLinks = [
-  { section: 'Overview' },
+  { section: 'Daily Operations' },
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/admin/directory', icon: School, label: 'School Registry' },
-  { section: 'Operations' },
+  { to: '/admin/notifications', icon: Bell, label: 'Announcements' },
   { to: '/admin/transport', icon: Truck, label: 'Transport' },
-  { section: 'People & Academics' },
-  { to: '/admin/teachers', icon: UserCog, label: 'Teachers' },
-  { to: '/admin/assignments', icon: ClipboardList, label: 'Teacher allocation' },
+  { to: '/admin/lost-found', icon: Search, label: 'Lost & Found' },
+
+  { section: 'People & Approvals' },
   { to: '/admin/students', icon: GraduationCap, label: 'Students' },
+  { to: '/admin/teachers', icon: UserCog, label: 'Teachers' },
   { to: '/admin/approvals', icon: UserCheck, label: 'Approvals' },
-  { to: '/admin/subjects', icon: BookOpen, label: 'Subjects' },
+
+  { section: 'Academic Management' },
   { to: '/admin/timetables', icon: Calendar, label: 'Timetables' },
-  { section: 'Assessment & Notifications' },
-  { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
   { to: '/admin/exams', icon: FileText, label: 'Exams' },
   { to: '/admin/report-cards', icon: Award, label: 'Report Cards' },
-  { section: 'System Setup & Onboarding' },
+
+  { section: 'System Configuration' },
+  { to: '/admin/subjects', icon: BookOpen, label: 'Subjects' },
+  { to: '/admin/assignments', icon: ClipboardList, label: 'Teacher Mapping' },
   { to: '/admin/academic-year', icon: Calendar, label: 'Academic Year' },
-  { to: '/admin/bulk-seeder', icon: Database, label: 'Bulk Seeder' },
-  { to: '/admin/classes', icon: Layers, label: 'Classes & Sections' },
   { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },
+  { to: '/admin/feedback', icon: MessageSquare, label: 'Feedback' },
+  { to: '/admin/about', icon: Info, label: 'About App' },
 ];
 
 export function Sidebar({ isOpen, onClose }) {

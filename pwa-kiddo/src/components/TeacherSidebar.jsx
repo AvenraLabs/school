@@ -1,4 +1,4 @@
-import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Avatar, Divider, IconButton } from "@mui/material";
+import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Typography, Avatar, Divider, IconButton, Button } from "@mui/material";
 import {
     School,
     Book,
@@ -11,6 +11,9 @@ import {
     Logout,
     DirectionsBus,
     Chat,
+    Search,
+    Feedback,
+    Info,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { Link, useNavigate } from "react-router-dom";
@@ -36,8 +39,11 @@ export default function TeacherSidebar({ open, onClose }) {
         { label: "Approvals", icon: <Assignment />, path: "/teacher/approvals" },
         { label: "Exams & Reports", icon: <Assessment />, path: "/teacher/exams/create" },
         { label: "AI Tools", icon: <AutoAwesome />, path: "/teacher/ai-tools" },
+        { label: "Lost & Found", icon: <Search />, path: "/teacher/lost-found" },
+        { label: "Feedback", icon: <Feedback />, path: "/teacher/feedback" },
         { label: "Themes", icon: <Palette />, path: "/teacher/themes" },
         { label: "Profile", icon: <Person />, path: "/teacher/profile" },
+        { label: "About", icon: <Info />, path: "/teacher/about" },
     ];
 
     return (
@@ -97,5 +103,3 @@ export default function TeacherSidebar({ open, onClose }) {
     );
 }
 
-// Inline fallback Button import to avoid drawer crashes
-import { Button } from "@mui/material";

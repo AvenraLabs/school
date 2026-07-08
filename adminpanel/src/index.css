@@ -507,4 +507,12 @@ select:focus {
   animation: spin 1.5s linear infinite;
 }
 
+/* Custom Utilities */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Responsive — sidebar handled via component translate */

@@ -2,8 +2,6 @@ import { z } from "zod";
 
 export const createSchoolSchema = z.object({
   name: z.string().min(1),
-  code: z.string().min(1),
-  cbse_affiliation_no: z.string().optional().default(''),
   address: z.string().optional().default(''),
   city: z.string().optional().default(''),
   state: z.string().optional().default(''),
@@ -23,4 +21,14 @@ export const updateSchoolAdminStatusSchema = z.object({
 
 export const resetSchoolAdminPasswordSchema = z.object({
   new_password: z.string().min(6),
+});
+
+export const updateSchoolSchema = z.object({
+  school_name: z.string().min(1).optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip: z.string().optional(),
+  email: z.union([z.string().email(), z.literal('')]).optional(),
+  contact_phone: z.string().optional(),
 });

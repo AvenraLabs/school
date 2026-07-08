@@ -14,8 +14,6 @@ import { Op } from "sequelize";
 ========================= */
 export const createSchoolService = async ({
   name,
-  code,
-  cbse_affiliation_no,
   address,
   city,
   state,
@@ -24,18 +22,8 @@ export const createSchoolService = async ({
   admin_username,
   admin_password,
 }) => {
-  const exists = await School.findOne({
-    where: { school_code: code },
-  });
-
-  if (exists) {
-    throw new AppError("School code already exists", 409);
-  }
-
   const school = await School.create({
     school_name: name,
-    school_code: code,
-    cbse_affiliation_no: cbse_affiliation_no || null,
     address: address || null,
     city: city || null,
     state: state || null,
@@ -263,10 +251,22 @@ export const getSchoolStatsService = async ({ school_id, query = {} }) => {
 
   return {
     success: true,
-    school: { id: school.id, name: school.school_name, code: school.school_code },
+    school: { id: school.id, name: school.school_name },
     counts: { students: studentCount, teachers: teacherCount, whatsapp: whatsappCount },
     classes,
     total,
     items: users,
   };
+};
+
+/* =========================
+   SUPER ADMIN: UPDATE SCHOOL DETAILS
+   ========================= */
+export const updateSchoolService = async (school_id, payload) => {
+  const school = await School.findByPk(school_id);
+  if (!school) {
+    throw new AppError("School not found", 404);
+  }
+  await school.update(payload);
+  return school;
 };

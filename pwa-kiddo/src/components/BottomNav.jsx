@@ -81,6 +81,18 @@ export default function BottomNav() {
           navigate(newValue);
         }}
         showLabels
+        sx={{
+          '& .MuiBottomNavigationAction-root': {
+            minWidth: 'auto',
+            padding: { xs: '6px 0', sm: '6px 12px' },
+          },
+          '& .MuiBottomNavigationAction-label': {
+            fontSize: { xs: '9px', sm: '12px' },
+            '&.Mui-selected': {
+              fontSize: { xs: '10px', sm: '14px' },
+            }
+          }
+        }}
       >
         {navItems[user.role].map((item) => (
           <BottomNavigationAction

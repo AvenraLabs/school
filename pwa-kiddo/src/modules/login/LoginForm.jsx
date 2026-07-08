@@ -8,10 +8,10 @@ import {
   Stack,
 } from "@mui/material";
 import {
-  Person,
-  LockRounded,
-  Visibility,
-  VisibilityOff,
+  PersonOutline,
+  LockOutlined,
+  VisibilityOutlined,
+  VisibilityOffOutlined,
 } from "@mui/icons-material";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -19,6 +19,37 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { loginSchema } from "./login.schema";
 import { useLogin } from "./useLogin";
+
+const fieldSx = {
+  "& .MuiOutlinedInput-root": {
+    borderRadius: "28px",
+    backgroundColor: "#ffffff",
+    height: "48px",
+    fontSize: "14px",
+    fontFamily: "'Inter', sans-serif",
+    fontWeight: 400,
+    boxShadow: "0px 2px 12px rgba(0, 0, 0, 0.06)",
+    pl: 0.5,
+    pr: 0.5,
+    "& fieldset": { border: "none" },
+    "&:hover fieldset": { border: "none" },
+    "&.Mui-focused fieldset": { border: "none" },
+  },
+  "& .MuiOutlinedInput-input": {
+    py: 0,
+    px: "4px",
+    color: "#000000",
+    fontSize: "14px",
+    "&::placeholder": {
+      color: "rgba(0, 0, 0, 0.38)",
+      opacity: 1,
+    },
+  },
+  "& .MuiFormHelperText-root": {
+    mx: 1.5,
+    fontSize: "11px",
+  },
+};
 
 export default function LoginForm({ onSuccess }) {
   const { handleLogin, loading, error } = useLogin();
@@ -38,135 +69,84 @@ export default function LoginForm({ onSuccess }) {
   }
 
   return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit(onSubmit)}
-      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-    >
-      {error && <Alert severity="error">{error}</Alert>}
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ width: "100%" }}>
+      {error && (
+        <Alert severity="error" sx={{ borderRadius: "14px", fontSize: "12px", mb: 1.5 }}>
+          {error}
+        </Alert>
+      )}
 
-      <Stack spacing={2}>
+      <Stack spacing="14px">
         <TextField
-          label="Username or Mobile Number"
+          placeholder="Username or Mobile"
           {...register("username")}
           error={!!errors.username}
           helperText={errors.username?.message}
           autoComplete="username"
           fullWidth
-          variant="filled"
+          variant="outlined"
           InputProps={{
-            disableUnderline: true,
             startAdornment: (
-              <InputAdornment position="start">
-                <Person fontSize="small" />
+              <InputAdornment position="start" sx={{ ml: 0.5, mr: 0 }}>
+                <PersonOutline sx={{ color: "#9133A0", fontSize: 20 }} />
               </InputAdornment>
             ),
           }}
-          sx={(theme) => ({
-            "& .MuiFilledInput-root": {
-              borderRadius: 2,
-              backgroundColor:
-                theme.palette.mode === "dark"
-                  ? "rgba(15, 23, 42, 0.9)"
-                  : "rgba(255, 255, 255, 0.95)",
-              border:
-                theme.palette.mode === "dark"
-                  ? "1px solid rgba(148, 163, 184, 0.25)"
-                  : "1px solid rgba(99, 102, 241, 0.12)",
-              boxShadow:
-                theme.palette.mode === "dark"
-                  ? "0 12px 26px rgba(2, 6, 23, 0.5)"
-                  : "0 10px 24px rgba(15, 23, 42, 0.08)",
-            },
-            "& .MuiInputBase-input": {
-              color: theme.palette.text.primary,
-            },
-            "& .MuiInputLabel-root": {
-              color: theme.palette.text.secondary,
-            },
-            "& .MuiInputLabel-root.Mui-focused": {
-              color: theme.palette.primary.main,
-            },
-          })}
+          sx={fieldSx}
         />
 
         <TextField
-          label="Password"
+          placeholder="Password"
           type={showPassword ? "text" : "password"}
           {...register("password")}
           error={!!errors.password}
           helperText={errors.password?.message}
           autoComplete="current-password"
           fullWidth
-          variant="filled"
+          variant="outlined"
           InputProps={{
-            disableUnderline: true,
             startAdornment: (
-              <InputAdornment position="start">
-                <LockRounded fontSize="small" />
+              <InputAdornment position="start" sx={{ ml: 0.5, mr: 0 }}>
+                <LockOutlined sx={{ color: "#9133A0", fontSize: 20 }} />
               </InputAdornment>
             ),
             endAdornment: (
-              <InputAdornment position="end">
+              <InputAdornment position="end" sx={{ mr: 0.5 }}>
                 <IconButton
                   onClick={() => setShowPassword((p) => !p)}
                   edge="end"
-                  aria-label="toggle password visibility"
+                  size="small"
+                  sx={{ color: "#9133A0", p: 0.5 }}
                 >
                   {showPassword ? (
-                    <VisibilityOff fontSize="small" />
+                    <VisibilityOffOutlined sx={{ fontSize: 18 }} />
                   ) : (
-                    <Visibility fontSize="small" />
+                    <VisibilityOutlined sx={{ fontSize: 18 }} />
                   )}
                 </IconButton>
               </InputAdornment>
             ),
           }}
-          sx={(theme) => ({
-            "& .MuiFilledInput-root": {
-              borderRadius: 2,
-              backgroundColor:
-                theme.palette.mode === "dark"
-                  ? "rgba(15, 23, 42, 0.9)"
-                  : "rgba(255, 255, 255, 0.95)",
-              border:
-                theme.palette.mode === "dark"
-                  ? "1px solid rgba(148, 163, 184, 0.25)"
-                  : "1px solid rgba(99, 102, 241, 0.12)",
-              boxShadow:
-                theme.palette.mode === "dark"
-                  ? "0 12px 26px rgba(2, 6, 23, 0.5)"
-                  : "0 10px 24px rgba(15, 23, 42, 0.08)",
-            },
-            "& .MuiInputBase-input": {
-              color: theme.palette.text.primary,
-            },
-            "& .MuiInputLabel-root": {
-              color: theme.palette.text.secondary,
-            },
-            "& .MuiInputLabel-root.Mui-focused": {
-              color: theme.palette.primary.main,
-            },
-          })}
+          sx={fieldSx}
         />
 
         <Button
           type="submit"
           variant="contained"
-          size="large"
           disabled={loading}
           disableElevation
           sx={{
-            borderRadius: 2,
-            py: 1.3,
+            borderRadius: "28px",
+            height: "48px",
+            mt: "2px",
             textTransform: "none",
-            fontWeight: 700,
-            background:
-              "linear-gradient(135deg, #6366f1 0%, #22d3ee 100%)",
-            boxShadow: "0 16px 30px rgba(79, 70, 229, 0.28)",
+            fontSize: "17px",
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: 600,
+            background: "linear-gradient(90deg, #CC3A7E 0%, #C05084 23.56%, #BD5F8B 49.04%, #8F64A8 73.08%, #6F55C4 100%)",
+            color: "#FFFFFF",
             "&:hover": {
-              background:
-                "linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)",
+              background: "linear-gradient(90deg, #b02a66 0%, #523ea3 100%)",
             },
           }}
         >

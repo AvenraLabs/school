@@ -10,6 +10,7 @@ import {
   updateSchoolStatus,
   updateSchoolAdminStatus,
   resetSchoolAdminPassword,
+  updateSchool,
 } from "./school.controller.js";
 
 import {
@@ -25,6 +26,7 @@ import {
   updateSchoolStatusSchema,
   updateSchoolAdminStatusSchema,
   resetSchoolAdminPasswordSchema,
+  updateSchoolSchema,
 } from "./school.schema.js";
 
 const router = express.Router();
@@ -53,6 +55,11 @@ router.patch(
   "/:id/admin-reset-password",
   validate(resetSchoolAdminPasswordSchema),
   resetSchoolAdminPassword
+);
+router.patch(
+  "/:id",
+  validate(updateSchoolSchema),
+  updateSchool
 );
 
 export default router;

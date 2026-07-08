@@ -16,17 +16,6 @@ const School = db.define(
       allowNull: false,
     },
 
-    school_code: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-    },
-
-    cbse_affiliation_no: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-
     address: {
       type: DataTypes.TEXT,
       allowNull: true,

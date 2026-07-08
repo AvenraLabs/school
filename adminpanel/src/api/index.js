@@ -83,6 +83,11 @@ export const schoolAPI = {
     const response = await axiosInstance.get(`/schools/directory/students/${studentId}/attendance-logs`);
     return response.data;
   },
+
+  update: async (schoolId, schoolData) => {
+    const response = await axiosInstance.patch(`/schools/${schoolId}`, schoolData);
+    return response.data;
+  },
 };
 
 // Classes API
@@ -127,10 +132,11 @@ export const classesAPI = {
 
 // Sections API
 export const sectionsAPI = {
-  create: async (classId, name) => {
+  create: async (classId, name, studentCount = 0) => {
     const response = await axiosInstance.post('/sections', {
       class_id: classId,
       name,
+      student_count: studentCount,
     });
     return response.data;
   },
@@ -670,6 +676,44 @@ export const academicYearsAPI = {
   },
   promote: async (data) => {
     const response = await axiosInstance.post('/academic-years/promote', data);
+    return response.data;
+  },
+};
+
+export const lostFoundAPI = {
+  list: async (params = {}) => {
+    const response = await axiosInstance.get('/lost-found', { params });
+    return response.data;
+  },
+  listMy: async () => {
+    const response = await axiosInstance.get('/lost-found/my');
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await axiosInstance.post('/lost-found', data);
+    return response.data;
+  },
+  close: async (id) => {
+    const response = await axiosInstance.patch(`/lost-found/${id}/status`, { status: 'CLOSED' });
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await axiosInstance.delete(`/lost-found/${id}`);
+    return response.data;
+  },
+};
+
+export const feedbackAPI = {
+  submit: async (data) => {
+    const response = await axiosInstance.post('/feedback', data);
+    return response.data;
+  },
+  manage: async (params = {}) => {
+    const response = await axiosInstance.get('/feedback/manage', { params });
+    return response.data;
+  },
+  updateStatus: async (id, status) => {
+    const response = await axiosInstance.patch(`/feedback/${id}/status`, { status });
     return response.data;
   },
 };

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { teacherAssignmentsAPI, teachersAPI, classesAPI, subjectsAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
-import { UserCog, ChevronDown, ChevronRight, UserPlus, X, Check } from 'lucide-react';
+import { UserCog, ChevronDown, ChevronRight, UserPlus, X, Check, UserCheck, BookOpen } from 'lucide-react';
 
 /* ── plain CSS styles ── */
 const s = {
@@ -293,8 +293,8 @@ export function TeacherAssignments() {
       <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
         <div style={s.pageHeader}>
           <div>
-            <h1 style={s.pageTitle}>Class Incharge Allocation</h1>
-            <p style={s.pageSubtitle}>Allocate class incharge to each section</p>
+            <h1 style={s.pageTitle}>Teacher Mapping</h1>
+            <p style={s.pageSubtitle}>Assign class coordinators and map subjects to teachers</p>
           </div>
         </div>
         <div style={s.emptyState}><p style={{ color: '#94a3b8' }}>Loading…</p></div>
@@ -306,24 +306,34 @@ export function TeacherAssignments() {
     <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
       <div style={s.pageHeader}>
         <div>
-          <h1 style={s.pageTitle}>Class Incharge Allocation</h1>
-          <p style={s.pageSubtitle}>Allocate class incharge to each section</p>
+          <h1 style={s.pageTitle}>Teacher Mapping</h1>
+          <p style={s.pageSubtitle}>Assign class coordinators and map subjects to teachers</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={s.tabRow}>
+      <div className="flex gap-6 mb-6 border-b border-slate-200 pb-0 overflow-x-auto scrollbar-none">
         <button
-          style={s.tabBtn(activeTab === 'class-teachers')}
           onClick={() => { setActiveTab('class-teachers'); closePicker(); }}
+          className={`flex items-center gap-2 px-3 py-3 text-sm font-medium border-b-2 -mb-px transition-all duration-200 outline-none whitespace-nowrap ${
+            activeTab === 'class-teachers'
+              ? 'border-indigo-600 text-indigo-600 font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+          }`}
         >
-          Class Teachers
+          <UserCheck className={`w-4 h-4 ${activeTab === 'class-teachers' ? 'text-indigo-600' : 'text-slate-400'}`} />
+          <span>Class Coordinators</span>
         </button>
         <button
-          style={s.tabBtn(activeTab === 'subject-teachers')}
           onClick={() => { setActiveTab('subject-teachers'); closePicker(); }}
+          className={`flex items-center gap-2 px-3 py-3 text-sm font-medium border-b-2 -mb-px transition-all duration-200 outline-none whitespace-nowrap ${
+            activeTab === 'subject-teachers'
+              ? 'border-indigo-600 text-indigo-600 font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+          }`}
         >
-          Subject Teachers
+          <BookOpen className={`w-4 h-4 ${activeTab === 'subject-teachers' ? 'text-indigo-600' : 'text-slate-400'}`} />
+          <span>Subject Mapping</span>
         </button>
       </div>
 

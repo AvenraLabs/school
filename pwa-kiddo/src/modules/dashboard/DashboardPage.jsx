@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Container,
@@ -118,7 +118,7 @@ export default function DashboardPage() {
       <Box sx={{ pb: 2, bgcolor: 'background.default' }}>
         <Box
           sx={{
-            p: 3,
+            p: { xs: 2, sm: 3 },
             pt: 4,
             background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary?.main || theme.palette.primary.dark} 100%)`,
             color: 'white',
@@ -144,11 +144,11 @@ export default function DashboardPage() {
           </Stack>
 
           {/* Stats Grid inside header */}
-          <Grid container spacing={2}>
+          <Grid container spacing={1.5}>
             <Grid item xs={6}>
               <Paper
                 sx={{
-                  p: 2,
+                  p: { xs: 1.5, sm: 2 },
                   bgcolor: 'rgba(255,255,255,0.12)',
                   backdropFilter: 'blur(12px)',
                   color: 'white',
@@ -161,15 +161,15 @@ export default function DashboardPage() {
                 }}
               >
                 <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: { xs: '0.6rem', sm: '0.68rem' }, fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
                     AI Tokens
                   </Typography>
-                  <Typography variant="h5" fontWeight="950">
+                  <Typography sx={{ fontSize: { xs: '1.15rem', sm: '1.5rem' }, fontWeight: 950, lineHeight: 1.2 }}>
                     {aiRemaining}
                   </Typography>
                 </Box>
                 <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: '0.68rem' }}>
+                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.58rem', sm: '0.68rem' } }}>
                     Used: {aiUsed} / {aiTotal}
                   </Typography>
                 </Box>
@@ -179,7 +179,7 @@ export default function DashboardPage() {
             <Grid item xs={6}>
               <Paper
                 sx={{
-                  p: 2,
+                  p: { xs: 1.5, sm: 2 },
                   bgcolor: 'rgba(255,255,255,0.12)',
                   backdropFilter: 'blur(12px)',
                   color: 'white',
@@ -192,16 +192,16 @@ export default function DashboardPage() {
                 }}
               >
                 <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: { xs: '0.6rem', sm: '0.68rem' }, fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
                     Grading Tasks
                   </Typography>
-                  <Typography variant="h5" fontWeight="950">
+                  <Typography sx={{ fontSize: { xs: '1.15rem', sm: '1.5rem' }, fontWeight: 950, lineHeight: 1.2 }}>
                     {totalPendingTasks} Pending
                   </Typography>
                 </Box>
                 <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: '0.68rem' }}>
-                    HW: {pendingHomeworkCount} | Exams: {pendingReportCardsCount}
+                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.58rem', sm: '0.68rem' } }}>
+                    HW: {pendingHomeworkCount} • Exams: {pendingReportCardsCount}
                   </Typography>
                 </Box>
               </Paper>

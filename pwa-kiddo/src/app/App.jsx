@@ -6,6 +6,8 @@ import StudentApp from "../pages/StudentApp";
 import TeacherApp from "../pages/TeacherApp";
 import DriverApp from "../pages/DriverApp";
 import NotAuthorized from "../pages/NotAuthorized";
+import PrivacyPolicy from "../pages/PrivacyPolicy";
+import TermsConditions from "../pages/TermsConditions";
 
 import RequireAuth from "../auth/RequireAuth";
 import RequireRole from "../auth/RequireRole";
@@ -27,6 +29,8 @@ export default function App() {
     <ErrorBoundary fallback={<div>Something went wrong</div>}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsConditions />} />
 
         <Route
           path="/first-login"

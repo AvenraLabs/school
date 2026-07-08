@@ -4,6 +4,8 @@ import db from "../config/db.js";
 /* ===================== CORE ===================== */
 import School from "../modules/schools/school.model.js";
 import User from "../modules/users/user.model.js";
+import LostFoundItem from "../modules/lost-found/lost-found.model.js";
+import Feedback from "../modules/feedback/feedback.model.js";
 
 /* ===================== PEOPLE ===================== */
 import Teacher from "../modules/teachers/teacher.model.js";
@@ -83,6 +85,20 @@ const initAssociations = () => {
 
   User.belongsTo(School, { foreignKey: "school_id" });
   Section.belongsTo(School, { foreignKey: "school_id" });
+
+  /* ==================== LOST & FOUND ==================== */
+  School.hasMany(LostFoundItem, { foreignKey: "school_id", onDelete: "CASCADE" });
+  LostFoundItem.belongsTo(School, { foreignKey: "school_id" });
+
+  User.hasMany(LostFoundItem, { foreignKey: "created_by", onDelete: "CASCADE" });
+  LostFoundItem.belongsTo(User, { as: "Creator", foreignKey: "created_by" });
+
+  /* ==================== FEEDBACK ==================== */
+  School.hasMany(Feedback, { foreignKey: "school_id", onDelete: "SET NULL" });
+  Feedback.belongsTo(School, { foreignKey: "school_id" });
+
+  User.hasMany(Feedback, { foreignKey: "user_id", onDelete: "CASCADE" });
+  Feedback.belongsTo(User, { foreignKey: "user_id" });
 
   /* ==================== USER PROFILES ==================== */
   User.hasOne(Student, { foreignKey: "user_id" });

@@ -38,10 +38,16 @@ export async function protect(req, res, next) {
     }
 
     // 5️⃣ Attach trusted identity + profile IDs (used across services)
+    let school_id = user.school_id;
+    if (!school_id && user.role === "super_admin") {
+      const firstSchool = await School.findOne({ attributes: ["id"] });
+      school_id = firstSchool ? firstSchool.id : null;
+    }
+
     const identity = {
       id: user.id,
       role: user.role,
-      school_id: user.school_id,
+      school_id,
       first_login: user.first_login,
     };
 

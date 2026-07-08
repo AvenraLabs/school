@@ -35,6 +35,7 @@ export function ClassesManager() {
   const [newClassName, setNewClassName] = useState('');
   const [editClassName, setEditClassName] = useState('');
   const [newSectionName, setNewSectionName] = useState('');
+  const [studentCount, setStudentCount] = useState('');
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
@@ -111,10 +112,11 @@ export function ClassesManager() {
 
     setSaving(true);
     try {
-      await sectionsAPI.create(showAddSection.id, normalizedNewName);
+      await sectionsAPI.create(showAddSection.id, normalizedNewName, Number(studentCount) || 0);
       toast.success('Section created');
       setShowAddSection(null);
       setNewSectionName('');
+      setStudentCount('');
       loadClasses();
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to create section');
@@ -224,7 +226,7 @@ export function ClassesManager() {
                 
                 <button
                   className="btn-add-section"
-                  onClick={() => { setShowAddSection(cls); setNewSectionName(''); }}
+                  onClick={() => { setShowAddSection(cls); setNewSectionName(''); setStudentCount(''); }}
                 >
                   <Plus className="w-4 h-4" /> Add Section
                 </button>
@@ -281,7 +283,7 @@ export function ClassesManager() {
       {/* Add Section Modal */}
       <Modal
         isOpen={!!showAddSection}
-        onClose={() => setShowAddSection(null)}
+        onClose={() => { setShowAddSection(null); setStudentCount(''); }}
         title={`Add Section to ${showAddSection?.class_name}`}
       >
         <form onSubmit={handleAddSection}>
@@ -296,8 +298,19 @@ export function ClassesManager() {
               autoFocus
             />
           </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={styles.label}>Auto-generate Students (Count - Optional)</label>
+            <input
+              style={styles.inputField}
+              type="number"
+              min="0"
+              value={studentCount}
+              onChange={(e) => setStudentCount(e.target.value)}
+              placeholder="e.g. 30 (leave blank or 0 to skip)"
+            />
+          </div>
           <div style={styles.formActions}>
-            <button type="button" onClick={() => setShowAddSection(null)} className="btn-secondary">Cancel</button>
+            <button type="button" onClick={() => { setShowAddSection(null); setStudentCount(''); }} className="btn-secondary">Cancel</button>
             <button type="submit" disabled={saving} className="btn-primary">
               {saving ? 'Creating...' : 'Create Section'}
             </button>

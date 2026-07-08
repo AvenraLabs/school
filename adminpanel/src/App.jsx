@@ -27,6 +27,11 @@ import { AuditLogs } from './pages/SchoolAdmin/AuditLogs';
 import { SchoolRegistry } from './pages/SchoolAdmin/SchoolRegistry';
 import { TransportManager } from './pages/SchoolAdmin/TransportManager';
 import { AcademicYearManager } from './pages/SchoolAdmin/AcademicYearManager';
+import PrivacyPolicy from './pages/Public/PrivacyPolicy';
+import TermsConditions from './pages/Public/TermsConditions';
+import { LostFoundManager } from './pages/SchoolAdmin/LostFoundManager';
+import { FeedbackSubmit } from './pages/SchoolAdmin/FeedbackSubmit';
+import { AboutAdmin } from './pages/SchoolAdmin/AboutAdmin';
 
 import './App.css';
 
@@ -38,6 +43,8 @@ function App() {
           <Routes>
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsConditions />} />
 
             {/* Super Admin — single unified page, no DashboardLayout (has its own top bar) */}
             <Route
@@ -77,6 +84,9 @@ function App() {
               <Route path="/admin/report-cards" element={<ReportCards />} />
               <Route path="/admin/academic-year" element={<AcademicYearManager />} />
               <Route path="/admin/audit-logs" element={<AuditLogs />} />
+              <Route path="/admin/lost-found" element={<LostFoundManager />} />
+              <Route path="/admin/feedback" element={<FeedbackSubmit />} />
+              <Route path="/admin/about" element={<AboutAdmin />} />
             </Route>
 
             {/* Fallback */}

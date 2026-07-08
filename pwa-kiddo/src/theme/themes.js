@@ -99,6 +99,23 @@ export const themes = {
       },
     },
   }),
+
+  sunset: createTheme({
+    ...base,
+    palette: {
+      mode: "light",
+      primary: { main: "#cc3a7e" },
+      secondary: { main: "#6f55c4" },
+      background: {
+        default: "#F5EDE3",
+        paper: "#ffffff",
+      },
+      text: {
+        primary: "#2e0833",
+        secondary: "#6f55c4",
+      },
+    },
+  }),
 };
 
 export const AVAILABLE_THEMES = Object.keys(themes);

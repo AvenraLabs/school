@@ -4,7 +4,7 @@ import { Modal } from '../../components/common/Modal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { useToast } from '../../context/ToastContext';
 import { generateSingleCredentialPDF } from '../../utils/pdfGenerator';
-import { Plus, UserCog, Download, Copy } from 'lucide-react';
+import { Plus, UserCog, Download, Copy, UserCheck, Clock, UserMinus, Award, UserX } from 'lucide-react';
 
 export function TeachersManager() {
   const [teachers, setTeachers] = useState([]);
@@ -117,20 +117,31 @@ export function TeachersManager() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-slate-100 pb-px">
-        {['ACTIVE', 'PENDING', 'RESIGNED', 'RETIRED', 'TERMINATED'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => { setActiveTab(tab); setPage(0); }}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              activeTab === tab
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            }`}
-          >
-            {tab.charAt(0) + tab.slice(1).toLowerCase().replace('_', ' ')}
-          </button>
-        ))}
+      <div className="flex gap-6 mb-6 border-b border-slate-200 pb-0 overflow-x-auto scrollbar-none">
+        {['ACTIVE', 'PENDING', 'RESIGNED', 'RETIRED', 'TERMINATED'].map((tab) => {
+          const Icon = {
+            ACTIVE: UserCheck,
+            PENDING: Clock,
+            RESIGNED: UserMinus,
+            RETIRED: Award,
+            TERMINATED: UserX
+          }[tab];
+          
+          return (
+            <button
+              key={tab}
+              onClick={() => { setActiveTab(tab); setPage(0); }}
+              className={`flex items-center gap-2 px-3 py-3 text-sm font-medium border-b-2 -mb-px transition-all duration-200 outline-none whitespace-nowrap ${
+                activeTab === tab
+                  ? 'border-indigo-600 text-indigo-600 font-semibold'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              {Icon && <Icon className={`w-4 h-4 ${activeTab === tab ? 'text-indigo-600' : 'text-slate-400'}`} />}
+              <span>{tab.charAt(0) + tab.slice(1).toLowerCase().replace('_', ' ')}</span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="card overflow-hidden">

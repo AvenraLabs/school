@@ -10,12 +10,18 @@ import { schoolAPI, analyticsAPI, tokenPoliciesAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 
+// School Admin sub-pages mapped to Super Admin
+import { ClassesManager } from '../SchoolAdmin/ClassesManager';
+import { BulkSeeder } from '../SchoolAdmin/BulkSeeder';
+import { FeedbackManager } from './FeedbackManager';
+
 // Icons
 import {
   School, BarChart3, Coins, LogOut, Sparkles,
   Plus, RotateCcw, Copy, ChevronDown, ChevronUp,
   GraduationCap, UserCog, Users, ChevronLeft, ChevronRight,
-  Cpu, RefreshCw, Check,
+  Cpu, RefreshCw, Check, Edit3, Database, Layers,
+  MessageSquare
 } from 'lucide-react';
 
 /* ════════════════════════════════════════════════════════════════════
@@ -315,9 +321,12 @@ function CombinedTokenEditor({ policies, onSaved }) {
    MAIN PAGE
 ════════════════════════════════════════════════════════════════════ */
 const MAIN_TABS = [
-  { key: 'school',    label: 'School',       icon: School },
-  { key: 'analytics', label: 'AI Analytics', icon: BarChart3 },
-  { key: 'tokens',    label: 'Tokens',       icon: Coins },
+  { key: 'school',       label: 'School Settings',    icon: School },
+  { key: 'analytics',    label: 'AI Analytics',       icon: BarChart3 },
+  { key: 'tokens',       label: 'Tokens',             icon: Coins },
+  { key: 'classes',      label: 'Classes & Sections', icon: Layers },
+  { key: 'bulk-seeder',  label: 'Bulk Seeder',        icon: Database },
+  { key: 'feedback',     label: 'Feedback Management', icon: MessageSquare },
 ];
 
 
@@ -337,13 +346,15 @@ export function SuperAdminPage() {
   const [schoolLoading, setSchoolLoading]   = useState(true);
   const [expanded, setExpanded]             = useState(null);
   const [showCreate, setShowCreate]         = useState(false);
+  const [showEditSchool, setShowEditSchool] = useState(null);
   const [showResetPw, setShowResetPw]       = useState(null);
   const [showCredentials, setShowCredentials] = useState(null);
   const [creating, setCreating]             = useState(false);
+  const [saving, setSaving]                 = useState(false);
   const [resetPw, setResetPw]               = useState('');
   const [form, setForm] = useState({
-    name: '', code: '', cbse_affiliation_no: '', address: '',
-    city: '', state: '', zip: '', email: '', admin_username: '', admin_password: '',
+    name: '', address: '',
+    city: '', state: '', zip: '', email: '', contact_phone: '', admin_username: '', admin_password: '',
   });
 
   /* ── ANALYTICS state ── */
@@ -376,10 +387,33 @@ export function SuperAdminPage() {
       toast.success('School created!');
       setShowCreate(false);
       setShowCredentials({ school: form.name, username: res.admin?.username || form.admin_username, password: form.admin_password });
-      setForm({ name:'', code:'', cbse_affiliation_no:'', address:'', city:'', state:'', zip:'', email:'', admin_username:'', admin_password:'' });
+      setForm({ name:'', address:'', city:'', state:'', zip:'', email:'', contact_phone: '', admin_username:'', admin_password:'' });
       loadSchools();
     } catch (e) { toast.error(e.response?.data?.message || 'Failed to create school'); }
     finally { setCreating(false); }
+  };
+
+  const handleEditSchoolSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await schoolAPI.update(showEditSchool.id, {
+        school_name: form.name,
+        address: form.address,
+        city: form.city,
+        state: form.state,
+        zip: form.zip,
+        email: form.email,
+        contact_phone: form.contact_phone,
+      });
+      toast.success('School settings updated!');
+      setShowEditSchool(null);
+      loadSchools();
+    } catch (err) {
+      toast.error('Failed to update school settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleAdmin = async (school, isActive) => {
@@ -440,8 +474,8 @@ export function SuperAdminPage() {
   }, [roleFilter, analyticsTab, loadAnalyticsUsers]);
 
   /* ──────────────────────── DERIVED ──────────────────────── */
-  const totalAICalls  = schoolData.reduce((s, r) => s + (r.total_calls || 0), 0);
-  const totalAITokens = schoolData.reduce((s, r) => s + (r.total_tokens || 0), 0);
+  const totalAICalls  = schoolData.reduce((s, r) => s + Number(r.total_calls || 0), 0);
+  const totalAITokens = schoolData.reduce((s, r) => s + Number(r.total_tokens || 0), 0);
   const policyFor = (role) => policies.find(p => p.role === role) || { role, monthly_tokens: 0, updated_by: null };
 
   /* ────────────────────────── RENDER ──────────────────────── */
@@ -504,72 +538,144 @@ export function SuperAdminPage() {
       <main style={{ flex: 1, overflowY: 'auto' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '36px 24px' }}>
 
-          {/* ═══════════ SCHOOL TAB ═══════════ */}
+          {/* ═══════════ SCHOOL SETTINGS TAB (SINGLE SCHOOL) ═══════════ */}
           {activeTab === 'school' && (
             <div>
-              <div className="page-header">
+              {/* Header section with school brand highlight */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                 <div>
-                  <h1 className="page-title">School Management</h1>
-                  <p className="page-subtitle">Create and manage schools with admin accounts</p>
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                      <School className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-bold text-slate-900 leading-tight">School Settings</h1>
+                      <p className="text-sm text-slate-500">Configure profile, contact details, and admin accounts</p>
+                    </div>
+                  </div>
                 </div>
-                <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
-                  <Plus className="w-4 h-4" /> Create School
-                </button>
-              </div>
-              <div className="card overflow-hidden">
-                {schoolLoading ? (
-                  <div className="p-8 text-center text-slate-400">Loading schools…</div>
-                ) : schools.length === 0 ? (
-                  <div className="empty-state">
-                    <School className="empty-state-icon" />
-                    <p className="empty-state-title">No schools yet</p>
-                    <p className="empty-state-desc">Create your first school to get started</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="data-table min-w-[680px]">
-                      <thead>
-                        <tr><th>School Name</th><th>Code</th><th>City</th><th>Admin Username</th><th>Status</th><th>Actions</th></tr>
-                      </thead>
-                      <tbody>
-                        {schools.map(s => {
-                          const admin = s.users?.[0] || s.User || s.admin;
-                          const isExpanded = expanded === s.id;
-                          return [
-                            <tr key={s.id}>
-                              <td>
-                                <button onClick={() => setExpanded(isExpanded ? null : s.id)} className="flex items-center gap-2 font-semibold text-slate-900 hover:text-indigo-600 transition-colors text-left">
-                                  {isExpanded ? <ChevronUp className="w-4 h-4 text-indigo-500 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />}
-                                  {s.school_name}
-                                </button>
-                              </td>
-                              <td className="font-mono text-xs text-slate-500">{s.school_code}</td>
-                              <td className="text-sm">{s.city || '—'}</td>
-                              <td className="font-mono text-xs text-slate-500">{admin?.username || '—'}</td>
-                              <td><StatusBadge status={admin?.is_active ? 'active' : 'inactive'} /></td>
-                              <td>
-                                <div className="flex items-center gap-2">
-                                  <button onClick={() => toggleAdmin(s, !admin?.is_active)} className={`btn-sm ${admin?.is_active ? 'btn-secondary' : 'btn-success'}`}>
-                                    {admin?.is_active ? 'Deactivate' : 'Activate'}
-                                  </button>
-                                  <button onClick={() => { setShowResetPw(s); setResetPw(''); }} className="btn-sm btn-secondary" title="Reset admin password">
-                                    <RotateCcw className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>,
-                            isExpanded && (
-                              <tr key={`${s.id}-stats`}>
-                                <td colSpan={6} className="p-0"><SchoolStatsPanel school={s} /></td>
-                              </tr>
-                            ),
-                          ];
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                {schools[0] && (
+                  <button onClick={() => {
+                    const sch = schools[0];
+                    setForm({
+                      name: sch.school_name,
+                      address: sch.address || '',
+                      city: sch.city || '',
+                      state: sch.state || '',
+                      zip: sch.zip || '',
+                      email: sch.email || '',
+                      contact_phone: sch.contact_phone || '',
+                    });
+                    setShowEditSchool(sch);
+                  }} className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-100 hover:shadow-indigo-200 transition-all duration-200">
+                    <Edit3 className="w-4 h-4" /> Edit School Profile
+                  </button>
                 )}
               </div>
+              
+              {schoolLoading ? (
+                <div className="card p-12 text-center text-slate-400">Loading school settings…</div>
+              ) : schools.length === 0 ? (
+                <div className="empty-state">
+                  <School className="empty-state-icon" />
+                  <p className="empty-state-title">No school configured</p>
+                  <p className="empty-state-desc">Use the Bulk Seeder or database seed to create a school</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Left Column: General Info and Address */}
+                  <div className="lg:col-span-2 space-y-8">
+                    {/* General Info Card */}
+                    <div className="card p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm">
+                      <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6 flex items-center gap-2">
+                        <span className="w-1.5 h-5 bg-indigo-500 rounded-full inline-block"></span>
+                        School Details
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">School Name</span>
+                          <span className="text-base font-bold text-slate-800">{schools[0].school_name}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Email Address</span>
+                          <span className="text-base font-bold text-slate-800">{schools[0].email || '—'}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150 sm:col-span-2">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Contact Phone</span>
+                          <span className="text-base font-bold text-slate-800">{schools[0].contact_phone || '—'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Address Card */}
+                    <div className="card p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm">
+                      <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6 flex items-center gap-2">
+                        <span className="w-1.5 h-5 bg-indigo-500 rounded-full inline-block"></span>
+                        Address Details
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150 sm:col-span-2">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Street Address</span>
+                          <span className="text-base font-bold text-slate-800">{schools[0].address || '—'}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">City</span>
+                          <span className="text-base font-bold text-slate-800">{schools[0].city || '—'}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">State</span>
+                          <span className="text-base font-bold text-slate-800">{schools[0].state || '—'}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150 sm:col-span-2">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">ZIP Code</span>
+                          <span className="text-base font-bold text-slate-800">{schools[0].zip || '—'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Admin Actions */}
+                  <div className="space-y-8">
+                    <div className="card p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm flex flex-col justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6 flex items-center gap-2">
+                          <span className="w-1.5 h-5 bg-indigo-500 rounded-full inline-block"></span>
+                          School Admin Account
+                        </h3>
+                        {(() => {
+                          const admin = schools[0].users?.[0] || schools[0].User || schools[0].admin;
+                          return (
+                            <div className="space-y-6">
+                              <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80">
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Admin Username</span>
+                                <span className="text-base font-mono font-bold text-slate-800">{admin?.username || '—'}</span>
+                              </div>
+                              <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 flex items-center justify-between">
+                                <div>
+                                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Account Status</span>
+                                  <span className="inline-block mt-0.5"><StatusBadge status={admin?.is_active ? 'active' : 'inactive'} /></span>
+                                </div>
+                              </div>
+                              <div className="pt-4 border-t border-slate-100 space-y-3">
+                                <button onClick={() => toggleAdmin(schools[0], !admin?.is_active)} className={`w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-150 flex items-center justify-center gap-2 ${
+                                  admin?.is_active 
+                                    ? 'bg-rose-50 text-rose-600 hover:bg-rose-100/80 border border-rose-200/50' 
+                                    : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100/80 border border-emerald-200/50'
+                                }`}>
+                                  {admin?.is_active ? 'Deactivate Admin' : 'Activate Admin'}
+                                </button>
+                                <button onClick={() => { setShowResetPw(schools[0]); setResetPw(''); }} className="w-full py-3 px-4 rounded-xl font-semibold text-sm bg-slate-50 hover:bg-slate-100 border border-slate-200/60 text-slate-700 transition-all duration-150 flex items-center justify-center gap-2">
+                                  <RotateCcw className="w-4 h-4" /> Reset Admin Password
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -669,57 +775,65 @@ export function SuperAdminPage() {
             </div>
           )}
 
+          {/* ═══════════ CLASSES & SECTIONS TAB ═══════════ */}
+          {activeTab === 'classes' && (
+            <ClassesManager />
+          )}
+
+          {/* ═══════════ BULK SEEDER TAB ═══════════ */}
+          {activeTab === 'bulk-seeder' && (
+            <BulkSeeder />
+          )}
+
+          {/* ═══════════ FEEDBACK TAB ═══════════ */}
+          {activeTab === 'feedback' && (
+            <FeedbackManager />
+          )}
+
         </div>
       </main>
 
 
       {/* ══════ MODALS ══════ */}
-      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Create New School" maxWidth="max-w-2xl">
-        <form onSubmit={handleCreate} className="space-y-4">
+      <Modal isOpen={!!showEditSchool} onClose={() => setShowEditSchool(null)} title="Edit School Settings" maxWidth="max-w-2xl">
+        <form onSubmit={handleEditSchoolSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="label">School Name *</label><input className="input-field" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Delhi Public School" /></div>
-            <div><label className="label">School Code *</label><input className="input-field" required value={form.code} onChange={e => setForm({...form, code: e.target.value})} placeholder="e.g. DPS001" /></div>
-            <div><label className="label">CBSE Affiliation No</label><input className="input-field" value={form.cbse_affiliation_no} onChange={e => setForm({...form, cbse_affiliation_no: e.target.value})} placeholder="Optional" /></div>
-            <div><label className="label">Email</label><input className="input-field" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="school@example.com" /></div>
-            <div className="sm:col-span-2"><label className="label">Address</label><input className="input-field" value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Street address" /></div>
-            <div><label className="label">City</label><input className="input-field" value={form.city} onChange={e => setForm({...form, city: e.target.value})} /></div>
-            <div><label className="label">State</label><input className="input-field" value={form.state} onChange={e => setForm({...form, state: e.target.value})} /></div>
-            <div><label className="label">ZIP Code</label><input className="input-field" value={form.zip} onChange={e => setForm({...form, zip: e.target.value})} /></div>
-          </div>
-          <div className="border-t border-slate-100 pt-4">
-            <h4 className="text-sm font-semibold text-slate-900 mb-3">Admin Account</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><label className="label">Admin Username *</label><input className="input-field" required value={form.admin_username} onChange={e => setForm({...form, admin_username: e.target.value})} placeholder="e.g. dps_admin" /></div>
-              <div><label className="label">Admin Password *</label><input className="input-field" required value={form.admin_password} onChange={e => setForm({...form, admin_password: e.target.value})} placeholder="Secure password" /></div>
+            <div>
+              <label className="label">School Name *</label>
+              <input className="input-field" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Delhi Public School" />
+            </div>
+            <div>
+              <label className="label">Email Address</label>
+              <input className="input-field" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="school@example.com" />
+            </div>
+            <div>
+              <label className="label">Contact Phone</label>
+              <input className="input-field" value={form.contact_phone} onChange={e => setForm({...form, contact_phone: e.target.value})} placeholder="Optional" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label">Address</label>
+              <input className="input-field" value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Street address" />
+            </div>
+            <div>
+              <label className="label">City</label>
+              <input className="input-field" value={form.city} onChange={e => setForm({...form, city: e.target.value})} />
+            </div>
+            <div>
+              <label className="label">State</label>
+              <input className="input-field" value={form.state} onChange={e => setForm({...form, state: e.target.value})} />
+            </div>
+            <div>
+              <label className="label">ZIP Code</label>
+              <input className="input-field" value={form.zip} onChange={e => setForm({...form, zip: e.target.value})} />
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={creating} className="btn-primary">{creating ? 'Creating…' : 'Create School'}</button>
+            <button type="button" onClick={() => setShowEditSchool(null)} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={saving} className="btn-primary">
+              {saving ? 'Saving...' : 'Save Settings'}
+            </button>
           </div>
         </form>
-      </Modal>
-
-      <Modal isOpen={!!showCredentials} onClose={() => setShowCredentials(null)} title="School Admin Credentials">
-        {showCredentials && (
-          <div>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
-              <p className="text-sm text-emerald-800 font-medium">✅ School created successfully!</p>
-            </div>
-            <div className="credential-box space-y-3">
-              {[['School', showCredentials.school], ['Username', showCredentials.username], ['Password', showCredentials.password]].map(([label, val]) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">{label}:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold">{val}</span>
-                    <button onClick={() => copy(val)} className="text-indigo-500 hover:text-indigo-700"><Copy className="w-3.5 h-3.5" /></button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-slate-400 mt-3 text-center">Save these credentials securely.</p>
-          </div>
-        )}
       </Modal>
 
       <Modal isOpen={!!showResetPw} onClose={() => setShowResetPw(null)} title="Reset Admin Password">

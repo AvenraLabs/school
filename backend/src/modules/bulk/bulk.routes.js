@@ -10,7 +10,7 @@ const router = express.Router();
 router.post(
   "/bulk-create",
   protect,
-  allowRoles("school_admin"),
+  allowRoles("school_admin", "super_admin"),
   validate(bulkCreateDataSchema),
   bulkCreateData
 );

@@ -179,17 +179,28 @@ export function LoginPage() {
         </div>
 
         {/* Avenra credit */}
-        <p className="absolute bottom-5 left-0 right-0 text-center text-[11px] text-slate-400">
-          Built by{' '}
-          <a
-            href="https://www.avenra.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-slate-500 font-medium hover:text-indigo-500 transition-colors duration-200"
-          >
-            Avenra
-          </a>
-        </p>
+        <div className="absolute bottom-5 left-0 right-0 text-center text-[11px] text-slate-400 space-y-1">
+          <p>
+            Built by{' '}
+            <a
+              href="https://www.avenra.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-500 font-medium hover:text-indigo-500 transition-colors duration-200"
+            >
+              Avenra
+            </a>
+          </p>
+          <div className="flex gap-2.5 justify-center">
+            <a href="/privacy" className="hover:text-indigo-500 hover:underline transition-colors duration-200">
+              Privacy Policy
+            </a>
+            <span className="opacity-30">|</span>
+            <a href="/terms" className="hover:text-indigo-500 hover:underline transition-colors duration-200">
+              Terms & Conditions
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -9,6 +9,9 @@ import {
   Logout,
   CalendarMonth,
   Chat,
+  Search,
+  Feedback,
+  Info,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { Link, useNavigate } from "react-router-dom";
@@ -23,8 +26,11 @@ export default function StudentSidebar({ open, onClose }) {
     { label: "Chat", icon: <Chat />, path: "/student/group-chat" },
     { label: "Homework", icon: <Book />, path: "/student/diary" },
     { label: "Exams", icon: <ReceiptLong />, path: "/student/report-cards" },
+    { label: "Lost & Found", icon: <Search />, path: "/student/lost-found" },
+    { label: "Feedback", icon: <Feedback />, path: "/student/feedback" },
     { label: "Themes", icon: <Palette />, path: "/student/themes" },
     { label: "Profile", icon: <Person />, path: "/student/profile" },
+    { label: "About", icon: <Info />, path: "/student/about" },
   ];
 
   const handleNavigate = (path) => {
