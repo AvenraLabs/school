@@ -1,0 +1,213 @@
+.feedback-page {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.feedback-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding: 28px;
+  border: 1px solid #e0e7ff;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 12% 15%, rgba(244, 63, 94, 0.12), transparent 28%),
+    linear-gradient(135deg, #fff1f2 0%, #ffffff 55%, #fff5f5 100%);
+  box-shadow: 0 18px 45px rgba(244, 63, 94, 0.08);
+}
+
+.feedback-hero h1 {
+  margin: 8px 0 6px;
+  color: #0f172a;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.feedback-hero p {
+  max-width: 520px;
+  margin: 0;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.feedback-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #be123c;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.feedback-card {
+  padding: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.feedback-form {
+  display: grid;
+  gap: 20px;
+}
+
+.feedback-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.feedback-form span {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.feedback-form input,
+.feedback-form textarea,
+.feedback-form select {
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid #dbe3ef;
+  border-radius: 14px;
+  outline: none;
+  color: #0f172a;
+  background: #ffffff;
+  font-size: 14px;
+  transition: all 0.15s ease;
+}
+
+.feedback-form textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.feedback-form input:focus,
+.feedback-form textarea:focus,
+.feedback-form select:focus {
+  border-color: #f43f5e;
+  box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.12);
+}
+
+.feedback-screenshot-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.feedback-screenshot-preview {
+  position: relative;
+  width: 120px;
+  height: 90px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.feedback-screenshot-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.feedback-screenshot-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(225, 29, 72, 0.9);
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.feedback-upload-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 14px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.feedback-upload-placeholder:hover {
+  border-color: #f43f5e;
+  color: #f43f5e;
+  background: #fff5f5;
+}
+
+.feedback-btn-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 14px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #f43f5e, #be123c);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(244, 63, 94, 0.25);
+  transition: all 0.18s ease;
+}
+
+.feedback-btn-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(244, 63, 94, 0.3);
+}
+
+.feedback-btn-submit:disabled {
+  background: #cbd5e1;
+  box-shadow: none;
+  cursor: not-allowed;
+  color: #94a3b8;
+}
+
+@media (max-width: 720px) {
+  .feedback-page {
+    padding: 16px;
+  }
+
+  .feedback-hero {
+    padding: 20px;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .feedback-kicker {
+    justify-content: center;
+  }
+
+  .feedback-hero h1 {
+    font-size: 28px;
+  }
+}

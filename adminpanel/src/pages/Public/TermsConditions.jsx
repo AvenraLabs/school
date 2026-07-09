@@ -15,7 +15,7 @@ export default function TermsConditions() {
             <ArrowLeft className="w-4 h-4" /> Back to Login
           </button>
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-900">Avenra Campus</span>
+            <span className="font-bold text-slate-900">SchoolIQ</span>
           </div>
         </div>
 
@@ -49,7 +49,7 @@ export default function TermsConditions() {
             <div>
               <h2 className="text-lg font-bold text-slate-900 mb-2">4. WhatsApp Messaging Services</h2>
               <p>
-                Automated reminders and notifications sent via WhatsApp are supplementary. Avenra Campus is not liable for delayed delivery of transport details or attendance warnings due to telco service interruptions.
+                Automated reminders and notifications sent via WhatsApp are supplementary. SchoolIQ is not liable for delayed delivery of transport details or attendance warnings due to telco service interruptions.
               </p>
             </div>
 

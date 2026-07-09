@@ -1,42 +1,59 @@
 import { Sparkles } from 'lucide-react';
+import './AboutAdmin.css';
 
 export function AboutAdmin() {
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="page-title text-2xl font-bold text-slate-900">About</h1>
-        <p className="page-subtitle text-sm text-slate-500">Information about the school management system portal application.</p>
-      </div>
+    <div className="about-page">
+      {/* Hero Header */}
+      <section className="about-hero">
+        <div>
+          <div className="about-kicker">
+            <Sparkles size={16} />
+            System Info
+          </div>
+          <h1>About App</h1>
+          <p>Information about the school management system portal application.</p>
+        </div>
+      </section>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm text-center">
-        <h2 className="text-xl font-bold text-slate-950 mt-4">Avenra Campus</h2>
-        <p className="text-xs text-slate-400 font-semibold mb-6">Version 1.3.0</p>
+      {/* Info Card */}
+      <div className="about-card">
+        <div className="about-brand-header">
+          <h2 className="about-brand-title">SchoolIQ</h2>
+          <p className="about-brand-version">Version 1.3.0</p>
+        </div>
 
-        <hr className="border-slate-100 my-6" />
+        <hr className="about-divider" />
 
-        <div className="text-left space-y-4 max-w-sm mx-auto text-sm">
-          <div>
-            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Developer / Publisher</span>
-            <strong className="text-slate-800 font-bold">Avenra</strong>
+        <div className="about-details-list">
+          <div className="about-detail-item">
+            <span className="about-detail-label">Developer / Publisher</span>
+            <span className="about-detail-value">Avenra</span>
           </div>
 
-          <div>
-            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Website</span>
-            <a href="https://avenra.org" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline">
-              avenra.org
-            </a>
+          <div className="about-detail-item">
+            <span className="about-detail-label">Website</span>
+            <span className="about-detail-value">
+              <a href="https://avenra.org" target="_blank" rel="noopener noreferrer">
+                avenra.org
+              </a>
+            </span>
           </div>
 
-          <div>
-            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Support Desk</span>
-            <a href="mailto:founders@avenra.org" className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline">
-              founders@avenra.org
-            </a>
+          <div className="about-detail-item">
+            <span className="about-detail-label">Support Desk</span>
+            <span className="about-detail-value">
+              <a href="mailto:founders@avenra.org">
+                founders@avenra.org
+              </a>
+            </span>
           </div>
 
-          <div>
-            <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Copyright</span>
-            <span className="text-slate-500">© {new Date().getFullYear()} Avenra. All rights reserved.</span>
+          <div className="about-detail-item">
+            <span className="about-detail-label">Copyright</span>
+            <span className="about-detail-value" style={{ color: '#64748b' }}>
+              &copy; {new Date().getFullYear()} Avenra. All rights reserved.
+            </span>
           </div>
         </div>
       </div>

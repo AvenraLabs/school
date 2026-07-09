@@ -1,7 +1,7 @@
 // PWA Manifest Configuration
 export const pwaManifest = {
-  name: 'Avenra Campus',
-  short_name: 'Avenra',
+  name: 'SchoolIQ',
+  short_name: 'SchoolIQ',
   description: 'A comprehensive Progressive Web Application for students, teachers, and parents in an educational environment',
   theme_color: '#F5EDE3',
   background_color: '#ffffff',

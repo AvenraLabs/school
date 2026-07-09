@@ -19,7 +19,7 @@ export default function AboutPage() {
       >
         <CardContent>
           <Typography variant="h5" fontWeight="900" sx={{ mb: 0.5, mt: 2 }}>
-            Avenra Campus
+            SchoolIQ
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 3, fontWeight: 700 }}>
             Version 1.3.0

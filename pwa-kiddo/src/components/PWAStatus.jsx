@@ -151,7 +151,7 @@ export default function PWAStatus() {
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <InstallIcon color="primary" />
-          Install Avenra
+          Install SchoolIQ
           <IconButton
             onClick={() => setShowInstallPrompt(false)}
             sx={{ ml: 'auto' }}
@@ -161,7 +161,7 @@ export default function PWAStatus() {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body1" gutterBottom>
-            Install Avenra on your device for a better experience:
+            Install SchoolIQ on your device for a better experience:
           </Typography>
           <Box component="ul" sx={{ mt: 2, pl: 2 }}>
             <Typography component="li" variant="body2">
@@ -205,7 +205,7 @@ export default function PWAStatus() {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body1">
-            A new version of Avenra is available. Update now to get the latest features and improvements.
+            A new version of SchoolIQ is available. Update now to get the latest features and improvements.
           </Typography>
         </DialogContent>
         <DialogActions>

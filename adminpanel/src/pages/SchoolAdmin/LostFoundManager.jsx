@@ -1,8 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { lostFoundAPI } from '../../api';
-import { Search, Plus, Trash2, CheckCircle2, Image as ImageIcon, X } from 'lucide-react';
+import { Modal } from '../../components/common/Modal';
+import {
+  Search,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  Image as ImageIcon,
+  X,
+  Sparkles,
+  Megaphone,
+  Clock3
+} from 'lucide-react';
+import './LostFoundManager.css';
 
 export function LostFoundManager() {
   const { user } = useAuth();
@@ -133,245 +145,279 @@ export function LostFoundManager() {
     }
   };
 
+  // Calculate statistics based on items currently displayed or in lists
+  const stats = useMemo(() => {
+    return {
+      total: items.length,
+      lost: items.filter((item) => item.type === 'lost').length,
+      found: items.filter((item) => item.type === 'found').length,
+    };
+  }, [items]);
+
   return (
-    <div className="space-y-6">
-      <div className="page-header flex justify-between items-center">
-        <div>
-          <h1 className="page-title text-2xl font-bold text-slate-900">Lost & Found</h1>
-          <p className="page-subtitle text-sm text-slate-500">Track and report lost/found items inside the school</p>
+    <div className="lostfound-page">
+      {/* Hero Header */}
+      <section className="lostfound-hero">
+        <div className="lostfound-hero-copy">
+          <div className="lostfound-kicker">
+            <Sparkles size={16} />
+            School Registry
+          </div>
+          <h1>Lost & Found</h1>
+          <p>Track, report, and claim lost or found items inside the school campus.</p>
         </div>
         <button
-          onClick={() => setShowCreate(true)}
-          className="btn-primary flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold transition"
+          onClick={() => {
+            resetForm();
+            setShowCreate(true);
+          }}
+          className="lostfound-btn lostfound-btn-primary"
         >
-          <Plus className="w-4 h-4" /> Create Post
+          <Plus size={18} />
+          Create Post
         </button>
-      </div>
+      </section>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200">
-        {[
-          { key: 'open', label: 'Open Items' },
-          { key: 'my', label: 'My Posts' },
-          { key: 'closed', label: 'Closed Items' },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`py-3 px-6 text-sm font-semibold border-b-2 transition ${
-              tab === t.key
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Stats Cards */}
+      <section className="lostfound-stats">
+        <div className="lostfound-stat-card">
+          <span>Items Displayed</span>
+          <strong>{stats.total}</strong>
+        </div>
+        <div className="lostfound-stat-card">
+          <span>Lost Items</span>
+          <strong>{stats.lost}</strong>
+        </div>
+        <div className="lostfound-stat-card">
+          <span>Found Items</span>
+          <strong>{stats.found}</strong>
+        </div>
+      </section>
 
-      {/* Search and Filters */}
-      {tab !== 'my' && (
-        <form onSubmit={handleSearchSubmit} className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search items..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
-            />
-          </div>
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="border border-slate-200 rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          >
-            <option value="all">All Types</option>
-            <option value="lost">Lost</option>
-            <option value="found">Found</option>
-          </select>
-          <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2 rounded-lg font-medium transition">
-            Search
-          </button>
-        </form>
-      )}
+      {/* Toolbar / Search & Filters */}
+      <section className="lostfound-toolbar">
+        {tab !== 'my' ? (
+          <form onSubmit={handleSearchSubmit} className="lostfound-search-container">
+            <div className="lostfound-search">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Search items..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="lostfound-select"
+            >
+              <option value="all">All Types</option>
+              <option value="lost">Lost</option>
+              <option value="found">Found</option>
+            </select>
+            <button type="submit" className="lostfound-btn lostfound-btn-primary">
+              Search
+            </button>
+          </form>
+        ) : (
+          <div style={{ flex: 1 }} />
+        )}
+
+        <div className="lostfound-filters">
+          {[
+            { key: 'open', label: 'Open Items' },
+            { key: 'my', label: 'My Posts' },
+            { key: 'closed', label: 'Closed Items' },
+          ].map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={tab === t.key ? 'active' : ''}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* Item Grid */}
-      {loading ? (
-        <div className="text-center py-12 text-slate-400">Loading items...</div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-12 text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-white">
-          No lost or found items reported yet.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {items.map((item) => {
+      <section className="lostfound-grid">
+        {loading ? (
+          <div className="lostfound-empty">Loading registry items...</div>
+        ) : items.length === 0 ? (
+          <div className="lostfound-empty">
+            <Megaphone size={42} />
+            <strong>No items found</strong>
+            <span>There are no registered posts matching your current filter.</span>
+          </div>
+        ) : (
+          items.map((item) => {
             const isOwner = String(item.created_by) === String(user?.id);
             const isAdmin = ['school_admin', 'super_admin'].includes(user?.role);
             return (
-              <div key={item.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between">
-                <div className="p-5 space-y-4">
-                  <div className="flex justify-between items-start">
-                    <span
-                      className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                        item.type === 'lost' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                      }`}
-                    >
-                      {item.type.toUpperCase()}
+              <article key={item.id} className="lostfound-card">
+                <div>
+                  <div className="lostfound-card-top">
+                    <span className={`lostfound-chip ${item.type === 'lost' ? 'lost' : 'found'}`}>
+                      {item.type}
                     </span>
-                    <span className="text-xs text-slate-400 font-medium">
-                      {new Date(item.date).toLocaleDateString()}
+                    <span className="lostfound-card-date">
+                      {new Date(item.date).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
                     </span>
                   </div>
 
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 mb-1">{item.title}</h3>
-                    {item.description && <p className="text-xs text-slate-500 line-clamp-3">{item.description}</p>}
-                  </div>
+                  <h3>{item.title}</h3>
+                  {item.description && <p>{item.description}</p>}
 
                   {item.photos && item.photos.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="lostfound-photos-grid">
                       {item.photos.map((p, i) => (
-                        <img key={i} src={p} alt="" className="w-full h-24 object-cover rounded-lg border border-slate-100" />
+                        <img key={i} src={p} alt="" className="lostfound-photo" />
                       ))}
                     </div>
                   )}
                 </div>
 
-                <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                  <div className="text-xs text-slate-400 font-semibold">
-                    By: {item.Creator?.name || 'Unknown'} ({item.Creator?.role?.replace(/_/g, ' ')})
+                <div className="lostfound-card-footer">
+                  <div className="lostfound-creator">
+                    <span className="lostfound-creator-name">
+                      By {item.Creator?.name || 'Unknown'}
+                    </span>
+                    <span className="lostfound-creator-role">
+                      {item.Creator?.role?.replace(/_/g, ' ')}
+                    </span>
                   </div>
-                  <div className="flex gap-2">
+
+                  <div className="lostfound-actions">
                     {item.status === 'OPEN' && (isOwner || isAdmin) && (
                       <button
                         onClick={() => handleClose(item.id)}
-                        className="p-1.5 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition"
-                        title="Mark Closed"
+                        className="lostfound-action-close"
+                        title="Mark Solved/Closed"
+                        type="button"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
+                        <CheckCircle2 size={16} />
                       </button>
                     )}
                     {(isOwner || isAdmin) && (
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="p-1.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition"
-                        title="Delete"
+                        className="lostfound-action-delete"
+                        title="Delete Post"
+                        type="button"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 size={16} />
                       </button>
                     )}
                   </div>
                 </div>
-              </div>
+              </article>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </section>
 
-      {/* Create Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center">
-              <h2 className="text-lg font-bold text-slate-900">Create Lost/Found Post</h2>
-              <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Item Title *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Red Pencil Box, Math Book"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
+      {/* Creation Modal */}
+      <Modal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        title="Create Lost & Found Post"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleSubmit} className="lostfound-form">
+          <label>
+            <span>Item Title *</span>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Red Pencil Box, Math Book"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </label>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Post Type</label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    <option value="lost">Lost Item</option>
-                    <option value="found">Found Item</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Description</label>
-                <textarea
-                  rows={3}
-                  placeholder="Provide description of item (where left, stickers, decals, etc.)"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Photos (Max 2)</label>
-                <div className="flex items-center gap-3">
-                  {photos.map((p, i) => (
-                    <div key={i} className="relative w-16 h-16 border border-slate-200 rounded-lg overflow-hidden">
-                      <img src={p} alt="" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(i)}
-                        className="absolute top-0 right-0 bg-rose-600 text-white rounded-bl p-0.5"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                  {photos.length < 2 && (
-                    <label className="w-16 h-16 border-2 border-dashed border-slate-200 hover:border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer text-slate-400">
-                      <ImageIcon className="w-5 h-5" />
-                      <input type="file" accept="image/*" multiple onChange={handlePhotoChange} className="hidden" />
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreate(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-500 hover:text-slate-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-5 py-2 rounded-lg font-semibold transition"
-                >
-                  {submitting ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </form>
+          <div className="lostfound-form-grid">
+            <label>
+              <span>Post Type</span>
+              <select value={type} onChange={(e) => setType(e.target.value)}>
+                <option value="lost">Lost Item</option>
+                <option value="found">Found Item</option>
+              </select>
+            </label>
+            <label>
+              <span>Date</span>
+              <input
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </label>
           </div>
-        </div>
-      )}
+
+          <label>
+            <span>Description</span>
+            <textarea
+              placeholder="Provide detail description of the item, where it was lost/found, tags, stickers, etc."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </label>
+
+          <label>
+            <span>Photos (Max 2)</span>
+            <div className="lostfound-photos-upload">
+              {photos.map((p, i) => (
+                <div key={i} className="lostfound-photo-preview">
+                  <img src={p} alt="upload preview" />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="lostfound-photo-remove"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              {photos.length < 2 && (
+                <label className="lostfound-upload-placeholder">
+                  <ImageIcon size={20} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+          </label>
+
+          <div className="lostfound-form-actions">
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="lostfound-btn lostfound-btn-soft"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="lostfound-btn lostfound-btn-primary"
+            >
+              {submitting ? 'Creating...' : 'Create Post'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

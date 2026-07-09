@@ -281,7 +281,7 @@ export default function Login() {
 
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>
-                Add Avenra Campus to Home Screen
+                Add SchoolIQ to Home Screen
               </Typography>
               <Typography sx={{ fontSize: "11px", color: "rgba(255,255,255,0.75)", lineHeight: 1.2 }}>
                 Faster access, works offline
@@ -454,7 +454,7 @@ export default function Login() {
                   letterSpacing: "-0.02em",
                 }}
               >
-                Avenra Campus
+                SchoolIQ
               </Typography>
             </Stack>
 

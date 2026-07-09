@@ -67,7 +67,7 @@ export function LoginPage() {
             <GraduationCap className="w-8 h-8 text-indigo-300" />
           </div>
           <div className="text-center">
-            <p className="text-white font-bold text-3xl tracking-tight">Avenra Campus</p>
+            <p className="text-white font-bold text-3xl tracking-tight">SchoolIQ</p>
             <p className="text-indigo-400/60 text-xs uppercase tracking-widest font-semibold mt-1">Admin Console</p>
           </div>
         </div>
@@ -90,7 +90,7 @@ export function LoginPage() {
             <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-3">
               <GraduationCap className="w-7 h-7 text-white" />
             </div>
-            <p className="text-slate-900 font-bold text-2xl">Avenra Campus</p>
+            <p className="text-slate-900 font-bold text-2xl">SchoolIQ</p>
             <p className="text-slate-400 text-xs mt-0.5">Admin Management Console</p>
           </div>
 

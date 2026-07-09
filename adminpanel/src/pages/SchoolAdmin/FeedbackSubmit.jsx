@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { feedbackAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
-import { Camera, X } from 'lucide-react';
+import { Camera, X, Sparkles } from 'lucide-react';
+import './FeedbackSubmit.css';
 
 function getBrowserInfo() {
   const ua = navigator.userAgent;
@@ -73,20 +74,27 @@ export function FeedbackSubmit() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="page-title text-2xl font-bold text-slate-900">Feedback</h1>
-        <p className="page-subtitle text-sm text-slate-500">Report bugs, request features, or send appreciation to platform developers.</p>
-      </div>
+    <div className="feedback-page">
+      {/* Hero Card */}
+      <section className="feedback-hero">
+        <div>
+          <div className="feedback-kicker">
+            <Sparkles size={16} />
+            Platform Support
+          </div>
+          <h1>Feedback Desk</h1>
+          <p>Report bugs, request new features, or send appreciation to our platform developers.</p>
+        </div>
+      </section>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Feedback Category</label>
+      {/* Form Card */}
+      <div className="feedback-card">
+        <form onSubmit={handleSubmit} className="feedback-form">
+          <label>
+            <span>Feedback Category</span>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
             >
               <option value="bug_report">Bug Report</option>
               <option value="feature_request">Feature Request</option>
@@ -94,58 +102,63 @@ export function FeedbackSubmit() {
               <option value="complaint">Complaint</option>
               <option value="appreciation">Appreciation</option>
             </select>
-          </div>
+          </label>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Subject Title *</label>
+          <label>
+            <span>Subject Title *</span>
             <input
               type="text"
               required
               placeholder="e.g. Seeder page hangs on big student Excel sheets"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
             />
-          </div>
+          </label>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Description *</label>
+          <label>
+            <span>Description *</span>
             <textarea
               required
-              rows={5}
-              placeholder="Provide details about the issue or suggestion..."
+              placeholder="Provide details about the issue, steps to reproduce, or details of your suggestion..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
             />
-          </div>
+          </label>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Screenshot (Optional)</label>
-            {screenshot ? (
-              <div className="relative w-40 h-30 border border-slate-200 rounded-lg overflow-hidden">
-                <img src={screenshot} alt="" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={removeScreenshot}
-                  className="absolute top-0 right-0 bg-rose-600 text-white rounded-bl p-0.5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <label className="border border-dashed border-slate-300 hover:border-slate-400 rounded-lg px-4 py-3 flex items-center justify-center gap-2 text-slate-500 text-sm font-semibold cursor-pointer transition">
-                <Camera className="w-4 h-4" /> Upload Screenshot
-                <input type="file" accept="image/*" onChange={handleScreenshotChange} className="hidden" />
-              </label>
-            )}
-          </div>
+          <label>
+            <span>Screenshot (Optional)</span>
+            <div className="feedback-screenshot-upload">
+              {screenshot ? (
+                <div className="feedback-screenshot-preview">
+                  <img src={screenshot} alt="screenshot preview" />
+                  <button
+                    type="button"
+                    onClick={removeScreenshot}
+                    className="feedback-screenshot-remove"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <label className="feedback-upload-placeholder">
+                  <Camera size={16} />
+                  <span>Upload Screenshot</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleScreenshotChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+          </label>
 
-          <div className="pt-2">
+          <div style={{ marginTop: '8px' }}>
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white py-2.5 rounded-lg font-bold text-sm transition shadow-sm"
+              className="feedback-btn-submit"
             >
               {submitting ? 'Submitting Feedback...' : 'Submit Feedback'}
             </button>

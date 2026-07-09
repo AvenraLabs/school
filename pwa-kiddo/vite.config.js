@@ -12,10 +12,10 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['avenra.jpeg', 'safari-pinned-tab.svg'],
+      includeAssets: ['schooliq.jpeg', 'safari-pinned-tab.svg'],
       manifest: {
-        name: 'Avenra Campus',
-        short_name: 'Avenra',
+        name: 'SchoolIQ',
+        short_name: 'SchoolIQ',
         description: 'A comprehensive Progressive Web Application for students, teachers, and parents in an educational environment',
         theme_color: '#F5EDE3',
         background_color: '#ffffff',
@@ -25,17 +25,17 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'avenra.jpeg',
+            src: 'schooliq.jpeg',
             sizes: '192x192',
             type: 'image/jpeg'
           },
           {
-            src: 'avenra.jpeg',
+            src: 'schooliq.jpeg',
             sizes: '512x512',
             type: 'image/jpeg'
           },
           {
-            src: 'avenra.jpeg',
+            src: 'schooliq.jpeg',
             sizes: '512x512',
             type: 'image/jpeg',
             purpose: 'any maskable'

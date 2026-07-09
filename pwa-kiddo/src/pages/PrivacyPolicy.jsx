@@ -20,7 +20,7 @@ export default function PrivacyPolicy() {
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Typography variant="subtitle1" fontWeight="900">
-              Avenra Campus
+              SchoolIQ
             </Typography>
           </Box>
         </Box>

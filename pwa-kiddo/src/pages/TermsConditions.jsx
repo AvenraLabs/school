@@ -20,7 +20,7 @@ export default function TermsConditions() {
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Typography variant="subtitle1" fontWeight="900">
-              Avenra Campus
+              SchoolIQ
             </Typography>
           </Box>
         </Box>
@@ -68,7 +68,7 @@ export default function TermsConditions() {
                 4. WhatsApp Messaging Services
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Automated reminders and notifications sent via WhatsApp are supplementary. Avenra Campus is not liable for delayed delivery of transport details or attendance warnings due to telco service interruptions.
+                Automated reminders and notifications sent via WhatsApp are supplementary. SchoolIQ is not liable for delayed delivery of transport details or attendance warnings due to telco service interruptions.
               </Typography>
             </Box>
 
