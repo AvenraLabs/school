@@ -15,10 +15,7 @@ export default function PrivacyPolicy() {
             <ArrowLeft className="w-4 h-4" /> Back to Login
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-slate-900">School App</span>
+            <span className="font-bold text-slate-900">Avenra Campus</span>
           </div>
         </div>
 
@@ -75,7 +72,7 @@ export default function PrivacyPolicy() {
               <p>
                 For questions regarding data practices or to request data deletion, contact us at:
                 <br />
-                Email: <strong>support@avenra.org</strong>
+                Email: <strong>founders@avenra.org</strong>
               </p>
             </div>
           </div>

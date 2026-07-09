@@ -19,21 +19,8 @@ export default function TermsConditions() {
           </Button>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Box
-              sx={{
-                width: 32,
-                height: 32,
-                borderRadius: "8px",
-                background: "linear-gradient(135deg, #cc3a7e 0%, #6f55c4 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-            >
-              <AutoAwesome sx={{ color: "white", fontSize: 16 }} />
-            </Box>
             <Typography variant="subtitle1" fontWeight="900">
-              School App
+              Avenra Campus
             </Typography>
           </Box>
         </Box>
@@ -81,7 +68,7 @@ export default function TermsConditions() {
                 4. WhatsApp Messaging Services
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Automated reminders and notifications sent via WhatsApp are supplementary. School App is not liable for delayed delivery of transport details or attendance warnings due to telco service interruptions.
+                Automated reminders and notifications sent via WhatsApp are supplementary. Avenra Campus is not liable for delayed delivery of transport details or attendance warnings due to telco service interruptions.
               </Typography>
             </Box>
 
@@ -101,7 +88,7 @@ export default function TermsConditions() {
               <Typography variant="body2" color="text.secondary">
                 For questions regarding terms, acceptable use, or license parameters, contact:
                 <br />
-                Email: <strong>support@avenra.org</strong>
+                Email: <strong>founders@avenra.org</strong>
               </Typography>
             </Box>
           </Stack>

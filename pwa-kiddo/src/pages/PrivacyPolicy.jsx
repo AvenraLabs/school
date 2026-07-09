@@ -19,21 +19,8 @@ export default function PrivacyPolicy() {
           </Button>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Box
-              sx={{
-                width: 32,
-                height: 32,
-                borderRadius: "8px",
-                background: "linear-gradient(135deg, #cc3a7e 0%, #6f55c4 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}
-            >
-              <AutoAwesome sx={{ color: "white", fontSize: 16 }} />
-            </Box>
             <Typography variant="subtitle1" fontWeight="900">
-              School App
+              Avenra Campus
             </Typography>
           </Box>
         </Box>
@@ -110,7 +97,7 @@ export default function PrivacyPolicy() {
               <Typography variant="body2" color="text.secondary">
                 For questions regarding data practices or to request data deletion, contact us at:
                 <br />
-                Email: <strong>support@avenra.org</strong>
+                Email: <strong>founders@avenra.org</strong>
               </Typography>
             </Box>
           </Stack>

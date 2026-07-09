@@ -13,12 +13,103 @@ import { useAuth } from "../auth/AuthProvider";
 import LoginForm from "../modules/login/LoginForm";
 import { useEffect, useState } from "react";
 import { usePwaInstall } from "../pwa/usePwaInstall";
+import { useTheme } from "@mui/material/styles";
+import { setThemeColor } from "../pwa/themeMeta";
 
 export default function Login() {
   const { user, loading, logout } = useAuth();
   const [blocked, setBlocked] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const { canInstall, isInstalled, install } = usePwaInstall();
+
+  const theme = useTheme();
+
+  // Cloud dragging states
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [isReturning, setIsReturning] = useState(false);
+
+  // Reset scroll and manage theme-color
+  useEffect(() => {
+    // Reset scroll position to top
+    window.scrollTo(0, 0);
+
+    // Set theme color to blend with the top gradient of login page
+    setThemeColor("#F5EDE3");
+
+    return () => {
+      // Restore theme color to theme default on unmount
+      if (theme?.palette?.background?.default) {
+        setThemeColor(theme.palette.background.default);
+      }
+    };
+  }, [theme]);
+
+  // Handle cloud drag events
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return; // Left click only
+    setIsDragging(true);
+    setIsReturning(false);
+    setStartPos({ x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y });
+    e.preventDefault();
+  };
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setIsDragging(true);
+    setIsReturning(false);
+    setStartPos({ x: touch.clientX - dragOffset.x, y: touch.clientY - dragOffset.y });
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e) => {
+      setDragOffset({
+        x: e.clientX - startPos.x,
+        y: e.clientY - startPos.y,
+      });
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      setDragOffset({
+        x: touch.clientX - startPos.x,
+        y: touch.clientY - startPos.y,
+      });
+    };
+
+    const handleDragEnd = () => {
+      setIsDragging(false);
+      if (dragOffset.x === 0 && dragOffset.y === 0) {
+        setIsReturning(false);
+      } else {
+        setIsReturning(true);
+        setDragOffset({ x: 0, y: 0 });
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleDragEnd);
+    window.addEventListener("touchmove", handleTouchMove);
+    window.addEventListener("touchend", handleDragEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleDragEnd);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleDragEnd);
+    };
+  }, [isDragging, startPos, dragOffset]);
+
+  const handleTransitionEnd = (e) => {
+    if (e.propertyName === "transform" && !isDragging) {
+      setIsReturning(false);
+    }
+  };
 
   const showBanner = canInstall && !isInstalled && !bannerDismissed;
 
@@ -65,6 +156,11 @@ export default function Login() {
           "@keyframes float": {
             "0%": { transform: "translateY(0px)" },
             "50%": { transform: "translateY(6px)" },
+            "100%": { transform: "translateY(0px)" },
+          },
+          "@keyframes floatBooks": {
+            "0%": { transform: "translateY(0px)" },
+            "50%": { transform: "translateY(18px)" },
             "100%": { transform: "translateY(0px)" },
           },
         }}
@@ -185,7 +281,7 @@ export default function Login() {
 
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>
-                Add School App to Home Screen
+                Add Avenra Campus to Home Screen
               </Typography>
               <Typography sx={{ fontSize: "11px", color: "rgba(255,255,255,0.75)", lineHeight: 1.2 }}>
                 Faster access, works offline
@@ -239,6 +335,9 @@ export default function Login() {
         >
           {/* Cloud — CSS shadow only, no SVG filter artifact */}
           <Box
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+            onTransitionEnd={handleTransitionEnd}
             sx={{
               position: "absolute",
               top: { xs: 88, sm: 108 },
@@ -246,16 +345,27 @@ export default function Login() {
               width: { xs: 108, sm: 124 },
               height: "auto",
               zIndex: 3,
-              pointerEvents: "none",
-              animation: "float 6s ease-in-out infinite",
+              cursor: isDragging ? "grabbing" : "grab",
+              pointerEvents: "auto",
+              userSelect: "none",
+              touchAction: "none",
               filter: "drop-shadow(4px 8px 16px rgba(132, 115, 161, 0.45))",
+              transform: (isDragging || isReturning)
+                ? `translate(${dragOffset.x}px, ${dragOffset.y}px)`
+                : "none",
+              transition: isReturning
+                ? "transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+                : "none",
+              animation: (!isDragging && !isReturning)
+                ? "float 6s ease-in-out infinite"
+                : "none",
             }}
           >
             <Box
               component="img"
               src="/cloud.svg"
               alt=""
-              sx={{ width: "100%", height: "auto", display: "block" }}
+              sx={{ width: "100%", height: "auto", display: "block", pointerEvents: "none" }}
             />
           </Box>
 
@@ -294,7 +404,7 @@ export default function Login() {
                 justifyContent: "center",
               }}
             >
-              <Box sx={{ width: { xs: 220, sm: 250 }, animation: "float 8s ease-in-out infinite" }}>
+              <Box sx={{ width: { xs: 220, sm: 250 }, animation: "floatBooks 8s ease-in-out infinite" }}>
                 <Box
                   component="img"
                   src="/books.png"
@@ -318,7 +428,7 @@ export default function Login() {
               pb: "170px",
             }}
           >
-            <Stack direction="row" alignItems="center" spacing={1}>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
               <Box
                 sx={{
                   width: 46,
@@ -337,14 +447,14 @@ export default function Login() {
               <Typography
                 sx={{
                   fontFamily: "'Inter', sans-serif",
-                  fontWeight: 700,
-                  fontSize: { xs: "26px", sm: "32px" },
+                  fontWeight: 900,
+                  fontSize: { xs: "28px", sm: "34px" },
                   color: "#000000",
                   lineHeight: 1.2,
                   letterSpacing: "-0.02em",
                 }}
               >
-                School App
+                Avenra Campus
               </Typography>
             </Stack>
 

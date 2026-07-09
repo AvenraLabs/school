@@ -9,11 +9,7 @@ export function AboutAdmin() {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm text-center">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center mx-auto mb-4 shadow-md">
-          <Sparkles className="w-8 h-8 text-white" />
-        </div>
-
-        <h2 className="text-xl font-bold text-slate-950">School App</h2>
+        <h2 className="text-xl font-bold text-slate-950 mt-4">Avenra Campus</h2>
         <p className="text-xs text-slate-400 font-semibold mb-6">Version 1.3.0</p>
 
         <hr className="border-slate-100 my-6" />
@@ -33,8 +29,8 @@ export function AboutAdmin() {
 
           <div>
             <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Support Desk</span>
-            <a href="mailto:support@avenra.org" className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline">
-              support@avenra.org
+            <a href="mailto:founders@avenra.org" className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline">
+              founders@avenra.org
             </a>
           </div>
 

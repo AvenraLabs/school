@@ -14,10 +14,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['avenra.jpeg', 'safari-pinned-tab.svg'],
       manifest: {
-        name: 'Avenra - School App',
+        name: 'Avenra Campus',
         short_name: 'Avenra',
         description: 'A comprehensive Progressive Web Application for students, teachers, and parents in an educational environment',
-        theme_color: '#1976d2',
+        theme_color: '#F5EDE3',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',

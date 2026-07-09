@@ -1,9 +1,9 @@
 // PWA Manifest Configuration
 export const pwaManifest = {
-  name: 'Avenra - School App',
+  name: 'Avenra Campus',
   short_name: 'Avenra',
   description: 'A comprehensive Progressive Web Application for students, teachers, and parents in an educational environment',
-  theme_color: '#1976d2',
+  theme_color: '#F5EDE3',
   background_color: '#ffffff',
   display: 'standalone',
   orientation: 'portrait',
@@ -84,7 +84,7 @@ export const themeColors = {
 
 export function updateThemeColor(theme = 'light') {
   const color = themeColors[theme] || themeColors.light;
-  
+
   // Update theme-color meta tag
   let meta = document.querySelector('meta[name="theme-color"]');
   if (!meta) {
@@ -93,7 +93,7 @@ export function updateThemeColor(theme = 'light') {
     document.head.appendChild(meta);
   }
   meta.setAttribute('content', color);
-  
+
   // Update status bar style for iOS
   let statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
   if (!statusBarMeta) {
@@ -101,5 +101,5 @@ export function updateThemeColor(theme = 'light') {
     statusBarMeta.name = 'apple-mobile-web-app-status-bar-style';
     document.head.appendChild(statusBarMeta);
   }
-  statusBarMeta.setAttribute('content', theme === 'dark' ? 'black-translucent' : 'default');
+  statusBarMeta.setAttribute('content', 'black-translucent');
 }

@@ -490,7 +490,7 @@ export function SuperAdminPage() {
               <Sparkles style={{ width: '18px', height: '18px', color: '#fff' }} />
             </div>
             <div>
-              <p style={{ fontSize: '15px', fontWeight: 700, color: '#fff', lineHeight: 1 }}>School App</p>
+              <p style={{ fontSize: '15px', fontWeight: 700, color: '#fff', lineHeight: 1 }}>Avenra Campus</p>
               <p style={{ fontSize: '11px', color: 'rgba(165,180,252,0.55)', marginTop: '3px', fontWeight: 500 }}>Super Admin</p>
             </div>
           </div>

@@ -39,7 +39,12 @@ export default function AppHeader() {
   }
 
   return (
-    <AppBar position="sticky" color="default" elevation={1}>
+    <AppBar
+      position="sticky"
+      color="default"
+      elevation={1}
+      sx={{ pt: "env(safe-area-inset-top, 0px)" }}
+    >
       <Toolbar sx={{ display: "flex", gap: 2 }}>
         <Typography variant="h6" sx={{ flex: 1, fontWeight: 600 }}>
           School App
