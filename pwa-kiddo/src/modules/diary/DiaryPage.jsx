@@ -9,6 +9,7 @@ import {
   Fab,
   Skeleton,
 } from "@mui/material";
+import { useTheme, alpha } from "@mui/material/styles";
 import { Add } from "@mui/icons-material";
 import { useDiary } from "./useDiary";
 import { useAuth } from "../../auth/AuthProvider";
