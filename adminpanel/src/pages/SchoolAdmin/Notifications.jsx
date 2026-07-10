@@ -1,7 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { notificationsAPI, classesAPI } from '../../api';
+import { notificationsAPI, classesAPI, uploadAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../context/ToastContext';
+
+const getAssetUrl = (path) => {
+  if (!path) return '';
+  if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  const host = baseUrl.replace(/\/api$/, '');
+  return `${host}${path}`;
+};
 import {
   Bell,
   CheckCircle,
@@ -13,6 +23,7 @@ import {
   Send,
   Sparkles,
   Users,
+  Camera,
 } from 'lucide-react';
 import './Notifications.css';
 
@@ -41,19 +52,24 @@ export function Notifications() {
   const [acks, setAcks] = useState(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
-  const [form, setForm] = useState({ title: '', message: '', target_role: 'all', class_id: '', section_id: '', send_whatsapp: false });
+  const [form, setForm] = useState({ title: '', message: '', target_role: 'all', class_id: '', section_id: '', send_whatsapp: false, image_url: '' });
   const [sending, setSending] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const LIMIT = 15;
   const toast = useToast();
 
   useEffect(() => {
     loadNotifications();
     loadClasses();
-  }, []);
+  }, [page]);
 
   const loadNotifications = async () => {
     try {
-      const res = await notificationsAPI.list();
+      const res = await notificationsAPI.list({ limit: LIMIT, offset: page * LIMIT });
       setNotifications(res.items || []);
+      setTotalCount(res.total || 0);
     } catch (e) {
       toast.error('Failed to load notifications');
     } finally {
@@ -70,6 +86,37 @@ export function Notifications() {
     }
   };
 
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const res = await uploadAPI.uploadAnnouncement(file);
+      if (res.success && res.url) {
+        setForm((prev) => ({ ...prev, image_url: res.url }));
+        toast.success('Image uploaded successfully');
+      } else {
+        toast.error('Image upload failed');
+      }
+    } catch (err) {
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    if (form.image_url) {
+      try {
+        await uploadAPI.deleteFile(form.image_url);
+      } catch (e) {
+        console.error("Cleanup failed:", e);
+      }
+    }
+    setForm((prev) => ({ ...prev, image_url: '' }));
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
     setSending(true);
@@ -80,12 +127,18 @@ export function Notifications() {
         form.target_role,
         form.class_id ? Number(form.class_id) : undefined,
         form.section_id ? Number(form.section_id) : undefined,
-        form.send_whatsapp
+        form.send_whatsapp,
+        form.image_url
       );
       toast.success('Notification sent');
       setShowCompose(false);
-      setForm({ title: '', message: '', target_role: 'all', class_id: '', section_id: '', send_whatsapp: false });
-      loadNotifications();
+      setForm({ title: '', message: '', target_role: 'all', class_id: '', section_id: '', send_whatsapp: false, image_url: '' });
+      // Go back to page 0 so the new announcement appears at the top
+      if (page === 0) {
+        loadNotifications();
+      } else {
+        setPage(0); // useEffect [page] will trigger the reload
+      }
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to send notification');
     } finally {
@@ -118,11 +171,13 @@ export function Notifications() {
     });
   }, [filter, notifications, query]);
 
+  const totalPages = Math.ceil(totalCount / LIMIT);
+
   const stats = useMemo(() => ({
-    total: notifications.length,
+    total: totalCount,
     student: notifications.filter((item) => item.target_role === 'student').length,
     teacher: notifications.filter((item) => item.target_role === 'teacher').length,
-  }), [notifications]);
+  }), [notifications, totalCount]);
 
   return (
     <div className="notifications-page">
@@ -203,6 +258,15 @@ export function Notifications() {
                 </div>
                 <h3>{notification.title}</h3>
                 <p>{notification.message}</p>
+                {notification.image_url && (
+                  <div className="notification-card-image" style={{ margin: '12px 0', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', maxHeight: '160px' }}>
+                    <img
+                      src={getAssetUrl(notification.image_url)}
+                      alt="announcement"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                )}
                 <div className="notification-card-meta">
                   <span>
                     <Clock3 size={14} />
@@ -219,6 +283,33 @@ export function Notifications() {
         )}
       </section>
 
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="notify-pagination" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '24px', padding: '0 4px' }}>
+          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>
+            Page {page + 1} of {totalPages} &nbsp;·&nbsp; {totalCount} total
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              className="notify-btn notify-btn-soft"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              style={{ opacity: page === 0 ? 0.45 : 1 }}
+            >
+              ← Previous
+            </button>
+            <button
+              className="notify-btn notify-btn-soft"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              style={{ opacity: page >= totalPages - 1 ? 0.45 : 1 }}
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
+
       <Modal isOpen={showCompose} onClose={() => setShowCompose(false)} title="Compose Announcement" maxWidth="max-w-xl">
         <form onSubmit={handleSend} className="notify-form">
           <label>
@@ -228,6 +319,69 @@ export function Notifications() {
           <label>
             <span>Message</span>
             <textarea required value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Write a short, clear message..." />
+          </label>
+          <label>
+            <span>Photo Attachment (Optional)</span>
+            <div className="notify-image-uploader" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+              {form.image_url ? (
+                <div style={{ position: 'relative', width: '80px', height: '60px' }}>
+                  <img
+                    src={getAssetUrl(form.image_url)}
+                    alt="attachment preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      right: '-6px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '10px'
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '10px 16px',
+                    border: '1px dashed #cbd5e0',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    color: '#4a5568',
+                    backgroundColor: '#f7fafc',
+                    width: '100%'
+                  }}
+                >
+                  <Camera size={18} />
+                  {uploadingImage ? 'Uploading...' : 'Attach Image / Take Photo'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    style={{ display: 'none' }}
+                    disabled={uploadingImage}
+                  />
+                </label>
+              )}
+            </div>
           </label>
           <div className="notify-form-grid">
             <label>
@@ -278,21 +432,43 @@ export function Notifications() {
       <Modal isOpen={!!showAcks} onClose={() => { setShowAcks(null); setAcks(null); }} title={`Acknowledgements - ${showAcks?.title || ''}`}>
         {acks === null ? (
           <div className="acks-empty">Loading acknowledgements...</div>
-        ) : acks.rows?.length === 0 ? (
-          <div className="acks-empty">No acknowledgements yet</div>
         ) : (
           <div className="acks-panel">
-            <div className="acks-count">
-              <Megaphone size={16} />
-              <strong>{acks.count}</strong> people acknowledged
-            </div>
-            {(acks.rows || []).map((ack, index) => (
-              <div key={index} className="ack-row">
-                <CheckCircle size={17} />
-                <span>{ack.user?.name || ack.user?.username || `User #${ack.user_id}`}</span>
-                {ack.acknowledged_at && <small>{formatDate(ack.acknowledged_at)}</small>}
+            {/* Seen / Unseen Stats Grid */}
+            <div className="acks-stats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+              <div className="acks-stat-pill" style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#eafaf1', padding: '12px', borderRadius: '12px', border: '1px solid #c2f0d5', textAlign: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#2ecc71', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Seen</span>
+                <strong style={{ fontSize: '20px', fontWeight: '900', color: '#1e7e34', marginTop: '4px' }}>{acks.seenCount ?? 0}</strong>
               </div>
-            ))}
+              <div className="acks-stat-pill" style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#fdf3f2', padding: '12px', borderRadius: '12px', border: '1px solid #f9d6d5', textAlign: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#e74c3c', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Unseen</span>
+                <strong style={{ fontSize: '20px', fontWeight: '900', color: '#bd2130', marginTop: '4px' }}>{acks.unseenCount ?? 0}</strong>
+              </div>
+            </div>
+
+            {acks.rows?.length === 0 ? (
+              <div className="acks-empty">No acknowledgements yet</div>
+            ) : (
+              <div className="acks-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto', paddingRight: '4px' }}>
+                {(acks.rows || []).map((ack, index) => {
+                  const u = ack.User || ack.user;
+                  const displayName = u?.name || `User #${ack.user_id}`;
+                  const displayRole = u?.role ? u.role.replace(/_/g, ' ') : '';
+                  return (
+                    <div key={index} className="ack-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <CheckCircle size={16} style={{ color: '#2ecc71' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '14px', fontWeight: '700', color: '#2d3748' }}>{displayName}</span>
+                          {displayRole && <small style={{ fontSize: '11px', color: '#718096', textTransform: 'capitalize' }}>{displayRole}</small>}
+                        </div>
+                      </div>
+                      {ack.acknowledged_at && <span style={{ fontSize: '12px', color: '#a0aec0' }}>{formatDate(ack.acknowledged_at)}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </Modal>

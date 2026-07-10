@@ -1,69 +1,41 @@
 import { Navigate, useLocation } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthProvider";
-import { getMyProfile } from "../modules/profile/profile.api";
 
 const APPROVAL_ROLES = ["student", "teacher", "parent"];
 
+/**
+ * RequireApproval guards routes that need an approved account.
+ *
+ * Strategy:
+ * - approval_status is hydrated into AuthProvider's user context during profile fetch
+ * - We read it directly from `user.approval_status` — no separate API call
+ * - This eliminates the redirect loop: when ApprovalPending calls updateUser({ approval_status: 'approved' }),
+ *   this component re-renders immediately and lets the route through
+ */
 export default function RequireApproval({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const [status, setStatus] = useState(null);
-  const [checking, setChecking] = useState(true);
 
-  const shouldCheck = useMemo(() => {
-    return user?.role && APPROVAL_ROLES.includes(user.role);
-  }, [user?.role]);
+  // While auth is initializing, render nothing
+  if (loading) return null;
 
-  useEffect(() => {
-    let isMounted = true;
+  const shouldCheck = user?.role && APPROVAL_ROLES.includes(user.role);
 
-    async function fetchApprovalStatus() {
-      if (!shouldCheck) {
-        if (isMounted) setChecking(false);
-        return;
+  if (shouldCheck) {
+    const status = user.approval_status;
+
+    // If we have a status and it's not approved → redirect
+    if (status && status !== "approved") {
+      const roleProfilePath = user.role ? `/${user.role}/profile` : null;
+      const isProfileRoute = roleProfilePath
+        ? location.pathname.startsWith(roleProfilePath)
+        : false;
+
+      if (!isProfileRoute) {
+        return (
+          <Navigate to="/approval-pending" state={{ from: location }} replace />
+        );
       }
-
-      try {
-        setChecking(true);
-        const res = await getMyProfile(user.role);
-        const data = res?.data || {};
-        const approvalStatus = data?.approval_status || null;
-
-        if (isMounted) {
-          setStatus(approvalStatus);
-        }
-      } catch (err) {
-        console.error("Failed to fetch approval status:", err);
-        if (isMounted) {
-          setStatus(null);
-        }
-      } finally {
-        if (isMounted) {
-          setChecking(false);
-        }
-      }
-    }
-
-    fetchApprovalStatus();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [shouldCheck, user?.role]);
-
-  if (loading || checking) return null;
-
-  if (status && status !== "approved") {
-    const roleProfilePath = user?.role ? `/${user.role}/profile` : null;
-    const isProfileRoute = roleProfilePath
-      ? location.pathname.startsWith(roleProfilePath)
-      : false;
-
-    if (!isProfileRoute) {
-      return (
-        <Navigate to="/approval-pending" state={{ from: location }} replace />
-      );
     }
   }
 

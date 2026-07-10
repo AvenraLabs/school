@@ -23,6 +23,11 @@ export const authAPI = {
     });
     return response.data;
   },
+
+  updateProfile: async (profileData) => {
+    const response = await axiosInstance.patch('/auth/profile', profileData);
+    return response.data;
+  },
 };
 
 // School APIs (Super Admin)
@@ -309,6 +314,19 @@ export const approvalsAPI = {
     });
     return response.data;
   },
+
+  listProfileUpdates: async () => {
+    const response = await axiosInstance.get('/admin/approvals/profile-updates');
+    return response.data;
+  },
+
+  processProfileUpdate: async (id, action, rejectionReason) => {
+    const response = await axiosInstance.post(`/admin/approvals/profile-updates/${id}/process`, {
+      action,
+      rejection_reason: rejectionReason,
+    });
+    return response.data;
+  },
 };
 
 // Timetable API
@@ -377,7 +395,7 @@ export const teacherAssignmentsAPI = {
 
 // Notifications API
 export const notificationsAPI = {
-  create: async (title, message, targetRole, classId, sectionId, sendWhatsApp) => {
+  create: async (title, message, targetRole, classId, sectionId, sendWhatsApp, imageUrl) => {
     const response = await axiosInstance.post('/notifications', {
       title,
       message,
@@ -385,12 +403,13 @@ export const notificationsAPI = {
       class_id: classId,
       section_id: sectionId,
       send_whatsapp: sendWhatsApp,
+      image_url: imageUrl,
     });
     return response.data;
   },
 
-  list: async () => {
-    const response = await axiosInstance.get('/notifications');
+  list: async (params = {}) => {
+    const response = await axiosInstance.get('/notifications', { params });
     return response.data;
   },
 
@@ -685,8 +704,8 @@ export const lostFoundAPI = {
     const response = await axiosInstance.get('/lost-found', { params });
     return response.data;
   },
-  listMy: async () => {
-    const response = await axiosInstance.get('/lost-found/my');
+  listMy: async (params = {}) => {
+    const response = await axiosInstance.get('/lost-found/my', { params });
     return response.data;
   },
   create: async (data) => {
@@ -714,6 +733,33 @@ export const feedbackAPI = {
   },
   updateStatus: async (id, status) => {
     const response = await axiosInstance.patch(`/feedback/${id}/status`, { status });
+    return response.data;
+  },
+};
+
+export const uploadAPI = {
+  uploadAnnouncement: async (file) => {
+    const formData = new FormData();
+    formData.append('announcement', file);
+    const response = await axiosInstance.post('/upload/announcement', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  uploadAvatar: async (file) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const response = await axiosInstance.post('/upload/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  deleteFile: async (filePath) => {
+    const response = await axiosInstance.post('/upload/delete-file', { filePath });
     return response.data;
   },
 };

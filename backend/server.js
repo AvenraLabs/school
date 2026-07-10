@@ -78,7 +78,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(morgan("dev"));
 
 const __filename = fileURLToPath(import.meta.url);
@@ -253,6 +255,22 @@ async function runDbMigrations() {
     `);
     await db.query(`
       ALTER TABLE attendances ADD COLUMN IF NOT EXISTS updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL;
+    `);
+    await db.query(`
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS image_url TEXT;
+    `);
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS profile_update_requests (
+        id BIGSERIAL PRIMARY KEY,
+        school_id BIGINT NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(50) NOT NULL,
+        pending_data JSON NOT NULL,
+        status VARCHAR(50) DEFAULT 'PENDING',
+        rejection_reason TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
     `);
   } catch (err) {
     console.log("Note: Altering columns skipped or failed:", err.message);

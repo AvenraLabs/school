@@ -43,11 +43,16 @@ const Notification = db.define(
 
     class_id: {
       type: DataTypes.BIGINT,
-      allowNull: true, // teacher → own class, admin optional
+      allowNull: true,
     },
 
     section_id: {
       type: DataTypes.BIGINT,
+      allowNull: true,
+    },
+
+    image_url: {
+      type: DataTypes.TEXT,
       allowNull: true,
     },
 

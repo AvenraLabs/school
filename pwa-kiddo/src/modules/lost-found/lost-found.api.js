@@ -1,13 +1,13 @@
 import api from "../../api/axios";
 
-export const getLostFoundItems = (status = "OPEN", type = "", search = "") => {
+export const getLostFoundItems = (status = "OPEN", type = "", search = "", limit = 10, offset = 0) => {
   return api.get("/lost-found", {
-    params: { status, type, search }
+    params: { status, type, search, limit, offset }
   });
 };
 
-export const getMyLostFoundItems = () => {
-  return api.get("/lost-found/my");
+export const getMyLostFoundItems = (limit = 10, offset = 0) => {
+  return api.get("/lost-found/my", { params: { limit, offset } });
 };
 
 export const createLostFoundItem = (data) => {

@@ -55,6 +55,7 @@ import ReportCardMark from "../modules/report-cards/report-card-mark.model.js";
 import Notification from "../modules/notifications/notification.model.js";
 import NotificationAck from "../modules/notifications/notification-ack.model.js";
 import WhatsappLog from "../modules/whatsapp/whatsapp-log.model.js";
+import ProfileUpdateRequest from "../modules/approvals/profile-update-request.model.js";
 
 /* ===================== GROUP CHAT ===================== */
 import GroupChat from "../modules/group-chat/group-chat.model.js";
@@ -99,6 +100,12 @@ const initAssociations = () => {
 
   User.hasMany(Feedback, { foreignKey: "user_id", onDelete: "CASCADE" });
   Feedback.belongsTo(User, { foreignKey: "user_id" });
+
+  /* ==================== PROFILE UPDATE REQUESTS ==================== */
+  School.hasMany(ProfileUpdateRequest, { foreignKey: "school_id", onDelete: "CASCADE" });
+  ProfileUpdateRequest.belongsTo(School, { foreignKey: "school_id" });
+  User.hasMany(ProfileUpdateRequest, { foreignKey: "user_id", onDelete: "CASCADE" });
+  ProfileUpdateRequest.belongsTo(User, { foreignKey: "user_id" });
 
   /* ==================== USER PROFILES ==================== */
   User.hasOne(Student, { foreignKey: "user_id" });
@@ -271,6 +278,10 @@ const initAssociations = () => {
   Notification.belongsTo(Class, { foreignKey: "class_id" });
   NotificationAck.belongsTo(Notification, {
     foreignKey: "notification_id",
+    onDelete: "CASCADE",
+  });
+  NotificationAck.belongsTo(User, {
+    foreignKey: "user_id",
     onDelete: "CASCADE",
   });
 

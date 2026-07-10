@@ -8,6 +8,8 @@ import {
   getTeacherPendingApprovals,
   getAdminPendingApprovals,
   approveRejectRequest,
+  getPendingProfileUpdates,
+  processProfileUpdateRequest,
 } from "./approval.controller.js";
 
 const router = express.Router();
@@ -46,6 +48,20 @@ router.post(
   protect,
   allowRoles("school_admin"),
   approveRejectRequest
+);
+
+router.get(
+  "/admin/approvals/profile-updates",
+  protect,
+  allowRoles("school_admin"),
+  getPendingProfileUpdates
+);
+
+router.post(
+  "/admin/approvals/profile-updates/:id/process",
+  protect,
+  allowRoles("school_admin"),
+  processProfileUpdateRequest
 );
 
 export default router;

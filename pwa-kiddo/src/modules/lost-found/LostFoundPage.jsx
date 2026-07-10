@@ -28,6 +28,7 @@ import {
   Search,
   Close,
   PhotoCamera,
+  CameraAlt,
   DeleteOutline,
   CheckCircleOutline,
   HelpOutline,
@@ -51,8 +52,12 @@ export default function LostFoundPage() {
   const [tabValue, setTabValue] = useState(0); // 0 = Open, 1 = My Posts, 2 = Closed
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all"); // all, lost, found
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const LIMIT = 10;
 
   // Dialog State
   const [openDialog, setOpenDialog] = useState(false);
@@ -65,36 +70,46 @@ export default function LostFoundPage() {
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
-    loadItems();
+    // Reset when tab or filter changes
+    setOffset(0);
+    setItems([]);
   }, [tabValue, typeFilter]);
 
-  async function loadItems() {
-    setLoading(true);
+  // Triggered on mount, tab/filter change (offset=0 reset), or explicit search
+  useEffect(() => {
+    loadItems(true);
+  }, [tabValue, typeFilter, offset]);
+
+  async function loadItems(replace = false) {
+    if (offset === 0) setLoading(true);
+    else setLoadingMore(true);
     try {
       let res;
       if (tabValue === 0) {
-        // Open
         const typeParam = typeFilter === "all" ? "" : typeFilter;
-        res = await getLostFoundItems("OPEN", typeParam, search);
+        res = await getLostFoundItems("OPEN", typeParam, search, LIMIT, offset);
       } else if (tabValue === 1) {
-        // My Posts
-        res = await getMyLostFoundItems();
+        res = await getMyLostFoundItems(LIMIT, offset);
       } else {
-        // Closed
         const typeParam = typeFilter === "all" ? "" : typeFilter;
-        res = await getLostFoundItems("CLOSED", typeParam, search);
+        res = await getLostFoundItems("CLOSED", typeParam, search, LIMIT, offset);
       }
-      setItems(res.data?.data || res.data || []);
+      const newItems = res.data?.data || res.data || [];
+      const total = res.data?.total || 0;
+      setItems((prev) => (offset === 0 ? newItems : [...prev, ...newItems]));
+      setHasMore(offset + LIMIT < total);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    loadItems();
+    setOffset(0);
+    setItems([]);
   };
 
   const handlePhotoUpload = async (e) => {
@@ -156,7 +171,8 @@ export default function LostFoundPage() {
       });
       setOpenDialog(false);
       resetForm();
-      loadItems();
+      setOffset(0);
+      setItems([]);
     } catch (err) {
       setFormError(err.response?.data?.message || "Failed to submit post");
     } finally {
@@ -177,7 +193,8 @@ export default function LostFoundPage() {
     if (!window.confirm("Are you sure you want to close this post?")) return;
     try {
       await closeLostFoundItem(id);
-      loadItems();
+      setOffset(0);
+      setItems([]);
     } catch (err) {
       alert("Failed to close item");
     }
@@ -187,7 +204,8 @@ export default function LostFoundPage() {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
     try {
       await deleteLostFoundItem(id);
-      loadItems();
+      setOffset(0);
+      setItems([]);
     } catch (err) {
       alert("Failed to delete item");
     }
@@ -207,7 +225,7 @@ export default function LostFoundPage() {
           onClick={() => setOpenDialog(true)}
           sx={{ borderRadius: "24px", px: 2, textTransform: "none", fontWeight: 700 }}
         >
-          Create Post
+          Create
         </Button>
       </Stack>
 
@@ -331,7 +349,7 @@ export default function LostFoundPage() {
                           {item.Creator?.name || "Unknown User"}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {item.Creator?.role?.replace(/_/g, " ")} - {new Date(item.created_at).toLocaleDateString()}
+                          {item.Creator?.role?.replace(/_/g, " ")} - {new Date(item.createdAt || item.created_at || Date.now()).toLocaleDateString()}
                         </Typography>
                       </Box>
                     </Stack>
@@ -429,10 +447,31 @@ export default function LostFoundPage() {
         )}
       </Stack>
 
-      {/* Create Dialog */}
+      {/* Load More Button */}
+      {hasMore && (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 3, mb: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setOffset((prev) => prev + LIMIT)}
+            disabled={loadingMore}
+            sx={{
+              borderRadius: "24px",
+              px: 4,
+              textTransform: "none",
+              fontWeight: 700,
+              borderColor: "primary.main",
+            }}
+          >
+            {loadingMore ? <CircularProgress size={18} sx={{ mr: 1 }} /> : null}
+            {loadingMore ? "Loading..." : "Load More"}
+          </Button>
+        </Box>
+      )}
+
+
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 900 }}>
-          Create Lost/Found Post
+          Create Post
           <IconButton onClick={() => setOpenDialog(false)} size="small">
             <Close />
           </IconButton>
@@ -515,6 +554,7 @@ export default function LostFoundPage() {
                   <Button
                     variant="outlined"
                     component="label"
+                    title="Upload Photo / Take Picture"
                     sx={{ width: 64, height: 64, borderRadius: "8px", border: "1px dashed rgba(0,0,0,0.2)", p: 0 }}
                   >
                     <PhotoCamera />
@@ -522,7 +562,6 @@ export default function LostFoundPage() {
                       type="file"
                       hidden
                       accept="image/*"
-                      multiple
                       onChange={handlePhotoUpload}
                     />
                   </Button>

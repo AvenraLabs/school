@@ -139,6 +139,12 @@ export default function ProfilePage() {
         </Alert>
       )}
 
+      {profile?.pending_update && (
+        <Alert severity="warning" sx={{ mb: 3, borderRadius: '12px' }}>
+          <strong>Changes Pending Approval:</strong> You have submitted updates to your profile. They are currently pending administrator review. You can continue using the app with your current details in the meantime.
+        </Alert>
+      )}
+
       {profile && (
         <Paper sx={{ p: 3, mb: 3 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>

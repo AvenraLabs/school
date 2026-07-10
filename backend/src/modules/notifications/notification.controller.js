@@ -68,12 +68,17 @@ export const listNotifications = asyncHandler(async (req, res) => {
     ];
   }
 
+  const limit = req.query.limit ? parseInt(req.query.limit) : 20;
+  const offset = req.query.offset ? parseInt(req.query.offset) : 0;
+
   const result = await listNotificationsForUserService({
     school_id: req.user.school_id,
     user_role: req.user.role,
     user_id: req.user.id,
     class_ids: classIds,
     section_ids: sectionIds,
+    limit,
+    offset,
   });
 
   res.json({
@@ -85,6 +90,9 @@ export const listNotifications = asyncHandler(async (req, res) => {
       const u = plain.User || plain.user;
       return {
         ...plain,
+        // Ensure snake_case date field is always present regardless of Sequelize naming
+        created_at: plain.created_at || plain.createdAt,
+        updated_at: plain.updated_at || plain.updatedAt,
         is_acknowledged: Boolean(ack),
         acknowledged_at: ack?.acknowledged_at || null,
         sender: u

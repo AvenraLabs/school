@@ -1,5 +1,5 @@
 import express from "express";
-import { login, changePassword, switchStudent, adminResetUserPassword } from "./auth.controller.js";
+import { login, changePassword, switchStudent, adminResetUserPassword, updateProfile } from "./auth.controller.js";
 import { loginSchema, changePasswordSchema } from "./auth.schema.js";
 import { validate } from "../../shared/middlewares/validate.js";
 import { protect } from "../../shared/middlewares/auth.js";
@@ -15,5 +15,6 @@ router.post(
 );
 router.post("/switch-student", protect, switchStudent);
 router.patch("/admin/users/:userId/reset-password", protect, adminResetUserPassword);
+router.patch("/profile", protect, updateProfile);
 
 export default router;

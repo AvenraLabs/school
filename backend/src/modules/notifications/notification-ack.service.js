@@ -59,11 +59,40 @@ export const listNotificationAcksService = async ({
 
   const { limit, offset } = getPagination(query);
 
-  return NotificationAck.findAndCountAll({
+  const User = (await import("../users/user.model.js")).default;
+  const Student = (await import("../students/student.model.js")).default;
+  const Teacher = (await import("../teachers/teacher.model.js")).default;
+
+  const { rows, count } = await NotificationAck.findAndCountAll({
     where: { notification_id },
-    include: [{ model: Notification }],
+    include: [
+      { model: Notification },
+      { model: User, attributes: ["id", "name", "role", "avatar_url"] }
+    ],
     order: [["acknowledged_at", "DESC"]],
     limit,
     offset,
   });
+
+  // Calculate target audience count
+  let targetCount = 0;
+  if (notification.target_role === "student") {
+    const studentWhere = { school_id: notification.school_id, status: "ACTIVE" };
+    if (notification.class_id) studentWhere.class_id = notification.class_id;
+    if (notification.section_id) studentWhere.section_id = notification.section_id;
+    targetCount = await Student.count({ where: studentWhere });
+  } else if (notification.target_role === "teacher") {
+    targetCount = await Teacher.count({ where: { school_id: notification.school_id, status: "ACTIVE" } });
+  } else if (notification.target_role === "all") {
+    const studentCount = await Student.count({ where: { school_id: notification.school_id, status: "ACTIVE" } });
+    const teacherCount = await Teacher.count({ where: { school_id: notification.school_id, status: "ACTIVE" } });
+    targetCount = studentCount + teacherCount;
+  }
+
+  return {
+    rows,
+    seenCount: count,
+    unseenCount: Math.max(0, targetCount - count),
+    totalCount: targetCount,
+  };
 };

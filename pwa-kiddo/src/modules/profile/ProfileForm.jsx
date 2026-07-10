@@ -167,6 +167,7 @@ export default function ProfileForm({
         {/* Upload Controls */}
         <Stack direction="row" spacing={1} alignItems="center">
           <Button
+            type="button"
             component="label"
             variant="outlined"
             startIcon={<PhotoCamera />}

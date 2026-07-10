@@ -5,9 +5,20 @@ import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../context/ToastContext';
 import { UserCheck, CheckCircle, XCircle } from 'lucide-react';
 
+const getAssetUrl = (path) => {
+  if (!path) return '';
+  if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  const host = baseUrl.replace(/\/api$/, '');
+  return `${host}${path}`;
+};
+
 export function Approvals() {
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
+  const [profileUpdates, setProfileUpdates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('teachers');
   const [selectedTeachers, setSelectedTeachers] = useState([]);
@@ -15,6 +26,8 @@ export function Approvals() {
   const [processing, setProcessing] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalType, setModalType] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
   const toast = useToast();
 
   const [teachersPage, setTeachersPage] = useState(0);
@@ -22,6 +35,7 @@ export function Approvals() {
 
   const [teachersTotal, setTeachersTotal] = useState(0);
   const [studentsTotal, setStudentsTotal] = useState(0);
+  const [profileUpdatesTotal, setProfileUpdatesTotal] = useState(0);
 
   const PAGE_SIZE = 50;
 
@@ -185,6 +199,56 @@ export function Approvals() {
             </div>
           </div>
         )}
+
+        {modalType === 'profile_update' && (
+          <div className="flex flex-col gap-4 text-sm" style={{ width: '100%' }}>
+            <p className="text-slate-600 font-medium mb-1">This user is already approved. Below is a list of their updated fields waiting for review:</p>
+            <div className="overflow-x-auto border border-slate-100 rounded-lg">
+              <table className="min-w-full divide-y divide-slate-150 text-left">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Field</th>
+                    <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Current Active Value</th>
+                    <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Proposed Value</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {Object.entries(selectedItem.pending_data || {}).map(([key, newVal]) => {
+                    let currentVal = '—';
+                    const activeProfile = selectedItem.user?.student || selectedItem.user?.Student || selectedItem.user?.teacher || selectedItem.user?.Teacher || {};
+                    if (key === 'name' || key === 'email' || key === 'phone' || key === 'avatar_url') {
+                      currentVal = selectedItem.user?.[key];
+                    } else {
+                      currentVal = activeProfile[key];
+                    }
+
+                    const isAvatar = key === 'avatar_url';
+
+                    return (
+                      <tr key={key}>
+                        <td className="px-4 py-3 font-semibold text-slate-700 capitalize">{key.replace(/_/g, ' ')}</td>
+                        <td className="px-4 py-3 text-slate-500">
+                          {isAvatar ? (
+                            currentVal ? <img src={getAssetUrl(currentVal)} className="w-10 h-10 rounded-full object-cover border" style={{ maxWidth: '40px', maxHeight: '40px' }} /> : 'No Avatar'
+                          ) : (
+                            String(currentVal ?? '—')
+                          )}
+                        </td>
+                        <td className="px-4 py-3 font-medium text-emerald-600 bg-emerald-50/20">
+                          {isAvatar ? (
+                            newVal ? <img src={getAssetUrl(newVal)} className="w-10 h-10 rounded-full object-cover border border-emerald-200" style={{ maxWidth: '40px', maxHeight: '40px' }} /> : 'Remove Avatar'
+                          ) : (
+                            String(newVal ?? '—')
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -202,6 +266,10 @@ export function Approvals() {
       setStudents(res.students?.items || []);
       setStudentsTotal(res.students?.total || 0);
       setStudentsPage(0);
+
+      const profileRes = await approvalsAPI.listProfileUpdates();
+      setProfileUpdates(profileRes || []);
+      setProfileUpdatesTotal(profileRes?.length || 0);
     } catch (e) {
       toast.error('Failed to load approvals');
     } finally {
@@ -236,6 +304,19 @@ export function Approvals() {
       await loadTab(type, nextPg);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed');
+    }
+  };
+
+  const handleProcessProfileUpdate = async (id, action, reason) => {
+    try {
+      await approvalsAPI.processProfileUpdate(id, action, reason);
+      toast.success(`Profile update request ${action}d`);
+      const profileRes = await approvalsAPI.listProfileUpdates();
+      setProfileUpdates(profileRes || []);
+      setProfileUpdatesTotal(profileRes?.length || 0);
+      closeDetails();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to process request');
     }
   };
 
@@ -298,7 +379,7 @@ export function Approvals() {
         <div>
           <h1 className="page-title">Approvals</h1>
           <p className="page-subtitle">
-            {teachersTotal} pending teachers, {studentsTotal} pending students
+            {teachersTotal} pending teachers, {studentsTotal} pending students, {profileUpdatesTotal} pending updates
           </p>
         </div>
       </div>
@@ -309,6 +390,9 @@ export function Approvals() {
         </button>
         <button className={`tab ${activeTab === 'students' ? 'active' : ''}`} onClick={() => setActiveTab('students')}>
           Students ({studentsTotal})
+        </button>
+        <button className={`tab ${activeTab === 'profile_updates' ? 'active' : ''}`} onClick={() => setActiveTab('profile_updates')}>
+          Profile Updates ({profileUpdatesTotal})
         </button>
       </div>
 
@@ -370,7 +454,7 @@ export function Approvals() {
             </>
           )}
         </div>
-      ) : (
+      ) : activeTab === 'students' ? (
         <div className="card overflow-hidden">
           {students.length > 0 && (
             <div className="flex items-center gap-3 p-4 border-b border-slate-100 bg-slate-50">
@@ -428,19 +512,67 @@ export function Approvals() {
             </>
           )}
         </div>
+      ) : (
+        <div className="card overflow-hidden">
+          {profileUpdates.length === 0 ? (
+            <div className="empty-state">
+              <UserCheck className="empty-state-icon" />
+              <p className="empty-state-title">No pending profile updates</p>
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Role</th>
+                  <th>Username</th>
+                  <th>Name</th>
+                  <th>Updated Fields</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {profileUpdates.map((u) => {
+                  const changedCount = Object.keys(u.pending_data || {}).length;
+                  return (
+                    <tr key={u.id} className="cursor-pointer hover:bg-slate-50" onClick={() => openDetails('profile_update', u)}>
+                      <td className="font-mono text-xs">#{u.user_id}</td>
+                      <td className="capitalize text-xs font-semibold">{u.role}</td>
+                      <td className="font-mono text-xs">{u.user?.username || '—'}</td>
+                      <td>{u.user?.name || '—'}</td>
+                      <td className="text-slate-500 font-semibold">{changedCount} fields changed</td>
+                      <td><StatusBadge status="pending" /></td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-1">
+                          <button onClick={() => handleProcessProfileUpdate(u.id, 'approve')} className="btn-sm btn-success">Approve</button>
+                          <button onClick={() => handleProcessProfileUpdate(u.id, 'reject')} className="btn-sm btn-danger">Reject</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
       )}
       {selectedItem && (
         <Modal
           isOpen={!!selectedItem}
           onClose={closeDetails}
-          title={`Review Pending ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}`}
+          title={modalType === 'profile_update' ? "Review Profile Update Request" : `Review Pending ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}`}
           maxWidth="max-w-xl"
           footer={
             <div className="flex justify-end gap-3 w-full">
               <button
                 onClick={() => {
-                  handleApprove(modalType, selectedItem.id, 'reject');
-                  closeDetails();
+                  if (modalType === 'profile_update') {
+                    handleProcessProfileUpdate(selectedItem.id, 'reject');
+                  } else {
+                    handleApprove(modalType, selectedItem.id, 'reject');
+                    closeDetails();
+                  }
                 }}
                 className="btn btn-danger btn-sm"
               >
@@ -448,8 +580,12 @@ export function Approvals() {
               </button>
               <button
                 onClick={() => {
-                  handleApprove(modalType, selectedItem.id, 'approve');
-                  closeDetails();
+                  if (modalType === 'profile_update') {
+                    handleProcessProfileUpdate(selectedItem.id, 'approve');
+                  } else {
+                    handleApprove(modalType, selectedItem.id, 'approve');
+                    closeDetails();
+                  }
                 }}
                 className="btn btn-success btn-sm"
               >

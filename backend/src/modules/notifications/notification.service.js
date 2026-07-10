@@ -14,6 +14,7 @@ export const createNotificationService = async ({
   target_role,
   class_id,
   section_id,
+  image_url,
 }) => {
   /* Role enforcement */
   if (sender_role === "teacher" && target_role === "teacher") {
@@ -33,6 +34,7 @@ export const createNotificationService = async ({
     target_role,
     class_id,
     section_id,
+    image_url,
   });
 
   return notification;
@@ -45,6 +47,8 @@ export const listNotificationsForUserService = async ({
   user_id,
   class_ids = [],
   section_ids = [],
+  limit = 20,
+  offset = 0,
 }) => {
   const where = { school_id };
 
@@ -70,6 +74,8 @@ export const listNotificationsForUserService = async ({
 
   return Notification.findAndCountAll({
     where,
+    limit,
+    offset,
     include: [
       {
         model: User,

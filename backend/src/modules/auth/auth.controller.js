@@ -196,3 +196,35 @@ export const adminResetUserPassword = asyncHandler(async (req, res) => {
 
   res.json({ message: "Password reset successfully" });
 });
+
+export const updateProfile = asyncHandler(async (req, res) => {
+  const { name, avatar_url } = req.body;
+  const user = await User.findByPk(req.user.id);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  // Clean up old avatar if changed
+  if (avatar_url !== undefined && avatar_url !== user.avatar_url) {
+    if (user.avatar_url) {
+      try {
+        const { deleteLocalFile } = await import("../../shared/utils/fileCleanup.js");
+        deleteLocalFile(user.avatar_url);
+      } catch (e) {
+        console.error("Cleanup old file error:", e);
+      }
+    }
+    user.avatar_url = avatar_url || null;
+  }
+
+  if (name !== undefined) {
+    user.name = name;
+  }
+
+  await user.save();
+
+  res.json({
+    message: "Profile updated successfully",
+    user,
+  });
+});

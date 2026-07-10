@@ -187,6 +187,7 @@ export const processApprovalAction = async ({
     }
   }
 
+
   if (user.role === "school_admin") {
     if (entitySchoolId !== user.school_id) {
       throw new AppError("Unauthorized", 403);
@@ -202,4 +203,154 @@ export const processApprovalAction = async ({
   });
 
   return entity;
+};
+
+export const getPendingProfileUpdatesService = async ({ school_id, user }) => {
+  const scopedSchoolId = school_id ?? user?.school_id;
+  if (!scopedSchoolId) {
+    throw new AppError("school_id is required", 400);
+  }
+
+  const Student = (await import("../students/student.model.js")).default;
+  const Teacher = (await import("../teachers/teacher.model.js")).default;
+  const ProfileUpdateRequest = (await import("./profile-update-request.model.js")).default;
+
+  return ProfileUpdateRequest.findAll({
+    where: {
+      school_id: scopedSchoolId,
+      status: "PENDING",
+    },
+    include: [
+      {
+        model: User,
+        attributes: ["id", "name", "username", "email", "phone", "avatar_url"],
+        include: [
+          { model: Student, required: false },
+          { model: Teacher, required: false },
+        ]
+      },
+    ],
+    order: [["created_at", "ASC"]],
+  });
+};
+
+export const processProfileUpdateService = async ({
+  id,
+  action,
+  rejection_reason,
+  user,
+}) => {
+  const ProfileUpdateRequest = (await import("./profile-update-request.model.js")).default;
+  const request = await ProfileUpdateRequest.findByPk(id);
+  if (!request) {
+    throw new AppError("Profile update request not found", 404);
+  }
+
+  if (String(request.school_id) !== String(user.school_id)) {
+    throw new AppError("Forbidden", 403);
+  }
+
+  if (action === "reject") {
+    await request.update({
+      status: "REJECTED",
+      rejection_reason: rejection_reason || null,
+    });
+    return request;
+  }
+
+  if (action === "approve") {
+    const data = request.pending_data || {};
+    const userId = request.user_id;
+
+    if (request.role === "student") {
+      const student = await Student.findOne({ where: { user_id: userId } });
+      if (!student) throw new AppError("Student profile not found", 404);
+
+      const targetUser = await User.findByPk(userId);
+      if (!targetUser) throw new AppError("User not found", 404);
+
+      // Clean up old avatar if changed
+      if (data.avatar_url && data.avatar_url !== targetUser.avatar_url) {
+        try {
+          const { deleteLocalFile } = await import("../../shared/utils/fileCleanup.js");
+          deleteLocalFile(targetUser.avatar_url);
+        } catch (e) {
+          console.error("Cleanup old file error:", e);
+        }
+      }
+
+      // Update User table fields
+      const userUpdates = {};
+      if (data.name !== undefined) userUpdates.name = data.name;
+      if (data.phone !== undefined) userUpdates.phone = data.phone;
+      if (data.email !== undefined) userUpdates.email = data.email;
+      if (data.avatar_url !== undefined) userUpdates.avatar_url = data.avatar_url;
+
+      if (Object.keys(userUpdates).length > 0) {
+        await targetUser.update(userUpdates);
+      }
+
+      // Update Student table fields
+      const studentUpdates = {};
+      const fields = [
+        "dob", "gender", "blood_group", "father_name", "mother_name",
+        "guardian_name", "father_occupation", "mother_occupation",
+        "guardian_occupation", "emergency_contact", "residential_status",
+        "address", "family_income"
+      ];
+      fields.forEach(f => {
+        if (data[f] !== undefined) studentUpdates[f] = data[f];
+      });
+
+      if (Object.keys(studentUpdates).length > 0) {
+        await student.update(studentUpdates);
+      }
+    } else if (request.role === "teacher") {
+      const teacher = await Teacher.findOne({ where: { user_id: userId } });
+      if (!teacher) throw new AppError("Teacher profile not found", 404);
+
+      const targetUser = await User.findByPk(userId);
+      if (!targetUser) throw new AppError("User not found", 404);
+
+      // Clean up old avatar if changed
+      if (data.avatar_url && data.avatar_url !== targetUser.avatar_url) {
+        try {
+          const { deleteLocalFile } = await import("../../shared/utils/fileCleanup.js");
+          deleteLocalFile(targetUser.avatar_url);
+        } catch (e) {
+          console.error("Cleanup old file error:", e);
+        }
+      }
+
+      // Update User table fields
+      const userUpdates = {};
+      if (data.name !== undefined) userUpdates.name = data.name;
+      if (data.phone !== undefined) userUpdates.phone = data.phone;
+      if (data.email !== undefined) userUpdates.email = data.email;
+      if (data.avatar_url !== undefined) userUpdates.avatar_url = data.avatar_url;
+
+      if (Object.keys(userUpdates).length > 0) {
+        await targetUser.update(userUpdates);
+      }
+
+      // Update Teacher table fields
+      const teacherUpdates = {};
+      const fields = ["gender", "designation", "qualification", "experience"];
+      fields.forEach(f => {
+        if (data[f] !== undefined) teacherUpdates[f] = data[f];
+      });
+
+      if (Object.keys(teacherUpdates).length > 0) {
+        await teacher.update(teacherUpdates);
+      }
+    }
+
+    await request.update({
+      status: "APPROVED",
+    });
+
+    return request;
+  }
+
+  throw new AppError("Invalid action", 400);
 };

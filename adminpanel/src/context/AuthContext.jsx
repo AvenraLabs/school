@@ -35,6 +35,14 @@ export function AuthProvider({ children }) {
     setError(null);
   };
 
+  const updateUser = (userData) => {
+    setUser((prev) => {
+      const nextUser = { ...prev, ...userData };
+      localStorage.setItem('user', JSON.stringify(nextUser));
+      return nextUser;
+    });
+  };
+
   const value = {
     user,
     token,
@@ -43,6 +51,7 @@ export function AuthProvider({ children }) {
     setError,
     login,
     logout,
+    updateUser,
     isAuthenticated: !!token,
   };
 

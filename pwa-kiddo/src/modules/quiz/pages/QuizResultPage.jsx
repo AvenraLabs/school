@@ -1,10 +1,26 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { Box, Typography, Button, Paper, Avatar, List, ListItem, ListItemAvatar, ListItemText, Stack } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Button,
+  Paper,
+  Avatar,
+  Stack,
+  Chip,
+} from "@mui/material";
 import { EmojiEvents } from "@mui/icons-material";
 import { getQuizLeaderboard } from "../api/quiz.api";
 import { useAuth } from "../../../auth/AuthProvider";
 import { getAssetUrl } from "../../../utils/asset";
+
+const RANK_MEDAL = ["🥇", "🥈", "🥉"];
+
+const RANK_COLORS = [
+  { bg: "linear-gradient(135deg,#FFD700,#FFA500)", text: "#7A4F00" },
+  { bg: "linear-gradient(135deg,#C0C0C0,#9E9E9E)", text: "#3A3A3A" },
+  { bg: "linear-gradient(135deg,#CD7F32,#A0522D)", text: "#fff" },
+];
 
 export default function QuizResultPage() {
   const { id } = useParams();
@@ -17,7 +33,6 @@ export default function QuizResultPage() {
     async function load() {
       try {
         const res = await getQuizLeaderboard(id);
-        console.log("LEADERBOARD API RES:", res.data);
         setLeaderboard(res.data || []);
       } catch (err) {
         console.error(err);
@@ -26,6 +41,7 @@ export default function QuizResultPage() {
     load();
   }, [id]);
 
+  // Deduplicate by user id
   const uniqueLeaderboard = [];
   const seenUserIds = new Set();
   for (const entry of leaderboard) {
@@ -41,56 +57,184 @@ export default function QuizResultPage() {
     }
   }
 
-  const myEntry =
-    uniqueLeaderboard.find((p) => {
-      const u = p.user || p.User;
-      return u?.id === user?.id;
-    }) || null;
+  const myEntry = uniqueLeaderboard.find((p) => {
+    const u = p.user || p.User;
+    return u?.id === user?.id;
+  }) || null;
   const myScore = myEntry?.score ?? 0;
 
   const isTeacher = location.pathname.startsWith("/teacher");
   const backPath = isTeacher ? "/teacher/quiz" : "/student/quiz";
 
   return (
-    <Box sx={{ p: 3, mt: 4, textAlign: 'center' }}>
-      <Paper sx={{ p: 4, borderRadius: 4 }}>
-        <EmojiEvents sx={{ fontSize: 60, color: '#FFD700', mb: 2 }} />
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
+    <Box sx={{ p: 2, mt: 3, textAlign: "center" }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 4,
+          borderRadius: "24px",
+          border: "1px solid rgba(0,0,0,0.06)",
+          background: "#fff",
+        }}
+      >
+        {/* Trophy */}
+        <EmojiEvents sx={{ fontSize: 64, color: "#FFD700", mb: 1 }} />
+        <Typography
+          variant="h4"
+          fontWeight={900}
+          sx={{ fontFamily: "'Outfit', sans-serif", mb: 0.5 }}
+        >
           Game Over!
         </Typography>
+        {myEntry && (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            You scored{" "}
+            <strong style={{ color: "#6366f1" }}>{myScore}</strong> points
+          </Typography>
+        )}
 
-        <Box sx={{ mt: 4, mb: 4, textAlign: 'left' }}>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: "bold" }}>Leaderboard</Typography>
-          <List>
-            {uniqueLeaderboard.map((player, idx) => {
-              const u = player.user || player.User;
-              return (
-                <ListItem key={u?.id || idx} secondaryAction={
-                  <Typography variant="h6" fontWeight="bold">{player.score} pts</Typography>
-                }>
-                  <ListItemAvatar>
-                    <Avatar 
-                      src={getAssetUrl(u?.avatar_url) || ""}
-                      sx={{ 
-                        border: idx === 0 ? '2px solid #FFD700' : idx === 1 ? '2px solid #C0C0C0' : idx === 2 ? '2px solid #CD7F32' : '1px solid rgba(0,0,0,0.06)',
-                        width: 40,
-                        height: 40
+        {/* Leaderboard */}
+        <Typography
+          variant="h6"
+          fontWeight={800}
+          sx={{ mb: 2, textAlign: "left", fontFamily: "'Outfit', sans-serif" }}
+        >
+          Leaderboard
+        </Typography>
+
+        <Stack spacing={1.5}>
+          {uniqueLeaderboard.map((player, idx) => {
+            const u = player.user || player.User;
+            const isMe = u?.id === user?.id;
+            const isTop3 = idx < 3;
+
+            return (
+              <Box
+                key={u?.id || idx}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  p: "10px 14px",
+                  borderRadius: "14px",
+                  background: isMe
+                    ? "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.06))"
+                    : isTop3
+                    ? "rgba(0,0,0,0.025)"
+                    : "transparent",
+                  border: isMe
+                    ? "1.5px solid rgba(99,102,241,0.25)"
+                    : "1px solid transparent",
+                  transition: "all 0.2s",
+                }}
+              >
+                {/* Rank */}
+                <Box
+                  sx={{
+                    minWidth: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: isTop3 ? "20px" : "13px",
+                    fontWeight: 700,
+                    color: isTop3 ? "inherit" : "#94a3b8",
+                    background: isTop3 ? RANK_COLORS[idx].bg : "rgba(0,0,0,0.04)",
+                    flexShrink: 0,
+                  }}
+                >
+                  {isTop3 ? RANK_MEDAL[idx] : idx + 1}
+                </Box>
+
+                {/* Avatar */}
+                <Avatar
+                  src={getAssetUrl(u?.avatar_url) || ""}
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    border: isTop3
+                      ? `2px solid ${["#FFD700", "#C0C0C0", "#CD7F32"][idx]}`
+                      : "1.5px solid rgba(0,0,0,0.08)",
+                    flexShrink: 0,
+                  }}
+                >
+                  {u?.name?.[0]?.toUpperCase() || "?"}
+                </Avatar>
+
+                {/* Name */}
+                <Typography
+                  sx={{
+                    flex: 1,
+                    fontWeight: isMe ? 800 : isTop3 ? 700 : 500,
+                    fontSize: "14px",
+                    textAlign: "left",
+                    color: isMe ? "#6366f1" : "#1e293b",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {u?.name || "Player"}
+                  {isMe && (
+                    <Typography
+                      component="span"
+                      sx={{
+                        ml: 0.8,
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        color: "#6366f1",
+                        opacity: 0.7,
                       }}
                     >
-                      {u?.name?.[0]?.toUpperCase() || "P"}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText 
-                    primary={`${idx + 1}. ${u?.name || "Player"}`}
-                    primaryTypographyProps={{ fontWeight: u?.id === user?.id ? "bold" : "regular" }}
-                  />
-                </ListItem>
-              );
-            })}
-          </List>
-        </Box>
+                      (you)
+                    </Typography>
+                  )}
+                </Typography>
 
-        <Button variant="contained" fullWidth onClick={() => navigate(backPath)}>
+                {/* Score */}
+                <Chip
+                  label={player.score}
+                  size="small"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: "13px",
+                    height: "26px",
+                    minWidth: "44px",
+                    background: isTop3
+                      ? RANK_COLORS[idx].bg
+                      : "rgba(99,102,241,0.08)",
+                    color: isTop3 ? RANK_COLORS[idx].text : "#6366f1",
+                    border: "none",
+                    flexShrink: 0,
+                  }}
+                />
+              </Box>
+            );
+          })}
+        </Stack>
+
+        <Button
+          variant="contained"
+          fullWidth
+          onClick={() => navigate(backPath)}
+          sx={{
+            mt: 4,
+            borderRadius: "14px",
+            py: 1.5,
+            fontWeight: 800,
+            fontSize: "15px",
+            textTransform: "none",
+            fontFamily: "'Outfit', sans-serif",
+            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+            boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
+            "&:hover": {
+              background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+            },
+          }}
+        >
           Back to Quiz Menu
         </Button>
       </Paper>

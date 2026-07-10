@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -6,8 +7,9 @@ import {
   ClipboardList, Calendar, Bell, FileText,
   Award, LogOut, UserCog,
   Layers, X, Database, Sparkles, Truck,
-  Search, MessageSquare, Info
+  Search, MessageSquare, Info, Camera, Loader2
 } from 'lucide-react';
+import { authAPI, uploadAPI } from '../../api';
 
 // Super admin no longer uses the sidebar — it has its own top-bar layout (SuperAdminPage).
 // This sidebar is exclusively for school_admin.
@@ -40,17 +42,97 @@ const schoolAdminLinks = [
 ];
 
 export function Sidebar({ isOpen, onClose }) {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [profileName, setProfileName] = useState(user?.name || '');
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const links = schoolAdminLinks;
   const displayName = user?.name || user?.username || 'Admin';
   const initial = displayName[0].toUpperCase();
   const roleLabel = user?.role === 'super_admin' ? 'Super Admin' : 'School Admin';
 
+  const getAssetUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const cleanBackend = backendUrl.replace(/\/$/, '');
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${cleanBackend}${cleanPath}`;
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleAvatarFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      setErrorMsg('');
+      const res = await uploadAPI.uploadAvatar(file);
+      if (res.success) {
+        setAvatarUrl(res.url);
+      } else {
+        setErrorMsg('Upload failed.');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Error uploading image.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    try {
+      setIsSaving(true);
+      setErrorMsg('');
+      setSuccessMsg('');
+      await authAPI.updateProfile({
+        name: profileName,
+        avatar_url: avatarUrl,
+      });
+      updateUser({
+        name: profileName,
+        avatar_url: avatarUrl,
+      });
+      setSuccessMsg('Profile updated successfully.');
+      setTimeout(() => {
+        setIsProfileModalOpen(false);
+        setSuccessMsg('');
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err?.response?.data?.message || 'Failed to update profile.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    try {
+      setIsSaving(true);
+      setErrorMsg('');
+      await authAPI.updateProfile({ name: profileName, avatar_url: '' });
+      updateUser({ avatar_url: '' });
+      setAvatarUrl('');
+    } catch (err) {
+      setErrorMsg('Failed to remove avatar.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleLinkClick = () => {
@@ -175,16 +257,28 @@ export function Sidebar({ isOpen, onClose }) {
         >
           {/* User card */}
           <div
-            className="flex items-center gap-3"
+            onClick={() => {
+              setProfileName(user?.name || '');
+              setAvatarUrl(user?.avatar_url || '');
+              setIsProfileModalOpen(true);
+            }}
+            className="flex items-center gap-3 cursor-pointer group"
             style={{
               padding: '10px 12px',
               borderRadius: '10px',
               background: 'rgba(255,255,255,0.05)',
               marginBottom: '4px',
+              transition: 'background 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.09)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
             }}
           >
             <div
-              className="flex items-center justify-center flex-shrink-0"
+              className="flex items-center justify-center flex-shrink-0 overflow-hidden"
               style={{
                 width: '36px',
                 height: '36px',
@@ -195,7 +289,15 @@ export function Sidebar({ isOpen, onClose }) {
                 color: '#fff',
               }}
             >
-              {initial}
+              {user?.avatar_url ? (
+                <img
+                  src={getAssetUrl(user.avatar_url)}
+                  alt="Avatar"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                initial
+              )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: '13px', fontWeight: 600, color: '#fff', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -240,6 +342,121 @@ export function Sidebar({ isOpen, onClose }) {
           </button>
         </div>
       </aside>
+
+      {/* Profile Edit Modal */}
+      {isProfileModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-slate-100">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
+              <h3 className="text-base font-bold text-white">Edit Profile</h3>
+              <button
+                type="button"
+                onClick={() => setIsProfileModalOpen(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveProfile} className="p-6 space-y-5">
+              {errorMsg && (
+                <div className="p-3 text-xs font-semibold text-rose-200 bg-rose-500/20 border border-rose-500/30 rounded-lg">
+                  {errorMsg}
+                </div>
+              )}
+              {successMsg && (
+                <div className="p-3 text-xs font-semibold text-emerald-200 bg-emerald-500/20 border border-emerald-500/30 rounded-lg">
+                  {successMsg}
+                </div>
+              )}
+
+              {/* Avatar Uploader Section */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-indigo-500/50 bg-slate-800 flex items-center justify-center">
+                  {avatarUrl ? (
+                    <img
+                      src={getAssetUrl(avatarUrl)}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-2xl font-bold text-slate-400">{initial}</span>
+                  )}
+                  {isUploading && (
+                    <div className="absolute inset-0 bg-slate-950/70 flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+                    </div>
+                  )}
+                </div>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleAvatarFileChange}
+                  accept="image/jpeg,image/png,image/jpg,image/webp"
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  disabled={isUploading || isSaving}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-all cursor-pointer"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  {avatarUrl ? 'Change Photo' : 'Upload Photo'}
+                </button>
+                {avatarUrl && (
+                  <button
+                    type="button"
+                    disabled={isUploading || isSaving}
+                    onClick={handleDeleteAvatar}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-300 hover:text-rose-200 bg-rose-500/10 hover:bg-rose-500/20 rounded-lg border border-rose-500/20 transition-all cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              {/* Name Input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300">Display Name</label>
+                <input
+                  type="text"
+                  required
+                  value={profileName}
+                  onChange={e => setProfileName(e.target.value)}
+                  placeholder="Enter name"
+                  disabled={isSaving}
+                  className="w-full px-3.5 py-2 text-sm bg-slate-950 border border-slate-800 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileModalOpen(false)}
+                  disabled={isSaving}
+                  className="px-4 py-2 text-xs font-medium text-slate-300 hover:text-white bg-transparent hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving || isUploading}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:text-slate-400 rounded-lg transition-colors cursor-pointer"
+                >
+                  {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Scoped styles — avoids Tailwind purge issues with dynamic active states */}
       <style>{`

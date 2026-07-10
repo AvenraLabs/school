@@ -6,7 +6,7 @@ import { getMyProfile } from "../modules/profile/profile.api";
 import { useNavigate } from "react-router-dom";
 
 export default function ApprovalPending() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [checking, setChecking] = useState(false);
   const navigate = useNavigate();
 
@@ -17,6 +17,9 @@ export default function ApprovalPending() {
       const res = await getMyProfile(user.role);
       const status = res?.data?.approval_status;
       if (status === "approved") {
+        // Update global context FIRST so RequireApproval re-renders with approved status
+        // before we navigate — prevents the redirect loop
+        updateUser({ approval_status: "approved" });
         navigate(`/${user.role}/dashboard`, { replace: true });
       }
     } catch (err) {
@@ -26,9 +29,10 @@ export default function ApprovalPending() {
     }
   };
 
+  // Check once on mount in case status was already updated while the page was open
   useEffect(() => {
     checkStatus();
-  }, [user?.role]);
+  }, []); // Only once — no repeated polling
 
   return (
     <Box
@@ -44,8 +48,8 @@ export default function ApprovalPending() {
         <Stack spacing={3} alignItems="center" textAlign="center">
           <Box
             sx={{
-              width: 64,
-              height: 64,
+              width: 72,
+              height: 72,
               borderRadius: "50%",
               display: "grid",
               placeItems: "center",
@@ -53,7 +57,7 @@ export default function ApprovalPending() {
               color: "warning.dark",
             }}
           >
-            <HourglassTopRounded />
+            <HourglassTopRounded sx={{ fontSize: 36 }} />
           </Box>
 
           <Stack spacing={1}>
@@ -66,12 +70,17 @@ export default function ApprovalPending() {
                 : "Your account is waiting for approval."}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Please contact your school admin. You can still complete your profile if needed.
+              Please contact your school admin. You can still complete your
+              profile if needed.
             </Typography>
           </Stack>
 
-          <Stack direction="row" spacing={2}>
-            <Button variant="outlined" onClick={checkStatus} disabled={checking}>
+          <Stack direction="row" spacing={2} flexWrap="wrap" justifyContent="center">
+            <Button
+              variant="outlined"
+              onClick={checkStatus}
+              disabled={checking}
+            >
               {checking ? "Checking..." : "Check Again"}
             </Button>
             {user?.role && (

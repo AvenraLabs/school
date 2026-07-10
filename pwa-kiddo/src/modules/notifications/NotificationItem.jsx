@@ -4,14 +4,12 @@ import {
   Typography,
   Avatar,
   Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Drawer,
   Button
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
+import { getAssetUrl } from "../../utils/asset";
 
 export default function NotificationItem({ item, onAcknowledge }) {
   const { user } = useAuth();
@@ -43,14 +41,13 @@ export default function NotificationItem({ item, onAcknowledge }) {
     (item?.sender_role === "school_admin" ? "School Admin" : "Teacher");
 
   const senderAvatar =
-    item?.sender_role === "school_admin"
-      ? item?.school?.logo_url || ""
-      : item?.sender?.avatar_url || "";
+    item?.sender?.avatar_url
+      ? getAssetUrl(item.sender.avatar_url)
+      : item?.sender_role === "school_admin"
+        ? (item?.school?.logo_url ? getAssetUrl(item.school.logo_url) : "")
+        : "";
 
-  const senderInitial =
-    item?.sender_role === "school_admin"
-      ? "A"
-      : senderName?.[0]?.toUpperCase() || "T";
+  const senderInitial = senderName?.[0]?.toUpperCase() || "A";
 
   const handleItemClick = async () => {
     // Automatically mark as read if unread
@@ -160,27 +157,45 @@ export default function NotificationItem({ item, onAcknowledge }) {
         )}
       </Box>
 
-      {/* Detail Modal Dialog */}
-      <Dialog
+      {/* Detail Slide-Up Bottom Drawer */}
+      <Drawer
+        anchor="bottom"
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        maxWidth="xs"
-        fullWidth
         PaperProps={{
-          sx: { borderRadius: "16px", p: 1 }
+          sx: {
+            borderTopLeftRadius: "24px",
+            borderTopRightRadius: "24px",
+            maxHeight: "80vh",
+            p: 3,
+            pb: 4,
+            boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
+          }
         }}
       >
-        <DialogTitle sx={{ pb: 1, fontWeight: "bold" }}>
-          Announcement
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2}>
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Avatar src={senderAvatar} sx={{ width: 40, height: 40, bgcolor: "primary.light" }}>
+        {/* Top drag handle indicator */}
+        <Box
+          sx={{
+            width: 44,
+            height: 5,
+            bgcolor: "grey.200",
+            borderRadius: "3px",
+            mx: "auto",
+            mb: 2.5,
+            cursor: "pointer"
+          }}
+          onClick={() => setModalOpen(false)}
+        />
+
+        <Box sx={{ overflowY: "auto" }}>
+          <Stack spacing={2.5}>
+            {/* Header info */}
+            <Stack direction="row" spacing={1.8} alignItems="center">
+              <Avatar src={senderAvatar} sx={{ width: 44, height: 44, bgcolor: "primary.light" }}>
                 {senderInitial}
               </Avatar>
               <Box>
-                <Typography variant="subtitle2" fontWeight={800}>
+                <Typography variant="subtitle2" fontWeight={850} sx={{ fontSize: "0.95rem" }}>
                   {senderName}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -189,25 +204,51 @@ export default function NotificationItem({ item, onAcknowledge }) {
               </Box>
             </Stack>
 
-            <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+            <Typography variant="h6" fontWeight={900} color="text.primary" sx={{ lineHeight: 1.3, fontSize: "1.15rem" }}>
               {item.title}
             </Typography>
 
-            <Typography variant="body2" sx={{ color: "text.secondary", whiteSpace: "pre-line", lineHeight: 1.6 }}>
+            <Typography variant="body2" sx={{ color: "text.secondary", whiteSpace: "pre-line", lineHeight: 1.6, fontSize: "0.9rem" }}>
               {item.message}
             </Typography>
+
+            {item.image_url && (
+              <Box
+                component="img"
+                src={getAssetUrl(item.image_url)}
+                alt="Announcement Image"
+                sx={{
+                  width: "100%",
+                  maxHeight: 280,
+                  objectFit: "cover",
+                  borderRadius: "16px",
+                  border: "1px solid rgba(0,0,0,0.05)",
+                  mt: 1,
+                  cursor: "pointer"
+                }}
+                onClick={() => window.open(getAssetUrl(item.image_url), "_blank")}
+              />
+            )}
+
+            <Button
+              onClick={() => setModalOpen(false)}
+              variant="contained"
+              fullWidth
+              sx={{
+                borderRadius: "12px",
+                textTransform: "none",
+                fontWeight: "bold",
+                py: 1.2,
+                mt: 1.5,
+                boxShadow: "none",
+                "&:hover": { boxShadow: "none" }
+              }}
+            >
+              Close
+            </Button>
           </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setModalOpen(false)}
-            variant="contained"
-            sx={{ borderRadius: "8px", textTransform: "none", fontWeight: "bold" }}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </Drawer>
     </>
   );
 }

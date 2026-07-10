@@ -88,3 +88,34 @@ export const approveRejectRequest = async (req, res, next) => {
     next(e);
   }
 };
+
+export const getPendingProfileUpdates = async (req, res, next) => {
+  try {
+    const { getPendingProfileUpdatesService } = await import("./approval.service.js");
+    const result = await getPendingProfileUpdatesService({
+      user: req.user,
+    });
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const processProfileUpdateRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { action, rejection_reason } = req.body;
+    const { processProfileUpdateService } = await import("./approval.service.js");
+
+    const result = await processProfileUpdateService({
+      id,
+      action,
+      rejection_reason,
+      user: req.user,
+    });
+
+    res.json({ message: "Profile update request processed successfully", result });
+  } catch (e) {
+    next(e);
+  }
+};

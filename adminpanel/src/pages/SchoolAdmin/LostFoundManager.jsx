@@ -24,6 +24,9 @@ export function LostFoundManager() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const LIMIT = 12;
 
   // Modal State
   const [showCreate, setShowCreate] = useState(false);
@@ -33,10 +36,15 @@ export function LostFoundManager() {
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+
+  useEffect(() => {
+    setPage(0);
+  }, [tab, typeFilter]);
 
   useEffect(() => {
     loadItems();
-  }, [tab, typeFilter]);
+  }, [tab, typeFilter, page]);
 
   async function loadItems() {
     setLoading(true);
@@ -47,17 +55,22 @@ export function LostFoundManager() {
           status: 'OPEN',
           type: typeFilter === 'all' ? '' : typeFilter,
           search,
+          limit: LIMIT,
+          offset: page * LIMIT,
         });
       } else if (tab === 'my') {
-        res = await lostFoundAPI.listMy();
+        res = await lostFoundAPI.listMy({ limit: LIMIT, offset: page * LIMIT });
       } else {
         res = await lostFoundAPI.list({
           status: 'CLOSED',
           type: typeFilter === 'all' ? '' : typeFilter,
           search,
+          limit: LIMIT,
+          offset: page * LIMIT,
         });
       }
       setItems(res.data || []);
+      setTotalCount(res.total || 0);
     } catch (err) {
       toast.error('Failed to load items');
     } finally {
@@ -123,36 +136,52 @@ export function LostFoundManager() {
     setPhotos([]);
   };
 
-  const handleClose = async (id) => {
-    if (!window.confirm('Are you sure you want to close/solve this post?')) return;
+  const handleClose = (id) => {
+    setConfirmAction({
+      id,
+      type: 'close',
+      title: 'Solve Lost & Found Post',
+      message: 'Are you sure you want to mark this lost & found post as solved? It will be moved to the closed registry.',
+    });
+  };
+
+  const handleDelete = (id) => {
+    setConfirmAction({
+      id,
+      type: 'delete',
+      title: 'Delete Lost & Found Post',
+      message: 'Are you sure you want to delete this lost & found post permanently? This action cannot be undone.',
+    });
+  };
+
+  const executeConfirmAction = async () => {
+    if (!confirmAction) return;
+    const { id, type } = confirmAction;
+    setConfirmAction(null);
     try {
-      await lostFoundAPI.close(id);
-      toast.success('Post marked as Closed/Solved!');
+      if (type === 'close') {
+        await lostFoundAPI.close(id);
+        toast.success('Post marked as Closed/Solved!');
+      } else if (type === 'delete') {
+        await lostFoundAPI.delete(id);
+        toast.success('Post deleted successfully!');
+      }
       loadItems();
     } catch (err) {
-      toast.error('Failed to close post');
+      toast.error(`Failed to execute action`);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this post?')) return;
-    try {
-      await lostFoundAPI.delete(id);
-      toast.success('Post deleted successfully!');
-      loadItems();
-    } catch (err) {
-      toast.error('Failed to delete post');
-    }
-  };
+  const totalPages = Math.ceil(totalCount / LIMIT);
 
   // Calculate statistics based on items currently displayed or in lists
   const stats = useMemo(() => {
     return {
-      total: items.length,
+      total: totalCount,
       lost: items.filter((item) => item.type === 'lost').length,
       found: items.filter((item) => item.type === 'found').length,
     };
-  }, [items]);
+  }, [items, totalCount]);
 
   return (
     <div className="lostfound-page">
@@ -323,6 +352,41 @@ export function LostFoundManager() {
         )}
       </section>
 
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: '24px',
+            padding: '0 4px',
+          }}
+        >
+          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>
+            Page {page + 1} of {totalPages} &nbsp;·&nbsp; {totalCount} items total
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              className="lostfound-btn lostfound-btn-soft"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              style={{ opacity: page === 0 ? 0.45 : 1 }}
+            >
+              ← Previous
+            </button>
+            <button
+              className="lostfound-btn lostfound-btn-soft"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              style={{ opacity: page >= totalPages - 1 ? 0.45 : 1 }}
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Creation Modal */}
       <Modal
         isOpen={showCreate}
@@ -417,6 +481,37 @@ export function LostFoundManager() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Action Confirmation Dialog Modal */}
+      <Modal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction?.title || 'Confirm Action'}
+      >
+        <div style={{ padding: '16px 0 24px', color: '#4b5563', fontSize: '14px', lineHeight: 1.5 }}>
+          {confirmAction?.message}
+        </div>
+        <div className="lostfound-form-actions">
+          <button
+            type="button"
+            onClick={() => setConfirmAction(null)}
+            className="lostfound-btn lostfound-btn-soft"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={executeConfirmAction}
+            className="lostfound-btn lostfound-btn-primary"
+            style={{
+              backgroundColor: confirmAction?.type === 'delete' ? '#ef4444' : '#10b981',
+              color: '#ffffff',
+            }}
+          >
+            Confirm
+          </button>
+        </div>
       </Modal>
     </div>
   );

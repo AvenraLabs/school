@@ -89,6 +89,8 @@ export function AuthProvider({ children }) {
         const data = res.data;
         const normalized = data?.user ? { ...data, ...data.user } : data;
         const avatarUrl = normalized?.avatar_url || normalized?.avatar || "";
+        // approval_status lives on the profile object (student/teacher row), not the user row
+        const approvalStatus = data?.approval_status || normalized?.approval_status || null;
 
         if (!cancelled) {
           setUser((prev) => ({
@@ -97,6 +99,8 @@ export function AuthProvider({ children }) {
             phone: normalized?.phone ?? prev?.phone,
             email: normalized?.email ?? prev?.email,
             avatar_url: avatarUrl || prev?.avatar_url || "",
+            // Always update approval_status so RequireApproval reads from context
+            ...(approvalStatus !== null ? { approval_status: approvalStatus } : {}),
           }));
         }
       } catch (err) {

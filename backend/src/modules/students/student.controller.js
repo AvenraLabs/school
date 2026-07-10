@@ -127,6 +127,44 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     }
   }
 
+  if (student.approval_status === "approved") {
+    const ProfileUpdateRequest = (await import("../approvals/profile-update-request.model.js")).default;
+    await ProfileUpdateRequest.destroy({
+      where: { user_id: req.user.id, status: "PENDING" }
+    });
+    await ProfileUpdateRequest.create({
+      school_id: req.user.school_id,
+      user_id: req.user.id,
+      role: "student",
+      pending_data: {
+        name,
+        phone: cleanedPhone || null,
+        email: req.body.email || null,
+        dob,
+        gender,
+        blood_group,
+        father_name,
+        mother_name,
+        guardian_name,
+        father_occupation,
+        mother_occupation,
+        guardian_occupation,
+        emergency_contact,
+        residential_status,
+        address,
+        family_income,
+        avatar_url,
+      },
+      status: "PENDING",
+    });
+    return res.json({
+      success: true,
+      message: "Profile updates submitted for approval",
+      approval_pending: true,
+      student,
+    });
+  }
+
   const currentUser = await User.findByPk(req.user.id);
   if (!currentUser) throw new AppError("User not found", 404);
 
@@ -194,12 +232,18 @@ export const getMyProfile = asyncHandler(async (req, res) => {
   });
   if (!student) throw new AppError("Student profile not found", 404);
 
+  const ProfileUpdateRequest = (await import("../approvals/profile-update-request.model.js")).default;
+  const pendingUpdate = await ProfileUpdateRequest.findOne({
+    where: { user_id: req.user.id, status: "PENDING" },
+  });
+
   const data = student.get({ plain: true });
   const user = data.user || {};
   res.json({
     ...data,
     ...user,
     avatar_url: user.avatar_url || "",
+    pending_update: pendingUpdate || null,
   });
 });
 

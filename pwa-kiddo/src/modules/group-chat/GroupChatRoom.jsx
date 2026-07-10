@@ -9,7 +9,7 @@ import {
   Stack,
   CircularProgress
 } from "@mui/material";
-import { Send, Close, PhotoCamera } from "@mui/icons-material";
+import { Send, Close, PhotoCamera, CameraAlt } from "@mui/icons-material";
 import { useAuth } from "../../auth/AuthProvider";
 import api from "../../api/axios";
 import { getAssetUrl } from "../../utils/asset";

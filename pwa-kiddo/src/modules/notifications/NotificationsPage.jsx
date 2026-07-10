@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Container,
   CircularProgress,
@@ -7,7 +7,7 @@ import {
   Fab,
   Box,
   Button,
-  Stack
+  Stack,
 } from "@mui/material";
 import { Add, NotificationsNone } from "@mui/icons-material";
 import { useNotifications } from "./useNotifications";
@@ -20,14 +20,33 @@ export default function NotificationsPage() {
   const {
     items,
     loading,
+    loadingMore,
     error,
+    hasMore,
     acknowledge,
     markAllRead,
-    refresh
+    loadMore,
+    refresh,
   } = useNotifications();
 
   const [showCreate, setShowCreate] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
+
+  // IntersectionObserver sentinel for auto-load on scroll
+  const sentinelRef = useRef(null);
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          loadMore();
+        }
+      },
+      { rootMargin: "120px" }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loadMore]);
 
   const canCreate = user?.role === "teacher" || user?.role === "admin";
   const hasUnread = items.some((item) => !item.is_acknowledged);
@@ -60,8 +79,13 @@ export default function NotificationsPage() {
 
   return (
     <Container maxWidth="sm" sx={{ mt: 4, pb: 10 }}>
-      {/* Header section with Action button */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      {/* Header */}
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{ mb: 3 }}
+      >
         <Typography variant="h5" fontWeight="bold" sx={{ color: "text.primary" }}>
           Notifications
         </Typography>
@@ -74,7 +98,7 @@ export default function NotificationsPage() {
               textTransform: "none",
               fontWeight: 800,
               color: "primary.main",
-              "&:hover": { bgcolor: "primary.lighter" }
+              "&:hover": { bgcolor: "primary.lighter" },
             }}
           >
             {markingAll ? "Marking..." : "Mark all as read"}
@@ -96,7 +120,7 @@ export default function NotificationsPage() {
             borderRadius: "16px",
             border: "1px dashed",
             borderColor: "grey.200",
-            mt: 2
+            mt: 2,
           }}
         >
           <NotificationsNone sx={{ fontSize: 48, color: "text.disabled", mb: 2 }} />
@@ -108,16 +132,40 @@ export default function NotificationsPage() {
           </Typography>
         </Box>
       ) : (
-        <NotificationsList
-          items={items}
-          onAcknowledge={acknowledge}
-        />
+        <>
+          <NotificationsList items={items} onAcknowledge={acknowledge} />
+
+          {/* IntersectionObserver sentinel — triggers loadMore automatically */}
+          <Box ref={sentinelRef} sx={{ height: 4, mt: 2 }} />
+
+          {/* Loading indicator when fetching next page */}
+          {loadingMore && (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+              <CircularProgress size={24} />
+            </Box>
+          )}
+
+          {/* End-of-feed message */}
+          {!hasMore && items.length > 0 && (
+            <Typography
+              variant="caption"
+              color="text.disabled"
+              sx={{ display: "block", textAlign: "center", mt: 3, pb: 2, fontWeight: 600 }}
+            >
+              You're all caught up ✓
+            </Typography>
+          )}
+        </>
       )}
 
       {canCreate && (
         <>
-          <Box sx={{ position: 'fixed', bottom: 80, right: 16, zIndex: 1000 }}>
-            <Fab color="primary" onClick={() => setShowCreate(true)} sx={{ boxShadow: "0 4px 14px rgba(25, 118, 210, 0.4)" }}>
+          <Box sx={{ position: "fixed", bottom: 80, right: 16, zIndex: 1000 }}>
+            <Fab
+              color="primary"
+              onClick={() => setShowCreate(true)}
+              sx={{ boxShadow: "0 4px 14px rgba(25, 118, 210, 0.4)" }}
+            >
               <Add />
             </Fab>
           </Box>
