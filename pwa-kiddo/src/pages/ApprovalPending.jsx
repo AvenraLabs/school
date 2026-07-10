@@ -1,5 +1,5 @@
-import { Box, Container, Stack, Typography, Button } from "@mui/material";
-import { HourglassTopRounded } from "@mui/icons-material";
+import { Box, Container, Stack, Typography, Button, Alert } from "@mui/material";
+import { HourglassTopRounded, ErrorRounded } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { useEffect, useState } from "react";
 import { getMyProfile } from "../modules/profile/profile.api";
@@ -34,6 +34,8 @@ export default function ApprovalPending() {
     checkStatus();
   }, []); // Only once — no repeated polling
 
+  const isRejected = user?.approval_status === "rejected";
+
   return (
     <Box
       sx={{
@@ -53,25 +55,39 @@ export default function ApprovalPending() {
               borderRadius: "50%",
               display: "grid",
               placeItems: "center",
-              bgcolor: "warning.light",
-              color: "warning.dark",
+              bgcolor: isRejected ? "error.light" : "warning.light",
+              color: isRejected ? "error.dark" : "warning.dark",
             }}
           >
-            <HourglassTopRounded sx={{ fontSize: 36 }} />
+            {isRejected ? (
+              <ErrorRounded sx={{ fontSize: 36 }} />
+            ) : (
+              <HourglassTopRounded sx={{ fontSize: 36 }} />
+            )}
           </Box>
 
-          <Stack spacing={1}>
+          <Stack spacing={2} sx={{ width: "100%" }}>
             <Typography variant="h5" fontWeight={700}>
-              Approval Pending
+              {isRejected ? "Registration Rejected" : "Approval Pending"}
             </Typography>
             <Typography color="text.secondary">
-              {user?.role
+              {isRejected
+                ? `Your ${user?.role?.replace("_", " ") || "account"} registration was rejected.`
+                : user?.role
                 ? `Your ${user.role.replace("_", " ")} account is waiting for approval.`
                 : "Your account is waiting for approval."}
             </Typography>
+
+            {isRejected && user?.rejection_reason && (
+              <Alert severity="error" sx={{ textAlign: "left", borderRadius: "12px" }}>
+                <strong>Rejection Reason:</strong> {user.rejection_reason}
+              </Alert>
+            )}
+
             <Typography variant="body2" color="text.secondary">
-              Please contact your school admin. You can still complete your
-              profile if needed.
+              {isRejected
+                ? "Please correct your profile details and resubmit for approval."
+                : "Please contact your school admin. You can still complete your profile if needed."}
             </Typography>
           </Stack>
 

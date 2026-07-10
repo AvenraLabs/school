@@ -63,9 +63,17 @@ export function Sidebar({ isOpen, onClose }) {
     if (!path) return '';
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
     const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const cleanBackend = backendUrl.replace(/\/$/, '');
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    return `${cleanBackend}${cleanPath}`;
+    let cleanBackend = backendUrl.replace(/\/$/, '');
+    const hasApi = cleanBackend.endsWith('/api');
+    const host = hasApi ? cleanBackend.replace(/\/api$/, '') : cleanBackend;
+    
+    let cleanPath = path.startsWith('/') ? path : `/${path}`;
+    if (cleanPath.startsWith('/uploads')) {
+      cleanPath = `/api${cleanPath}`;
+    } else if (hasApi && !cleanPath.startsWith('/api')) {
+      cleanPath = `/api${cleanPath}`;
+    }
+    return `${host}${cleanPath}`;
   };
 
   const handleLogout = () => {

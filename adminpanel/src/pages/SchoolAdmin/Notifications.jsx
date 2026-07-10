@@ -8,9 +8,13 @@ const getAssetUrl = (path) => {
   if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) {
     return path;
   }
+  let cleanPath = path;
+  if (path.startsWith('/uploads')) {
+    cleanPath = `/api${path}`;
+  }
   const baseUrl = import.meta.env.VITE_API_URL || '';
   const host = baseUrl.replace(/\/api$/, '');
-  return `${host}${path}`;
+  return `${host}${cleanPath}`;
 };
 import {
   Bell,

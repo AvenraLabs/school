@@ -13,6 +13,7 @@ import { EmojiEvents } from "@mui/icons-material";
 import { getQuizLeaderboard } from "../api/quiz.api";
 import { useAuth } from "../../../auth/AuthProvider";
 import { getAssetUrl } from "../../../utils/asset";
+import { useTheme, alpha } from "@mui/material/styles";
 
 const RANK_MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -23,6 +24,7 @@ const RANK_COLORS = [
 ];
 
 export default function QuizResultPage() {
+  const theme = useTheme();
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -89,7 +91,7 @@ export default function QuizResultPage() {
         {myEntry && (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             You scored{" "}
-            <strong style={{ color: "#6366f1" }}>{myScore}</strong> points
+            <strong style={{ color: theme.palette.primary.main }}>{myScore}</strong> points
           </Typography>
         )}
 
@@ -118,12 +120,12 @@ export default function QuizResultPage() {
                   p: "10px 14px",
                   borderRadius: "14px",
                   background: isMe
-                    ? "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.06))"
+                    ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)}, ${alpha(theme.palette.secondary?.main || theme.palette.primary.dark, 0.06)})`
                     : isTop3
-                    ? "rgba(0,0,0,0.025)"
+                    ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : "rgba(0,0,0,0.025)")
                     : "transparent",
                   border: isMe
-                    ? "1.5px solid rgba(99,102,241,0.25)"
+                    ? `1.5px solid ${alpha(theme.palette.primary.main, 0.25)}`
                     : "1px solid transparent",
                   transition: "all 0.2s",
                 }}
@@ -171,7 +173,7 @@ export default function QuizResultPage() {
                     fontWeight: isMe ? 800 : isTop3 ? 700 : 500,
                     fontSize: "14px",
                     textAlign: "left",
-                    color: isMe ? "#6366f1" : "#1e293b",
+                    color: isMe ? "primary.main" : "text.primary",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -185,7 +187,7 @@ export default function QuizResultPage() {
                         ml: 0.8,
                         fontSize: "10px",
                         fontWeight: 700,
-                        color: "#6366f1",
+                        color: "primary.main",
                         opacity: 0.7,
                       }}
                     >
@@ -205,8 +207,8 @@ export default function QuizResultPage() {
                     minWidth: "44px",
                     background: isTop3
                       ? RANK_COLORS[idx].bg
-                      : "rgba(99,102,241,0.08)",
-                    color: isTop3 ? RANK_COLORS[idx].text : "#6366f1",
+                      : alpha(theme.palette.primary.main, 0.08),
+                    color: isTop3 ? RANK_COLORS[idx].text : "primary.main",
                     border: "none",
                     flexShrink: 0,
                   }}
@@ -228,10 +230,10 @@ export default function QuizResultPage() {
             fontSize: "15px",
             textTransform: "none",
             fontFamily: "'Outfit', sans-serif",
-            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-            boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
+            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary?.main || theme.palette.primary.dark})`,
+            boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.35)}`,
             "&:hover": {
-              background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+              background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary?.dark || theme.palette.primary.main})`,
             },
           }}
         >

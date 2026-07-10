@@ -28,6 +28,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import ParentDashboard from "./ParentDashboard";
 import TeacherDashboard from "./TeacherDashboard";
+import { getAssetUrl } from "../../utils/asset";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -83,7 +84,7 @@ export default function DashboardPage() {
         >
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack direction="row" alignItems="center" spacing={2}>
-              <Avatar src={user.avatar_url} sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 44, height: 44, border: '2px solid rgba(255,255,255,0.3)' }}>
+              <Avatar src={getAssetUrl(user.avatar_url)} sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 44, height: 44, border: '2px solid rgba(255,255,255,0.3)' }}>
                 {user.name?.[0]?.toUpperCase()}
               </Avatar>
               <Box>
@@ -129,7 +130,7 @@ export default function DashboardPage() {
         >
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
             <Stack direction="row" alignItems="center" spacing={1.5}>
-              <Avatar src={user.avatar_url} sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 40, height: 40 }}>
+              <Avatar src={getAssetUrl(user.avatar_url)} sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 40, height: 40 }}>
                 {user.name?.[0] || "T"}
               </Avatar>
               <Box>
@@ -257,7 +258,7 @@ export default function DashboardPage() {
         }}
       >
         <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2.5 }}>
-          <Avatar src={user.avatar_url} sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 40, height: 40, border: '2px solid rgba(255,255,255,0.3)' }}>
+          <Avatar src={getAssetUrl(user.avatar_url)} sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 40, height: 40, border: '2px solid rgba(255,255,255,0.3)' }}>
             {studentName[0]}
           </Avatar>
           <Box>

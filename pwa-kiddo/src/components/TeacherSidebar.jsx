@@ -17,6 +17,7 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { Link, useNavigate } from "react-router-dom";
+import { getAssetUrl } from "../utils/asset";
 
 export default function TeacherSidebar({ open, onClose }) {
     const { user, logout } = useAuth();
@@ -62,7 +63,7 @@ export default function TeacherSidebar({ open, onClose }) {
 
             <Link to="/teacher/profile" onClick={onClose} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
                 <Box sx={{ px: 2, mb: 2, display: "flex", alignItems: "center", gap: 2 }}>
-                    <Avatar src={user?.avatar_url || ""} sx={{ width: 48, height: 48, bgcolor: 'primary.main' }}>
+                    <Avatar src={getAssetUrl(user?.avatar_url) || ""} sx={{ width: 48, height: 48, bgcolor: 'primary.main' }}>
                         {user?.name?.[0]}
                     </Avatar>
                     <Box>

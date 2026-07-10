@@ -11,6 +11,10 @@ export function getAssetUrl(path) {
   if (path.startsWith("data:") || path.startsWith("http://") || path.startsWith("https://")) {
     return path;
   }
+  let cleanPath = path;
+  if (path.startsWith("/uploads")) {
+    cleanPath = `/api${path}`;
+  }
   const host = API_BASE_URL.replace(/\/api$/, "");
-  return `${host}${path}`;
+  return `${host}${cleanPath}`;
 }

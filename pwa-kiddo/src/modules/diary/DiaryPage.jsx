@@ -14,32 +14,34 @@ import { useDiary } from "./useDiary";
 import { useAuth } from "../../auth/AuthProvider";
 import CreateHomeworkDialog from "./CreateHomeworkDialog";
 
-// ── Subject colour palette ──────────────────────────────────────────────────
-const SUBJECT_COLORS = {
-  mathematics: { bg: "#fff7ed", accent: "#f97316", text: "#9a3412" },
-  math:        { bg: "#fff7ed", accent: "#f97316", text: "#9a3412" },
-  maths:       { bg: "#fff7ed", accent: "#f97316", text: "#9a3412" },
-  science:     { bg: "#f0fdf4", accent: "#10b981", text: "#065f46" },
-  english:     { bg: "#eef2ff", accent: "#6366f1", text: "#3730a3" },
-  history:     { bg: "#fffbeb", accent: "#f59e0b", text: "#78350f" },
-  geography:   { bg: "#f7fee7", accent: "#84cc16", text: "#3a5c13" },
-  physics:     { bg: "#eff6ff", accent: "#3b82f6", text: "#1e3a8a" },
-  chemistry:   { bg: "#fdf4ff", accent: "#a855f7", text: "#581c87" },
-  biology:     { bg: "#f0fdf4", accent: "#22c55e", text: "#14532d" },
-  social:      { bg: "#fff7ed", accent: "#fb923c", text: "#7c2d12" },
-  computer:    { bg: "#f0f9ff", accent: "#0ea5e9", text: "#0c4a6e" },
-  hindi:       { bg: "#fef2f2", accent: "#ef4444", text: "#7f1d1d" },
-  tamil:       { bg: "#fef2f2", accent: "#dc2626", text: "#7f1d1d" },
-  default:     { bg: "#f5f3ff", accent: "#8b5cf6", text: "#4c1d95" },
-};
-
-function getSubjectColor(name = "") {
+function getSubjectThemeColor(name = "", theme) {
   const key = name.toLowerCase().trim();
-  return (
-    SUBJECT_COLORS[key] ||
-    Object.entries(SUBJECT_COLORS).find(([k]) => key.includes(k))?.[1] ||
-    SUBJECT_COLORS.default
-  );
+  let role = "primary";
+  
+  if (key.includes("math")) {
+    role = "primary";
+  } else if (key.includes("science") || key.includes("biology") || key.includes("botany") || key.includes("zoology")) {
+    role = "success";
+  } else if (key.includes("english") || key.includes("history") || key.includes("civics") || key.includes("art")) {
+    role = "info";
+  } else if (key.includes("physics") || key.includes("chemistry") || key.includes("computer")) {
+    role = "secondary";
+  } else if (key.includes("geography") || key.includes("social") || key.includes("economics")) {
+    role = "warning";
+  } else if (key.includes("hindi") || key.includes("tamil") || key.includes("language")) {
+    role = "error";
+  } else {
+    const charCode = key.charCodeAt(0) || 0;
+    const roles = ["primary", "secondary", "info", "success", "warning"];
+    role = roles[charCode % roles.length];
+  }
+
+  const paletteColor = theme.palette[role] || theme.palette.primary;
+  return {
+    bg: alpha(paletteColor.main, 0.05),
+    accent: paletteColor.main,
+    text: paletteColor.dark || paletteColor.main,
+  };
 }
 
 // ── Due date helpers ────────────────────────────────────────────────────────
@@ -147,7 +149,8 @@ function HomeworkCard({ item }) {
     item.teacher?.name ||
     "";
 
-  const colors = getSubjectColor(subjectName);
+  const theme = useTheme();
+  const colors = getSubjectThemeColor(subjectName, theme);
   const dueInfo = getDueLabel(dueDate);
   const isOverdueItem = dueInfo?.label === "Overdue";
 
@@ -322,12 +325,12 @@ export default function DiaryPage() {
           <Typography
             variant="h5"
             fontWeight={900}
-            sx={{ fontFamily: "'Outfit', sans-serif", color: "#0f172a", lineHeight: 1 }}
+            sx={{ fontFamily: "'Outfit', sans-serif", color: "text.primary", lineHeight: 1 }}
           >
             Homework
           </Typography>
           {!loading && (
-            <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 500 }}>
+            <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 500 }}>
               {items.length} {items.length === 1 ? "entry" : "entries"}
             </Typography>
           )}
@@ -361,14 +364,14 @@ export default function DiaryPage() {
               transition: "all 0.18s",
               ...(activeFilter === f
                 ? {
-                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                    background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary?.main || theme.palette.primary.dark})`,
                     color: "#fff",
-                    boxShadow: "0 3px 10px rgba(99,102,241,0.35)",
+                    boxShadow: (theme) => `0 3px 10px ${alpha(theme.palette.primary.main, 0.35)}`,
                   }
                 : {
-                    background: "#f1f5f9",
-                    color: "#64748b",
-                    "&:hover": { background: "#e2e8f0" },
+                    background: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : "#f1f5f9",
+                    color: "text.secondary",
+                    "&:hover": { background: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : "#e2e8f0" },
                   }),
             }}
           />
@@ -408,8 +411,8 @@ export default function DiaryPage() {
             py: 8,
             px: 3,
             borderRadius: "20px",
-            background: "linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)",
-            border: "1px dashed rgba(139,92,246,0.25)",
+            background: (theme) => `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary?.main || theme.palette.primary.dark, 0.03)} 100%)`,
+            border: (theme) => `1px dashed ${alpha(theme.palette.primary.main, 0.25)}`,
             mt: 2,
           }}
         >
@@ -418,7 +421,7 @@ export default function DiaryPage() {
           </Typography>
           <Typography
             fontWeight={800}
-            sx={{ fontSize: "17px", color: "#4c1d95", fontFamily: "'Outfit', sans-serif" }}
+            sx={{ fontSize: "17px", color: "primary.dark", fontFamily: "'Outfit', sans-serif" }}
           >
             {activeFilter === "Overdue"
               ? "No overdue homework!"
@@ -426,7 +429,7 @@ export default function DiaryPage() {
               ? "Nothing due today"
               : "All caught up!"}
           </Typography>
-          <Typography variant="body2" sx={{ color: "#7c3aed", mt: 0.5, opacity: 0.7 }}>
+          <Typography variant="body2" sx={{ color: "primary.main", mt: 0.5, opacity: 0.7 }}>
             {activeFilter === "All"
               ? "No homework has been assigned yet."
               : `No homework matches the "${activeFilter}" filter.`}
@@ -454,7 +457,7 @@ export default function DiaryPage() {
                   sx={{
                     fontSize: isRecent ? "16px" : "13px",
                     fontWeight: isRecent ? 900 : 700,
-                    color: isRecent ? "#0f172a" : "#475569",
+                    color: isRecent ? "text.primary" : "text.secondary",
                     fontFamily: "'Outfit', sans-serif",
                     lineHeight: 1,
                   }}
@@ -522,7 +525,7 @@ export default function DiaryPage() {
       {/* ── Load more spinner ── */}
       {loadingMore && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
-          <CircularProgress size={22} sx={{ color: "#8b5cf6" }} />
+          <CircularProgress size={22} color="primary" />
         </Box>
       )}
 
@@ -550,11 +553,11 @@ export default function DiaryPage() {
             <Fab
               onClick={() => setShowCreate(true)}
               sx={{
-                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                boxShadow: "0 4px 20px rgba(99,102,241,0.45)",
+                background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary?.main || theme.palette.primary.dark})`,
+                boxShadow: (theme) => `0 4px 20px ${alpha(theme.palette.primary.main, 0.45)}`,
                 "&:hover": {
-                  background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-                  boxShadow: "0 6px 24px rgba(99,102,241,0.55)",
+                  background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary?.dark || theme.palette.primary.main})`,
+                  boxShadow: (theme) => `0 6px 24px ${alpha(theme.palette.primary.main, 0.55)}`,
                 },
                 transition: "all 0.2s",
               }}

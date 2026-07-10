@@ -140,9 +140,19 @@ export default function ProfilePage() {
       )}
 
       {profile?.pending_update && (
-        <Alert severity="warning" sx={{ mb: 3, borderRadius: '12px' }}>
-          <strong>Changes Pending Approval:</strong> You have submitted updates to your profile. They are currently pending administrator review. You can continue using the app with your current details in the meantime.
-        </Alert>
+        profile.pending_update.status === "REJECTED" ? (
+          <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
+            <strong>Changes Rejected:</strong> Your previous profile update request was rejected.
+            {profile.pending_update.rejection_reason && (
+              <span> Reason: <em>{profile.pending_update.rejection_reason}</em></span>
+            )}
+            . You can edit your profile details below and submit again.
+          </Alert>
+        ) : (
+          <Alert severity="warning" sx={{ mb: 3, borderRadius: '12px' }}>
+            <strong>Changes Pending Approval:</strong> You have submitted updates to your profile. They are currently pending administrator review. You can continue using the app with your current details in the meantime.
+          </Alert>
+        )
       )}
 
       {profile && (

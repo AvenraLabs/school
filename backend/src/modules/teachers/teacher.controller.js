@@ -107,7 +107,7 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
   if (teacher.approval_status === "approved") {
     const ProfileUpdateRequest = (await import("../approvals/profile-update-request.model.js")).default;
     await ProfileUpdateRequest.destroy({
-      where: { user_id: req.user.id, status: "PENDING" }
+      where: { user_id: req.user.id, status: ["PENDING", "REJECTED"] }
     });
     await ProfileUpdateRequest.create({
       school_id: req.user.school_id,
@@ -202,7 +202,8 @@ export const getMyProfile = asyncHandler(async (req, res) => {
 
   const ProfileUpdateRequest = (await import("../approvals/profile-update-request.model.js")).default;
   const pendingUpdate = await ProfileUpdateRequest.findOne({
-    where: { user_id: req.user.id, status: "PENDING" },
+    where: { user_id: req.user.id, status: ["PENDING", "REJECTED"] },
+    order: [["id", "DESC"]],
   });
 
   const data = teacher.get({ plain: true });
