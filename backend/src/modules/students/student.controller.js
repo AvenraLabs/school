@@ -128,6 +128,57 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
   }
 
   if (student.approval_status === "approved") {
+    const currentUser = await User.findByPk(req.user.id);
+    if (!currentUser) throw new AppError("User not found", 404);
+
+    const pending_data = {};
+
+    if (name !== undefined) {
+      const normalizedNew = name || null;
+      const normalizedCur = currentUser.name || null;
+      if (normalizedNew !== normalizedCur) pending_data.name = normalizedNew;
+    }
+    if (phone !== undefined) {
+      const normalizedNew = cleanedPhone || null;
+      const normalizedCur = currentUser.phone || null;
+      if (normalizedNew !== normalizedCur) pending_data.phone = normalizedNew;
+    }
+    if (req.body.email !== undefined) {
+      const normalizedNew = req.body.email || null;
+      const normalizedCur = currentUser.email || null;
+      if (normalizedNew !== normalizedCur) pending_data.email = normalizedNew;
+    }
+    if (avatar_url !== undefined) {
+      const normalizedNew = avatar_url || null;
+      const normalizedCur = currentUser.avatar_url || null;
+      if (normalizedNew !== normalizedCur) pending_data.avatar_url = normalizedNew;
+    }
+
+    const studentFields = [
+      "dob", "gender", "blood_group", "father_name", "mother_name",
+      "guardian_name", "father_occupation", "mother_occupation",
+      "guardian_occupation", "emergency_contact", "residential_status",
+      "address", "family_income"
+    ];
+    studentFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        const normalizedNew = req.body[field] || null;
+        const normalizedCur = student[field] || null;
+        if (normalizedNew !== normalizedCur) {
+          pending_data[field] = normalizedNew;
+        }
+      }
+    });
+
+    if (Object.keys(pending_data).length === 0) {
+      return res.json({
+        success: true,
+        message: "Profile is already up to date",
+        approval_pending: false,
+        student,
+      });
+    }
+
     const ProfileUpdateRequest = (await import("../approvals/profile-update-request.model.js")).default;
     await ProfileUpdateRequest.destroy({
       where: { user_id: req.user.id, status: ["PENDING", "REJECTED"] }
@@ -136,25 +187,7 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
       school_id: req.user.school_id,
       user_id: req.user.id,
       role: "student",
-      pending_data: {
-        name,
-        phone: cleanedPhone || null,
-        email: req.body.email || null,
-        dob,
-        gender,
-        blood_group,
-        father_name,
-        mother_name,
-        guardian_name,
-        father_occupation,
-        mother_occupation,
-        guardian_occupation,
-        emergency_contact,
-        residential_status,
-        address,
-        family_income,
-        avatar_url,
-      },
+      pending_data,
       status: "PENDING",
     });
     return res.json({

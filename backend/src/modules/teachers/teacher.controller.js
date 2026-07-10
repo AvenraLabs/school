@@ -105,6 +105,52 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
   }
 
   if (teacher.approval_status === "approved") {
+    const currentUser = await User.findByPk(req.user.id);
+    if (!currentUser) throw new AppError("User not found", 404);
+
+    const pending_data = {};
+
+    if (name !== undefined) {
+      const normalizedNew = name || null;
+      const normalizedCur = currentUser.name || null;
+      if (normalizedNew !== normalizedCur) pending_data.name = normalizedNew;
+    }
+    if (phone !== undefined) {
+      const normalizedNew = cleanedPhone || null;
+      const normalizedCur = currentUser.phone || null;
+      if (normalizedNew !== normalizedCur) pending_data.phone = normalizedNew;
+    }
+    if (email !== undefined) {
+      const normalizedNew = email || null;
+      const normalizedCur = currentUser.email || null;
+      if (normalizedNew !== normalizedCur) pending_data.email = normalizedNew;
+    }
+    if (avatar_url !== undefined) {
+      const normalizedNew = avatar_url || null;
+      const normalizedCur = currentUser.avatar_url || null;
+      if (normalizedNew !== normalizedCur) pending_data.avatar_url = normalizedNew;
+    }
+
+    const teacherFields = ["gender", "designation", "qualification", "experience"];
+    teacherFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        const normalizedNew = req.body[field] || null;
+        const normalizedCur = teacher[field] || null;
+        if (normalizedNew !== normalizedCur) {
+          pending_data[field] = normalizedNew;
+        }
+      }
+    });
+
+    if (Object.keys(pending_data).length === 0) {
+      return res.json({
+        success: true,
+        message: "Profile is already up to date",
+        approval_pending: false,
+        teacher,
+      });
+    }
+
     const ProfileUpdateRequest = (await import("../approvals/profile-update-request.model.js")).default;
     await ProfileUpdateRequest.destroy({
       where: { user_id: req.user.id, status: ["PENDING", "REJECTED"] }
@@ -113,16 +159,7 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
       school_id: req.user.school_id,
       user_id: req.user.id,
       role: "teacher",
-      pending_data: {
-        name,
-        phone: cleanedPhone || null,
-        email: email || null,
-        gender,
-        designation,
-        qualification,
-        experience,
-        avatar_url,
-      },
+      pending_data,
       status: "PENDING",
     });
     return res.json({

@@ -46,6 +46,7 @@ import {
 import { processImageForUpload } from "../../utils/imageUtils";
 import cloudStorageService from "../../services/cloudStorage";
 import { getAssetUrl } from "../../utils/asset";
+import ConfirmationDialog from "../../components/ConfirmationDialog";
 
 export default function LostFoundPage() {
   const { user } = useAuth();
@@ -106,10 +107,17 @@ export default function LostFoundPage() {
     }
   }
 
+  const refreshList = () => {
+    if (offset === 0) {
+      loadItems(true);
+    } else {
+      setOffset(0);
+    }
+  };
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    setOffset(0);
-    setItems([]);
+    refreshList();
   };
 
   const handlePhotoUpload = async (e) => {
@@ -171,8 +179,7 @@ export default function LostFoundPage() {
       });
       setOpenDialog(false);
       resetForm();
-      setOffset(0);
-      setItems([]);
+      refreshList();
     } catch (err) {
       setFormError(err.response?.data?.message || "Failed to submit post");
     } finally {
@@ -188,26 +195,52 @@ export default function LostFoundPage() {
     setPhotos([]);
     setFormError("");
   };
+  // Confirmation Dialog States
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteItemId, setDeleteItemId] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const handleCloseItem = async (id) => {
-    if (!window.confirm("Are you sure you want to close this post?")) return;
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+  const [closeItemId, setCloseItemId] = useState(null);
+  const [closeLoading, setCloseLoading] = useState(false);
+
+  const handleCloseItem = (id) => {
+    setCloseItemId(id);
+    setConfirmCloseOpen(true);
+  };
+
+  const handleConfirmClose = async () => {
+    if (!closeItemId) return;
+    setCloseLoading(true);
     try {
-      await closeLostFoundItem(id);
-      setOffset(0);
-      setItems([]);
+      await closeLostFoundItem(closeItemId);
+      setConfirmCloseOpen(false);
+      setCloseItemId(null);
+      refreshList();
     } catch (err) {
-      alert("Failed to close item");
+      console.error(err);
+    } finally {
+      setCloseLoading(false);
     }
   };
 
-  const handleDeleteItem = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this post?")) return;
+  const handleDeleteItem = (id) => {
+    setDeleteItemId(id);
+    setConfirmDeleteOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteItemId) return;
+    setDeleteLoading(true);
     try {
-      await deleteLostFoundItem(id);
-      setOffset(0);
-      setItems([]);
+      await deleteLostFoundItem(deleteItemId);
+      setConfirmDeleteOpen(false);
+      setDeleteItemId(null);
+      refreshList();
     } catch (err) {
-      alert("Failed to delete item");
+      console.error(err);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -584,6 +617,30 @@ export default function LostFoundPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmationDialog
+        open={confirmDeleteOpen}
+        onClose={() => setConfirmDeleteOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Post"
+        description="Are you sure you want to permanently delete this post? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        severity="error"
+        loading={deleteLoading}
+      />
+
+      <ConfirmationDialog
+        open={confirmCloseOpen}
+        onClose={() => setConfirmCloseOpen(false)}
+        onConfirm={handleConfirmClose}
+        title="Close Post"
+        description="Are you sure you want to mark this item as closed/solved?"
+        confirmText="Close Post"
+        cancelText="Cancel"
+        severity="warning"
+        loading={closeLoading}
+      />
     </Container>
   );
 }

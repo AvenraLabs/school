@@ -43,13 +43,6 @@ router.get(
   getAdminPendingApprovals
 );
 
-router.post(
-  "/admin/approvals/:type/:id/:action",
-  protect,
-  allowRoles("school_admin"),
-  approveRejectRequest
-);
-
 router.get(
   "/admin/approvals/profile-updates",
   protect,
@@ -62,6 +55,13 @@ router.post(
   protect,
   allowRoles("school_admin"),
   processProfileUpdateRequest
+);
+
+router.post(
+  "/admin/approvals/:type/:id/:action",
+  protect,
+  allowRoles("school_admin"),
+  approveRejectRequest
 );
 
 export default router;
