@@ -12,6 +12,7 @@ The summary should:
 - Include key concepts
 - Be easy to explain to students
 - Fit a 30–40 minute class
+- DO NOT use or include any emojis in the summary.
 `,
 
   question_paper: ({ subject, classLevel, chapter, marks }) => `
@@ -25,6 +26,7 @@ Total Marks: ${marks}
 Instructions:
 - Follow CBSE exam pattern
 - Include a mix of difficulty levels
+- DO NOT use or include any emojis in the generated question paper.
 
 Paper structure:
 Section A: MCQs  
@@ -43,6 +45,7 @@ Rules:
 - 10 multiple choice questions
 - 4 options per question
 - Clearly mark the correct answer
+- DO NOT use or include any emojis in the quiz content.
 `,
 
   homework: ({ topic, classLevel, subject }) => `
@@ -55,5 +58,6 @@ Include:
 - 5 theory questions
 - 5 application-based questions
 - Clear instructions for students
+- DO NOT use or include any emojis in the homework assignment.
 `,
 };

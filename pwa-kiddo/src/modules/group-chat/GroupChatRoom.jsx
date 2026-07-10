@@ -6,19 +6,48 @@ import {
   Paper,
   Typography,
   Avatar,
-  Stack
+  Stack,
+  CircularProgress
 } from "@mui/material";
-import { Send, Close } from "@mui/icons-material";
+import { Send, Close, PhotoCamera } from "@mui/icons-material";
 import { useAuth } from "../../auth/AuthProvider";
+import api from "../../api/axios";
+import { getAssetUrl } from "../../utils/asset";
 
-export default function GroupChatRoom({ messages, onSend, meta, onClose }) {
+export default function GroupChatRoom({ messages, onSend, onSendImage, meta, onClose }) {
   const { user } = useAuth();
   const [text, setText] = useState("");
+  const [uploading, setUploading] = useState(false);
   const endRef = useRef(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  async function handleImageSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("chat", file);
+
+      const response = await api.post("/upload/chat", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (response.data?.success && response.data.url) {
+        onSendImage?.(response.data.url);
+      }
+    } catch (err) {
+      console.error("Chat image upload failed:", err);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   function handleSend() {
     if (!text.trim()) return;
@@ -89,6 +118,7 @@ export default function GroupChatRoom({ messages, onSend, meta, onClose }) {
               >
                 {!isMe && (
                   <Avatar
+                    src={getAssetUrl(msg.sender_avatar)}
                     sx={{ width: 32, height: 32, fontSize: 12, bgcolor: 'primary.light' }}
                   >
                     {initial || "?"}
@@ -108,10 +138,27 @@ export default function GroupChatRoom({ messages, onSend, meta, onClose }) {
                       bgcolor: isMe ? 'primary.main' : 'white',
                       color: isMe ? 'white' : 'text.primary',
                       borderTopRightRadius: isMe ? 4 : 20,
-                      borderTopLeftRadius: isMe ? 20 : 4
+                      borderTopLeftRadius: isMe ? 20 : 4,
+                      overflow: "hidden"
                     }}
                   >
-                    <Typography variant="body2">{msg.content}</Typography>
+                    {msg.type === "image" ? (
+                      <Box
+                        component="img"
+                        src={getAssetUrl(msg.content)}
+                        alt="Image attachment"
+                        sx={{
+                          maxWidth: "100%",
+                          maxHeight: 200,
+                          borderRadius: 2,
+                          display: "block",
+                          cursor: "pointer"
+                        }}
+                        onClick={() => window.open(getAssetUrl(msg.content), "_blank")}
+                      />
+                    ) : (
+                      <Typography variant="body2">{msg.content}</Typography>
+                    )}
                   </Paper>
                   <Typography variant="caption" color="text.disabled" sx={{ display: 'block', textAlign: isMe ? 'right' : 'left', mt: 0.5, px: 1 }}>
                     {msg.created_at
@@ -128,7 +175,22 @@ export default function GroupChatRoom({ messages, onSend, meta, onClose }) {
 
       {/* Input Area */}
       <Box sx={{ p: 2, bgcolor: 'white', borderTop: 1, borderColor: 'divider' }}>
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <IconButton
+            component="label"
+            disabled={uploading}
+            sx={{ color: "text.secondary" }}
+          >
+            {uploading ? <CircularProgress size={24} /> : <PhotoCamera />}
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleImageSelect}
+              disabled={uploading}
+            />
+          </IconButton>
+
           <TextField
             fullWidth
             placeholder="Type a message..."
@@ -136,6 +198,7 @@ export default function GroupChatRoom({ messages, onSend, meta, onClose }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            disabled={uploading}
             sx={{
               '& .MuiOutlinedInput-root': { borderRadius: 4 }
             }}
@@ -143,7 +206,7 @@ export default function GroupChatRoom({ messages, onSend, meta, onClose }) {
           <IconButton
             color="primary"
             onClick={handleSend}
-            disabled={!text.trim()}
+            disabled={!text.trim() || uploading}
             sx={{ bgcolor: 'primary.light', color: 'white', '&:hover': { bgcolor: 'primary.main' } }}
           >
             <Send />

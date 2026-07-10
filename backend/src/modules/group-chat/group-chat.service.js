@@ -308,7 +308,7 @@ export async function getGroupMessages({ chatId, user }) {
     include: [
       {
         model: User,
-        attributes: ["id", "name"],
+        attributes: ["id", "name", "avatar_url"],
         as: "Sender",
         required: false,
       },
@@ -320,6 +320,7 @@ export async function getGroupMessages({ chatId, user }) {
     id: m.id,
     sender_id: m.sender_user_id,
     sender_name: m.Sender?.name ?? "Unknown",
+    sender_avatar: m.Sender?.avatar_url || null,
     content: m.message_text || m.image_url,
     type: m.message_type,
     created_at: m.created_at,

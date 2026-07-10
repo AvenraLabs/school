@@ -33,7 +33,7 @@ export function useTimetable() {
       targetClassId = user.class_id;
       targetSectionId = user.section_id;
 
-      console.log("Timetable User Context:", { targetClassId, targetSectionId, role: user.role });
+
 
       if (!targetClassId || !targetSectionId) {
         setError("Missing class/section context for timetable.");

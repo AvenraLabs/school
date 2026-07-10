@@ -16,6 +16,8 @@ import { Close, PhotoCamera } from "@mui/icons-material";
 import { useState } from "react";
 import { submitFeedbackApi } from "./feedback.api";
 import { processImageForUpload } from "../../utils/imageUtils";
+import cloudStorageService from "../../services/cloudStorage";
+import { getAssetUrl } from "../../utils/asset";
 
 // Simple User Agent parser to detect browser
 function getBrowserInfo() {
@@ -54,13 +56,17 @@ export default function FeedbackPage() {
         validation: { maxSizeInMB: 3 },
         compression: { maxWidth: 800, maxHeight: 800, quality: 0.7 }
       });
-      setScreenshot(processed.data);
+      const uploadResult = await cloudStorageService.uploadImage(processed, { type: "announcement" });
+      setScreenshot(uploadResult.url);
     } catch (err) {
-      setError(err.message || "Failed to process screenshot");
+      setError(err.message || "Failed to upload screenshot");
     }
   };
 
-  const removeScreenshot = () => {
+  const removeScreenshot = async () => {
+    if (screenshot) {
+      await cloudStorageService.deleteImage(screenshot);
+    }
     setScreenshot("");
   };
 
@@ -162,7 +168,7 @@ export default function FeedbackPage() {
                 <Box sx={{ position: "relative", width: 120, height: 90 }}>
                   <Box
                     component="img"
-                    src={screenshot}
+                    src={getAssetUrl(screenshot)}
                     alt=""
                     sx={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px", border: "1px solid rgba(0,0,0,0.1)" }}
                   />

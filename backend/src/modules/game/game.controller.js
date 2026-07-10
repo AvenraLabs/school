@@ -201,8 +201,8 @@ export const getLeaderboard = asyncHandler(async (req, res) => {
   const leaderboard = await GameSessionPlayer.findAll({
     where: { session_id: sessionId },
     order: [["score", "DESC"], ["finished_at", "ASC"]],
-    include: [{ model: User, attributes: ["id", "name"] }],
-    attributes: ["score", "finished_at"],
+    include: [{ model: User, attributes: ["id", "name", "avatar_url"] }],
+    attributes: ["score", "finished_at", "user_id"],
   });
 
   res.json(leaderboard);
@@ -280,7 +280,8 @@ export const joinMultiplayerQuiz = asyncHandler(async (req, res) => {
 
 // Quiz history for current user (single + multiplayer)
 export const getQuizHistory = asyncHandler(async (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 20, 100);
+  const limit = Math.min(Number(req.query.limit) || 10, 100);
+  const offset = Number(req.query.offset) || 0;
 
   const myPlayers = await GameSessionPlayer.findAll({
     where: { user_id: req.user.id },
@@ -307,6 +308,7 @@ export const getQuizHistory = asyncHandler(async (req, res) => {
     ],
     order: [["created_at", "DESC"]],
     limit,
+    offset,
   });
 
   const hostedSessions = await GameSession.findAll({
@@ -324,6 +326,7 @@ export const getQuizHistory = asyncHandler(async (req, res) => {
     ],
     order: [["created_at", "DESC"]],
     limit,
+    offset,
   });
 
   const sessionIds = [
@@ -345,10 +348,11 @@ export const getQuizHistory = asyncHandler(async (req, res) => {
       if (!playersBySession[p.session_id]) {
         playersBySession[p.session_id] = [];
       }
+      const u = p.user || p.User;
       playersBySession[p.session_id].push({
         user_id: p.user_id,
-        name: p.User?.name || "Player",
-        avatar_url: p.User?.avatar_url || null,
+        name: u?.name || "Player",
+        avatar_url: u?.avatar_url || null,
         score: p.score ?? 0,
         status: p.status,
       });

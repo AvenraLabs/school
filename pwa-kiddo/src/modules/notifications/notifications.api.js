@@ -8,7 +8,7 @@ export const createNotification = (data) =>
 export const listNotifications = (params = {}) =>
   api.get("/notifications", { params });
 
-// Alias for backward compatibility if used elsewhere
+// Alias for backward compatibility
 export const getNotifications = listNotifications;
 
 // Acknowledge a notification
@@ -18,3 +18,7 @@ export const acknowledgeNotification = (id) =>
 // Get acknowledgements for a notification
 export const getNotificationAcknowledgements = (id) =>
   api.get(`/notifications/${id}/acknowledgements`);
+
+// Mark all notifications as read
+export const markAllNotificationsAsRead = () =>
+  api.post("/notifications/mark-all-read");

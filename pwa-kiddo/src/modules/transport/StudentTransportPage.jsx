@@ -209,31 +209,48 @@ export default function StudentTransportPage() {
   }, [leafletLoaded, gpsLocation, transportInfo]);
 
   const fetchTransportInfo = async () => {
+    if (!studentId) {
+      // No student ID available, try the simple /me endpoint only
+      setLoading(true);
+      try {
+        const res = await api.get("/student/transport/me");
+        if (res.data?.success && res.data.data) {
+          setTransportInfo(res.data.data);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setLoading(true);
     try {
-      // Try the "me" endpoint first (simple static info)
-      const res = await api.get("/student/transport/me");
-      if (res.data?.success && res.data.data) {
-        setTransportInfo(res.data.data);
-        // Also fetch live trip data if we have a student_id claim
-        if (studentId) {
-          try {
-            const liveRes = await api.get(`/student/transport/students/${studentId}`);
-            if (liveRes.data?.success && liveRes.data.data) {
-              setTransportInfo(liveRes.data.data.transport);
-              const trip = liveRes.data.data.active_trip;
-              setActiveTrip(trip);
-              if (trip) {
-                try {
-                  const locRes = await api.get(`/student/transport/trips/${trip.id}/location`);
-                  if (locRes.data?.success && locRes.data.data) {
-                    setGpsLocation(locRes.data.data);
-                  }
-                } catch { /* ignore location fetch error */ }
+      // Fetch transport info and active trip in parallel
+      const [transportRes, liveRes] = await Promise.all([
+        api.get("/student/transport/me").catch(() => null),
+        api.get(`/student/transport/students/${studentId}`).catch(() => null),
+      ]);
+
+      // Use the richer live response if available, else fallback to /me
+      if (liveRes?.data?.success && liveRes.data.data) {
+        const { transport, active_trip } = liveRes.data.data;
+        setTransportInfo(transport);
+        setActiveTrip(active_trip);
+
+        // If there is an active trip, fetch its GPS location in the background
+        if (active_trip) {
+          api.get(`/student/transport/trips/${active_trip.id}/location`)
+            .then((locRes) => {
+              if (locRes.data?.success && locRes.data.data) {
+                setGpsLocation(locRes.data.data);
               }
-            }
-          } catch { /* ignore live fetch error */ }
+            })
+            .catch(() => {/* ignore — location is optional */});
         }
+      } else if (transportRes?.data?.success && transportRes.data.data) {
+        setTransportInfo(transportRes.data.data);
       }
     } catch (e) {
       console.error(e);

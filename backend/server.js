@@ -3,11 +3,14 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 dotenv.config();
 
 import db from "./src/config/db.js";
 import errorHandler from "./src/shared/errorHandler.js";
 import "./src/models/initModels.js";
+import uploadRoutes from "./src/modules/upload/upload.routes.js";
 
 // socket
 import { createServer } from "http";
@@ -78,6 +81,10 @@ app.use(express.json());
 app.use(helmet());
 app.use(morgan("dev"));
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 // HEALTH CHECK
 app.get("/", (req, res) => {
@@ -141,6 +148,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/upload", uploadRoutes);
 app.use("/api", transportRoutes);
 
 // attendance (MOVED UP to prevent teacherRoutes masking)

@@ -9,7 +9,11 @@ import {
   CircularProgress,
   Paper,
   LinearProgress,
-  Stack
+  Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from "@mui/material";
 import { EmojiEvents, School } from "@mui/icons-material";
 import { generateQuiz, startSingleQuiz, submitSingleQuiz } from "../api/quiz.api";
@@ -27,6 +31,8 @@ export default function SinglePlayerQuizPage() {
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [sessionId, setSessionId] = useState(null);
   const [playerId, setPlayerId] = useState(null);
+  const [difficulty, setDifficulty] = useState("EASY");
+  const [numQuestions, setNumQuestions] = useState(5);
   const [answers, setAnswers] = useState([]);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,8 +45,8 @@ export default function SinglePlayerQuizPage() {
       const res = await generateQuiz({
         topic,
         classLevel: user?.class_level || 5,
-        difficulty: "MEDIUM",
-        numQuestions: 5,
+        difficulty,
+        numQuestions,
       });
 
       const quizData = res.data?.questions || [];
@@ -142,17 +148,71 @@ export default function SinglePlayerQuizPage() {
           <Typography variant="h5" fontWeight="bold" gutterBottom>
             AI Quiz Master
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-            Enter a topic and I will generate a quiz for you!
-          </Typography>
 
           <TextField
             label="Quiz Topic (e.g. Solar System)"
             fullWidth
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            sx={{ mb: 3 }}
+            sx={{ mb: 2 }}
           />
+
+          <Stack spacing={2} sx={{ mb: 3, textAlign: "left" }}>
+            <Box>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", display: "block", mb: 1 }}>
+                Number of questions
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                {[5, 10, 20].map((num) => (
+                  <Button
+                    key={num}
+                    variant={numQuestions === num ? "contained" : "outlined"}
+                    onClick={() => setNumQuestions(num)}
+                    sx={{
+                      borderRadius: "12px",
+                      flex: 1,
+                      py: 1,
+                      fontWeight: 800,
+                      textTransform: "none",
+                      borderWidth: "1.5px",
+                      "&:hover": { borderWidth: "1.5px" }
+                    }}
+                  >
+                    {num}
+                  </Button>
+                ))}
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", display: "block", mb: 1 }}>
+                Difficulty
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                {[
+                  { value: "EASY", label: "Easy" },
+                  { value: "HARD", label: "Hard" },
+                ].map((diff) => (
+                  <Button
+                    key={diff.value}
+                    variant={difficulty === diff.value ? "contained" : "outlined"}
+                    onClick={() => setDifficulty(diff.value)}
+                    sx={{
+                      borderRadius: "12px",
+                      flex: 1,
+                      py: 1,
+                      fontWeight: 800,
+                      textTransform: "none",
+                      borderWidth: "1.5px",
+                      "&:hover": { borderWidth: "1.5px" }
+                    }}
+                  >
+                    {diff.label}
+                  </Button>
+                ))}
+              </Stack>
+            </Box>
+          </Stack>
 
           <Button
             variant="contained"

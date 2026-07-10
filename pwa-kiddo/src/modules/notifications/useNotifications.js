@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   getNotifications,
   acknowledgeNotification,
+  markAllNotificationsAsRead,
 } from "./notifications.api";
 
 export function useNotifications() {
@@ -40,12 +41,24 @@ export function useNotifications() {
     window.dispatchEvent(new Event("notifications:refresh"));
   }
 
+  async function markAllRead() {
+    try {
+      await markAllNotificationsAsRead();
+      setItems((prev) =>
+        prev.map((n) => ({ ...n, is_acknowledged: true }))
+      );
+      window.dispatchEvent(new Event("notifications:refresh"));
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+    }
+  }
+
   return {
     items,
     loading,
     error,
     acknowledge,
+    markAllRead,
     refresh: fetchNotifications,
   };
 }
-

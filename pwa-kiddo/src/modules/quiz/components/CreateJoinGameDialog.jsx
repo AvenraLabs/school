@@ -7,7 +7,12 @@ import {
     Box,
     TextField,
     Button,
-    Stack
+    Stack,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    Typography
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +23,8 @@ export default function CreateJoinGameDialog({ open, onClose }) {
     const [tab, setTab] = useState(0);
     const [roomCode, setRoomCode] = useState("");
     const [topic, setTopic] = useState("");
+    const [difficulty, setDifficulty] = useState("EASY");
+    const [numQuestions, setNumQuestions] = useState(5);
     const [loading, setLoading] = useState(false);
 
     async function handleCreate() {
@@ -26,8 +33,8 @@ export default function CreateJoinGameDialog({ open, onClose }) {
         try {
             const res = await createMultiplayerQuiz({
                 topic,
-                difficulty: "MEDIUM",
-                numQuestions: 5,
+                difficulty,
+                numQuestions,
             });
             const sessionId = res.data?.sessionId;
             const code = res.data?.roomCode;
@@ -57,15 +64,15 @@ export default function CreateJoinGameDialog({ open, onClose }) {
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-            <DialogTitle>Multiplayer Quiz</DialogTitle>
+            <DialogTitle sx={{ fontWeight: "bold" }}>Multiplayer Quiz</DialogTitle>
             <DialogContent>
                 <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth" sx={{ mb: 2 }}>
-                    <Tab label="Create Game" />
-                    <Tab label="Join Game" />
+                    <Tab label="Create Game" sx={{ fontWeight: "bold" }} />
+                    <Tab label="Join Game" sx={{ fontWeight: "bold" }} />
                 </Tabs>
 
                 {tab === 0 ? (
-                    <Stack spacing={2} sx={{ mt: 2 }}>
+                    <Stack spacing={2.5} sx={{ mt: 2 }}>
                         <TextField
                             label="Quiz Topic"
                             helperText="Example: Solar System"
@@ -73,19 +80,87 @@ export default function CreateJoinGameDialog({ open, onClose }) {
                             value={topic}
                             onChange={(e) => setTopic(e.target.value)}
                         />
-                        <Button variant="contained" onClick={handleCreate} disabled={loading || !topic.trim()}>
+
+                        <Stack spacing={2} sx={{ textAlign: "left" }}>
+                            <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", display: "block", mb: 1 }}>
+                                    Number of questions
+                                </Typography>
+                                <Stack direction="row" spacing={1}>
+                                    {[5, 10, 20].map((num) => (
+                                        <Button
+                                            key={num}
+                                            variant={numQuestions === num ? "contained" : "outlined"}
+                                            onClick={() => setNumQuestions(num)}
+                                            sx={{
+                                                borderRadius: "12px",
+                                                flex: 1,
+                                                py: 1,
+                                                fontWeight: 800,
+                                                textTransform: "none",
+                                                borderWidth: "1.5px",
+                                                "&:hover": { borderWidth: "1.5px" }
+                                            }}
+                                        >
+                                            {num}
+                                        </Button>
+                                    ))}
+                                </Stack>
+                            </Box>
+
+                            <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 700, color: "text.secondary", textTransform: "uppercase", display: "block", mb: 1 }}>
+                                    Difficulty
+                                </Typography>
+                                <Stack direction="row" spacing={1}>
+                                    {[
+                                        { value: "EASY", label: "Easy" },
+                                        { value: "HARD", label: "Hard" },
+                                    ].map((diff) => (
+                                        <Button
+                                            key={diff.value}
+                                            variant={difficulty === diff.value ? "contained" : "outlined"}
+                                            onClick={() => setDifficulty(diff.value)}
+                                            sx={{
+                                                borderRadius: "12px",
+                                                flex: 1,
+                                                py: 1,
+                                                fontWeight: 800,
+                                                textTransform: "none",
+                                                borderWidth: "1.5px",
+                                                "&:hover": { borderWidth: "1.5px" }
+                                            }}
+                                        >
+                                            {diff.label}
+                                        </Button>
+                                    ))}
+                                </Stack>
+                            </Box>
+                        </Stack>
+
+                        <Button 
+                            variant="contained" 
+                            onClick={handleCreate} 
+                            disabled={loading || !topic.trim()}
+                            sx={{ py: 1.2, fontWeight: "bold", borderRadius: 2 }}
+                        >
                             {loading ? "Creating..." : "Create Room"}
                         </Button>
                     </Stack>
                 ) : (
-                    <Stack spacing={2} sx={{ mt: 2 }}>
+                    <Stack spacing={2.5} sx={{ mt: 2 }}>
                         <TextField
                             label="Game Code"
                             fullWidth
                             value={roomCode}
                             onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                         />
-                        <Button variant="contained" onClick={handleJoin} disabled={!roomCode || loading}>
+                        <Button 
+                            variant="contained" 
+                            onClick={handleJoin} 
+                            disabled={!roomCode || loading}
+                            sx={{ py: 1.2, fontWeight: "bold", borderRadius: 2 }}
+                        >
                             {loading ? "Joining..." : "Join Room"}
                         </Button>
                     </Stack>

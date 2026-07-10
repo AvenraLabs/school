@@ -104,12 +104,21 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
     }
   }
 
+  const currentUser = await User.findByPk(req.user.id);
+  if (!currentUser) throw new AppError("User not found", 404);
+
   // Update User details
   const userUpdates = {};
   if (name !== undefined) userUpdates.name = name;
   if (phone !== undefined) userUpdates.phone = cleanedPhone || null;
   if (email !== undefined) userUpdates.email = email;
-  if (avatar_url !== undefined) userUpdates.avatar_url = avatar_url || null;
+  if (avatar_url !== undefined) {
+    if (avatar_url !== currentUser.avatar_url) {
+      const { deleteLocalFile } = await import("../../shared/utils/fileCleanup.js");
+      deleteLocalFile(currentUser.avatar_url);
+    }
+    userUpdates.avatar_url = avatar_url || null;
+  }
   if (req.user.first_login && name !== undefined) {
     userUpdates.first_login = false;
   }

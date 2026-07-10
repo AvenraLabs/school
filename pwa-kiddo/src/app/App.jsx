@@ -8,6 +8,7 @@ import DriverApp from "../pages/DriverApp";
 import NotAuthorized from "../pages/NotAuthorized";
 import PrivacyPolicy from "../pages/PrivacyPolicy";
 import TermsConditions from "../pages/TermsConditions";
+import NotFoundPage from "../pages/NotFoundPage";
 
 import RequireAuth from "../auth/RequireAuth";
 import RequireRole from "../auth/RequireRole";
@@ -28,6 +29,7 @@ export default function App() {
   return (
     <ErrorBoundary fallback={<div>Something went wrong</div>}>
       <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsConditions />} />
@@ -94,7 +96,7 @@ export default function App() {
         />
 
         <Route path="/unauthorized" element={<NotAuthorized />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </ErrorBoundary>
   );

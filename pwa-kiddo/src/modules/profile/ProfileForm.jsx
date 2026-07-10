@@ -14,6 +14,7 @@ import { useForm, Controller } from "react-hook-form";
 import { useState, useRef } from "react";
 import { createImagePreview, revokeImagePreview } from "../../utils/imageUtils";
 import DatePickerField from "../../components/DatePickerField";
+import { getAssetUrl } from "../../utils/asset";
 
 export default function ProfileForm({
   profile,
@@ -111,7 +112,7 @@ export default function ProfileForm({
     }
   }
 
-  const currentAvatarUrl = previewUrl || profile?.avatar_url;
+  const currentAvatarUrl = previewUrl || getAssetUrl(profile?.avatar_url);
   const hasAvatar = Boolean(currentAvatarUrl);
 
   return (

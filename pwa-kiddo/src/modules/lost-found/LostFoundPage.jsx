@@ -43,6 +43,8 @@ import {
   deleteLostFoundItem,
 } from "./lost-found.api";
 import { processImageForUpload } from "../../utils/imageUtils";
+import cloudStorageService from "../../services/cloudStorage";
+import { getAssetUrl } from "../../utils/asset";
 
 export default function LostFoundPage() {
   const { user } = useAuth();
@@ -115,15 +117,23 @@ export default function LostFoundPage() {
         )
       );
 
-      const base64s = processed.map((p) => p.data);
-      setPhotos((prev) => [...prev, ...base64s]);
+      const uploadResults = await Promise.all(
+        processed.map((p) => cloudStorageService.uploadImage(p, { type: "announcement" }))
+      );
+
+      const urls = uploadResults.map((r) => r.url);
+      setPhotos((prev) => [...prev, ...urls]);
     } catch (err) {
       setFormError(err.message || "Failed to upload image");
     }
     e.target.value = "";
   };
 
-  const removePhoto = (index) => {
+  const removePhoto = async (index) => {
+    const targetUrl = photos[index];
+    if (targetUrl) {
+      await cloudStorageService.deleteImage(targetUrl);
+    }
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -358,7 +368,7 @@ export default function LostFoundPage() {
                         <Grid item xs={item.photos.length === 1 ? 12 : 6} key={idx}>
                           <Box
                             component="img"
-                            src={p}
+                            src={getAssetUrl(p)}
                             alt=""
                             sx={{
                               width: "100%",
@@ -480,7 +490,7 @@ export default function LostFoundPage() {
                   <Box key={idx} sx={{ position: "relative", width: 64, height: 64 }}>
                     <Box
                       component="img"
-                      src={p}
+                      src={getAssetUrl(p)}
                       alt=""
                       sx={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }}
                     />

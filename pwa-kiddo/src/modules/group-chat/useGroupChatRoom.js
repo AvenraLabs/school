@@ -54,9 +54,21 @@ export function useGroupChatRoom(chatId) {
     });
   }
 
+  function sendImageMessage(imageUrl) {
+    const socket = socketRef.current || connectGroupChatSocket(token);
+    socketRef.current = socket;
+
+    socket.emit("group:message", {
+      chatId,
+      type: "image",
+      imageUrl,
+    });
+  }
+
   return {
     messages,
     sendMessage,
+    sendImageMessage,
   };
 }
 
@@ -65,6 +77,7 @@ function normalizeApiMessage(m) {
     id: m.id,
     sender_id: m.sender_id,
     sender_name: m.sender_name || "Unknown",
+    sender_avatar: m.sender_avatar || null,
     content: m.content,
     type: m.type,
     created_at: m.created_at || new Date().toISOString(),
@@ -96,6 +109,10 @@ function normalizeSocketMessage(msg, user) {
       msg.senderUserId === user?.id
         ? user?.name || "You"
         : msg.senderName || "Unknown",
+    sender_avatar:
+      msg.senderUserId === user?.id
+        ? user?.avatar_url || null
+        : msg.senderAvatar || null,
     content: msg.text || msg.imageUrl || "",
     type: msg.type || "text",
     created_at: msg.createdAt || new Date().toISOString(),

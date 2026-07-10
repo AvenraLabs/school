@@ -27,27 +27,45 @@ class StorageProvider {
  * Simple base64 storage provider
  * Stores images as base64 data through the backend API
  */
+function dataURLtoFile(dataurl, filename) {
+  const arr = dataurl.split(",");
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
+}
+
 class Base64StorageProvider extends StorageProvider {
   async uploadImage(imageData, options = {}) {
     try {
       const { userId, type = 'profile' } = options;
+      const dataUrl = imageData.data;
+      const file = dataURLtoFile(dataUrl, `${type}_${userId || "user"}_${Date.now()}.jpg`);
       
-      // For now, we'll store the base64 data directly
-      // In a real implementation, this would upload to a cloud service
-      const uploadData = {
-        image_data: imageData.data,
-        image_size: imageData.size,
-        image_type: type,
-        user_id: userId
-      };
-
-      // Since backend doesn't have upload endpoint yet, we'll simulate it
-      // by returning a data URL that can be stored in the profile
-      const imageUrl = imageData.data;
+      const formData = new FormData();
+      const isAvatar = type === "profile" || type === "avatar";
+      const fieldName = isAvatar ? "avatar" : type;
+      formData.append(fieldName, file);
+      
+      const endpoint = isAvatar ? "/upload/avatar" : `/upload/${type}`;
+      const response = await api.post(endpoint, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      });
+      
+      if (!response.data || !response.data.success) {
+        throw new Error(response.data?.message || 'Upload failed');
+      }
       
       return {
-        url: imageUrl,
-        id: `${type}_${userId}_${Date.now()}`,
+        url: response.data.url, // e.g. "/uploads/avatars/filename.jpg"
+        id: response.data.fileName,
         size: imageData.size,
         uploadedAt: new Date().toISOString()
       };
@@ -58,21 +76,29 @@ class Base64StorageProvider extends StorageProvider {
 
   async deleteImage(imageUrl) {
     try {
-      // In a real implementation, this would delete from cloud storage
-      // For now, we just return success since we're using data URLs
+      // Deletions happen via specific backend actions or fileCleanup,
+      // but if called from client, we can send a DELETE request
+      if (imageUrl && imageUrl.startsWith("/uploads/")) {
+        await api.delete(`/upload/file?path=${encodeURIComponent(imageUrl)}`);
+      }
       return { success: true };
     } catch (error) {
-      throw new Error(`Delete failed: ${error.message}`);
+      console.warn("Delete failed", error);
+      return { success: true }; // Don't block
     }
   }
 
   async getImageUrl(imageId) {
     try {
-      // In a real implementation, this would fetch from cloud storage
-      // For now, we assume the imageId is already a data URL
-      return imageId;
+      if (!imageId) return "";
+      if (imageId.startsWith("data:") || imageId.startsWith("http://") || imageId.startsWith("https://")) {
+        return imageId;
+      }
+      // Retrieve host from api baseURL
+      const host = api.defaults.baseURL.replace(/\/api$/, "");
+      return `${host}${imageId}`;
     } catch (error) {
-      throw new Error(`Get image URL failed: ${error.message}`);
+      return imageId;
     }
   }
 }

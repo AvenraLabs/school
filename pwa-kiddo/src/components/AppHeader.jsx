@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import { Notifications } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
+import { getAssetUrl } from "../utils/asset";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../modules/notifications/useNotifications";
 import SiblingSelector from "./SiblingSelector";
@@ -47,7 +48,7 @@ export default function AppHeader() {
     >
       <Toolbar sx={{ display: "flex", gap: 2 }}>
         <Typography variant="h6" sx={{ flex: 1, fontWeight: 600 }}>
-          School App
+          SchoolIQ
         </Typography>
         {user && (
           <>
@@ -73,7 +74,7 @@ export default function AppHeader() {
               aria-label="Open profile"
             >
               <Avatar
-                src={user?.avatar_url || ""}
+                src={getAssetUrl(user?.avatar_url) || ""}
                 sx={{
                   width: 32,
                   height: 32,

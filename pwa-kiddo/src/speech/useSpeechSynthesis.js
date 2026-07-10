@@ -25,26 +25,20 @@ export function useSpeechSynthesis() {
   const speak = useCallback((text, onStart, onEnd) => {
     if (!supported || !text) return;
 
-    // Cancel any ongoing speech
     window.speechSynthesis.cancel();
 
-    // Clean text by removing markdown notation (like *, #, etc.) to make TTS read smoothly
     const cleanText = text
       .replace(/[*#`_\-]/g, "")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // Simplify markdown links to just their text
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
       .trim();
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utteranceRef.current = utterance;
 
-    // Detect if text contains Tamil characters (Unicode range: \u0B80 to \u0BFF)
     const containsTamil = /[\u0B80-\u0BFF]/.test(cleanText);
-
-    // Get all available voices
     const voices = window.speechSynthesis.getVoices();
 
     if (containsTamil) {
-      // Find Tamil voice (case-insensitive, supporting ta-in, ta_in, ta-lk, and ta)
       const tamilVoice = voices.find((voice) => {
         const langLower = voice.lang.toLowerCase().replace("_", "-");
         return (
@@ -59,7 +53,6 @@ export function useSpeechSynthesis() {
       }
       utterance.lang = "ta-IN";
     } else {
-      // Find an English voice (prefer Indian/US English if available)
       const englishVoice = voices.find((voice) => {
         const langLower = voice.lang.toLowerCase().replace("_", "-");
         return (
@@ -75,11 +68,9 @@ export function useSpeechSynthesis() {
       utterance.lang = "en-US";
     }
 
-    // Set rate and pitch for standard clear school instructions
-    utterance.rate = containsTamil ? 0.85 : 0.95; // Slightly slower for Tamil to be more distinct
+    utterance.rate = containsTamil ? 0.85 : 0.95;
     utterance.pitch = 1.0;
 
-    // Handle events
     utterance.onstart = () => {
       setIsPlaying(true);
       if (onStart) onStart();
@@ -96,7 +87,6 @@ export function useSpeechSynthesis() {
       if (onEnd) onEnd();
     };
 
-    // Speak
     window.speechSynthesis.speak(utterance);
   }, [supported]);
 

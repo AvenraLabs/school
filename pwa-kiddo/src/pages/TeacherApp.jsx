@@ -7,6 +7,7 @@ import BottomNav from "../components/BottomNav";
 import LoadingScreen from "../components/LoadingScreen";
 import TeacherSidebar from "../components/TeacherSidebar";
 import { ProtectedAppWrapper } from "./ProtectedAppWrapper";
+import NotFoundPage from "./NotFoundPage";
 
 /* lazy pages */
 const DashboardPage = lazy(() => import("../modules/dashboard/DashboardPage"));
@@ -74,6 +75,7 @@ export default function TeacherApp() {
               <Route path="quiz/:id/lobby" element={<QuizLobbyPage />} />
               <Route path="quiz/:id/play" element={<QuizPlayPage />} />
               <Route path="quiz/:id/results" element={<QuizResultPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>
         </Box>

@@ -1,4 +1,4 @@
-import { Box, Paper, Typography, Avatar, useTheme, IconButton, Stack } from "@mui/material";
+import { Box, Paper, Typography, Avatar, useTheme, Stack, IconButton } from "@mui/material";
 import { SmartToy, Person, VolumeUp, VolumeOff } from "@mui/icons-material";
 import { useSpeechSynthesis } from "../../../speech/useSpeechSynthesis";
 

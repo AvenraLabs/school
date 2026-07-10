@@ -4,6 +4,7 @@ import { Box, Typography, Button, Paper, Avatar, List, ListItem, ListItemAvatar,
 import { EmojiEvents } from "@mui/icons-material";
 import { getQuizLeaderboard } from "../api/quiz.api";
 import { useAuth } from "../../../auth/AuthProvider";
+import { getAssetUrl } from "../../../utils/asset";
 
 export default function QuizResultPage() {
   const { id } = useParams();
@@ -16,6 +17,7 @@ export default function QuizResultPage() {
     async function load() {
       try {
         const res = await getQuizLeaderboard(id);
+        console.log("LEADERBOARD API RES:", res.data);
         setLeaderboard(res.data || []);
       } catch (err) {
         console.error(err);
@@ -24,8 +26,26 @@ export default function QuizResultPage() {
     load();
   }, [id]);
 
+  const uniqueLeaderboard = [];
+  const seenUserIds = new Set();
+  for (const entry of leaderboard) {
+    const u = entry.user || entry.User;
+    const uid = u?.id;
+    if (uid) {
+      if (!seenUserIds.has(uid)) {
+        seenUserIds.add(uid);
+        uniqueLeaderboard.push(entry);
+      }
+    } else {
+      uniqueLeaderboard.push(entry);
+    }
+  }
+
   const myEntry =
-    leaderboard.find((p) => p.User?.id === user?.id) || null;
+    uniqueLeaderboard.find((p) => {
+      const u = p.user || p.User;
+      return u?.id === user?.id;
+    }) || null;
   const myScore = myEntry?.score ?? 0;
 
   const isTeacher = location.pathname.startsWith("/teacher");
@@ -39,33 +59,34 @@ export default function QuizResultPage() {
           Game Over!
         </Typography>
 
-        <Stack direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ mt: 2, mb: 3 }}>
-          <Avatar src={user?.avatar_url}>
-            {user?.name?.[0] || "U"}
-          </Avatar>
-          <Box sx={{ textAlign: "left" }}>
-            <Typography fontWeight="bold">{user?.name || "You"}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Your score: {myScore}
-            </Typography>
-          </Box>
-        </Stack>
-
         <Box sx={{ mt: 4, mb: 4, textAlign: 'left' }}>
-          <Typography variant="h6" gutterBottom>Leaderboard</Typography>
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: "bold" }}>Leaderboard</Typography>
           <List>
-            {leaderboard.map((player, idx) => (
-              <ListItem key={player.User?.id || idx} secondaryAction={
-                <Typography variant="h6" fontWeight="bold">{player.score}</Typography>
-              }>
-                <ListItemAvatar>
-                  <Avatar sx={{ bgcolor: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : 'grey.300' }}>
-                    {idx + 1}
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText primary={player.User?.name || "Player"} />
-              </ListItem>
-            ))}
+            {uniqueLeaderboard.map((player, idx) => {
+              const u = player.user || player.User;
+              return (
+                <ListItem key={u?.id || idx} secondaryAction={
+                  <Typography variant="h6" fontWeight="bold">{player.score} pts</Typography>
+                }>
+                  <ListItemAvatar>
+                    <Avatar 
+                      src={getAssetUrl(u?.avatar_url) || ""}
+                      sx={{ 
+                        border: idx === 0 ? '2px solid #FFD700' : idx === 1 ? '2px solid #C0C0C0' : idx === 2 ? '2px solid #CD7F32' : '1px solid rgba(0,0,0,0.06)',
+                        width: 40,
+                        height: 40
+                      }}
+                    >
+                      {u?.name?.[0]?.toUpperCase() || "P"}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText 
+                    primary={`${idx + 1}. ${u?.name || "Player"}`}
+                    primaryTypographyProps={{ fontWeight: u?.id === user?.id ? "bold" : "regular" }}
+                  />
+                </ListItem>
+              );
+            })}
           </List>
         </Box>
 

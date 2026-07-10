@@ -186,6 +186,9 @@ Language Guidelines:
 - If the question is in Tamil, or the student requests the explanation in Tamil, write the entire response in Tamil script (தமிழ்). Do not write transliterated English characters for Tamil words (e.g. write "ஐந்து" instead of "Ainthu").
 - You may include key English technical terms in parentheses next to their Tamil translation (e.g., "உராய்வு (Friction)").
 
+Emoji Guidelines:
+- DO NOT use or include any emojis (such as smiley faces, symbols, or illustrative icons) in your response. Keep the output strictly as plain text or standard formatting without emojis.
+
 Textbook content:
 ${contextText}
 
@@ -234,6 +237,9 @@ Language Guidelines:
 - If the question is in Tamil, or the student requests the explanation in Tamil, write the entire response in Tamil script (தமிழ்). Do not write transliterated English characters for Tamil words (e.g. write "ஐந்து" instead of "Ainthu").
 - You may include key English technical terms in parentheses next to their Tamil translation (e.g., "உராய்வு (Friction)").
 
+Emoji Guidelines:
+- DO NOT use or include any emojis (such as smiley faces, symbols, or illustrative icons) in your response. Keep the output strictly as plain text or standard formatting without emojis.
+
 Textbook content:
 ${retryContext}
 
@@ -269,6 +275,9 @@ Answer (simple, clear, student-friendly):
     const prompt = `
 You are a school tutor.
 Answer the student's question in a simple, clear, student-friendly way.
+
+Guidelines:
+- DO NOT use or include any emojis (such as smiley faces, symbols, or illustrative icons) in your response under any circumstances.
 
 Question:
 ${question}

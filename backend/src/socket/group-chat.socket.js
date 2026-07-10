@@ -1,7 +1,6 @@
 // src/socket/group-chat.socket.js
 import jwt from "jsonwebtoken";
 import GroupChat from "../modules/group-chat/group-chat.model.js";
-import GroupChatMember from "../modules/group-chat/group-chat-member.model.js";
 import {
   isUserMemberOfChat,
   createGroupChatMessage,
@@ -79,10 +78,15 @@ export function initGroupChatSocket(io) {
           imageUrl,
         });
 
+        const User = (await import("../modules/users/user.model.js")).default;
+        const sender = await User.findByPk(socket.user.id, { attributes: ["name", "avatar_url"] });
+
         io.to(`group:${chatId}`).emit("group:message:new", {
           id: message.id,
           chatId,
           senderUserId: socket.user.id,
+          senderName: sender?.name || "Unknown",
+          senderAvatar: sender?.avatar_url || null,
           type,
           text: message.message_text,
           imageUrl: message.image_url,
@@ -92,7 +96,7 @@ export function initGroupChatSocket(io) {
     );
 
     /**
-     * LEAVE SOCKET ROOM (optional, implicit on disconnect)
+     * LEAVE SOCKET ROOM
      */
     socket.on("group:leave", ({ chatId }) => {
       socket.leave(`group:${chatId}`);

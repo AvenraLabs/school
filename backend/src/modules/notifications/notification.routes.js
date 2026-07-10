@@ -9,6 +9,7 @@ import {
 import {
   createNotification,
   listNotifications,
+  markAllNotificationsAsRead,
 } from "./notification.controller.js";
 import {
   acknowledgeNotification,
@@ -29,6 +30,8 @@ router.post(
 
 /* all logged-in users */
 router.get("/", listNotifications);
+
+router.post("/mark-all-read", markAllNotificationsAsRead);
 
 router.post(
   "/:id/acknowledge",

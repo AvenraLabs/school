@@ -7,6 +7,7 @@ import BottomNav from "../components/BottomNav";
 import LoadingScreen from "../components/LoadingScreen";
 import { ProtectedAppWrapper } from "./ProtectedAppWrapper";
 import StudentSidebar from "../components/StudentSidebar";
+import NotFoundPage from "./NotFoundPage";
 
 /* lazy pages */
 const DashboardPage = lazy(() =>
@@ -119,6 +120,7 @@ export default function StudentApp() {
               <Route path="lost-found" element={<LostFoundPage />} />
               <Route path="feedback" element={<FeedbackPage />} />
               <Route path="about" element={<AboutPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>
         </Box>
