@@ -130,24 +130,7 @@ export default function QuizResultPage() {
                   transition: "all 0.2s",
                 }}
               >
-                {/* Rank */}
-                <Box
-                  sx={{
-                    minWidth: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: isTop3 ? "20px" : "13px",
-                    fontWeight: 700,
-                    color: isTop3 ? "inherit" : "#94a3b8",
-                    background: isTop3 ? RANK_COLORS[idx].bg : "rgba(0,0,0,0.04)",
-                    flexShrink: 0,
-                  }}
-                >
-                  {isTop3 ? RANK_MEDAL[idx] : idx + 1}
-                </Box>
+
 
                 {/* Avatar */}
                 <Avatar
