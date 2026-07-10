@@ -23,7 +23,6 @@ const Attendance = db.define("attendance", {
   teacher_class_session_id: {
     type: DataTypes.BIGINT,
     allowNull: true,
-    references: { model: "teacher_class_sessions", key: "id" },
   },
 
   class_id: {
