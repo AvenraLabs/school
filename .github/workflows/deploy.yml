@@ -1,0 +1,46 @@
+name: Deploy School App
+
+on:
+  push:
+    branches:
+      - main  # This triggers the deploy whenever you push to the 'main' branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: nessi
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # 1. Enter project folder and get latest code
+            cd ~/school
+            git pull origin main
+            
+            # 2. Setup Backend
+            cd backend
+            npm install --production
+            # We restart the app using PM2. If it's not running, we start it.
+            # Change 'server.js' if your main file has a different name
+            pm2 restart school-backend || pm2 start server.js --name school-backend
+
+            # 3. Build Admin Panel
+            cd ../adminpanel
+            npm install
+            npm run build
+
+            # 4. Build Student PWA
+            cd ../pwa-kiddo
+            npm install
+            npm run build
+
+            # 5. Refresh Web Server
+            sudo systemctl restart caddy
+            
+            echo "Deployment to Mumbai Server Finished Successfully!"
