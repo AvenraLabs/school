@@ -48,8 +48,8 @@ import TokenPolicy from "../modules/tokens/token-policy.model.js";
 import ExamMaster from "../modules/report-cards/exam-master.model.js";
 import Exam from "../modules/report-cards/exam.model.js";
 import ExamSubject from "../modules/report-cards/exam-subject.model.js";
-import ReportCard from "../modules/report-cards/report-card.model.js";
-import ReportCardMark from "../modules/report-cards/report-card-mark.model.js";
+import ExamMark from "../modules/report-cards/exam-mark.model.js";
+import GradingScale from "../modules/report-cards/grading-scale.model.js";
 
 /* ===================== MISC ===================== */
 import Notification from "../modules/notifications/notification.model.js";
@@ -140,24 +140,12 @@ const initAssociations = () => {
   ExamSubject.belongsTo(Exam, { foreignKey: "exam_id" });
   ExamSubject.belongsTo(Subject, { foreignKey: "subject_id" });
 
-  Exam.hasMany(ReportCard, { foreignKey: "exam_id" });
-
-  ReportCard.belongsTo(School, { foreignKey: "school_id" });
-  ReportCard.belongsTo(Student, { foreignKey: "student_id" });
-  ReportCard.belongsTo(Class, { foreignKey: "class_id" });
-  ReportCard.belongsTo(Exam, { foreignKey: "exam_id" });
-  ReportCard.hasMany(ReportCardMark, {
-    foreignKey: "report_card_id",
-    onDelete: "CASCADE",
-  });
-
-  ReportCardMark.belongsTo(ReportCard, {
-    foreignKey: "report_card_id",
-  });
-
-  ReportCardMark.belongsTo(Subject, {
-    foreignKey: "subject_id",
-  });
+  Exam.hasMany(ExamMark, { foreignKey: "exam_id", onDelete: "CASCADE" });
+  ExamMark.belongsTo(Exam, { foreignKey: "exam_id" });
+  ExamMark.belongsTo(School, { foreignKey: "school_id" });
+  ExamMark.belongsTo(Student, { foreignKey: "student_id" });
+  ExamMark.belongsTo(Subject, { foreignKey: "subject_id" });
+  Student.hasMany(ExamMark, { foreignKey: "student_id", onDelete: "CASCADE" });
 
 
   /* ==================== FAMILY / SIBLINGS ==================== */
@@ -357,6 +345,9 @@ const initAssociations = () => {
   /* ==================== ACADEMIC YEARS & ENROLLMENTS ==================== */
   School.hasMany(AcademicYear, { foreignKey: "school_id", onDelete: "CASCADE" });
   AcademicYear.belongsTo(School, { foreignKey: "school_id" });
+
+  School.hasMany(GradingScale, { foreignKey: "school_id", onDelete: "CASCADE" });
+  GradingScale.belongsTo(School, { foreignKey: "school_id" });
 
   Student.hasMany(StudentEnrollment, { foreignKey: "student_id", onDelete: "CASCADE" });
   StudentEnrollment.belongsTo(Student, { foreignKey: "student_id" });

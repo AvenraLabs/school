@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { askAiQuestion } from "../api/aiChat.api";
 
-const SESSION_KEY = "kiddo_ai_chat_messages";
+const SESSION_KEY = "schooliq_ai_chat_messages";
 
 export function useAiChat({ classLevel }) {
   const [messages, setMessages] = useState(() => {

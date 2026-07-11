@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { examsAPI, classesAPI, subjectsAPI } from '../../api';
+import { examsAPI, classesAPI, subjectsAPI, reportCardsAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -41,6 +41,59 @@ export function ExamsManager() {
   });
   const [saving, setSaving] = useState(false);
   const toast = useToast();
+
+  const [showGradingScales, setShowGradingScales] = useState(false);
+  const [gradingScales, setGradingScales] = useState([]);
+  const [loadingScales, setLoadingScales] = useState(false);
+  const [savingScales, setSavingScales] = useState(false);
+
+  const openGradingScales = async () => {
+    setShowGradingScales(true);
+    setLoadingScales(true);
+    try {
+      const res = await reportCardsAPI.getGradingScales();
+      setGradingScales(res.data || []);
+    } catch (e) {
+      toast.error('Failed to load grading scales');
+    } finally {
+      setLoadingScales(false);
+    }
+  };
+
+  const handleSaveGradingScales = async (e) => {
+    e.preventDefault();
+    setSavingScales(true);
+    try {
+      await reportCardsAPI.saveGradingScales(gradingScales);
+      toast.success('Grading scales updated successfully');
+      setShowGradingScales(false);
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to save grading scales');
+    } finally {
+      setSavingScales(false);
+    }
+  };
+
+  const handleScaleChange = (index, field, value) => {
+    const updated = [...gradingScales];
+    if (field === 'min_percentage') {
+      updated[index][field] = value === '' ? '' : Number(value);
+    } else {
+      updated[index][field] = value;
+    }
+    setGradingScales(updated);
+  };
+
+  const addGradingRow = () => {
+    setGradingScales((prev) => [
+      ...prev,
+      { grade_name: '', min_percentage: 0, is_pass: true, color_code: '#10b981' },
+    ]);
+  };
+
+  const removeGradingRow = (index) => {
+    setGradingScales((prev) => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     loadClasses();
@@ -193,7 +246,10 @@ export function ExamsManager() {
             Create exams per class, then schedule subject-wise tests with date and syllabus.
           </p>
         </div>
-        <div className="exams-header-actions">
+        <div className="exams-header-actions" style={{ display: 'flex', gap: '8px' }}>
+          <button type="button" onClick={openGradingScales} className="exam-btn exam-btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <ClipboardList size={16} /> Grading Scales
+          </button>
           <button type="button" onClick={openCreateExam} className="exam-btn exam-btn-primary">
             <Plus size={16} /> Create Exam
           </button>
@@ -428,6 +484,83 @@ export function ExamsManager() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Configure Grading Scales Modal */}
+      <Modal isOpen={showGradingScales} onClose={() => setShowGradingScales(false)} title="Configure Grading Scales">
+        {loadingScales ? (
+          <div style={{ padding: '24px', textAlign: 'center' }}>Loading scales...</div>
+        ) : (
+          <form onSubmit={handleSaveGradingScales} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+              Set up grading ranges for exam marks. Grades are evaluated automatically based on the minimum percentage of marks obtained.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '300px', overflowY: 'auto', paddingRight: '4px' }}>
+              {gradingScales.map((scale, index) => (
+                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Grade Name (e.g. A+)"
+                    value={scale.grade_name}
+                    onChange={(e) => handleScaleChange(index, 'grade_name', e.target.value)}
+                    style={{ flex: 2, padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                  />
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    max={100}
+                    placeholder="Min %"
+                    value={scale.min_percentage}
+                    onChange={(e) => handleScaleChange(index, 'min_percentage', e.target.value)}
+                    style={{ flex: 1, padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                  />
+                  <input
+                    type="color"
+                    value={scale.color_code || '#10b981'}
+                    onChange={(e) => handleScaleChange(index, 'color_code', e.target.value)}
+                    style={{ width: '40px', height: '36px', border: '1px solid #d1d5db', borderRadius: '4px', padding: '2px', cursor: 'pointer' }}
+                  />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.875rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={scale.is_pass !== false}
+                      onChange={(e) => handleScaleChange(index, 'is_pass', e.target.checked)}
+                    />
+                    Pass
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeGradingRow(index)}
+                    style={{ padding: '6px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={addGradingRow}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', alignSelf: 'flex-start', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem' }}
+            >
+              <Plus size={16} /> Add Grade Range
+            </button>
+
+            <div className="exam-modal-actions" style={{ marginTop: '12px' }}>
+              <button type="button" onClick={() => setShowGradingScales(false)} className="exam-btn exam-btn-ghost">Cancel</button>
+              <button
+                type="submit"
+                disabled={savingScales}
+                className="exam-btn exam-btn-primary"
+              >
+                {savingScales ? 'Saving…' : 'Save Grading Scale'}
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

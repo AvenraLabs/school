@@ -34,6 +34,9 @@ const ReportCardPage = lazy(() =>
 const ReportCardsList = lazy(() =>
   import("../modules/report-card/ReportCardsList")
 );
+const StudentPerformancePage = lazy(() =>
+  import("../modules/report-card/pages/StudentPerformancePage")
+);
 const GroupChatPage = lazy(() =>
   import("../modules/group-chat/GroupChatPage")
 );
@@ -104,6 +107,7 @@ export default function StudentApp() {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="report-cards" element={<ReportCardsList />} />
               <Route path="report-cards/:id" element={<ReportCardPage />} />
+              <Route path="report-cards/performance" element={<StudentPerformancePage />} />
 
               <Route path="group-chat" element={<GroupChatPage />} />
               <Route path="group-chat/:id" element={<GroupChatRoomPage />} />

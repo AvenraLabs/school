@@ -8,6 +8,7 @@ import {
   listExamsByClassService,
   upsertExamSubjectService,
   removeExamSubjectService,
+  deleteExamService,
 } from "./exam.service.js";
 
 /* ADMIN/TEACHER: Create exam with subject schedule */
@@ -86,3 +87,13 @@ export const removeExamSubject = asyncHandler(async (req, res) => {
   });
   res.json({ success: true, message: "Subject removed from exam" });
 });
+
+/* ADMIN/TEACHER: Delete an entire exam */
+export const deleteExam = asyncHandler(async (req, res) => {
+  await deleteExamService({
+    exam_id: Number(req.params.id),
+    school_id: req.user.school_id,
+  });
+  res.json({ success: true, message: "Exam and all associated marks deleted" });
+});
+

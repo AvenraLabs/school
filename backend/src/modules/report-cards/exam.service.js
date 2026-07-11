@@ -50,6 +50,7 @@ export const createExamService = async ({
             subject_id: subject.subject_id,
             exam_date: subject.exam_date,
             syllabus: subject.syllabus || null,
+            max_marks: subject.max_marks !== undefined ? Number(subject.max_marks) : 100,
           },
           { transaction: t }
         );
@@ -69,6 +70,7 @@ export const upsertExamSubjectService = async ({
   subject_id,
   exam_date,
   syllabus,
+  max_marks,
 }) => {
   const exam = await Exam.findOne({ where: { id: exam_id, school_id } });
   if (!exam) throw new AppError("EXAM_NOT_FOUND", 404);
@@ -81,6 +83,7 @@ export const upsertExamSubjectService = async ({
     subject_id,
     exam_date,
     syllabus: syllabus || null,
+    max_marks: max_marks !== undefined ? Number(max_marks) : 100,
   });
 
   return row;
@@ -175,3 +178,24 @@ const assertSubjectsBelongToSchool = async (subjectIds, school_id, transaction) 
     throw new AppError("SUBJECT_NOT_FOUND", 404);
   }
 };
+
+export const deleteExamService = async ({ exam_id, school_id }) => {
+  const exam = await Exam.findOne({ where: { id: exam_id, school_id } });
+  if (!exam) throw new AppError("EXAM_NOT_FOUND", 404);
+  if (exam.is_locked) throw new AppError("EXAM_LOCKED", 400);
+
+  const ExamMark = (await import("./exam-mark.model.js")).default;
+
+  return db.transaction(async (t) => {
+    // Delete subjects
+    await ExamSubject.destroy({ where: { exam_id }, transaction: t });
+
+    // Delete all marks entered for this exam
+    await ExamMark.destroy({ where: { exam_id }, transaction: t });
+
+    // Delete exam
+    await exam.destroy({ transaction: t });
+    return true;
+  });
+};
+

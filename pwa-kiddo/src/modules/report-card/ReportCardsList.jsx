@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Alert,
     Avatar,
     Box,
+    Button,
     Card,
     CardContent,
     Chip,
@@ -44,8 +46,10 @@ const clamp = (value) => Math.max(0, Math.min(100, value));
 
 export default function ReportCardsList() {
     const theme = useTheme();
+    const navigate = useNavigate();
     const [reportCards, setReportCards] = useState([]);
     const [exams, setExams] = useState([]);
+    const [gradingScales, setGradingScales] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedExamId, setSelectedExamId] = useState(null);
@@ -57,18 +61,21 @@ export default function ReportCardsList() {
     async function fetchReportCards() {
         try {
             setLoading(true);
-            const [reportRes, examRes] = await Promise.all([
+            const [reportRes, examRes, scaleRes] = await Promise.all([
                 listMyReportCards(),
                 api.get("/exams"),
+                api.get("/report-cards/grading-scales")
             ]);
             const fetchedReports = reportRes.data.data || [];
             const fetchedExams = examRes.data.items || [];
+            const fetchedScales = scaleRes.data?.data || [];
             const reportOnlyExams = fetchedReports.map((report) => report.exam).filter(Boolean);
             const mergedExams = [...fetchedExams, ...reportOnlyExams]
                 .filter((exam, index, list) => exam?.id && list.findIndex((item) => Number(item.id) === Number(exam.id)) === index);
 
             setReportCards(fetchedReports);
             setExams(mergedExams);
+            setGradingScales(fetchedScales.sort((a, b) => b.min_percentage - a.min_percentage));
 
             if (mergedExams.length > 0) {
                 setSelectedExamId(mergedExams[0].id);
@@ -81,14 +88,23 @@ export default function ReportCardsList() {
         }
     }
 
-    const getGrade = (pct) => {
+    const getGrade = useCallback((pct) => {
+        const scale = gradingScales.find(s => pct >= s.min_percentage);
+        if (scale) {
+            return {
+                label: scale.grade_name,
+                color: scale.is_pass ? theme.palette.success.main : theme.palette.error.main,
+                bg: alpha(scale.is_pass ? theme.palette.success.main : theme.palette.error.main, 0.12),
+                text: scale.is_pass ? theme.palette.success.dark : theme.palette.error.dark
+            };
+        }
         if (pct >= 90) return { label: "A+", color: theme.palette.success.main, bg: alpha(theme.palette.success.main, 0.12), text: theme.palette.success.dark };
         if (pct >= 80) return { label: "A", color: theme.palette.success.main, bg: alpha(theme.palette.success.main, 0.12), text: theme.palette.success.dark };
         if (pct >= 70) return { label: "B", color: theme.palette.primary.main, bg: alpha(theme.palette.primary.main, 0.12), text: theme.palette.primary.dark };
         if (pct >= 60) return { label: "C", color: theme.palette.warning.main, bg: alpha(theme.palette.warning.main, 0.14), text: theme.palette.warning.dark };
         if (pct >= 50) return { label: "D", color: theme.palette.warning.main, bg: alpha(theme.palette.warning.main, 0.14), text: theme.palette.warning.dark };
         return { label: "F", color: theme.palette.error.main, bg: alpha(theme.palette.error.main, 0.12), text: theme.palette.error.dark };
-    };
+    }, [gradingScales, theme]);
 
     const summaries = useMemo(() => exams.map((exam) => {
         const reportCard = reportCards.find((report) => Number(report.exam_id) === Number(exam.id));
@@ -146,14 +162,21 @@ export default function ReportCardsList() {
     return (
         <Container maxWidth="sm" sx={{ mt: 2.5, mb: 10, px: 2 }}>
             <Stack spacing={2.5}>
-                <Box>
-                    <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: "-0.04em", color: "text.primary" }}>
-                        Exams & Progress
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        Your marks, syllabus notes, and subject-wise progress.
-                    </Typography>
-                </Box>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Box>
+                        <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: "-0.04em", color: "text.primary" }}>
+                            Exams & Progress
+                        </Typography>
+                    </Box>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => navigate("/student/report-cards/performance")}
+                        sx={{ textTransform: "none", borderRadius: "10px", fontWeight: "bold" }}
+                    >
+                        Performance
+                    </Button>
+                </Stack>
 
                 {error && <Alert severity="error" sx={{ borderRadius: 3 }}>{error}</Alert>}
 
@@ -169,7 +192,7 @@ export default function ReportCardsList() {
                             <Typography variant="subtitle2" sx={{ fontWeight: 800, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.7rem' }}>Performance Snapshot</Typography>
                         </Stack>
                         <Typography variant="h4" fontWeight={950} sx={{ lineHeight: 1.1 }}>
-                            {latest ? `${latest.percentage}%` : "â€”"}
+                            {latest ? `${latest.percentage}%` : "—"}
                         </Typography>
                         <Typography variant="caption" sx={{ opacity: 0.8 }}>
                             {latest ? `Latest: ${getExamName(latest.exam)}` : "No graded marks yet"}
@@ -183,7 +206,7 @@ export default function ReportCardsList() {
                                     <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>Best Subject</Typography>
                                 </Stack>
                                 <Typography variant="body2" fontWeight={900} noWrap color="success.dark">
-                                    {strongSubject ? strongSubject.subject : "â€”"}
+                                    {strongSubject ? strongSubject.subject : "—"}
                                 </Typography>
                                 {strongSubject && <Typography variant="caption" color="text.secondary">{strongSubject.percentage}% avg</Typography>}
                             </Box>
@@ -193,7 +216,7 @@ export default function ReportCardsList() {
                                     <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>Needs Focus</Typography>
                                 </Stack>
                                 <Typography variant="body2" fontWeight={900} noWrap color="warning.dark">
-                                    {focusSubject && focusSubject !== strongSubject ? focusSubject.subject : "â€”"}
+                                    {focusSubject && focusSubject !== strongSubject ? focusSubject.subject : "—"}
                                 </Typography>
                                 {focusSubject && focusSubject !== strongSubject && <Typography variant="caption" color="text.secondary">{focusSubject.percentage}% avg</Typography>}
                             </Box>

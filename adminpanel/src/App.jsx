@@ -22,7 +22,6 @@ import { TeacherAssignments } from './pages/SchoolAdmin/TeacherAssignments';
 import { Timetables } from './pages/SchoolAdmin/Timetables';
 import { Notifications } from './pages/SchoolAdmin/Notifications';
 import { ExamsManager } from './pages/SchoolAdmin/ExamsManager';
-import { ReportCards } from './pages/SchoolAdmin/ReportCards';
 import { AuditLogs } from './pages/SchoolAdmin/AuditLogs';
 import { SchoolRegistry } from './pages/SchoolAdmin/SchoolRegistry';
 import { TransportManager } from './pages/SchoolAdmin/TransportManager';
@@ -81,7 +80,6 @@ function App() {
               <Route path="/admin/transport" element={<TransportManager />} />
               <Route path="/admin/notifications" element={<Notifications />} />
               <Route path="/admin/exams" element={<ExamsManager />} />
-              <Route path="/admin/report-cards" element={<ReportCards />} />
               <Route path="/admin/academic-year" element={<AcademicYearManager />} />
               <Route path="/admin/audit-logs" element={<AuditLogs />} />
               <Route path="/admin/lost-found" element={<LostFoundManager />} />

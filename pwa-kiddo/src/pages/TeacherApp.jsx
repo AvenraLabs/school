@@ -20,7 +20,8 @@ const GroupChatRoomPage = lazy(() => import("../modules/group-chat/GroupChatRoom
 const TeacherAttendancePage = lazy(() => import("../modules/attendance/TeacherAttendancePage"));
 const ApprovalsPage = lazy(() => import("../modules/approvals/pages/ApprovalsPage"));
 const ExamCreationPage = lazy(() => import("../modules/exams/pages/ExamCreationPage"));
-const ReportCardEntryPage = lazy(() => import("../modules/report-card/pages/ReportCardEntryPage"));
+const ExamMarksEntryPage = lazy(() => import("../modules/report-card/pages/ExamMarksEntryPage"));
+const TeacherInsightsPage = lazy(() => import("../modules/report-card/pages/TeacherInsightsPage"));
 const TeacherAIToolsPage = lazy(() => import("../modules/ai-tools/TeacherAIToolsPage"));
 const ThemePage = lazy(() => import("../modules/theme/ThemePage"));
 const LostFoundPage = lazy(() => import("../modules/lost-found/LostFoundPage"));
@@ -59,7 +60,9 @@ export default function TeacherApp() {
               <Route path="attendance" element={<TeacherAttendancePage />} />
               <Route path="approvals" element={<ApprovalsPage />} />
               <Route path="exams/create" element={<ExamCreationPage />} />
-              <Route path="report-cards/entry" element={<ReportCardEntryPage />} />
+              <Route path="exams/:examId/marks" element={<ExamMarksEntryPage />} />
+              <Route path="exams/insights" element={<TeacherInsightsPage />} />
+              <Route path="report-cards/entry" element={<Navigate to="../exams/create" replace />} />
               <Route path="ai-tools" element={<TeacherAIToolsPage />} />
               <Route path="themes" element={<ThemePage />} />
               <Route path="lost-found" element={<LostFoundPage />} />

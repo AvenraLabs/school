@@ -517,6 +517,16 @@ export const reportCardsAPI = {
     });
     return response.data;
   },
+
+  getGradingScales: async () => {
+    const response = await axiosInstance.get('/report-cards/grading-scales');
+    return response.data;
+  },
+
+  saveGradingScales: async (scales) => {
+    const response = await axiosInstance.post('/report-cards/grading-scales', { scales });
+    return response.data;
+  },
 };
 
 // Token Policies API (Super Admin)

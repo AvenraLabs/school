@@ -9,6 +9,7 @@ export const createExamSchema = z.object({
         subject_id: z.coerce.number().int().positive(),
         exam_date: z.string().min(1),
         syllabus: z.string().optional().nullable(),
+        max_marks: z.coerce.number().positive().optional(),
       })
     )
     .default([]),
@@ -22,4 +23,5 @@ export const upsertExamSubjectSchema = z.object({
   subject_id: z.coerce.number().int().positive(),
   exam_date: z.string().min(1),
   syllabus: z.string().optional().nullable(),
+  max_marks: z.coerce.number().positive().optional(),
 });

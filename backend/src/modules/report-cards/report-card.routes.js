@@ -6,6 +6,8 @@ import {
   saveReportCardMarksSchema,
   publishReportCardSchema,
   getAcademicReportCardsSchema,
+  bulkSaveReportCardMarksSchema,
+  bulkPublishReportCardsSchema,
 } from "./report-card.schema.js";
 import {
   createReportCard,
@@ -14,6 +16,10 @@ import {
   getReportCard,
   listReportCards,
   getAcademicReportCards,
+  bulkSaveReportCardMarks,
+  bulkPublishReportCards,
+  getGradingScales,
+  saveGradingScales,
 } from "./report-card.controller.js";
 import { allowRoles } from "../../shared/middlewares/role.js";
 
@@ -48,6 +54,24 @@ router.post(
   validate(publishReportCardSchema),
   publishReportCard
 );
+
+router.post(
+  "/bulk-marks",
+  allowRoles("school_admin", "teacher"),
+  validate(bulkSaveReportCardMarksSchema),
+  bulkSaveReportCardMarks
+);
+
+router.post(
+  "/bulk-publish",
+  allowRoles("school_admin", "teacher"),
+  validate(bulkPublishReportCardsSchema),
+  bulkPublishReportCards
+);
+
+/* Grading Scales */
+router.get("/grading-scales", getGradingScales);
+router.post("/grading-scales", allowRoles("school_admin"), saveGradingScales);
 
 /* view */
 router.get("/student/list", allowRoles("student"), listReportCards);

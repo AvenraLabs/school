@@ -30,7 +30,6 @@ const schoolAdminLinks = [
   { section: 'Academic Management' },
   { to: '/admin/timetables', icon: Calendar, label: 'Timetables' },
   { to: '/admin/exams', icon: FileText, label: 'Exams' },
-  { to: '/admin/report-cards', icon: Award, label: 'Report Cards' },
 
   { section: 'System Configuration' },
   { to: '/admin/subjects', icon: BookOpen, label: 'Subjects' },

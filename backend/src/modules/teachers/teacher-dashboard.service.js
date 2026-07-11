@@ -4,7 +4,6 @@ import Timetable from "../timetables/timetable.model.js";
 import Homework from "../homework/homework.model.js";
 import HomeworkSubmission from "../homework/homework-submission.model.js";
 import Student from "../students/student.model.js";
-import ReportCard from "../report-cards/report-card.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import TokenAccount from "../tokens/token-account.model.js";
 import { ensureTokenAccount } from "../tokens/token.service.js";
@@ -125,14 +124,7 @@ export const getTeacherDashboardService = async ({
   );
 
   /* 5) Pending report cards */
-  const pendingReportCards = classIds.length
-    ? await ReportCard.count({
-        where: {
-          class_id: classIds,
-          published_at: null,
-        },
-      })
-    : 0;
+  const pendingReportCards = 0;
 
   // 6) AI Tokens (lifetime used + current balance)
   await ensureTokenAccount(user_id);

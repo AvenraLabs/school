@@ -29,7 +29,7 @@ const getSlotForMark = (exam, mark) => getExamSlots(exam).find((slot) => Number(
 
 export default function ReportCardPage() {
   const { id } = useParams();
-  const { data: rc, loading, error } = useReportCard(id);
+  const { data: rc, gradingScales, loading, error } = useReportCard(id);
   const navigate = useNavigate();
 
   if (loading) {
@@ -61,6 +61,15 @@ export default function ReportCardPage() {
   const percentage = totalMax > 0 ? (totalObtained / totalMax) * 100 : 0;
   
   const getGrade = (pct) => {
+    const scale = gradingScales?.find(s => pct >= s.min_percentage);
+    if (scale) {
+      return {
+        label: scale.grade_name,
+        color: scale.color_code || '#10b981',
+        bg: scale.color_code ? `${scale.color_code}1A` : '#ecfdf5',
+        text: scale.color_code || '#065f46'
+      };
+    }
     if (pct >= 90) return { label: 'A+', color: '#10b981', bg: '#ecfdf5', text: '#065f46' };
     if (pct >= 80) return { label: 'A', color: '#10b981', bg: '#ecfdf5', text: '#065f46' };
     if (pct >= 70) return { label: 'B', color: '#3b82f6', bg: '#eff6ff', text: '#1e40af' };
@@ -218,25 +227,7 @@ export default function ReportCardPage() {
           </Stack>
         </Box>
 
-        {/* Remarks section */}
-        {rc.remarks && (
-          <Paper 
-            sx={{ 
-              borderRadius: '16px', 
-              p: 2, 
-              bgcolor: '#f8fafc', 
-              border: '1px solid rgba(0,0,0,0.03)', 
-              boxShadow: 'none' 
-            }}
-          >
-            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary', fontSize: '0.8rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-              <Message sx={{ fontSize: 16, color: 'primary.main' }} /> Teacher Remarks
-            </Typography>
-            <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary', lineHeight: 1.5, fontSize: '0.85rem' }}>
-              "{rc.remarks}"
-            </Typography>
-          </Paper>
-        )}
+
       </Stack>
     </Container>
   );

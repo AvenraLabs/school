@@ -7,8 +7,7 @@ import Teacher from "../teachers/teacher.model.js";
 import Family from "../students/family.model.js";
 import User from "../users/user.model.js";
 import Attendance from "../attendance/attendance.model.js";
-import ReportCard from "../report-cards/report-card.model.js";
-import ReportCardMark from "../report-cards/report-card-mark.model.js";
+import ExamMark from "../report-cards/exam-mark.model.js";
 import Exam from "../report-cards/exam.model.js";
 import ExamMaster from "../report-cards/exam-master.model.js";
 import ExamSubject from "../report-cards/exam-subject.model.js";
@@ -173,9 +172,13 @@ export const getSectionRoster = asyncHandler(async (req, res) => {
   });
 
   // Report Cards
-  const reportCards = studentIds.length ? await ReportCard.findAll({
+  const marks = studentIds.length ? await ExamMark.findAll({
     where: { school_id, student_id: studentIds },
     include: [
+      {
+        model: Subject,
+        attributes: ["id", "name"]
+      },
       {
         model: Exam,
         attributes: ["id", "name", "createdAt", "is_locked"],
@@ -187,22 +190,40 @@ export const getSectionRoster = asyncHandler(async (req, res) => {
             include: [{ model: Subject, attributes: ["id", "name"] }],
           },
         ],
-      },
-      {
-        model: ReportCardMark,
-        include: [
-          {
-            model: Subject,
-            attributes: ["id", "name"]
-          }
-        ]
       }
     ],
     order: [[Exam, "createdAt", "DESC"]]
   }) : [];
 
+  // Group marks by (student_id, exam_id)
+  const studentExamGroups = {};
+  marks.forEach(m => {
+    const key = `${m.student_id}-${m.exam_id}`;
+    const exam = m.exam || m.Exam;
+    if (!studentExamGroups[key]) {
+      studentExamGroups[key] = {
+        id: m.exam_id,
+        student_id: m.student_id,
+        exam_id: m.exam_id,
+        remarks: m.remarks,
+        createdAt: exam?.createdAt || m.createdAt,
+        exam,
+        report_card_marks: []
+      };
+    }
+    studentExamGroups[key].report_card_marks.push({
+      id: m.id,
+      subject_id: m.subject_id,
+      marks_obtained: m.marks_obtained,
+      max_marks: m.max_marks,
+      remarks: m.remarks,
+      subject: m.subject || m.Subject,
+      Subject: m.subject || m.Subject
+    });
+  });
+
   const reportCardMap = {};
-  reportCards.forEach(rc => {
+  Object.values(studentExamGroups).forEach(rc => {
     if (!reportCardMap[rc.student_id]) {
       reportCardMap[rc.student_id] = [];
     }
@@ -283,9 +304,13 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
     attendanceMap.subject_stats = {};
   }
 
-  const reportCards = await ReportCard.findAll({
+  const marks = await ExamMark.findAll({
     where: { school_id, student_id: studentId },
     include: [
+      {
+        model: Subject,
+        attributes: ["id", "name"]
+      },
       {
         model: Exam,
         attributes: ["id", "name", "createdAt", "is_locked"],
@@ -297,19 +322,38 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
             include: [{ model: Subject, attributes: ["id", "name"] }],
           },
         ],
-      },
-      {
-        model: ReportCardMark,
-        include: [
-          {
-            model: Subject,
-            attributes: ["id", "name"]
-          }
-        ]
       }
     ],
     order: [[Exam, "createdAt", "DESC"]]
   });
+
+  const examGroups = {};
+  marks.forEach(m => {
+    const examId = m.exam_id;
+    const exam = m.exam || m.Exam;
+    if (!examGroups[examId]) {
+      examGroups[examId] = {
+        id: examId,
+        student_id: studentId,
+        exam_id: examId,
+        remarks: m.remarks,
+        createdAt: exam?.createdAt || m.createdAt,
+        exam,
+        report_card_marks: []
+      };
+    }
+    examGroups[examId].report_card_marks.push({
+      id: m.id,
+      subject_id: m.subject_id,
+      marks_obtained: m.marks_obtained,
+      max_marks: m.max_marks,
+      remarks: m.remarks,
+      subject: m.subject || m.Subject,
+      Subject: m.subject || m.Subject
+    });
+  });
+
+  const reportCards = Object.values(examGroups);
 
   res.json({
     success: true,

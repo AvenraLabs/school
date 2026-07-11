@@ -23,6 +23,12 @@ const ExamSubject = db.define(
       references: { model: "subjects", key: "id" },
     },
 
+    max_marks: {
+      type: DataTypes.FLOAT,
+      allowNull: false,
+      defaultValue: 100,
+    },
+
     // e.g. "Chapter 3 - Fractions", "Lesson 1-4"
     syllabus: {
       type: DataTypes.TEXT,

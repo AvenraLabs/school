@@ -14,6 +14,7 @@ import {
   listExamsByClass,
   upsertExamSubject,
   removeExamSubject,
+  deleteExam,
 } from "./exam.controller.js";
 
 const router = express.Router();
@@ -30,7 +31,11 @@ router.post("/:id/lock", allowRoles("school_admin"), validate(lockExamSchema), l
 router.put("/:id/subjects", allowRoles("teacher", "school_admin"), validate(upsertExamSubjectSchema), upsertExamSubject);
 router.delete("/:id/subjects/:subject_id", allowRoles("teacher", "school_admin"), removeExamSubject);
 
+/* ADMIN/TEACHER: Delete exam */
+router.delete("/:id", allowRoles("teacher", "school_admin"), deleteExam);
+
 /* All roles: List exams for a class */
 router.get("/", listExamsByClass);
+
 
 export default router;

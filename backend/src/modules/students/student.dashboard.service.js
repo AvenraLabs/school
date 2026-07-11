@@ -8,8 +8,7 @@ import { Op } from "sequelize";
 import TokenAccount from "../tokens/token-account.model.js";
 import { ensureTokenAccount } from "../tokens/token.service.js";
 import AiChatLog from "../ai-chat-logs/ai-chat-log.model.js";
-import ReportCard from "../report-cards/report-card.model.js";
-import ReportCardMark from "../report-cards/report-card-mark.model.js";
+import ExamMark from "../report-cards/exam-mark.model.js";
 import Exam from "../report-cards/exam.model.js";
 import ExamSubject from "../report-cards/exam-subject.model.js";
 import Subject from "../subjects/subject.model.js";
@@ -35,17 +34,16 @@ const getExamPrimaryDate = (exam, fallback) => {
 
 const buildPerformanceAnalytics = async (student) => {
     const academicYearId = await getCurrentAcademicYearId(student.school_id);
-    const reportCards = await ReportCard.findAll({
+    const marks = await ExamMark.findAll({
         where: {
             student_id: student.id,
             school_id: student.school_id,
             academic_year_id: academicYearId,
-            published_at: { [Op.ne]: null },
         },
         include: [
             {
-                model: ReportCardMark,
-                include: [{ model: Subject, attributes: ["id", "name"] }],
+                model: Subject,
+                attributes: ["id", "name"],
             },
             {
                 model: Exam,
@@ -59,10 +57,36 @@ const buildPerformanceAnalytics = async (student) => {
                 ],
             },
         ],
-        order: [["published_at", "ASC"]],
+        order: [["created_at", "ASC"]],
     });
 
-    const cards = reportCards.map((card) => card.get({ plain: true }));
+    // Group marks by exam_id
+    const examGroups = {};
+    marks.forEach((m) => {
+        const examId = m.exam_id;
+        const exam = m.exam || m.Exam;
+        if (!examGroups[examId]) {
+            examGroups[examId] = {
+                id: examId,
+                student_id: student.id,
+                exam_id: examId,
+                remarks: m.remarks,
+                createdAt: exam?.createdAt || m.createdAt,
+                exam,
+                report_card_marks: [],
+            };
+        }
+        examGroups[examId].report_card_marks.push({
+            id: m.id,
+            subject_id: m.subject_id,
+            marks_obtained: m.marks_obtained,
+            max_marks: m.max_marks,
+            remarks: m.remarks,
+            subject: m.subject || m.Subject,
+        });
+    });
+
+    const cards = Object.values(examGroups);
     const subjectBuckets = new Map();
     const syllabusItems = [];
 

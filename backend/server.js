@@ -141,6 +141,7 @@ import gameRoutes from "./src/modules/game/game.routes.js";
 import quizRoutes from "./src/modules/quiz/quiz.routes.js";
 import transportRoutes from "./src/modules/transport/transport.routes.js";
 import academicYearRoutes from "./src/modules/academic-years/academic-year.routes.js";
+import analyticsRoutes from "./src/modules/analytics/analytics.routes.js";
 
 
 
@@ -202,6 +203,7 @@ app.use("/api", tokenRoutes);
 app.use("/api/rag", ragRoutes);
 app.use("/api", teacherAiRoutes);
 app.use("/api", aiAnalyticsRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // quiz
 app.use("/api/quiz", quizRoutes);
@@ -288,12 +290,45 @@ async function runDbMigrations() {
     await db.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';`);
     await db.query(`ALTER TABLE teachers ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';`);
 
-    // 2. Add academic_year_id column to yearly tables
     await db.query(`ALTER TABLE attendances ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
     await db.query(`ALTER TABLE timetables ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
     await db.query(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
-    await db.query(`ALTER TABLE report_cards ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
     await db.query(`ALTER TABLE homeworks ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
+    await db.query(`ALTER TABLE exam_subjects ADD COLUMN IF NOT EXISTS max_marks FLOAT DEFAULT 100;`);
+
+    // Drop old report card tables and create exam_marks
+    await db.query(`DROP TABLE IF EXISTS report_card_marks CASCADE;`);
+    await db.query(`DROP TABLE IF EXISTS report_cards CASCADE;`);
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS exam_marks (
+        id BIGSERIAL PRIMARY KEY,
+        school_id BIGINT NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+        academic_year_id BIGINT REFERENCES academic_years(id) ON DELETE SET NULL,
+        exam_id BIGINT NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
+        subject_id BIGINT NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+        student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+        marks_obtained FLOAT NOT NULL,
+        max_marks FLOAT NOT NULL DEFAULT 100,
+        remarks TEXT,
+        entered_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      );
+    `);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS grading_scales (
+        id BIGSERIAL PRIMARY KEY,
+        school_id BIGINT NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+        grade_name VARCHAR(50) NOT NULL,
+        min_percentage INTEGER NOT NULL,
+        is_pass BOOLEAN DEFAULT TRUE,
+        color_code VARCHAR(20) DEFAULT '#10b981',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (school_id, grade_name)
+      );
+    `);
 
     // 3. Create academic_years table if not exists (so we can insert initial values)
     await db.query(`
@@ -352,7 +387,25 @@ async function runDbMigrations() {
       await db.query(`UPDATE attendances SET academic_year_id = :yearId WHERE school_id = :schoolId AND academic_year_id IS NULL;`, { replacements: { yearId, schoolId } });
       await db.query(`UPDATE timetables SET academic_year_id = :yearId WHERE school_id = :schoolId AND academic_year_id IS NULL;`, { replacements: { yearId, schoolId } });
       await db.query(`UPDATE exams SET academic_year_id = :yearId WHERE school_id = :schoolId AND academic_year_id IS NULL;`, { replacements: { yearId, schoolId } });
-      await db.query(`UPDATE report_cards SET academic_year_id = :yearId WHERE school_id = :schoolId AND academic_year_id IS NULL;`, { replacements: { yearId, schoolId } });
+      await db.query(`UPDATE exam_marks SET academic_year_id = :yearId WHERE school_id = :schoolId AND academic_year_id IS NULL;`, { replacements: { yearId, schoolId } });
+
+      // Seed default grading scales if none exist for this school
+      const [existingScales] = await db.query(
+        `SELECT id FROM grading_scales WHERE school_id = :schoolId LIMIT 1;`,
+        { replacements: { schoolId } }
+      );
+      if (existingScales.length === 0) {
+        await db.query(
+          `INSERT INTO grading_scales (school_id, grade_name, min_percentage, is_pass, color_code) VALUES
+            (:schoolId, 'A+', 90, true, '#10b981'),
+            (:schoolId, 'A', 80, true, '#10b981'),
+            (:schoolId, 'B', 70, true, '#3b82f6'),
+            (:schoolId, 'C', 60, true, '#f59e0b'),
+            (:schoolId, 'D', 50, true, '#f59e0b'),
+            (:schoolId, 'F', 0, false, '#ef4444');`,
+          { replacements: { schoolId } }
+        );
+      }
       await db.query(`UPDATE homeworks SET academic_year_id = :yearId WHERE school_id = :schoolId AND academic_year_id IS NULL;`, { replacements: { yearId, schoolId } });
 
       // Create student enrollments from student placements
