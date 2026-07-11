@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import User from "../users/user.model.js";
 import GameSession from "./game-session.model.js";
 import GameSessionPlayer from "./game-session-player.model.js";
@@ -10,9 +11,18 @@ import AppError from "../../shared/appError.js";
 import asyncHandler from "../../shared/asyncHandler.js";
 import db from "../../config/db.js";
 
-function generateRoomCode(length = 6) {
-  return Math.random().toString(36).substring(2, 2 + length).toUpperCase();
+
+// Curated charset: uppercase letters + digits, minus visually confusing chars (0/O, 1/I, 8/B, 2/Z)
+const ROOM_CODE_CHARSET = "ACDEFGHJKLMNPQRSTUVWXY3456789";
+
+function generateRoomCode(length = 8) {
+  let code = "";
+  for (let i = 0; i < length; i++) {
+    code += ROOM_CODE_CHARSET[Math.floor(Math.random() * ROOM_CODE_CHARSET.length)];
+  }
+  return code;
 }
+
 
 export const submitSinglePlayerQuiz = asyncHandler(async (req, res) => {
   const { playerId, answers } = req.body;
@@ -155,45 +165,51 @@ export const createMultiplayerQuiz = asyncHandler(async (req, res) => {
     numQuestions,
   });
 
-  let code = null;
-  for (let i = 0; i < 10; i++) {
-    const candidate = generateRoomCode(6);
-    const existing = await GameSession.findOne({
-      where: { room_code: candidate },
-    });
-    if (!existing) {
-      code = candidate;
-      break;
-    }
-  }
-
-  if (!code) {
-    throw new AppError("Unable to allocate room code", 500);
-  }
-
   const perQuestionMs = 30000;
-  const totalQuestions =
-    quizResult.questions?.length || numQuestions || 5;
+  const totalQuestions = quizResult.questions?.length || numQuestions || 5;
   const totalTimeMs = timeLimitMinutes
     ? timeLimitMinutes * 60 * 1000
     : totalQuestions * perQuestionMs;
 
-  const session = await GameSession.create({
-    quiz_id: quizResult.quizId,
-    mode: "MULTI",
-    room_code: code,
-    host_user_id: req.user.id,
-    max_players: maxPlayers ?? null,
-    total_time_ms: totalTimeMs,
-    status: "LOBBY",
-  });
+  // ── Atomic room code generation ────────────────────────────────────────────
+  // The DB has a UNIQUE constraint on room_code. Instead of pre-checking
+  // (TOCTOU race condition), we attempt the INSERT and retry if it fails
+  // with a UniqueConstraintError. This is safe for concurrent creators.
+  let session = null;
+  const MAX_RETRIES = 10;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const candidateCode = generateRoomCode(8);
+    try {
+      session = await GameSession.create({
+        quiz_id: quizResult.quizId,
+        mode: "MULTI",
+        room_code: candidateCode,
+        host_user_id: req.user.id,
+        max_players: maxPlayers ?? null,
+        total_time_ms: totalTimeMs,
+        status: "LOBBY",
+      });
+      break; // Success — exit loop
+    } catch (err) {
+      // Retry only on unique constraint collision; re-throw anything else
+      if (err.name === "SequelizeUniqueConstraintError") {
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  if (!session) {
+    throw new AppError("Unable to allocate a unique room code. Please try again.", 500);
+  }
 
   res.json({
     sessionId: session.id,
-    roomCode: code,
+    roomCode: session.room_code,
     quizId: quizResult.quizId,
   });
 });
+
 
 export const getLeaderboard = asyncHandler(async (req, res) => {
   const { sessionId } = req.params;
@@ -213,27 +229,13 @@ export const joinMultiplayerQuiz = asyncHandler(async (req, res) => {
   const normalizedCode = roomCode ? String(roomCode).toUpperCase() : "";
 
   const session = await GameSession.findOne({
-    where: { room_code: normalizedCode },
+    where: { room_code: normalizedCode, status: { [Op.notIn]: ["FINISHED"] } },
   });
 
   if (!session) {
-    throw new AppError("Room not found", 404);
+    throw new AppError("Room not found. Check the code and try again.", 404);
   }
 
-  // 👩‍🏫 TEACHER / HOST LOGIC
-  // Teachers don't join as players. They just need the session ID to enter the lobby as host.
-  if (req.user.role === "teacher") {
-    // Optional: Check if this teacher is actually the host? 
-    // Usually yes, but even if another teacher joins, maybe they just observe?
-    // For now, allow any teacher to 'join' the view, but client handles "Start" button visibility based on ID.
-    return res.json({
-      sessionId: session.id,
-      isTeacher: true,
-      isHost: session.host_user_id === req.user.id,
-    });
-  }
-
-  // 🎓 STUDENT LOGIC
   if (session.status === "FINISHED") {
     throw new AppError("Quiz already finished", 403);
   }
@@ -243,6 +245,7 @@ export const joinMultiplayerQuiz = asyncHandler(async (req, res) => {
     throw new AppError("Quiz time is over", 403);
   }
 
+  // If the student already has a record in this session, return it
   const existing = await GameSessionPlayer.findOne({
     where: {
       session_id: session.id,
@@ -254,6 +257,7 @@ export const joinMultiplayerQuiz = asyncHandler(async (req, res) => {
     return res.json({
       sessionId: session.id,
       playerId: existing.id,
+      isHost: existing.is_host,
     });
   }
 
@@ -268,15 +272,17 @@ export const joinMultiplayerQuiz = asyncHandler(async (req, res) => {
   const player = await GameSessionPlayer.create({
     session_id: session.id,
     user_id: req.user.id,
-    is_host: session.host_user_id === req.user.id, // Should usually be false for students if teacher created it
+    is_host: session.host_user_id === req.user.id,
     status: "WAITING",
   });
 
   res.json({
     sessionId: session.id,
     playerId: player.id,
+    isHost: player.is_host,
   });
 });
+
 
 // Quiz history for current user (single + multiplayer)
 export const getQuizHistory = asyncHandler(async (req, res) => {

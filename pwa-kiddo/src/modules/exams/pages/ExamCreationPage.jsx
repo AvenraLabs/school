@@ -1,6 +1,24 @@
-import { Typography, Paper, TextField, Button, Box, Grid, MenuItem, Alert, CircularProgress, Snackbar, Container } from "@mui/material";
-import { Add } from "@mui/icons-material";
-import { useState, useEffect, useMemo } from "react";
+import {
+    Typography,
+    Paper,
+    TextField,
+    Button,
+    Box,
+    Grid,
+    MenuItem,
+    Alert,
+    CircularProgress,
+    Snackbar,
+    Container,
+    Card,
+    CardContent,
+    Stack,
+    IconButton,
+    Chip,
+    Divider,
+} from "@mui/material";
+import { Add, Delete, CalendarMonth, Lock, LockOpen } from "@mui/icons-material";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import api from "../../../api/axios";
 import DatePickerField from "../../../components/DatePickerField";
 
@@ -19,6 +37,7 @@ export default function ExamCreationPage() {
 
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
+    const [successMsg, setSuccessMsg] = useState("");
     
     const [formData, setFormData] = useState({
         subject_id: "",
@@ -26,6 +45,21 @@ export default function ExamCreationPage() {
         syllabus: "",
         class_id: "",
     });
+
+    const loadExams = useCallback(async (classId) => {
+        if (!classId) return;
+        try {
+            setExamsLoading(true);
+            const res = await api.get("/exams", { params: { class_id: classId } });
+            const data = res?.data?.items || res?.data?.data || [];
+            setExams(data);
+        } catch (err) {
+            console.error("Failed to load exams for class", err);
+            setExams([]);
+        } finally {
+            setExamsLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -57,30 +91,10 @@ export default function ExamCreationPage() {
             setSelectedExamId("");
             return;
         }
-
-        let active = true;
-        const loadExams = async () => {
-            try {
-                setExamsLoading(true);
-                const res = await api.get("/exams", { params: { class_id: formData.class_id } });
-                const data = res?.data?.items || res?.data?.data || [];
-                if (!active) return;
-                setExams(data);
-                setSelectedExamId("");
-                setNewExamName("");
-            } catch (err) {
-                console.error("Failed to load exams for class", err);
-                if (!active) return;
-                setExams([]);
-            } finally {
-                if (active) setExamsLoading(false);
-            }
-        };
-        loadExams();
-        return () => {
-            active = false;
-        };
-    }, [formData.class_id]);
+        loadExams(formData.class_id);
+        setSelectedExamId("");
+        setNewExamName("");
+    }, [formData.class_id, loadExams]);
 
     const classOptions = useMemo(() => {
         const map = new Map();
@@ -110,6 +124,19 @@ export default function ExamCreationPage() {
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleDeleteSubject = async (examId, subjectId) => {
+        try {
+            setError("");
+            await api.delete(`/exams/${examId}/subjects/${subjectId}`);
+            setSuccessMsg("Subject unscheduled successfully");
+            setSuccess(true);
+            loadExams(formData.class_id);
+        } catch (err) {
+            console.error("Failed to delete subject from exam", err);
+            setError(err.response?.data?.message || "Failed to remove subject from exam");
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -145,7 +172,6 @@ export default function ExamCreationPage() {
             }
 
             if (selectedExamId === "new") {
-                // 1. Create a new exam with the subject scheduled (backend POST /exams accepts subjects array)
                 await api.post("/exams", {
                     class_id: Number(formData.class_id),
                     name: newExamName.trim(),
@@ -158,7 +184,6 @@ export default function ExamCreationPage() {
                     ],
                 });
             } else {
-                // 2. Schedule a subject on an existing exam via PUT /exams/:id/subjects
                 await api.put(`/exams/${selectedExamId}/subjects`, {
                     subject_id: Number(formData.subject_id),
                     exam_date: formData.exam_date,
@@ -166,15 +191,17 @@ export default function ExamCreationPage() {
                 });
             }
 
+            setSuccessMsg("Exam subject scheduled successfully");
             setSuccess(true);
             setFormData({
                 subject_id: "",
                 exam_date: "",
                 syllabus: "",
-                class_id: "",
+                class_id: formData.class_id, // Keep selected class
             });
             setSelectedExamId("");
             setNewExamName("");
+            loadExams(formData.class_id);
         } catch (err) {
             console.error("Failed to schedule exam subject", err);
             setError(err.response?.data?.message || "Failed to schedule exam subject");
@@ -185,8 +212,8 @@ export default function ExamCreationPage() {
 
     return (
         <Container maxWidth="sm" sx={{ mt: 3, pb: 12 }}>
-            <Typography variant="h5" fontWeight="bold" sx={{ mb: 3, color: "text.primary" }}>
-                Schedule Exam
+            <Typography variant="h5" fontWeight={900} sx={{ mb: 3, color: "text.primary", fontFamily: "'Outfit', sans-serif" }}>
+                Schedule Exams
             </Typography>
 
             <Paper
@@ -194,22 +221,23 @@ export default function ExamCreationPage() {
                 onSubmit={handleSubmit}
                 sx={{
                     p: { xs: 2.5, sm: 3 },
-                    borderRadius: 4,
+                    borderRadius: 5,
                     border: "1px solid rgba(0,0,0,0.06)",
                     boxShadow: "none",
                     bgcolor: "background.paper",
-                    overflow: "hidden"
+                    overflow: "hidden",
+                    mb: 4
                 }}
             >
                 <Grid container spacing={2.5}>
                     {error && (
-                        <Grid size={12}>
+                        <Grid item xs={12}>
                             <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>
                         </Grid>
                     )}
 
                     {/* Class Dropdown */}
-                    <Grid size={12}>
+                    <Grid item xs={12}>
                         <TextField
                             select
                             required
@@ -251,7 +279,7 @@ export default function ExamCreationPage() {
                     </Grid>
 
                     {/* Exam Dropdown */}
-                    <Grid size={12}>
+                    <Grid item xs={12}>
                         <TextField
                             select
                             required
@@ -288,7 +316,7 @@ export default function ExamCreationPage() {
                             )}
                             {exams.map((exam) => (
                                 <MenuItem key={exam.id} value={exam.id} disabled={exam.is_locked}>
-                                    {exam.name} {exam.is_locked ? "(Locked)" : ""}
+                                    {exam.name} {exam.is_locked ? "(Locked) 🔒" : ""}
                                 </MenuItem>
                             ))}
                         </TextField>
@@ -296,7 +324,7 @@ export default function ExamCreationPage() {
 
                     {/* New Exam Name Input */}
                     {selectedExamId === "new" && (
-                        <Grid size={12}>
+                        <Grid item xs={12}>
                             <TextField
                                 required
                                 fullWidth
@@ -311,7 +339,7 @@ export default function ExamCreationPage() {
                     )}
 
                     {/* Subject Dropdown */}
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    <Grid item xs={12} sm={6}>
                         <TextField
                             select
                             required
@@ -348,7 +376,7 @@ export default function ExamCreationPage() {
                     </Grid>
 
                     {/* Exam Date Picker */}
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    <Grid item xs={12} sm={6}>
                         <DatePickerField
                             label="Exam Date"
                             value={formData.exam_date}
@@ -360,7 +388,7 @@ export default function ExamCreationPage() {
                     </Grid>
 
                     {/* Syllabus multiline input */}
-                    <Grid size={12}>
+                    <Grid item xs={12}>
                         <TextField
                             fullWidth
                             multiline
@@ -374,7 +402,7 @@ export default function ExamCreationPage() {
                     </Grid>
 
                     {/* Submit Button */}
-                    <Grid size={12}>
+                    <Grid item xs={12}>
                         <Button
                             type="submit"
                             variant="contained"
@@ -397,6 +425,98 @@ export default function ExamCreationPage() {
                 </Grid>
             </Paper>
 
+            {/* Scheduled Exams List (Fix: teacher can now see scheduled exams/syllabus) */}
+            {formData.class_id && (
+                <Box>
+                    <Typography variant="h6" fontWeight={800} sx={{ mb: 2, color: "text.primary", fontFamily: "'Outfit', sans-serif" }}>
+                        Scheduled Exams ({exams.length})
+                    </Typography>
+
+                    {examsLoading ? (
+                        <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                            <CircularProgress size={24} />
+                        </Box>
+                    ) : exams.length === 0 ? (
+                        <Card sx={{ borderRadius: 4, border: "1px solid rgba(0,0,0,0.05)", bgcolor: "action.hover", boxShadow: "none" }}>
+                            <CardContent sx={{ textAlign: "center", py: 4 }}>
+                                <Typography color="text.secondary" variant="body2">
+                                    No exams scheduled yet for this class.
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Stack spacing={2.5}>
+                            {exams.map((exam) => {
+                                const subjectsList = exam.exam_subjects || [];
+                                return (
+                                    <Card key={exam.id} sx={{ borderRadius: 4, border: "1px solid rgba(0,0,0,0.05)", boxShadow: "none" }}>
+                                        <CardContent sx={{ p: 2.5 }}>
+                                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                                                <Typography fontWeight="bold" variant="subtitle1">
+                                                    {exam.name}
+                                                </Typography>
+                                                <Chip
+                                                    label={exam.is_locked ? "Locked" : "Active"}
+                                                    size="small"
+                                                    color={exam.is_locked ? "default" : "success"}
+                                                    icon={exam.is_locked ? <Lock sx={{ fontSize: 14 }} /> : <LockOpen sx={{ fontSize: 14 }} />}
+                                                    sx={{ fontWeight: 800, height: 22 }}
+                                                />
+                                            </Stack>
+
+                                            <Divider sx={{ mb: 2 }} />
+
+                                            {subjectsList.length === 0 ? (
+                                                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
+                                                    No subjects scheduled for this exam yet.
+                                                </Typography>
+                                            ) : (
+                                                <Stack spacing={2}>
+                                                    {subjectsList.map((es) => (
+                                                        <Box key={es.subject_id} sx={{ p: 1.5, bgcolor: "action.hover", borderRadius: "12px", border: "1px solid rgba(0,0,0,0.02)" }}>
+                                                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                                                                <Box>
+                                                                    <Typography variant="subtitle2" fontWeight="bold">
+                                                                        {es.Subject?.name || `Subject ${es.subject_id}`}
+                                                                    </Typography>
+                                                                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5, color: "text.secondary" }}>
+                                                                        <CalendarMonth sx={{ fontSize: 14 }} />
+                                                                        <Typography variant="caption" fontWeight={600}>
+                                                                            {es.exam_date}
+                                                                        </Typography>
+                                                                    </Stack>
+                                                                </Box>
+                                                                {!exam.is_locked && (
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="error"
+                                                                        onClick={() => handleDeleteSubject(exam.id, es.subject_id)}
+                                                                    >
+                                                                        <Delete fontSize="small" />
+                                                                    </IconButton>
+                                                                )}
+                                                            </Stack>
+                                                            {es.syllabus && (
+                                                                <Box sx={{ mt: 1 }}>
+                                                                    <Typography variant="caption" color="text.secondary" fontWeight={800}>SYLLABUS:</Typography>
+                                                                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem", mt: 0.2 }}>
+                                                                        {es.syllabus}
+                                                                    </Typography>
+                                                                </Box>
+                                                            )}
+                                                        </Box>
+                                                    ))}
+                                                </Stack>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
+                        </Stack>
+                    )}
+                </Box>
+            )}
+
             <Snackbar
                 open={success}
                 autoHideDuration={2500}
@@ -404,7 +524,7 @@ export default function ExamCreationPage() {
                 anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
             >
                 <Alert severity="success" onClose={() => setSuccess(false)} sx={{ borderRadius: 2 }}>
-                    Exam subject scheduled successfully
+                    {successMsg}
                 </Alert>
             </Snackbar>
         </Container>

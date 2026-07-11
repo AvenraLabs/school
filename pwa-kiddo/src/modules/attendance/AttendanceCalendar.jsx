@@ -1,6 +1,7 @@
-import { Box, Grid, Stack, Typography } from "@mui/material";
+import { Box, Grid, Stack, Typography, FormControl, Select, MenuItem } from "@mui/material";
 import { useTheme, alpha } from "@mui/material/styles";
 import dayjs from "dayjs";
+import { useMemo } from "react";
 
 const STATUS_LABEL = {
   present: "P",
@@ -23,7 +24,6 @@ export default function AttendanceCalendar({
   details = [],
   month,
   onMonthChange,
-  monthsBack = 6,
 }) {
   const theme = useTheme();
   const currentMonth = month ? dayjs(month).startOf("month") : dayjs().startOf("month");
@@ -41,10 +41,21 @@ export default function AttendanceCalendar({
     return acc;
   }, {});
 
-  const months = [];
-  for (let i = monthsBack; i >= 0; i -= 1) {
-    months.push(dayjs().subtract(i, "month").startOf("month"));
-  }
+  const currentYear = dayjs().year();
+  const months = useMemo(() => {
+    const list = [];
+    // Previous year (all 12 months)
+    for (let m = 0; m < 12; m++) {
+      list.push(dayjs().year(currentYear - 1).month(m).startOf("month"));
+    }
+    // Current year (up to current month)
+    const currentMonthIdx = dayjs().month();
+    for (let m = 0; m <= currentMonthIdx; m++) {
+      list.push(dayjs().year(currentYear).month(m).startOf("month"));
+    }
+    // Sort descending (newest first)
+    return list.sort((a, b) => b.valueOf() - a.valueOf());
+  }, [currentYear]);
 
   return (
     <Stack spacing={2}>
@@ -56,32 +67,41 @@ export default function AttendanceCalendar({
           border: `1px solid ${theme.palette.divider}`,
         }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-          <Typography variant="subtitle1" fontWeight={700}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+          <Typography variant="subtitle1" fontWeight={700} sx={{ fontFamily: "'Outfit', sans-serif" }}>
             {currentMonth.format("MMMM YYYY")}
           </Typography>
-          <Box
-            component="select"
-            value={currentMonth.format("YYYY-MM")}
-            onChange={(e) => {
-              const next = months.find((m) => m.format("YYYY-MM") === e.target.value);
-              if (next && onMonthChange) onMonthChange(next);
-            }}
-            style={{
-              border: `1px solid ${theme.palette.divider}`,
-              borderRadius: 10,
-              padding: "6px 10px",
-              background: theme.palette.background.paper,
-              color: theme.palette.text.primary,
-              fontSize: 12,
-            }}
-          >
-            {months.map((m) => (
-              <option key={m.format("YYYY-MM")} value={m.format("YYYY-MM")}>
-                {m.format("MMM YYYY")}
-              </option>
-            ))}
-          </Box>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <Select
+              value={currentMonth.format("YYYY-MM")}
+              onChange={(e) => {
+                const next = months.find((m) => m.format("YYYY-MM") === e.target.value);
+                if (next && onMonthChange) onMonthChange(next);
+              }}
+              sx={{
+                borderRadius: "10px",
+                fontSize: "12px",
+                fontWeight: 700,
+                bgcolor: theme.palette.background.paper,
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: theme.palette.divider,
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: theme.palette.primary.main,
+                },
+              }}
+            >
+              {months.map((m) => (
+                <MenuItem
+                  key={m.format("YYYY-MM")}
+                  value={m.format("YYYY-MM")}
+                  sx={{ fontSize: "12px", fontWeight: 600 }}
+                >
+                  {m.format("MMMM YYYY")}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Stack>
 
         <Box

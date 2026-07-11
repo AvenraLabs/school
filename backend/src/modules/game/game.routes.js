@@ -14,39 +14,40 @@ const router = express.Router();
 
 router.use(protect);
 
+// Quiz is for students only
 router.post(
   "/quiz/single/start",
-  allowRoles("student", "teacher"),
+  allowRoles("student"),
   startSinglePlayerQuiz
 );
 
 router.post(
   "/quiz/multi/create",
-  allowRoles("student", "teacher"),
+  allowRoles("student"),
   createMultiplayerQuiz
 );
 
 router.post(
   "/quiz/single/submit",
-  allowRoles("student", "teacher"),
+  allowRoles("student"),
   submitSinglePlayerQuiz
 );
 
 router.get(
   "/quiz/:sessionId/leaderboard",
-  allowRoles("student", "teacher"),
+  allowRoles("student"),
   getLeaderboard
 );
 
 router.get(
   "/quiz/history",
-  allowRoles("student", "teacher"),
+  allowRoles("student"),
   getQuizHistory
 );
 
 router.post(
   "/quiz/multi/join",
-  allowRoles("student", "teacher"),
+  allowRoles("student"),
   joinMultiplayerQuiz
 );
 

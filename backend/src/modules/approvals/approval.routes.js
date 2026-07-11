@@ -25,6 +25,20 @@ router.get(
   getTeacherPendingApprovals
 );
 
+router.get(
+  "/teachers/approvals/profile-updates",
+  protect,
+  allowRoles("teacher"),
+  getPendingProfileUpdates
+);
+
+router.post(
+  "/teachers/approvals/profile-updates/:id/process",
+  protect,
+  allowRoles("teacher"),
+  processProfileUpdateRequest
+);
+
 router.post(
   "/teachers/approvals/:type/:id/:action",
   protect,

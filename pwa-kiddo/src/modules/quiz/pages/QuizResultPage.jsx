@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -27,7 +27,6 @@ export default function QuizResultPage() {
   const theme = useTheme();
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState([]);
 
@@ -65,8 +64,7 @@ export default function QuizResultPage() {
   }) || null;
   const myScore = myEntry?.score ?? 0;
 
-  const isTeacher = location.pathname.startsWith("/teacher");
-  const backPath = isTeacher ? "/teacher/quiz" : "/student/quiz";
+  const backPath = "/student/quiz";
 
   return (
     <Box sx={{ p: 2, mt: 3, textAlign: "center" }}>

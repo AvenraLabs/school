@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Box, Typography, Button, LinearProgress, Stack, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useAuth } from "../../../auth/AuthProvider";
-import { useLocation } from "react-router-dom";
 import { useQuizPlay } from "../hooks/useQuizPlay";
 import { connectQuizSocket } from "../socket/quiz.socket";
 import QuestionCard from "../components/QuestionCard";
@@ -12,7 +11,6 @@ export default function QuizPlayPage() {
   const { id } = useParams();
   const { token } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const { submitAnswer, answered } = useQuizPlay(id);
 
   const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -41,9 +39,7 @@ export default function QuizPlayPage() {
     });
 
     socket.on("quiz:finished", () => {
-      const isTeacher = location.pathname.startsWith("/teacher");
-      const base = isTeacher ? "/teacher" : "/student";
-      navigate(`${base}/quiz/${id}/results`, { replace: true });
+      navigate(`/student/quiz/${id}/results`, { replace: true });
     });
 
     return () => {
@@ -53,7 +49,7 @@ export default function QuizPlayPage() {
     };
   }, [id, token, navigate]);
 
-  // Timer text effect
+  // Timer countdown effect
   useEffect(() => {
     if (!currentQuestion) return;
     const interval = setInterval(() => {

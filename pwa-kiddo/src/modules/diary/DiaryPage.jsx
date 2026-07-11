@@ -18,7 +18,7 @@ import CreateHomeworkDialog from "./CreateHomeworkDialog";
 function getSubjectThemeColor(name = "", theme) {
   const key = name.toLowerCase().trim();
   let role = "primary";
-  
+
   if (key.includes("math")) {
     role = "primary";
   } else if (key.includes("science") || key.includes("biology") || key.includes("botany") || key.includes("zoology")) {
@@ -45,7 +45,7 @@ function getSubjectThemeColor(name = "", theme) {
   };
 }
 
-// ── Due date helpers ────────────────────────────────────────────────────────
+// ── Due date label (no "Overdue" — just informational) ──────────────────────
 function getDueLabel(dateStr) {
   if (!dateStr) return null;
   const due = new Date(dateStr);
@@ -53,9 +53,13 @@ function getDueLabel(dateStr) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const diff = Math.round((due - today) / 86400000);
-  if (diff < 0)  return { label: "Overdue",    color: "#ef4444", bg: "#fef2f2" };
   if (diff === 0) return { label: "Due Today",  color: "#f97316", bg: "#fff7ed" };
   if (diff === 1) return { label: "Tomorrow",   color: "#f59e0b", bg: "#fffbeb" };
+  if (diff < 0)  return {
+    label: `Due ${due.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`,
+    color: "#94a3b8",
+    bg: "#f1f5f9",
+  };
   return {
     label: `Due ${due.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`,
     color: "#64748b",
@@ -79,8 +83,8 @@ function formatGroupDate(dateKey) {
   };
 }
 
-// ── Filter chip tabs ─────────────────────────────────────────────────────────
-const FILTERS = ["All", "Today", "This Week", "Overdue"];
+// ── Filter chip tabs (no Overdue) ────────────────────────────────────────────
+const FILTERS = ["All", "Today", "This Week"];
 
 function isToday(dateStr) {
   if (!dateStr) return false;
@@ -99,15 +103,6 @@ function isThisWeek(dateStr) {
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 7);
   return d >= startOfWeek && d < endOfWeek;
-}
-
-function isOverdue(dateStr) {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
-  d.setHours(0, 0, 0, 0);
-  const t = new Date();
-  t.setHours(0, 0, 0, 0);
-  return d < t;
 }
 
 // ── Skeleton card ─────────────────────────────────────────────────────────
@@ -136,7 +131,7 @@ function SkeletonCard() {
   );
 }
 
-// ── Homework card ─────────────────────────────────────────────────────────
+// ── Homework card (no overdue styling) ──────────────────────────────────────
 function HomeworkCard({ item }) {
   const subjectName =
     item.Subject?.name || item.subject?.name || item.subject || "Subject";
@@ -153,7 +148,6 @@ function HomeworkCard({ item }) {
   const theme = useTheme();
   const colors = getSubjectThemeColor(subjectName, theme);
   const dueInfo = getDueLabel(dueDate);
-  const isOverdueItem = dueInfo?.label === "Overdue";
 
   return (
     <Box
@@ -162,12 +156,8 @@ function HomeworkCard({ item }) {
         borderRadius: "16px",
         overflow: "hidden",
         background: colors.bg,
-        border: isOverdueItem
-          ? `1.5px solid ${colors.accent}40`
-          : "1px solid rgba(0,0,0,0.05)",
-        boxShadow: isOverdueItem
-          ? `0 0 0 3px ${colors.accent}15`
-          : "0 1px 4px rgba(0,0,0,0.04)",
+        border: "1px solid rgba(0,0,0,0.05)",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
         mb: 1.5,
         transition: "box-shadow 0.2s, transform 0.15s",
         "&:active": { transform: "scale(0.99)" },
@@ -179,7 +169,6 @@ function HomeworkCard({ item }) {
           width: "5px",
           flexShrink: 0,
           background: colors.accent,
-          borderRadius: "0 0 0 0",
         }}
       />
 
@@ -293,17 +282,16 @@ export default function DiaryPage() {
     return () => observer.disconnect();
   }, [hasMore, loadingMore, loadMore]);
 
-  // Filter items
+  // Filter items by assigned/due date
   const filtered = useMemo(() => {
     if (activeFilter === "All") return items;
     const dateField = (item) => item.homework_date || item.due_date || item.created_at || item.createdAt;
     if (activeFilter === "Today")     return items.filter((i) => isToday(dateField(i)));
     if (activeFilter === "This Week") return items.filter((i) => isThisWeek(dateField(i)));
-    if (activeFilter === "Overdue")   return items.filter((i) => isOverdue(dateField(i)));
     return items;
   }, [items, activeFilter]);
 
-  // Group by date
+  // Group by assigned date
   const groupedEntries = useMemo(() => {
     return Object.entries(
       filtered.reduce((acc, item) => {
@@ -365,14 +353,20 @@ export default function DiaryPage() {
               transition: "all 0.18s",
               ...(activeFilter === f
                 ? {
-                    background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary?.main || theme.palette.primary.dark})`,
+                    background: (theme) =>
+                      `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary?.main || theme.palette.primary.dark})`,
                     color: "#fff",
-                    boxShadow: (theme) => `0 3px 10px ${alpha(theme.palette.primary.main, 0.35)}`,
+                    boxShadow: (theme) =>
+                      `0 3px 10px ${alpha(theme.palette.primary.main, 0.35)}`,
                   }
                 : {
-                    background: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : "#f1f5f9",
+                    background: (theme) =>
+                      theme.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "#f1f5f9",
                     color: "text.secondary",
-                    "&:hover": { background: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : "#e2e8f0" },
+                    "&:hover": {
+                      background: (theme) =>
+                        theme.palette.mode === "dark" ? "rgba(255,255,255,0.12)" : "#e2e8f0",
+                    },
                   }),
             }}
           />
@@ -412,29 +406,25 @@ export default function DiaryPage() {
             py: 8,
             px: 3,
             borderRadius: "20px",
-            background: (theme) => `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary?.main || theme.palette.primary.dark, 0.03)} 100%)`,
-            border: (theme) => `1px dashed ${alpha(theme.palette.primary.main, 0.25)}`,
+            background: (theme) =>
+              `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary?.main || theme.palette.primary.dark, 0.03)} 100%)`,
+            border: (theme) =>
+              `1px dashed ${alpha(theme.palette.primary.main, 0.25)}`,
             mt: 2,
           }}
         >
-          <Typography sx={{ fontSize: "52px", mb: 1.5, lineHeight: 1 }}>
-            {activeFilter === "Overdue" ? "✅" : "📚"}
-          </Typography>
+          <Typography sx={{ fontSize: "52px", mb: 1.5, lineHeight: 1 }}>📚</Typography>
           <Typography
             fontWeight={800}
             sx={{ fontSize: "17px", color: "primary.dark", fontFamily: "'Outfit', sans-serif" }}
           >
-            {activeFilter === "Overdue"
-              ? "No overdue homework!"
-              : activeFilter === "Today"
-              ? "Nothing due today"
-              : "All caught up!"}
+            {activeFilter === "Today" ? "Nothing due today" : "All caught up!"}
           </Typography>
-          <Typography variant="body2" sx={{ color: "primary.main", mt: 0.5, opacity: 0.7 }}>
-            {activeFilter === "All"
-              ? "No homework has been assigned yet."
-              : `No homework matches the "${activeFilter}" filter.`}
-          </Typography>
+          {activeFilter === "All" && (
+            <Typography variant="body2" sx={{ color: "primary.main", mt: 0.5, opacity: 0.7 }}>
+              No homework has been assigned yet.
+            </Typography>
+          )}
         </Box>
       )}
 
@@ -447,13 +437,7 @@ export default function DiaryPage() {
           <Box key={dateKey} sx={{ mb: 3 }}>
             {/* Date group header */}
             <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1.5 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                }}
-              >
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
                 <Typography
                   sx={{
                     fontSize: isRecent ? "16px" : "13px",
@@ -483,12 +467,7 @@ export default function DiaryPage() {
                 </Typography>
                 {sub && (
                   <Typography
-                    sx={{
-                      fontSize: "11px",
-                      color: "#94a3b8",
-                      fontWeight: 500,
-                      mt: "2px",
-                    }}
+                    sx={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500, mt: "2px" }}
                   >
                     {sub}
                   </Typography>
@@ -519,9 +498,7 @@ export default function DiaryPage() {
       })}
 
       {/* ── IntersectionObserver sentinel ── */}
-      {!loading && (
-        <Box ref={sentinelRef} sx={{ height: 4, mt: 1 }} />
-      )}
+      {!loading && <Box ref={sentinelRef} sx={{ height: 4, mt: 1 }} />}
 
       {/* ── Load more spinner ── */}
       {loadingMore && (
@@ -554,11 +531,15 @@ export default function DiaryPage() {
             <Fab
               onClick={() => setShowCreate(true)}
               sx={{
-                background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary?.main || theme.palette.primary.dark})`,
-                boxShadow: (theme) => `0 4px 20px ${alpha(theme.palette.primary.main, 0.45)}`,
+                background: (theme) =>
+                  `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary?.main || theme.palette.primary.dark})`,
+                boxShadow: (theme) =>
+                  `0 4px 20px ${alpha(theme.palette.primary.main, 0.45)}`,
                 "&:hover": {
-                  background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary?.dark || theme.palette.primary.main})`,
-                  boxShadow: (theme) => `0 6px 24px ${alpha(theme.palette.primary.main, 0.55)}`,
+                  background: (theme) =>
+                    `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary?.dark || theme.palette.primary.main})`,
+                  boxShadow: (theme) =>
+                    `0 6px 24px ${alpha(theme.palette.primary.main, 0.55)}`,
                 },
                 transition: "all 0.2s",
               }}

@@ -215,17 +215,56 @@ export const getPendingProfileUpdatesService = async ({ school_id, user }) => {
   const Teacher = (await import("../teachers/teacher.model.js")).default;
   const ProfileUpdateRequest = (await import("./profile-update-request.model.js")).default;
 
+  const where = {
+    school_id: scopedSchoolId,
+    status: "PENDING",
+  };
+
+  if (user?.role === "teacher") {
+    // Only student updates are routed to class teacher
+    where.role = "student";
+
+    const assignments = await TeacherAssignment.findAll({
+      where: {
+        school_id: scopedSchoolId,
+        teacher_id: user.teacher_id,
+        is_active: true,
+      },
+      attributes: ["class_id", "section_id"],
+    });
+
+    if (!assignments.length) {
+      return [];
+    }
+
+    const allowedSectionIds = [...new Set(assignments.map((a) => a.section_id))];
+    const allowedStudents = await Student.findAll({
+      where: {
+        school_id: scopedSchoolId,
+        section_id: { [Op.in]: allowedSectionIds },
+      },
+      attributes: ["user_id"],
+    });
+
+    const allowedUserIds = allowedStudents.map((s) => s.user_id);
+    where.user_id = { [Op.in]: allowedUserIds };
+  }
+
   return ProfileUpdateRequest.findAll({
-    where: {
-      school_id: scopedSchoolId,
-      status: "PENDING",
-    },
+    where,
     include: [
       {
         model: User,
         attributes: ["id", "name", "username", "email", "phone", "avatar_url"],
         include: [
-          { model: Student, required: false },
+          {
+            model: Student,
+            required: false,
+            include: [
+              { model: Class, attributes: ["id", "class_name"] },
+              { model: Section, attributes: ["id", "name"] },
+            ],
+          },
           { model: Teacher, required: false },
         ]
       },
@@ -248,6 +287,29 @@ export const processProfileUpdateService = async ({
 
   if (String(request.school_id) !== String(user.school_id)) {
     throw new AppError("Forbidden", 403);
+  }
+
+  if (user.role === "teacher") {
+    if (request.role !== "student") {
+      throw new AppError("Forbidden", 403);
+    }
+    const StudentModel = (await import("../students/student.model.js")).default;
+    const TeacherAssignmentModel = (await import("../teacher-assignments/teacher-assignment.model.js")).default;
+    const student = await StudentModel.findOne({ where: { user_id: request.user_id } });
+    if (!student) {
+      throw new AppError("Student profile not found", 404);
+    }
+    const hasAssignment = await TeacherAssignmentModel.findOne({
+      where: {
+        school_id: user.school_id,
+        teacher_id: user.teacher_id,
+        section_id: student.section_id,
+        is_active: true,
+      },
+    });
+    if (!hasAssignment) {
+      throw new AppError("Forbidden", 403);
+    }
   }
 
   if (action === "reject") {

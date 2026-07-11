@@ -27,10 +27,7 @@ const LostFoundPage = lazy(() => import("../modules/lost-found/LostFoundPage"));
 const FeedbackPage = lazy(() => import("../modules/feedback/FeedbackPage"));
 const AboutPage = lazy(() => import("../modules/about/AboutPage"));
 
-// Quiz pages
-const QuizLobbyPage = lazy(() => import("../modules/quiz/pages/QuizLobbyPage"));
-const QuizPlayPage = lazy(() => import("../modules/quiz/pages/QuizPlayPage"));
-const QuizResultPage = lazy(() => import("../modules/quiz/pages/QuizResultPage"));
+
 
 export default function TeacherApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -72,9 +69,7 @@ export default function TeacherApp() {
               <Route path="group-chat" element={<GroupChatPage />} />
               <Route path="group-chat/:id" element={<GroupChatRoomPage />} />
 
-              <Route path="quiz/:id/lobby" element={<QuizLobbyPage />} />
-              <Route path="quiz/:id/play" element={<QuizPlayPage />} />
-              <Route path="quiz/:id/results" element={<QuizResultPage />} />
+
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>

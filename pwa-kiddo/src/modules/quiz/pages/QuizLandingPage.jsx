@@ -11,7 +11,6 @@ export default function QuizLandingPage() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [multiplayerOpen, setMultiplayerOpen] = useState(false);
-    const isTeacher = user?.role === "teacher";
     const [history, setHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true);
@@ -69,32 +68,31 @@ export default function QuizLandingPage() {
             </Typography>
 
             <Grid container spacing={3}>
-                {!isTeacher && (
-                    <Grid item xs={12}>
-                        <Card
-                            sx={{
-                                borderRadius: 4,
-                                cursor: 'pointer',
-                                bgcolor: '#e3f2fd',
-                                transition: 'transform 0.2s',
-                                '&:hover': { transform: 'scale(1.02)' }
-                            }}
-                            onClick={() => navigate('single')}
-                        >
-                            <CardContent sx={{ display: 'flex', alignItems: 'center', p: 3 }}>
-                                <Avatar sx={{ bgcolor: 'primary.main', width: 60, height: 60, mr: 3 }}>
-                                    <Person fontSize="large" />
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="h6" fontWeight="bold">Single Player</Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Challenge yourself AI.
-                                    </Typography>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                )}
+                <Grid item xs={12}>
+                    <Card
+                        sx={{
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            bgcolor: '#e3f2fd',
+                            transition: 'transform 0.2s',
+                            '&:hover': { transform: 'scale(1.02)' }
+                        }}
+                        onClick={() => navigate('single')}
+                    >
+                        <CardContent sx={{ display: 'flex', alignItems: 'center', p: 3 }}>
+                            <Avatar sx={{ bgcolor: 'primary.main', width: 60, height: 60, mr: 3 }}>
+                                <Person fontSize="large" />
+                            </Avatar>
+                            <Box>
+                                <Typography variant="h6" fontWeight="bold">Single Player</Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Challenge yourself with AI.
+                                </Typography>
+                            </Box>
+                        </CardContent>
+                    </Card>
+                </Grid>
+
 
                 {/* Multiplayer */}
                 <Grid item xs={12}>
@@ -268,7 +266,7 @@ export default function QuizLandingPage() {
                                             <Button
                                                 variant="outlined"
                                                 size="small"
-                                                onClick={() => navigate(`/${isTeacher ? "teacher" : "student"}/quiz/${item.session_id}/results`)}
+                                                onClick={() => navigate(`/student/quiz/${item.session_id}/results`)}
                                                 sx={{ 
                                                     borderRadius: "8px", 
                                                     textTransform: "none", 
