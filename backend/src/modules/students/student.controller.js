@@ -11,7 +11,6 @@ import {
   listStudentsForTeacherSectionService,
   listStudentOptionsService,
 } from "./student.service.js";
-import { getMySiblings } from "./family.controller.js";
 import Student from "./student.model.js";
 import User from "../users/user.model.js";
 

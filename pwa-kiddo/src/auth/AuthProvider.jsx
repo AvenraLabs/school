@@ -26,33 +26,64 @@ export function AuthProvider({ children }) {
     return decoded.exp * 1000 < Date.now();
   }
 
+  // Get saved accounts helper
+  function getSavedAccounts() {
+    try {
+      const accs = localStorage.getItem("accounts");
+      return accs ? JSON.parse(accs) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  // Save accounts helper
+  function saveAccounts(accs) {
+    localStorage.setItem("accounts", JSON.stringify(accs));
+  }
+
   // ---------- bootstrap (restore session) ----------
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
+    const accs = getSavedAccounts();
+    const activeId = localStorage.getItem("activeUserId");
+    
+    const cleanedAccs = {};
+    let activeAccount = null;
 
-    if (!storedToken) {
-      setLoading(false);
-      return;
+    Object.keys(accs).forEach((key) => {
+      const acc = accs[key];
+      const decoded = decodeToken(acc.token);
+      if (decoded && !isTokenExpired(decoded) && validateToken(acc.token)) {
+        cleanedAccs[key] = acc;
+        if (String(key) === String(activeId)) {
+          activeAccount = acc;
+        }
+      }
+    });
+
+    saveAccounts(cleanedAccs);
+
+    if (activeAccount) {
+      setToken(activeAccount.token);
+      setUser(decodeToken(activeAccount.token));
+      localStorage.setItem("token", activeAccount.token);
+      localStorage.setItem("activeUserId", activeAccount.user.id);
+    } else {
+      const remainingIds = Object.keys(cleanedAccs);
+      if (remainingIds.length > 0) {
+        const firstId = remainingIds[0];
+        const acc = cleanedAccs[firstId];
+        setToken(acc.token);
+        setUser(decodeToken(acc.token));
+        localStorage.setItem("token", acc.token);
+        localStorage.setItem("activeUserId", acc.user.id);
+      } else {
+        localStorage.removeItem("token");
+        localStorage.removeItem("activeUserId");
+        localStorage.removeItem("accounts");
+        setToken(null);
+        setUser(null);
+      }
     }
-
-    if (!validateToken(storedToken)) {
-      console.warn("Stored token is invalid, clearing session");
-      localStorage.removeItem("token");
-      setLoading(false);
-      return;
-    }
-
-    const decoded = decodeToken(storedToken);
-
-    if (!decoded || isTokenExpired(decoded)) {
-      console.warn("Stored token is expired, clearing session");
-      localStorage.removeItem("token");
-      setLoading(false);
-      return;
-    }
-
-    setToken(storedToken);
-    setUser(decoded);
     setLoading(false);
   }, []);
 
@@ -64,7 +95,11 @@ export function AuthProvider({ children }) {
         if (newToken && validateToken(newToken)) {
           const decoded = decodeToken(newToken);
           if (decoded && !isTokenExpired(decoded)) {
+            const accs = getSavedAccounts();
+            accs[decoded.id] = { token: newToken, user: decoded };
+            saveAccounts(accs);
             localStorage.setItem("token", newToken);
+            localStorage.setItem("activeUserId", decoded.id);
             setToken(newToken);
             setUser(decoded);
           }
@@ -132,7 +167,13 @@ export function AuthProvider({ children }) {
       if (!decoded || isTokenExpired(decoded)) throw new Error("Token is expired");
       if (!decoded.id || !decoded.role) throw new Error("Token missing required fields");
 
+      // Save to accounts list
+      const accs = getSavedAccounts();
+      accs[decoded.id] = { token: jwt, user: decoded };
+      saveAccounts(accs);
+
       localStorage.setItem("token", jwt);
+      localStorage.setItem("activeUserId", decoded.id);
       setToken(jwt);
       setUser(decoded);
 
@@ -150,9 +191,28 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.warn("Logout API call failed:", error);
     } finally {
-      localStorage.removeItem("token");
-      setToken(null);
-      setUser(null);
+      const currentUserId = user?.id;
+      const accs = getSavedAccounts();
+      if (currentUserId) {
+        delete accs[currentUserId];
+        saveAccounts(accs);
+      }
+
+      const remainingIds = Object.keys(accs);
+      if (remainingIds.length > 0) {
+        const nextId = remainingIds[0];
+        const nextAcc = accs[nextId];
+        localStorage.setItem("token", nextAcc.token);
+        localStorage.setItem("activeUserId", nextAcc.user.id);
+        setToken(nextAcc.token);
+        setUser(decodeToken(nextAcc.token));
+      } else {
+        localStorage.removeItem("token");
+        localStorage.removeItem("accounts");
+        localStorage.removeItem("activeUserId");
+        setToken(null);
+        setUser(null);
+      }
     }
   }
 
@@ -175,16 +235,30 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // Switch to a sibling student account (no re-login)
-  async function switchStudent(targetStudentId) {
+  // Switch to another logged-in user profile
+  function switchAccount(userId) {
     try {
-      const res = await api.post("/auth/switch-student", { target_student_id: targetStudentId });
-      const { token: newToken } = res.data;
-      return login(newToken);
+      const accs = getSavedAccounts();
+      const target = accs[userId];
+      if (!target) throw new Error("Account not found");
+
+      localStorage.setItem("token", target.token);
+      localStorage.setItem("activeUserId", target.user.id);
+      setToken(target.token);
+      setUser(decodeToken(target.token));
+      return target.user;
     } catch (err) {
-      setError(err?.response?.data?.message || "Switch failed");
+      setError(err.message || "Switch failed");
       throw err;
     }
+  }
+
+  // Sign out current state to trigger login form, keeping other saved accounts
+  function addAccount() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("activeUserId");
+    setToken(null);
+    setUser(null);
   }
 
   const value = {
@@ -197,7 +271,9 @@ export function AuthProvider({ children }) {
       setUser((prev) => (prev ? { ...prev, ...partial } : partial)),
     login,
     logout,
-    switchStudent,
+    switchAccount,
+    addAccount,
+    accounts: Object.values(getSavedAccounts()),
     refreshToken,
     clearError: () => setError(null),
   };

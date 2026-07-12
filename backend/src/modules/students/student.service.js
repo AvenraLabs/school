@@ -6,7 +6,6 @@ import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.j
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import db from "../../config/db.js";
-import { autoLinkFamilyByPhone } from "./family.service.js";
 import { cleanTo10Digits } from "../../shared/utils/phoneUtils.js";
 
 /* =========================
@@ -126,18 +125,7 @@ export const createStudentService = async ({
       { transaction: t }
     );
 
-    // Auto-link to existing family (or create one) by guardian_phone
-    if (guardian_phone) {
-      await autoLinkFamilyByPhone({
-        school_id,
-        guardian_phone,
-        student_id: student.id,
-        father_name,
-        mother_name,
-        address,
-        transaction: t,
-      });
-    }
+
 
     /**
      * 6️⃣ Return credential response for UI display

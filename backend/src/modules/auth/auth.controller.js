@@ -9,12 +9,7 @@ export const login = asyncHandler(async (req, res) => {
   const { username, password } = req.body; // already validated by Zod
 
   const user = await User.findOne({ 
-    where: { 
-      [Op.or]: [
-        { username },
-        { phone: username }
-      ]
-    } 
+    where: { username } 
   });
   if (!user) {
     throw new AppError("Username or Mobile Number not found", 401);
@@ -98,69 +93,7 @@ export const changePassword = asyncHandler(async (req, res) => {
   });
 });
 
-/* Switch to a sibling student account (no re-login required) */
-export const switchStudent = asyncHandler(async (req, res) => {
-  const { target_student_id } = req.body;
 
-  if (!target_student_id) {
-    throw new AppError("target_student_id is required", 400);
-  }
-
-  // Only students can switch
-  if (req.user.role !== "student") {
-    throw new AppError("Only students can switch accounts", 403);
-  }
-
-  const Student = (await import("../students/student.model.js")).default;
-
-  // Find current student's family_id
-  const currentStudent = await Student.findOne({
-    where: { user_id: req.user.id },
-    attributes: ["id", "family_id"],
-  });
-
-  if (!currentStudent?.family_id) {
-    throw new AppError("No family linked to your account", 400);
-  }
-
-  // Find target student — must be in same family
-  const targetStudent = await Student.findOne({
-    where: {
-      id: target_student_id,
-      family_id: currentStudent.family_id,
-      school_id: req.user.school_id,
-    },
-  });
-
-  if (!targetStudent) {
-    throw new AppError("Target student not found in your family", 404);
-  }
-
-  // Fetch target user
-  const targetUser = await User.findByPk(targetStudent.user_id);
-  if (!targetUser || !targetUser.is_active) {
-    throw new AppError("Target student account is inactive", 403);
-  }
-
-  // Issue new JWT scoped to target student
-  const token = jwt.sign(
-    {
-      id: targetUser.id,
-      role: targetUser.role,
-      school_id: targetUser.school_id,
-      name: targetUser.name,
-      username: targetUser.username,
-      phone: targetUser.phone,
-      class_id: targetStudent.class_id,
-      section_id: targetStudent.section_id,
-      student_id: targetStudent.id,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
-
-  res.json({ token, student_id: targetStudent.id });
-});
 
 export const adminResetUserPassword = asyncHandler(async (req, res) => {
   // Only school admins (and super admins) can reset passwords for their users

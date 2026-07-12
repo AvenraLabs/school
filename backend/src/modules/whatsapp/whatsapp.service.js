@@ -4,7 +4,6 @@ import Student from "../students/student.model.js";
 import User from "../users/user.model.js";
 import Class from "../classes/classes.model.js";
 import Section from "../sections/section.model.js";
-import Family from "../students/family.model.js";
 import Vehicle from "../transport/vehicle.model.js";
 import StudentTransport from "../transport/student-transport.model.js";
 import Teacher from "../teachers/teacher.model.js";
@@ -144,10 +143,9 @@ export const sendAbsentAlert = async (studentInput) => {
     const student = await Student.findOne({
       where: { id: studentId },
       include: [
-        { model: User, attributes: ["name"] },
+        { model: User, attributes: ["name", "phone"] },
         { model: Class, attributes: ["class_name"] },
         { model: Section, attributes: ["name"] },
-        { model: Family, attributes: ["guardian_phone"] },
       ],
     });
 
@@ -156,7 +154,7 @@ export const sendAbsentAlert = async (studentInput) => {
       return;
     }
 
-    const phone = student.family?.guardian_phone;
+    const phone = student.user?.phone || student.emergency_contact;
     if (!phone || phone.trim() === "") {
       await WhatsappLog.create({
         status: "skipped",
@@ -201,8 +199,8 @@ export const sendBusTripStarted = async (busId) => {
           model: Student,
           include: [
             {
-              model: Family,
-              attributes: ["guardian_phone"],
+              model: User,
+              attributes: ["phone"],
             },
           ],
         },
@@ -210,7 +208,7 @@ export const sendBusTripStarted = async (busId) => {
     });
 
     const phoneNumbers = studentTransports
-      .map((st) => st.student?.family?.guardian_phone)
+      .map((st) => st.student?.user?.phone || st.student?.emergency_contact)
       .filter((phone) => phone && phone.trim() !== "");
 
     const uniquePhones = [...new Set(phoneNumbers)];
@@ -251,8 +249,8 @@ export const sendBusTripEnded = async (busId) => {
           model: Student,
           include: [
             {
-              model: Family,
-              attributes: ["guardian_phone"],
+              model: User,
+              attributes: ["phone"],
             },
           ],
         },
@@ -260,7 +258,7 @@ export const sendBusTripEnded = async (busId) => {
     });
 
     const phoneNumbers = studentTransports
-      .map((st) => st.student?.family?.guardian_phone)
+      .map((st) => st.student?.user?.phone || st.student?.emergency_contact)
       .filter((phone) => phone && phone.trim() !== "");
 
     const uniquePhones = [...new Set(phoneNumbers)];
@@ -349,14 +347,15 @@ export const resolveAnnouncementRecipients = async ({ school_id, target_role, cl
       where: studentWhere,
       include: [
         {
-          model: Family,
-          attributes: ["guardian_phone"],
+          model: User,
+          attributes: ["phone"],
         },
       ],
     });
     for (const s of students) {
-      if (s.family?.guardian_phone) {
-        recipientPhones.push(s.family.guardian_phone);
+      const phone = s.user?.phone || s.emergency_contact;
+      if (phone) {
+        recipientPhones.push(phone);
       }
     }
   }

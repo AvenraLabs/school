@@ -10,7 +10,6 @@ import Feedback from "../modules/feedback/feedback.model.js";
 /* ===================== PEOPLE ===================== */
 import Teacher from "../modules/teachers/teacher.model.js";
 import Student from "../modules/students/student.model.js";
-import Family from "../modules/students/family.model.js";
 import TeacherAssignment from "../modules/teacher-assignments/teacher-assignment.model.js";
 
 
@@ -148,12 +147,7 @@ const initAssociations = () => {
   Student.hasMany(ExamMark, { foreignKey: "student_id", onDelete: "CASCADE" });
 
 
-  /* ==================== FAMILY / SIBLINGS ==================== */
-  School.hasMany(Family, { foreignKey: "school_id" });
-  Family.belongsTo(School, { foreignKey: "school_id" });
 
-  Family.hasMany(Student, { foreignKey: "family_id" });
-  Student.belongsTo(Family, { foreignKey: "family_id" });
 
 
 

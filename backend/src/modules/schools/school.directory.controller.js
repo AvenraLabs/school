@@ -4,7 +4,6 @@ import Class from "../classes/classes.model.js";
 import Section from "../sections/section.model.js";
 import Student from "../students/student.model.js";
 import Teacher from "../teachers/teacher.model.js";
-import Family from "../students/family.model.js";
 import User from "../users/user.model.js";
 import Attendance from "../attendance/attendance.model.js";
 import ExamMark from "../report-cards/exam-mark.model.js";
@@ -127,11 +126,6 @@ export const getSectionRoster = asyncHandler(async (req, res) => {
       {
         model: User,
         attributes: ["id", "name", "username", "email", "phone", "avatar_url", "is_active"]
-      },
-      {
-        model: Family,
-        attributes: ["id", "father_name", "mother_name", "guardian_phone"],
-        required: false,
       }
     ]
   });
@@ -257,11 +251,6 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
       {
         model: User,
         attributes: ["id", "name", "username", "email", "phone", "avatar_url", "is_active"]
-      },
-      {
-        model: Family,
-        attributes: ["id", "father_name", "mother_name", "guardian_phone", "address"],
-        required: false,
       }
     ]
   });
