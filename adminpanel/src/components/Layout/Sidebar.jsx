@@ -380,51 +380,144 @@ export function Sidebar({ isOpen, onClose }) {
               )}
 
               {/* Avatar Uploader Section */}
-              <div className="flex flex-col items-center gap-3">
-                <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-indigo-500/50 bg-slate-800 flex items-center justify-center">
-                  {avatarUrl ? (
-                    <img
-                      src={getAssetUrl(avatarUrl)}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-2xl font-bold text-slate-400">{initial}</span>
-                  )}
-                  {isUploading && (
-                    <div className="absolute inset-0 bg-slate-950/70 flex items-center justify-center">
-                      <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
-                    </div>
-                  )}
+              <div style={{ marginBottom: '4px' }}>
+                <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94a3b8', marginBottom: '10px' }}>Profile Photo</p>
+
+                <div
+                  style={{ position: 'relative', width: '100%', borderRadius: '14px', overflow: 'hidden', cursor: isUploading || isSaving ? 'not-allowed' : 'pointer' }}
+                  onClick={() => !isUploading && !isSaving && fileInputRef.current?.click()}
+                >
+                  {/* Upload Zone */}
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '160px',
+                      borderRadius: '14px',
+                      border: `2px dashed ${avatarUrl ? 'transparent' : 'rgba(99,102,241,0.4)'}`,
+                      background: avatarUrl ? 'transparent' : 'rgba(99,102,241,0.05)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      transition: 'all 0.2s ease',
+                      overflow: 'hidden',
+                      position: 'relative',
+                    }}
+                    onMouseEnter={e => {
+                      if (!avatarUrl) e.currentTarget.style.borderColor = 'rgba(99,102,241,0.7)';
+                      e.currentTarget.style.background = avatarUrl ? 'transparent' : 'rgba(99,102,241,0.09)';
+                    }}
+                    onMouseLeave={e => {
+                      if (!avatarUrl) e.currentTarget.style.borderColor = 'rgba(99,102,241,0.4)';
+                      e.currentTarget.style.background = avatarUrl ? 'transparent' : 'rgba(99,102,241,0.05)';
+                    }}
+                  >
+                    {avatarUrl ? (
+                      <>
+                        {/* Photo preview */}
+                        <img
+                          src={getAssetUrl(avatarUrl)}
+                          alt="Profile preview"
+                          style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }}
+                        />
+                        {/* Hover overlay */}
+                        <div
+                          className="photo-hover-overlay"
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'rgba(15,12,41,0.65)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            opacity: 0,
+                            transition: 'opacity 0.2s ease',
+                          }}
+                        >
+                          <Camera style={{ width: '22px', height: '22px', color: '#c7d2fe' }} />
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#e0e7ff' }}>Change Photo</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Upload placeholder */}
+                        <div style={{
+                          width: '48px', height: '48px', borderRadius: '12px',
+                          background: 'rgba(99,102,241,0.15)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          marginBottom: '4px',
+                        }}>
+                          <Camera style={{ width: '22px', height: '22px', color: '#818cf8' }} />
+                        </div>
+                        <p style={{ fontSize: '13px', fontWeight: 600, color: '#c7d2fe', margin: 0 }}>Click to upload photo</p>
+                        <p style={{ fontSize: '11px', color: 'rgba(148,163,184,0.55)', margin: 0 }}>JPG, PNG, WEBP · Max 5MB</p>
+                        <div style={{
+                          marginTop: '6px',
+                          padding: '5px 14px',
+                          borderRadius: '8px',
+                          background: 'rgba(99,102,241,0.2)',
+                          border: '1px solid rgba(99,102,241,0.35)',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          color: '#a5b4fc',
+                        }}>
+                          Browse Files
+                        </div>
+                      </>
+                    )}
+
+                    {/* Uploading spinner overlay */}
+                    {isUploading && (
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'rgba(15,12,41,0.75)',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center',
+                        gap: '8px', borderRadius: '14px',
+                      }}>
+                        <Loader2 style={{ width: '28px', height: '28px', color: '#818cf8', animation: 'spin 1s linear infinite' }} />
+                        <span style={{ fontSize: '12px', fontWeight: 500, color: '#c7d2fe' }}>Uploading…</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* Remove button — only shown if photo exists */}
+                {avatarUrl && !isUploading && (
+                  <button
+                    type="button"
+                    disabled={isSaving}
+                    onClick={handleDeleteAvatar}
+                    style={{
+                      marginTop: '8px',
+                      width: '100%',
+                      padding: '7px',
+                      borderRadius: '9px',
+                      border: '1px solid rgba(239,68,68,0.25)',
+                      background: 'rgba(239,68,68,0.08)',
+                      color: '#fca5a5',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.18)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+                  >
+                    Remove Photo
+                  </button>
+                )}
 
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleAvatarFileChange}
                   accept="image/jpeg,image/png,image/jpg,image/webp"
-                  className="hidden"
+                  style={{ display: 'none' }}
                 />
-
-                <button
-                  type="button"
-                  disabled={isUploading || isSaving}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-all cursor-pointer"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  {avatarUrl ? 'Change Photo' : 'Upload Photo'}
-                </button>
-                {avatarUrl && (
-                  <button
-                    type="button"
-                    disabled={isUploading || isSaving}
-                    onClick={handleDeleteAvatar}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-300 hover:text-rose-200 bg-rose-500/10 hover:bg-rose-500/20 rounded-lg border border-rose-500/20 transition-all cursor-pointer"
-                  >
-                    Remove
-                  </button>
-                )}
               </div>
 
               {/* Name Input */}
@@ -494,6 +587,9 @@ export function Sidebar({ isOpen, onClose }) {
         .nav-link-idle:hover {
           background: rgba(255,255,255,0.07);
           color: #fff;
+        }
+        div:hover > div > .photo-hover-overlay {
+          opacity: 1 !important;
         }
       `}</style>
     </>

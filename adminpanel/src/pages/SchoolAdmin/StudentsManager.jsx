@@ -144,7 +144,7 @@ export function StudentsManager() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
+    <div className="page-wrapper" style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
       <div className="page-header">
         <div>
           <h1 className="page-title">Students</h1>
@@ -184,13 +184,13 @@ export function StudentsManager() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 mb-4">
-        <select className="select-field w-48" value={filterClass}
+      <div className="filters-row">
+        <select className="select-field" style={{ width: 'auto', flex: '1 1 180px' }} value={filterClass}
           onChange={e => { setFilterClass(e.target.value); setFilterSection(''); setPage(0); }}>
           <option value="">All Classes</option>
           {classes.map(c => <option key={c.id} value={c.id}>{c.class_name}</option>)}
         </select>
-        <select className="select-field w-48" value={filterSection}
+        <select className="select-field" style={{ width: 'auto', flex: '1 1 180px' }} value={filterSection}
           onChange={e => { setFilterSection(e.target.value); setPage(0); }}
           disabled={!filterClass}>
           <option value="">All Sections</option>
@@ -210,6 +210,7 @@ export function StudentsManager() {
           </div>
         ) : (
           <>
+            <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr><th>Roll No</th><th>Admission No</th><th>Username</th><th>Name</th><th>Class</th><th>Section</th><th>Guardian Phone</th><th>Status</th><th>Actions</th></tr>
@@ -252,6 +253,7 @@ export function StudentsManager() {
                 ))}
               </tbody>
             </table>
+            </div>
             {totalPages > 1 && (
               <div className="flex items-center justify-between p-4 border-t border-slate-100">
                 <span className="text-sm text-slate-500">Page {page + 1} of {totalPages}</span>

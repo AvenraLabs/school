@@ -45,20 +45,19 @@ export function AuditLogs() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <select className="select-field w-48" value={entityType} onChange={(e) => { setEntityType(e.target.value); setPage(0); }}>
+      <div className="filters-row">
+        <select className="select-field" style={{ flex: '1 1 180px' }} value={entityType} onChange={(e) => { setEntityType(e.target.value); setPage(0); }}>
           <option value="">All Entity Types</option>
           <option value="student">Student</option>
           <option value="teacher">Teacher</option>
-
         </select>
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-500">From:</span>
-          <input type="date" className="input-field w-40" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(0); }} />
+          <input type="date" className="input-field" style={{ width: '160px' }} value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(0); }} />
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-500">To:</span>
-          <input type="date" className="input-field w-40" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(0); }} />
+          <input type="date" className="input-field" style={{ width: '160px' }} value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(0); }} />
         </div>
       </div>
 
@@ -73,6 +72,7 @@ export function AuditLogs() {
           </div>
         ) : (
           <>
+            <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr><th>Timestamp</th><th>Action</th><th>Entity Type</th><th>Entity ID</th><th>User</th><th>Details</th></tr>
@@ -94,6 +94,7 @@ export function AuditLogs() {
                 ))}
               </tbody>
             </table>
+            </div>
             {totalPages > 1 && (
               <div className="flex items-center justify-between p-4 border-t border-slate-100">
                 <span className="text-sm text-slate-500">Page {page + 1} of {totalPages}</span>

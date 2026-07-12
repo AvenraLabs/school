@@ -46,6 +46,7 @@ export default function ProfileForm({
       designation: profile?.designation || "",
       qualification: profile?.qualification || "",
       experience: profile?.experience || "",
+      roll_no: profile?.roll_no || "",
     },
   });
 
@@ -259,6 +260,16 @@ export default function ProfileForm({
                 fullWidth
                 value={profile?.section?.name || "—"}
                 InputProps={{ readOnly: true }}
+              />
+              <TextField
+                label="Roll No"
+                fullWidth
+                type="number"
+                error={Boolean(errors.roll_no)}
+                helperText={errors.roll_no?.message}
+                {...register("roll_no", {
+                  min: { value: 1, message: "Roll number must be positive" }
+                })}
               />
             </Stack>
             <TextField

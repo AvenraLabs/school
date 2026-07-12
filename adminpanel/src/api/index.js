@@ -463,6 +463,11 @@ export const examsAPI = {
     const response = await axiosInstance.delete(`/exams/${examId}/subjects/${subjectId}`);
     return response.data;
   },
+
+  delete: async (id) => {
+    const response = await axiosInstance.delete(`/exams/${id}`);
+    return response.data;
+  },
 };
 
 // Exam Master API (reusable exam names)

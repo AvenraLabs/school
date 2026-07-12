@@ -17,10 +17,11 @@ import {
     Box,
     Divider,
     FormControlLabel,
-    Checkbox
+    Checkbox,
+    Grid
 } from "@mui/material";
 import { Add, Delete } from "@mui/icons-material";
-import { getSectionAssignments, saveTimetable } from "./teacherTimetable.api";
+import { getSectionAssignments, saveTimetable, getTimetable } from "./teacherTimetable.api";
 
 export default function ManageTimetableDialog({ open, onClose, onSuccess, classTeacherSections = [] }) {
     const [loading, setLoading] = useState(false);
@@ -70,6 +71,35 @@ export default function ManageTimetableDialog({ open, onClose, onSuccess, classT
         }
         loadAssignments();
     }, [classSection, open]);
+
+    useEffect(() => {
+        async function loadExistingTimetable() {
+            if (!classSection || !open) return;
+            const [classId, sectionId] = classSection.split(",");
+            try {
+                setError(null);
+                const res = await getTimetable({ class_id: Number(classId), section_id: Number(sectionId) });
+                const fullTimetable = res?.data?.data ?? {};
+                const dayPeriods = fullTimetable[dayOfWeek] || [];
+                if (dayPeriods.length > 0) {
+                    setEntries(dayPeriods.map(p => ({
+                        start_time: p.start_time?.slice(0, 5) || "",
+                        end_time: p.end_time?.slice(0, 5) || "",
+                        teacher_assignment_id: p.teacher_assignment_id || "",
+                        title: p.title || "",
+                        is_break: !!p.is_break
+                    })));
+                } else {
+                    setEntries([{ start_time: "09:00", end_time: "10:00", teacher_assignment_id: "", title: "", is_break: false }]);
+                }
+            } catch (err) {
+                console.error(err);
+                setError("Failed to load existing timetable for this day");
+                setEntries([{ start_time: "09:00", end_time: "10:00", teacher_assignment_id: "", title: "", is_break: false }]);
+            }
+        }
+        loadExistingTimetable();
+    }, [classSection, dayOfWeek, open]);
 
 
     const handleEntryChange = (index, field, value) => {
@@ -177,89 +207,135 @@ export default function ManageTimetableDialog({ open, onClose, onSuccess, classT
                         </FormControl>
                     </Stack>
 
-                    <Divider>Periods</Divider>
+                    <Divider sx={{ my: 1 }}>Periods</Divider>
 
-    {entries.map((entry, index) => (
-        <Stack key={index} spacing={1}>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                    <TextField
-                        type="time"
-                        label="Start"
-                        value={entry.start_time}
-                        onChange={(e) => handleEntryChange(index, "start_time", e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        size="small"
-                        sx={{ width: 110 }}
-                    />
-                    <TextField
-                        type="time"
-                        label="End"
-                        value={entry.end_time}
-                        onChange={(e) => handleEntryChange(index, "end_time", e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        size="small"
-                        sx={{ width: 110 }}
-                    />
-                </Box>
+                    {/* Column Headers for larger screens */}
+                    {entries.length > 0 && (
+                        <Grid container spacing={2} sx={{ display: { xs: "none", md: "flex" }, px: 1, pb: 1, borderBottom: '2px solid', borderColor: 'divider', fontWeight: "bold" }}>
+                            <Grid item md={3}>Time Range</Grid>
+                            <Grid item md={1.5}>Is Break?</Grid>
+                            <Grid item md={6.5}>Subject & Teacher / Break Label</Grid>
+                            <Grid item md={1} sx={{ textAlign: "right" }}>Actions</Grid>
+                        </Grid>
+                    )}
 
-                <FormControl fullWidth size="small" disabled={entry.is_break} sx={{ minWidth: 220 }}>
-                    <InputLabel>Teacher Assignment</InputLabel>
-                    <Select
-                        value={entry.teacher_assignment_id}
-                        label="Teacher Assignment"
-                        onChange={(e) => handleEntryChange(index, "teacher_assignment_id", e.target.value)}
-                    >
-                        <MenuItem value=""><em>Select assignment</em></MenuItem>
-                        {sectionAssignments.map((a) => {
-                            const subjectName = a.Subject?.name || a.subject?.name || "Subject";
-                            const teacherName =
-                                a.Teacher?.User?.name ||
-                                a.teacher?.user?.name ||
-                                a.teacher?.User?.name ||
-                                "Teacher";
-                            return (
-                                <MenuItem key={a.id} value={a.id}>
-                                    {subjectName} - {teacherName}
-                                </MenuItem>
-                            );
-                        })}
-                    </Select>
-                </FormControl>
-            </Stack>
+                    <Stack spacing={2} divider={<Divider sx={{ display: { md: "none" } }} />}>
+                        {entries.map((entry, index) => (
+                            <Grid container spacing={2} alignItems="center" key={index} sx={{ py: { xs: 1.5, md: 0.5 } }}>
+                                {/* Time Fields */}
+                                <Grid item xs={12} md={3}>
+                                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                                        <TextField
+                                            type="time"
+                                            label="Start"
+                                            value={entry.start_time}
+                                            onChange={(e) => handleEntryChange(index, "start_time", e.target.value)}
+                                            InputLabelProps={{ shrink: true }}
+                                            size="small"
+                                            fullWidth
+                                        />
+                                        <TextField
+                                            type="time"
+                                            label="End"
+                                            value={entry.end_time}
+                                            onChange={(e) => handleEntryChange(index, "end_time", e.target.value)}
+                                            InputLabelProps={{ shrink: true }}
+                                            size="small"
+                                            fullWidth
+                                        />
+                                    </Box>
+                                </Grid>
 
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                <FormControlLabel
-                    control={
-                        <Checkbox
-                            checked={entry.is_break}
-                            onChange={(e) => handleEntryChange(index, "is_break", e.target.checked)}
-                        />
-                    }
-                    label="Break"
-                />
+                                {/* Is Break Checkbox */}
+                                <Grid item xs={4} md={1.5}>
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                                        <Checkbox
+                                            checked={!!entry.is_break}
+                                            onChange={(e) => {
+                                                const val = e.target.checked;
+                                                const newEntries = [...entries];
+                                                newEntries[index] = {
+                                                    ...newEntries[index],
+                                                    is_break: val,
+                                                    teacher_assignment_id: val ? "" : newEntries[index].teacher_assignment_id,
+                                                    title: val ? newEntries[index].title : ""
+                                                };
+                                                setEntries(newEntries);
+                                            }}
+                                            size="small"
+                                        />
+                                        <Typography
+                                            variant="body2"
+                                            sx={{ cursor: "pointer", userSelect: "none" }}
+                                            onClick={() => {
+                                                const val = !entry.is_break;
+                                                const newEntries = [...entries];
+                                                newEntries[index] = {
+                                                    ...newEntries[index],
+                                                    is_break: val,
+                                                    teacher_assignment_id: val ? "" : newEntries[index].teacher_assignment_id,
+                                                    title: val ? newEntries[index].title : ""
+                                                };
+                                                setEntries(newEntries);
+                                            }}
+                                        >
+                                            Break
+                                        </Typography>
+                                    </Box>
+                                </Grid>
 
-                {entry.is_break && (
-                    <TextField
-                        label="Break label (optional)"
-                        value={entry.title}
-                        onChange={(e) => handleEntryChange(index, "title", e.target.value)}
-                        size="small"
-                        sx={{ minWidth: 220, flex: 1 }}
-                    />
-                )}
+                                {/* Assignment or Break title */}
+                                <Grid item xs={6.5} md={6.5}>
+                                    {entry.is_break ? (
+                                        <TextField
+                                            label="Break Label (e.g. Lunch)"
+                                            value={entry.title}
+                                            onChange={(e) => handleEntryChange(index, "title", e.target.value)}
+                                            size="small"
+                                            fullWidth
+                                        />
+                                    ) : (
+                                        <FormControl fullWidth size="small" style={{ width: "100%", minWidth: "180px" }}>
+                                            <InputLabel id={`label-assignment-${index}`}>Subject & Teacher</InputLabel>
+                                            <Select
+                                                labelId={`label-assignment-${index}`}
+                                                value={entry.teacher_assignment_id || ""}
+                                                label="Subject & Teacher"
+                                                onChange={(e) => handleEntryChange(index, "teacher_assignment_id", e.target.value)}
+                                                fullWidth
+                                            >
+                                                <MenuItem value=""><em>Select assignment</em></MenuItem>
+                                                {sectionAssignments.map((a) => {
+                                                    const subjectName = a.Subject?.name || a.subject?.name || "Subject";
+                                                    const teacherName =
+                                                        a.Teacher?.User?.name ||
+                                                        a.teacher?.user?.name ||
+                                                        a.teacher?.User?.name ||
+                                                        "Teacher";
+                                                    return (
+                                                        <MenuItem key={a.id} value={a.id}>
+                                                            {subjectName} - {teacherName}
+                                                        </MenuItem>
+                                                    );
+                                                })}
+                                            </Select>
+                                        </FormControl>
+                                    )}
+                                </Grid>
 
-                <IconButton onClick={() => removeEntry(index)} color="error">
-                    <Delete />
-                </IconButton>
-            </Stack>
-        </Stack>
-    ))}
+                                {/* Delete */}
+                                <Grid item xs={1.5} md={1} sx={{ textAlign: "right" }}>
+                                    <IconButton onClick={() => removeEntry(index)} color="error" size="small">
+                                        <Delete />
+                                    </IconButton>
+                                </Grid>
+                            </Grid>
+                        ))}
+                    </Stack>
 
-                    <Button startIcon={<Add />} onClick={addEntry}>
+                    <Button startIcon={<Add />} onClick={addEntry} sx={{ mt: 1, alignSelf: "flex-start" }}>
                         Add Period
                     </Button>
-
                 </Stack>
             </DialogContent>
             <DialogActions>

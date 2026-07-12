@@ -148,6 +148,7 @@ export function LoginRoster() {
               <div className="p-4 border-b border-slate-100">
                 <h3 className="font-semibold text-slate-900">Teachers ({data.teachers.length})</h3>
               </div>
+              <div className="table-responsive">
               <table className="data-table">
                 <thead><tr><th>Username</th><th>Password</th><th>Name</th><th>Employee ID</th><th className="text-right">Actions</th></tr></thead>
                 <tbody>
@@ -172,6 +173,7 @@ export function LoginRoster() {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 
@@ -187,6 +189,7 @@ export function LoginRoster() {
                     Section {sec.name} ({sec.students?.length || 0} students)
                   </div>
                   {sec.students && sec.students.length > 0 && (
+                    <div className="table-responsive">
                     <table className="data-table">
                       <thead><tr><th>Roll No</th><th>Username</th><th>Password</th><th>Name</th><th className="text-right">Actions</th></tr></thead>
                       <tbody>
@@ -211,6 +214,7 @@ export function LoginRoster() {
                         })}
                       </tbody>
                     </table>
+                    </div>
                   )}
                 </div>
               ))}

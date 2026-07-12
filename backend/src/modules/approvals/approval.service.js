@@ -358,7 +358,7 @@ export const processProfileUpdateService = async ({
         "dob", "gender", "blood_group", "father_name", "mother_name",
         "guardian_name", "father_occupation", "mother_occupation",
         "guardian_occupation", "emergency_contact", "residential_status",
-        "address", "family_income"
+        "address", "family_income", "roll_no"
       ];
       fields.forEach(f => {
         if (data[f] !== undefined) studentUpdates[f] = data[f];
@@ -366,6 +366,19 @@ export const processProfileUpdateService = async ({
 
       if (Object.keys(studentUpdates).length > 0) {
         await student.update(studentUpdates);
+        
+        if (data.roll_no !== undefined) {
+          const StudentEnrollment = (await import("../students/student-enrollment.model.js")).default;
+          await StudentEnrollment.update(
+            { roll_no: data.roll_no || null },
+            { where: { student_id: student.id } }
+          );
+          const StudentAcademicRecord = (await import("../students/student.academic.model.js")).default;
+          await StudentAcademicRecord.update(
+            { roll_no: data.roll_no || null },
+            { where: { student_id: student.id } }
+          );
+        }
       }
     } else if (request.role === "teacher") {
       const teacher = await Teacher.findOne({ where: { user_id: userId } });

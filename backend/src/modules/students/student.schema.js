@@ -45,6 +45,7 @@ export const completeStudentProfileSchema = z.object({
   address: z.string().optional(),
   family_income: z.preprocess(emptyToUndefined, z.coerce.number().optional()),
   avatar_url: z.string().optional().or(z.literal("")).or(z.null()),
+  roll_no: z.preprocess(emptyToUndefined, z.coerce.number().int().positive().optional()),
 });
 
 /* admin: move */

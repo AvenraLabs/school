@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { transportAPI, studentsAPI, classesAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { StatusBadge } from '../../components/common/StatusBadge';
@@ -839,6 +839,7 @@ export function TransportManager() {
                   <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '4px' }}>Register vehicles to assign them to routes.</p>
                 </div>
               ) : (
+                <div className="table-responsive">
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
@@ -879,6 +880,7 @@ export function TransportManager() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           )}
@@ -893,6 +895,7 @@ export function TransportManager() {
                   <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '4px' }}>Register driver accounts for logging in.</p>
                 </div>
               ) : (
+                <div className="table-responsive">
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
@@ -933,6 +936,7 @@ export function TransportManager() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           )}
@@ -971,6 +975,7 @@ export function TransportManager() {
                     No students found matching filters.
                   </p>
                 ) : (
+                  <div className="table-responsive">
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
@@ -1024,6 +1029,7 @@ export function TransportManager() {
                       })}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </div>
             </div>
@@ -1039,6 +1045,7 @@ export function TransportManager() {
                   <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '4px' }}>Buses will appear here once drivers start a trip.</p>
                 </div>
               ) : (
+                <div className="table-responsive">
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
@@ -1071,6 +1078,7 @@ export function TransportManager() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           )}
@@ -1085,7 +1093,8 @@ export function TransportManager() {
                     <ClipboardList style={{ color: '#d97706', width: '18px', height: '18px' }} /> Pending Bus Change Requests ({requests.length})
                   </h3>
                   <div style={{ ...styles.card, padding: 0, overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <div className="table-responsive">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ background: '#fffbeb', borderBottom: '1px solid #fef3c7', fontSize: '11px', color: '#b45309', textTransform: 'uppercase', fontWeight: 700 }}>
                           <th style={{ padding: '14px 16px' }}>Student</th>
@@ -1110,6 +1119,7 @@ export function TransportManager() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1125,6 +1135,7 @@ export function TransportManager() {
                       No trip logs available.
                     </p>
                   ) : (
+                    <div className="table-responsive">
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
@@ -1162,6 +1173,7 @@ export function TransportManager() {
                         })}
                       </tbody>
                     </table>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1347,3 +1359,4 @@ export function TransportManager() {
 }
 
 export default TransportManager;
+

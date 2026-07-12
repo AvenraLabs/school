@@ -104,6 +104,7 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     address,
     family_income,
     avatar_url,
+    roll_no,
   } = req.body;
 
   const student = await Student.findOne({
@@ -158,7 +159,7 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
       "dob", "gender", "blood_group", "father_name", "mother_name",
       "guardian_name", "father_occupation", "mother_occupation",
       "guardian_occupation", "emergency_contact", "residential_status",
-      "address", "family_income"
+      "address", "family_income", "roll_no"
     ];
     studentFields.forEach(field => {
       if (req.body[field] !== undefined) {
@@ -234,6 +235,7 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     residential_status,
     address,
     family_income,
+    roll_no: roll_no || null,
     approval_status: "pending",
     approved_by: null,
     approved_at: null,
@@ -241,6 +243,19 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
   };
 
   await student.update(studentUpdates);
+
+  if (roll_no !== undefined) {
+    const StudentEnrollment = (await import("./student-enrollment.model.js")).default;
+    await StudentEnrollment.update(
+      { roll_no: roll_no || null },
+      { where: { student_id: student.id } }
+    );
+    const StudentAcademicRecord = (await import("./student.academic.model.js")).default;
+    await StudentAcademicRecord.update(
+      { roll_no: roll_no || null },
+      { where: { student_id: student.id } }
+    );
+  }
 
   /* Create new token */
   const token = jwt.sign(

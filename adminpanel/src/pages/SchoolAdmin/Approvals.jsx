@@ -421,6 +421,7 @@ export function Approvals() {
             </div>
           ) : (
             <>
+              <div className="table-responsive">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -446,6 +447,7 @@ export function Approvals() {
                   ))}
                 </tbody>
               </table>
+              </div>
               {teachersTotalPages > 1 && (
                 <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
                   <span className="text-sm text-slate-500">Page {teachersPage + 1} of {teachersTotalPages}</span>
@@ -477,6 +479,7 @@ export function Approvals() {
             </div>
           ) : (
             <>
+              <div className="table-responsive">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -504,6 +507,7 @@ export function Approvals() {
                   ))}
                 </tbody>
               </table>
+              </div>
               {studentsTotalPages > 1 && (
                 <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
                   <span className="text-sm text-slate-500">Page {studentsPage + 1} of {studentsTotalPages}</span>
@@ -524,6 +528,7 @@ export function Approvals() {
               <p className="empty-state-title">No pending profile updates</p>
             </div>
           ) : (
+            <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr>
@@ -558,6 +563,7 @@ export function Approvals() {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}

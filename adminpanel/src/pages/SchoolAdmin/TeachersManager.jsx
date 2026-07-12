@@ -155,6 +155,7 @@ export function TeachersManager() {
           </div>
         ) : (
           <>
+            <div className="table-responsive">
             <table className="data-table">
               <thead>
                 <tr><th>Employee ID</th><th>Username</th><th>Name</th><th>Approval</th><th>Status</th><th>Actions</th></tr>
@@ -194,6 +195,7 @@ export function TeachersManager() {
                 ))}
               </tbody>
             </table>
+            </div>
             {totalPages > 1 && (
               <div className="flex items-center justify-between p-4 border-t border-slate-100">
                 <span className="text-sm text-slate-500">Page {page + 1} of {totalPages}</span>

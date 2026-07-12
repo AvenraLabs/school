@@ -13,6 +13,7 @@ import {
   Plus,
   Trash2,
   Unlock,
+  HelpCircle,
 } from 'lucide-react';
 import './ExamsManager.css';
 
@@ -46,6 +47,7 @@ export function ExamsManager() {
   const [gradingScales, setGradingScales] = useState([]);
   const [loadingScales, setLoadingScales] = useState(false);
   const [savingScales, setSavingScales] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const openGradingScales = async () => {
     setShowGradingScales(true);
@@ -87,7 +89,7 @@ export function ExamsManager() {
   const addGradingRow = () => {
     setGradingScales((prev) => [
       ...prev,
-      { grade_name: '', min_percentage: 0, is_pass: true, color_code: '#10b981' },
+      { grade_name: '', min_percentage: '', is_pass: true, color_code: '#10b981' },
     ]);
   };
 
@@ -237,6 +239,18 @@ export function ExamsManager() {
     }
   };
 
+  const handleDeleteExam = async (exam) => {
+    const examName = getExamName(exam);
+    if (!window.confirm(`Are you sure you want to delete the exam "${examName}"? This will delete all scheduled subjects and entered marks for this exam.`)) return;
+    try {
+      await examsAPI.delete(exam.id);
+      toast.success(`Exam "${examName}" deleted`);
+      await loadExams();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to delete exam');
+    }
+  };
+
   return (
     <div className="exams-page">
       <div className="exams-header">
@@ -246,7 +260,16 @@ export function ExamsManager() {
             Create exams per class, then schedule subject-wise tests with date and syllabus.
           </p>
         </div>
-        <div className="exams-header-actions" style={{ display: 'flex', gap: '8px' }}>
+        <div className="exams-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setShowHelp(!showHelp)}
+            className={`exam-btn ${showHelp ? 'exam-btn-primary' : 'exam-btn-secondary'}`}
+            style={{ padding: '8px 10px', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Grading scale guide"
+          >
+            <HelpCircle size={18} />
+          </button>
           <button type="button" onClick={openGradingScales} className="exam-btn exam-btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <ClipboardList size={16} /> Grading Scales
           </button>
@@ -258,6 +281,45 @@ export function ExamsManager() {
           </button>
         </div>
       </div>
+      
+      {showHelp && (
+        <div style={{
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '16px',
+          fontSize: '0.875rem',
+          color: '#1e3a8a',
+          position: 'relative'
+        }}>
+          <h4 style={{ fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', marginTop: 0 }}>
+            <HelpCircle size={16} /> How Grading Scales Work
+          </h4>
+          <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <li>Enter the <strong>Minimum Percentage (%)</strong> required for each grade.</li>
+            <li><strong>Example:</strong> For grade <strong>C</strong> (35% to 50%), create a row with Name <code>C</code> and Min <code>35</code>.</li>
+            <li><strong>Example:</strong> For grade <strong>B</strong> (50% to 70%), create a row with Name <code>B</code> and Min <code>50</code>.</li>
+            <li><strong>Fails:</strong> You do not need to create a Fail grade. Any score below your lowest defined threshold (e.g. 35%) will automatically be evaluated as <strong>Fail</strong>.</li>
+          </ul>
+          <button
+            type="button"
+            onClick={() => setShowHelp(false)}
+            style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              color: '#3b82f6',
+              fontWeight: 'bold'
+            }}
+          >
+            Close
+          </button>
+        </div>
+      )}
 
       <section className="exam-toolbar">
         <div>
@@ -358,6 +420,15 @@ export function ExamsManager() {
                   <button type="button" onClick={() => toggleLock(exam)} className="exam-btn exam-btn-ghost">
                     {exam.is_locked ? <Unlock size={15} /> : <Lock size={15} />}
                     {exam.is_locked ? 'Unlock' : 'Lock'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteExam(exam)}
+                    disabled={exam.is_locked}
+                    className="exam-btn exam-btn-ghost"
+                    style={{ color: '#ef4444' }}
+                  >
+                    <Trash2 size={15} /> Delete
                   </button>
                 </div>
               </article>
