@@ -24,11 +24,36 @@ export default function Login() {
 
   const theme = useTheme();
 
-  // Cloud dragging states
+  // Cloud dragging & interactive play states
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [isReturning, setIsReturning] = useState(false);
+  const [isBouncing, setIsBouncing] = useState(false);
+  const [particles, setParticles] = useState([]);
+
+  // Spawn mini cloud/star particles
+  const spawnParticle = (cx, cy) => {
+    const colors = ["#ff4081", "#ffeb3b", "#00e5ff", "#a8ff35", "#ff9100", "#e040fb"];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const randomSize = Math.floor(Math.random() * 12) + 8; // 8px to 20px
+    const angle = Math.random() * Math.PI * 2;
+    const distance = Math.random() * 45 + 20;
+    const tx = Math.cos(angle) * distance;
+    const ty = Math.sin(angle) * distance - 25; // Float upwards
+    
+    const newParticle = {
+      id: Math.random(),
+      x: cx,
+      y: cy,
+      color: randomColor,
+      size: randomSize,
+      tx,
+      ty,
+    };
+    
+    setParticles((prev) => [...prev.slice(-25), newParticle]);
+  };
 
   // Reset scroll and manage theme-color
   useEffect(() => {
@@ -52,6 +77,14 @@ export default function Login() {
     setIsDragging(true);
     setIsReturning(false);
     setStartPos({ x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y });
+
+    // Bounce and spawn explosion of particles
+    setIsBouncing(true);
+    setTimeout(() => setIsBouncing(false), 600);
+    for (let i = 0; i < 6; i++) {
+      spawnParticle(dragOffset.x + 50, dragOffset.y + 30);
+    }
+    
     e.preventDefault();
   };
 
@@ -61,25 +94,40 @@ export default function Login() {
     setIsDragging(true);
     setIsReturning(false);
     setStartPos({ x: touch.clientX - dragOffset.x, y: touch.clientY - dragOffset.y });
+
+    // Bounce and spawn explosion of particles
+    setIsBouncing(true);
+    setTimeout(() => setIsBouncing(false), 600);
+    for (let i = 0; i < 6; i++) {
+      spawnParticle(dragOffset.x + 50, dragOffset.y + 30);
+    }
   };
 
   useEffect(() => {
     if (!isDragging) return;
 
     const handleMouseMove = (e) => {
-      setDragOffset({
-        x: e.clientX - startPos.x,
-        y: e.clientY - startPos.y,
-      });
+      const newX = e.clientX - startPos.x;
+      const newY = e.clientY - startPos.y;
+      setDragOffset({ x: newX, y: newY });
+      
+      // Spawn trail particles with throttle chance
+      if (Math.random() < 0.35) {
+        spawnParticle(newX + 50, newY + 30);
+      }
     };
 
     const handleTouchMove = (e) => {
       if (e.touches.length !== 1) return;
       const touch = e.touches[0];
-      setDragOffset({
-        x: touch.clientX - startPos.x,
-        y: touch.clientY - startPos.y,
-      });
+      const newX = touch.clientX - startPos.x;
+      const newY = touch.clientY - startPos.y;
+      setDragOffset({ x: newX, y: newY });
+      
+      // Spawn trail particles with throttle chance
+      if (Math.random() < 0.4) {
+        spawnParticle(newX + 50, newY + 30);
+      }
     };
 
     const handleDragEnd = () => {
@@ -162,6 +210,14 @@ export default function Login() {
             "0%": { transform: "translateY(0px)" },
             "50%": { transform: "translateY(18px)" },
             "100%": { transform: "translateY(0px)" },
+          },
+          "@keyframes wiggleBounce": {
+            "0%": { transform: "scale(1)" },
+            "15%": { transform: "scale(1.28, 0.72)" },
+            "30%": { transform: "scale(0.72, 1.28)" },
+            "50%": { transform: "scale(1.15, 0.85)" },
+            "70%": { transform: "scale(0.92, 1.08)" },
+            "100%": { transform: "scale(1)" },
           },
         }}
       >
@@ -333,6 +389,36 @@ export default function Login() {
             flexDirection: "column",
           }}
         >
+          {/* Particles Trail container */}
+          {particles.map((p) => (
+            <Box
+              key={p.id}
+              sx={{
+                position: "absolute",
+                top: { xs: 88, sm: 108 },
+                right: { xs: 28, sm: 44 },
+                width: p.size,
+                height: p.size,
+                borderRadius: "50%",
+                backgroundColor: p.color,
+                zIndex: 4,
+                pointerEvents: "none",
+                transform: `translate(${p.x}px, ${p.y}px)`,
+                animation: `particleFade-${p.id.toString().replace('.', '')} 0.8s forwards ease-out`,
+                [`@keyframes particleFade-${p.id.toString().replace('.', '')}`]: {
+                  "0%": {
+                    opacity: 1,
+                    transform: `translate(${p.x}px, ${p.y}px) scale(1)`,
+                  },
+                  "100%": {
+                    opacity: 0,
+                    transform: `translate(${p.x + p.tx}px, ${p.y + p.ty}px) scale(0)`,
+                  },
+                },
+              }}
+            />
+          ))}
+
           {/* Cloud — CSS shadow only, no SVG filter artifact */}
           <Box
             onMouseDown={handleMouseDown}
@@ -344,7 +430,7 @@ export default function Login() {
               right: { xs: 28, sm: 44 },
               width: { xs: 108, sm: 124 },
               height: "auto",
-              zIndex: 3,
+              zIndex: 5,
               cursor: isDragging ? "grabbing" : "grab",
               pointerEvents: "auto",
               userSelect: "none",
@@ -356,17 +442,28 @@ export default function Login() {
               transition: isReturning
                 ? "transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
                 : "none",
-              animation: (!isDragging && !isReturning)
-                ? "float 6s ease-in-out infinite"
-                : "none",
             }}
           >
+            {/* Decoupled Inner Box to run float/bounce animations independently of dragging transform */}
             <Box
-              component="img"
-              src="/cloud.svg"
-              alt=""
-              sx={{ width: "100%", height: "auto", display: "block", pointerEvents: "none" }}
-            />
+              sx={{
+                width: "100%",
+                height: "auto",
+                display: "block",
+                animation: isBouncing
+                  ? "wiggleBounce 0.6s ease-in-out"
+                  : (!isDragging && !isReturning)
+                    ? "float 6s ease-in-out infinite"
+                    : "none",
+              }}
+            >
+              <Box
+                component="img"
+                src="/cloud.svg"
+                alt=""
+                sx={{ width: "100%", height: "auto", display: "block", pointerEvents: "none" }}
+              />
+            </Box>
           </Box>
 
           {/* Books — pinned to bottom, always behind form */}
