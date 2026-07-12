@@ -40,6 +40,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
     ];
 
 const io = new Server(httpServer, {
+  path: "/api/socket.io",
   cors: {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);

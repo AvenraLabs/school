@@ -5,6 +5,7 @@ let socket;
 export function connectQuizSocket(token) {
   if (!socket) {
     socket = io(SOCKET_BASE_URL, {
+      path: "/api/socket.io",
       auth: { token },
     });
   }

@@ -111,6 +111,7 @@ export default function ExamMarksEntryPage() {
     }, [classId, sectionId, examId, user]);
 
     useEffect(() => {
+        window.scrollTo(0, 0);
         loadData();
     }, [loadData]);
 
@@ -192,7 +193,6 @@ export default function ExamMarksEntryPage() {
 
             setSuccessMsg("Marks saved successfully!");
             setSuccess(true);
-            loadData();
         } catch (err) {
             console.error("Save row failed", err);
             setError(err.response?.data?.message || "Failed to save marks.");
@@ -245,7 +245,9 @@ export default function ExamMarksEntryPage() {
 
             setSuccessMsg("All student marks saved successfully!");
             setSuccess(true);
-            loadData();
+            setTimeout(() => {
+                navigate("/teacher/exams/create");
+            }, 1000);
         } catch (err) {
             console.error("Bulk save failed", err);
             setError(err.response?.data?.message || "Failed to save marks.");

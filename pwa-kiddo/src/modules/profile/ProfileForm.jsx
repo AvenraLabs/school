@@ -204,6 +204,7 @@ export default function ProfileForm({
         <TextField
           label="Name"
           fullWidth
+          required
           error={Boolean(errors.name)}
           helperText={errors.name?.message}
           {...register("name", {
@@ -222,9 +223,11 @@ export default function ProfileForm({
         <TextField
           label="Phone"
           fullWidth
+          required
           error={Boolean(errors.phone)}
           helperText={errors.phone?.message}
           {...register("phone", {
+            required: "Phone number is required",
             pattern: {
               value: /^[+]?[\d\s\-\(\)]{10,15}$/,
               message: "Please enter a valid phone number"
@@ -263,13 +266,22 @@ export default function ProfileForm({
                 })}
               />
             </Stack>
-            <TextField
-              label="Email"
-              fullWidth
-              type="email"
-              {...register("email")}
-              sx={{ mb: 2 }}
-            />
+             <TextField
+               label="Email"
+               fullWidth
+               required
+               type="email"
+               error={Boolean(errors.email)}
+               helperText={errors.email?.message}
+               {...register("email", {
+                 required: "Email is required",
+                 pattern: {
+                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                   message: "Invalid email address"
+                 }
+               })}
+               sx={{ mb: 2 }}
+             />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: '100%' }}>
               <Controller
                 name="dob"
@@ -390,12 +402,21 @@ export default function ProfileForm({
               />
             </Stack>
 
-            <TextField
-              label="Email"
-              fullWidth
-              type="email"
-              {...register("email")}
-            />
+             <TextField
+               label="Email"
+               fullWidth
+               required
+               type="email"
+               error={Boolean(errors.email)}
+               helperText={errors.email?.message}
+               {...register("email", {
+                 required: "Email is required",
+                 pattern: {
+                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                   message: "Invalid email address"
+                 }
+               })}
+             />
           </>
         )}
 

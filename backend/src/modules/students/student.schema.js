@@ -32,7 +32,7 @@ export const completeStudentProfileSchema = z.object({
   phone: z.preprocess(emptyToUndefined, z.string().optional()),
   email: z.preprocess(emptyToUndefined, z.string().email().optional()),
   dob: z.string().optional(), // or z.coerce.date()
-  gender: z.enum(["male", "female", "other"]).optional(),
+  gender: z.preprocess(emptyToUndefined, z.enum(["male", "female", "other"]).optional()),
   blood_group: z.string().optional(),
   father_name: z.string().optional(),
   mother_name: z.string().optional(),
@@ -41,7 +41,7 @@ export const completeStudentProfileSchema = z.object({
   mother_occupation: z.string().optional(),
   guardian_occupation: z.string().optional(),
   emergency_contact: z.string().optional(),
-  residential_status: z.enum(["dayscholar", "hosteler"]).optional(),
+  residential_status: z.preprocess(emptyToUndefined, z.enum(["dayscholar", "hosteler"]).optional()),
   address: z.string().optional(),
   family_income: z.preprocess(emptyToUndefined, z.coerce.number().optional()),
   avatar_url: z.string().optional().or(z.literal("")).or(z.null()),

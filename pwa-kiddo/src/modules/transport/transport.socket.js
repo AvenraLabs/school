@@ -7,6 +7,7 @@ export function connectTransportSocket(token) {
   if (socket) return socket;
 
   socket = io(SOCKET_BASE_URL, {
+    path: "/api/socket.io",
     auth: { token },
   });
 
