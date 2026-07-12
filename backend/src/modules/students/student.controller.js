@@ -250,11 +250,6 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
       { roll_no: roll_no || null },
       { where: { student_id: student.id } }
     );
-    const StudentAcademicRecord = (await import("./student.academic.model.js")).default;
-    await StudentAcademicRecord.update(
-      { roll_no: roll_no || null },
-      { where: { student_id: student.id } }
-    );
   }
 
   /* Create new token */

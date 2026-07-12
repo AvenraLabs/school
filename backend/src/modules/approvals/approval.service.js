@@ -373,11 +373,6 @@ export const processProfileUpdateService = async ({
             { roll_no: data.roll_no || null },
             { where: { student_id: student.id } }
           );
-          const StudentAcademicRecord = (await import("../students/student.academic.model.js")).default;
-          await StudentAcademicRecord.update(
-            { roll_no: data.roll_no || null },
-            { where: { student_id: student.id } }
-          );
         }
       }
     } else if (request.role === "teacher") {
