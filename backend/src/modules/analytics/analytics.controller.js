@@ -21,11 +21,11 @@ async function buildRanking(studentIds, school_id, academic_year_id) {
 
   const students = await Student.findAll({
     where: { id: studentIds, school_id },
-    include: [{ model: User, attributes: ["name"] }],
+    include: [{ model: User, attributes: ["name", "avatar_url"] }],
     attributes: ["id", "user_id"],
   });
   const nameMap = new Map(
-    students.map((s) => [Number(s.id), s.user?.name || "Unknown"])
+    students.map((s) => [Number(s.id), { name: s.user?.name || "Unknown", avatar_url: s.user?.avatar_url || null }])
   );
 
   const allMarks = await ExamMark.findAll({
@@ -39,9 +39,11 @@ async function buildRanking(studentIds, school_id, academic_year_id) {
     );
     const obtained = sMarks.reduce((sum, m) => sum + m.marks_obtained, 0);
     const max = sMarks.reduce((sum, m) => sum + (m.max_marks || 100), 0);
+    const nameData = nameMap.get(Number(sid)) || { name: "Unknown", avatar_url: null };
     return {
       student_id: sid,
-      name: nameMap.get(Number(sid)) || "Unknown",
+      name: nameData.name,
+      avatar_url: nameData.avatar_url,
       percentage: max > 0 ? Math.round((obtained / max) * 100) : 0,
     };
   });
@@ -251,6 +253,7 @@ export const getStudentAnalytics = asyncHandler(async (req, res) => {
   const leaderboard = ranking.slice(0, 5).map((r) => ({
     rank: r.rank,
     name: r.name,
+    avatar_url: r.avatar_url,
     percentage: r.percentage,
     is_me: Number(r.student_id) === Number(student_id),
   }));
@@ -260,6 +263,7 @@ export const getStudentAnalytics = asyncHandler(async (req, res) => {
     leaderboard.push({
       rank: myEntry.rank,
       name: myEntry.name,
+      avatar_url: myEntry.avatar_url,
       percentage: myEntry.percentage,
       is_me: true,
     });
@@ -305,7 +309,7 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
   // Fetch all students in section
   const students = await Student.findAll({
     where: { school_id, class_id, section_id, status: "ACTIVE" },
-    include: [{ model: User, attributes: ["name"] }],
+    include: [{ model: User, attributes: ["name", "avatar_url"] }],
   });
   const studentIds = students.map((s) => s.id);
 
@@ -352,6 +356,7 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
     studentStats[s.id] = {
       id: s.id,
       name: s.user?.name || s.name,
+      avatar_url: s.user?.avatar_url || null,
       obtained: 0,
       max: 0,
       total_days: 0,
@@ -436,6 +441,7 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
     studentPerformance.push({
       id: stats.id,
       name: stats.name,
+      avatar_url: stats.avatar_url,
       percentage: academicPercentage,
       attendance: attendancePercentage,
     });
@@ -499,6 +505,7 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
       atRisk.push({
         id: stats.id,
         name: stats.name,
+        avatar_url: stats.avatar_url,
         academic_percentage: academicPercentage,
         attendance_percentage: attendancePercentage,
         reasons: reason.join(", "),

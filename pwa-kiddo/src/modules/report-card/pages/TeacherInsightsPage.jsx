@@ -16,6 +16,12 @@ import {
   Chip,
   Divider,
   Skeleton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Avatar,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -26,6 +32,7 @@ import {
   Star,
   EmojiEvents,
   TrendingUp,
+  HelpOutline,
 } from "@mui/icons-material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useState, useEffect } from "react";
@@ -148,6 +155,7 @@ export default function TeacherInsightsPage() {
   const [classes, setClasses] = useState([]);
   const [selectedClassIdx, setSelectedClassIdx] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [error, setError] = useState(null);
   const [analytics, setAnalytics] = useState(null);
 
@@ -254,6 +262,20 @@ export default function TeacherInsightsPage() {
       >
         Back to Exams
       </Button>
+
+      {/* Page Title */}
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+        <Typography
+          variant="h5"
+          fontWeight={900}
+          sx={{ fontFamily: "'Outfit', sans-serif" }}
+        >
+          Class Insights
+        </Typography>
+        <IconButton onClick={() => setHelpOpen(true)} size="small" color="primary">
+          <HelpOutline />
+        </IconButton>
+      </Stack>
 
       {/* Class Section Switcher Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
@@ -487,6 +509,22 @@ export default function TeacherInsightsPage() {
                       >
                         {student.rank}
                       </Box>
+
+                      {/* Student Avatar */}
+                      <Avatar
+                        src={student.avatar_url}
+                        alt={student.name}
+                        sx={{
+                          width: 28,
+                          height: 28,
+                          fontSize: "0.75rem",
+                          fontWeight: "bold",
+                          bgcolor: "primary.main",
+                        }}
+                      >
+                        {student.name ? student.name.charAt(0).toUpperCase() : "?"}
+                      </Avatar>
+
                       <Typography
                         variant="body2"
                         fontWeight={700}
@@ -553,19 +591,35 @@ export default function TeacherInsightsPage() {
                         justifyContent="space-between"
                         alignItems="center"
                       >
-                        <Box>
-                          <Typography variant="subtitle2" fontWeight="bold">
-                            {student.name}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color="error.main"
-                            display="block"
-                            sx={{ mt: 0.5, fontWeight: 600 }}
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                          {/* Student Avatar */}
+                          <Avatar
+                            src={student.avatar_url}
+                            alt={student.name}
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              fontSize: "0.8rem",
+                              fontWeight: "bold",
+                              bgcolor: "error.main",
+                            }}
                           >
-                            {student.reasons}
-                          </Typography>
-                        </Box>
+                            {student.name ? student.name.charAt(0).toUpperCase() : "?"}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle2" fontWeight="bold">
+                              {student.name}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="error.main"
+                              display="block"
+                              sx={{ mt: 0.5, fontWeight: 600 }}
+                            >
+                              {student.reasons}
+                            </Typography>
+                          </Box>
+                        </Stack>
                         <Stack
                           direction="row"
                           spacing={2}
@@ -660,6 +714,80 @@ export default function TeacherInsightsPage() {
           </Card>
         </Stack>
       )}
+
+      {/* Help Dialog Modal */}
+      <Dialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "16px", p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 900, pb: 1, fontFamily: "'Outfit', sans-serif" }}>
+          Understanding Insights
+        </DialogTitle>
+        <DialogContent sx={{ py: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="primary.main" gutterBottom>
+              📈 Class Performance Metrics
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              • <strong>Class Avg Mark</strong>: The average mark percentage scored by all students in this class-section.
+              <br />
+              • <strong>Attendance Avg</strong>: The average attendance percentage across all students in the class.
+            </Typography>
+          </Box>
+          
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="primary.main" gutterBottom>
+              ⚠️ At-Risk Students
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Highlights students needing urgent support because of:
+              <br />
+              • Attendance under <strong>75%</strong>
+              <br />
+              • Academic score under <strong>40%</strong>
+              <br />
+              • A sudden grade drop of more than <strong>15%</strong> compared to the previous test.
+            </Typography>
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="primary.main" gutterBottom>
+              📊 Grade Distribution
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              A bar chart displaying the count of students grouped by their mark percentages (0-40%, 41-60%, 61-80%, and 81-100%). This helps you understand the overall score distribution.
+            </Typography>
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="primary.main" gutterBottom>
+              🏆 Top Performers
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Displays the top 5 ranking students in this class-section.
+            </Typography>
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="primary.main" gutterBottom>
+              ⭐ Subject Breakdowns
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Shows average marks scored in each subject class-wide. The subject with the lowest class average is highlighted with a <strong>Lowest</strong> tag to indicate it is the most difficult subject.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setHelpOpen(false)} variant="contained" sx={{ borderRadius: "8px", textTransform: "none", fontWeight: 700 }}>
+            Got It
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

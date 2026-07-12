@@ -13,6 +13,12 @@ import {
   ToggleButtonGroup,
   Divider,
   Skeleton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Avatar,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -25,6 +31,7 @@ import {
   ArrowUpward,
   ArrowDownward,
   Remove,
+  HelpOutline,
 } from "@mui/icons-material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useState, useEffect } from "react";
@@ -43,7 +50,7 @@ function TrendLineChart({ data }) {
 
   const width = 500;
   const height = 200;
-  const padding = 30;
+  const padding = 40;
 
   const chartWidth = width - padding * 2;
   const chartHeight = height - padding * 2;
@@ -280,6 +287,7 @@ export default function StudentPerformancePage() {
   const [error, setError] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [scope, setScope] = useState("section");
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const loadAnalytics = async (rankScope) => {
     try {
@@ -373,13 +381,18 @@ export default function StudentPerformancePage() {
 
       <Stack spacing={2}>
         {/* Page title */}
-        <Typography
-          variant="h5"
-          fontWeight={900}
-          sx={{ fontFamily: "'Outfit', sans-serif" }}
-        >
-          Performance & Insights
-        </Typography>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Typography
+            variant="h5"
+            fontWeight={900}
+            sx={{ fontFamily: "'Outfit', sans-serif" }}
+          >
+            Performance & Insights
+          </Typography>
+          <IconButton onClick={() => setHelpOpen(true)} size="small" color="primary">
+            <HelpOutline />
+          </IconButton>
+        </Stack>
 
         {/* Stat Cards Row */}
         <Stack direction="row" spacing={1.5}>
@@ -787,6 +800,21 @@ export default function StudentPerformancePage() {
                           {entry.rank}
                         </Box>
 
+                        {/* Student Avatar */}
+                        <Avatar
+                          src={entry.avatar_url}
+                          alt={entry.name}
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            fontSize: "0.75rem",
+                            fontWeight: "bold",
+                            bgcolor: entry.is_me ? "primary.main" : "grey.400",
+                          }}
+                        >
+                          {entry.name ? entry.name.charAt(0).toUpperCase() : "?"}
+                        </Avatar>
+
                         <Typography
                           variant="body2"
                           fontWeight={entry.is_me ? 900 : 600}
@@ -825,6 +853,73 @@ export default function StudentPerformancePage() {
           </CardContent>
         </Card>
       </Stack>
+
+      {/* Help Dialog Modal */}
+      <Dialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: "16px", p: 1 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 900, pb: 1, fontFamily: "'Outfit', sans-serif" }}>
+          Understanding Insights
+        </DialogTitle>
+        <DialogContent sx={{ py: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="primary.main" gutterBottom>
+              📈 Stat Cards (Top Row)
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              • <strong>Overall Marks %</strong>: The combined average of all exams in the current school term.
+              <br />
+              • <strong>Class Rank</strong>: Your child's standing. You can toggle between <em>Section Rank</em> (only their classroom, e.g. 6A) or <em>Class Rank</em> (the entire 6th grade).
+              <br />
+              • <strong>Attendance %</strong>: Percentage of school days attended. Anything below 75% triggers an alert.
+            </Typography>
+          </Box>
+          
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="primary.main" gutterBottom>
+              📊 Exam Score Trend
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              This line chart shows how your child's average marks change from one exam to the next (e.g. Unit Test 1 ➡️ Mid-Term ➡️ Final). A line moving upwards shows improvement.
+            </Typography>
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="primary.main" gutterBottom>
+              🕸️ Subject Comparison Chart
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              This is a Radar chart showing your child's performance in each subject:
+              <br />
+              • The center is <strong>0%</strong> (low score) and the outer edges are <strong>100%</strong> (perfect score).
+              <br />
+              • The blue shaded area highlights your child's average in each subject.
+              <br />
+              • A shape stretched far to one side means high strength in that specific subject, while a large, balanced shape indicates high performance across all subjects.
+            </Typography>
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="primary.main" gutterBottom>
+              🏆 Class Leaderboard
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Highlights the top 5 students in the class/section to encourage healthy academic competition. If your child is not in the top 5, their personal rank will be shown at the bottom.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setHelpOpen(false)} variant="contained" sx={{ borderRadius: "8px", textTransform: "none", fontWeight: 700 }}>
+            Got It
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }
