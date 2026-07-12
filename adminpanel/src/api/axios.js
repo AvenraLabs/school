@@ -1,6 +1,22 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://admin.avenra.org/api';
+const normalizeApiBaseUrl = (url) => {
+  const baseUrl = (url || 'https://admin.avenra.org/api').replace(/\/$/, '');
+  return baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
+};
+
+export const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL);
+export const API_ORIGIN_URL = API_BASE_URL.replace(/\/api$/, '');
+
+export const getApiAssetUrl = (path) => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return cleanPath.startsWith('/api')
+    ? `${API_ORIGIN_URL}${cleanPath}`
+    : `${API_BASE_URL}${cleanPath}`;
+};
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,

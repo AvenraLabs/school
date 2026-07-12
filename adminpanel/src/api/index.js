@@ -756,21 +756,13 @@ export const uploadAPI = {
   uploadAnnouncement: async (file) => {
     const formData = new FormData();
     formData.append('announcement', file);
-    const response = await axiosInstance.post('/upload/announcement', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await axiosInstance.post('/upload/announcement', formData);
     return response.data;
   },
   uploadAvatar: async (file) => {
     const formData = new FormData();
     formData.append('avatar', file);
-    const response = await axiosInstance.post('/upload/avatar', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await axiosInstance.post('/upload/avatar', formData);
     return response.data;
   },
   deleteFile: async (filePath) => {
