@@ -21,8 +21,9 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    Collapse,
 } from "@mui/material";
-import { Add, Delete, CalendarMonth, Lock, LockOpen, ArrowForward, Check } from "@mui/icons-material";
+import { Add, Delete, CalendarMonth, Lock, LockOpen, ArrowForward, Check, ExpandMore, ExpandLess } from "@mui/icons-material";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
@@ -45,6 +46,7 @@ export default function ExamCreationPage() {
     // Exams lists
     const [exams, setExams] = useState([]);
     const [examsLoading, setExamsLoading] = useState(false);
+    const [expandedExamId, setExpandedExamId] = useState(null);
 
     // Dialog state for scheduling new test
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -278,7 +280,7 @@ export default function ExamCreationPage() {
             {/* Header & Page Title */}
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2.5 }}>
                 <Typography variant="h5" fontWeight={900} sx={{ color: "text.primary", fontFamily: "'Outfit', sans-serif", m: 0 }}>
-                    Exams & Reports
+                    Exams
                 </Typography>
                 <Button
                     variant="outlined"
@@ -400,97 +402,108 @@ export default function ExamCreationPage() {
                         </Card>
                     ) : (
                         <Stack spacing={2.5}>
-                            {filteredExams.map((exam) => {
-                                const subjectsList = exam.exam_subjects || [];
-                                return (
-                                    <Card key={exam.id} sx={{ borderRadius: 5, border: "1px solid rgba(0,0,0,0.06)", boxShadow: "none" }}>
-                                        <CardContent sx={{ p: 2.5 }}>
-                                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-                                                <Typography fontWeight="800" variant="subtitle1" sx={{ fontFamily: "'Outfit', sans-serif" }}>
-                                                    {exam.name}
-                                                </Typography>
-                                                <Chip
-                                                    label={exam.is_locked ? "Locked" : "Active"}
-                                                    size="small"
-                                                    color={exam.is_locked ? "default" : "success"}
-                                                    icon={exam.is_locked ? <Lock sx={{ fontSize: 13 }} /> : <LockOpen sx={{ fontSize: 13 }} />}
-                                                    sx={{ fontWeight: 800, height: 22, borderRadius: "6px" }}
-                                                />
-                                            </Stack>
+                             {filteredExams.map((exam) => {
+                                 const subjectsList = exam.exam_subjects || [];
+                                 const isExpanded = expandedExamId === exam.id;
+                                 return (
+                                     <Card key={exam.id} sx={{ borderRadius: "12px", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "none" }}>
+                                         <Box 
+                                             onClick={() => setExpandedExamId(isExpanded ? null : exam.id)} 
+                                             sx={{ p: 2, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                                         >
+                                             <Stack direction="row" alignItems="center" spacing={1.5}>
+                                                 <Typography fontWeight="800" variant="subtitle1" sx={{ fontFamily: "'Outfit', sans-serif" }}>
+                                                     {exam.name}
+                                                 </Typography>
+                                                 <Chip
+                                                     label={exam.is_locked ? "Locked" : "Active"}
+                                                     size="small"
+                                                     color={exam.is_locked ? "default" : "success"}
+                                                     icon={exam.is_locked ? <Lock sx={{ fontSize: 13 }} /> : <LockOpen sx={{ fontSize: 13 }} />}
+                                                     sx={{ fontWeight: 800, height: 22, borderRadius: "6px" }}
+                                                 />
+                                             </Stack>
+                                             <IconButton size="small">
+                                                 {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                                             </IconButton>
+                                         </Box>
 
-                                            <Divider sx={{ mb: 2 }} />
+                                         <Collapse in={isExpanded}>
+                                             <CardContent sx={{ p: 2, pt: 0, "&:last-child": { pb: 2 } }}>
+                                                 <Divider sx={{ mb: 2 }} />
 
-                                            {subjectsList.length === 0 ? (
-                                                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic", mb: 2 }}>
-                                                    No subjects scheduled for this exam yet.
-                                                </Typography>
-                                            ) : (
-                                                <Stack spacing={2} sx={{ mb: 2.5 }}>
-                                                    {subjectsList.map((es) => {
-                                                        const subjectName = es.subject?.name || es.Subject?.name || `Subject ${es.subject_id}`;
-                                                        return (
-                                                            <Box key={es.subject_id} sx={{ p: 1.8, bgcolor: "action.hover", borderRadius: "14px", border: "1px solid rgba(0,0,0,0.02)" }}>
-                                                                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                                                                    <Box>
-                                                                        <Typography variant="subtitle2" fontWeight="bold">
-                                                                            {subjectName}
-                                                                        </Typography>
-                                                                        <Stack direction="row" spacing={1.5} sx={{ mt: 0.5 }}>
-                                                                            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: "text.secondary" }}>
-                                                                                <CalendarMonth sx={{ fontSize: 14 }} />
-                                                                                <Typography variant="caption" fontWeight={600}>
-                                                                                    {es.exam_date ? dayjs(es.exam_date).format("DD-MM-YYYY") : ""}
-                                                                                </Typography>
-                                                                            </Stack>
-                                                                            <Typography variant="caption" fontWeight={700} color="primary.main">
-                                                                                Max Marks: {es.max_marks || 100}
-                                                                            </Typography>
-                                                                        </Stack>
-                                                                    </Box>
-                                                                    {!exam.is_locked && (
-                                                                        <IconButton
-                                                                            size="small"
-                                                                            color="error"
-                                                                            onClick={() => handleDeleteClick(exam.id, es.subject_id)}
-                                                                        >
-                                                                            <Delete fontSize="small" />
-                                                                        </IconButton>
-                                                                    )}
-                                                                </Stack>
-                                                                {es.syllabus && (
-                                                                    <Box sx={{ mt: 1, pt: 1, borderTop: "1px dashed rgba(0,0,0,0.05)" }}>
-                                                                        <Typography variant="caption" color="text.secondary" fontWeight={800}>SYLLABUS:</Typography>
-                                                                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem", mt: 0.1 }}>
-                                                                            {es.syllabus}
-                                                                        </Typography>
-                                                                    </Box>
-                                                                )}
-                                                            </Box>
-                                                        );
-                                                    })}
-                                                </Stack>
-                                            )}
+                                                 {subjectsList.length === 0 ? (
+                                                     <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic", mb: 2 }}>
+                                                         No subjects scheduled for this exam yet.
+                                                     </Typography>
+                                                 ) : (
+                                                     <Stack spacing={2} sx={{ mb: 2.5 }}>
+                                                         {subjectsList.map((es) => {
+                                                             const subjectName = es.subject?.name || es.Subject?.name || `Subject ${es.subject_id}`;
+                                                             return (
+                                                                 <Box key={es.subject_id} sx={{ p: 1.8, bgcolor: "action.hover", borderRadius: "14px", border: "1px solid rgba(0,0,0,0.02)" }}>
+                                                                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                                                                         <Box>
+                                                                             <Typography variant="subtitle2" fontWeight="bold">
+                                                                                 {subjectName}
+                                                                             </Typography>
+                                                                             <Stack direction="row" spacing={1.5} sx={{ mt: 0.5 }}>
+                                                                                 <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: "text.secondary" }}>
+                                                                                     <CalendarMonth sx={{ fontSize: 14 }} />
+                                                                                     <Typography variant="caption" fontWeight={600}>
+                                                                                         {es.exam_date ? dayjs(es.exam_date).format("DD-MM-YYYY") : ""}
+                                                                                     </Typography>
+                                                                                 </Stack>
+                                                                                 <Typography variant="caption" fontWeight={700} color="primary.main">
+                                                                                     Max Marks: {es.max_marks || 100}
+                                                                                 </Typography>
+                                                                             </Stack>
+                                                                         </Box>
+                                                                         {!exam.is_locked && (
+                                                                             <IconButton
+                                                                                 size="small"
+                                                                                 color="error"
+                                                                                 onClick={() => handleDeleteClick(exam.id, es.subject_id)}
+                                                                             >
+                                                                                 <Delete fontSize="small" />
+                                                                             </IconButton>
+                                                                         )}
+                                                                     </Stack>
+                                                                     {es.syllabus && (
+                                                                         <Box sx={{ mt: 1, pt: 1, borderTop: "1px dashed rgba(0,0,0,0.05)" }}>
+                                                                             <Typography variant="caption" color="text.secondary" fontWeight={800}>SYLLABUS:</Typography>
+                                                                             <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem", mt: 0.1 }}>
+                                                                                 {es.syllabus}
+                                                                             </Typography>
+                                                                         </Box>
+                                                                     )}
+                                                                 </Box>
+                                                             );
+                                                         })}
+                                                     </Stack>
+                                                 )}
 
-                                            <Button
-                                                fullWidth
-                                                variant="contained"
-                                                color="primary"
-                                                endIcon={<ArrowForward />}
-                                                onClick={() => navigate(`/teacher/exams/${exam.id}/marks?class_id=${selectedClassId}&section_id=${selectedSectionId}`)}
-                                                sx={{
-                                                    borderRadius: "12px",
-                                                    textTransform: "none",
-                                                    fontWeight: "bold",
-                                                    py: 1.2,
-                                                    boxShadow: "none",
-                                                }}
-                                            >
-                                                Enter Marks
-                                            </Button>
-                                        </CardContent>
-                                    </Card>
-                                );
-                            })}
+                                                 <Button
+                                                     fullWidth
+                                                     variant="contained"
+                                                     color="primary"
+                                                     endIcon={<ArrowForward />}
+                                                     onClick={() => navigate(`/teacher/exams/${exam.id}/marks?class_id=${selectedClassId}&section_id=${selectedSectionId}`)}
+                                                     sx={{
+                                                         borderRadius: "12px",
+                                                         textTransform: "none",
+                                                         fontWeight: "bold",
+                                                         py: 1.2,
+                                                         boxShadow: "none",
+                                                     }}
+                                                 >
+                                                     Enter Marks
+                                                 </Button>
+                                             </CardContent>
+                                         </Collapse>
+                                     </Card>
+                                 );
+                             })}
                         </Stack>
                     )}
                 </Box>

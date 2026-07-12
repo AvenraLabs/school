@@ -232,15 +232,6 @@ export default function ProfileForm({
           })}
         />
 
-        {/* Parent Fields */}
-        {profile?.role === 'parent' && (
-          <TextField
-            label="Email"
-            fullWidth
-            type="email"
-            {...register("email")}
-          />
-        )}
 
         {/* Student Fields */}
         {profile?.role === 'student' && (

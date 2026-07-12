@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
 
-const APPROVAL_ROLES = ["student", "teacher", "parent"];
+const APPROVAL_ROLES = ["student", "teacher"];
 
 /**
  * RequireApproval guards routes that need an approved account.

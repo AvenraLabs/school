@@ -3,7 +3,6 @@ import { useAuth } from "./AuthProvider";
 import { 
   completeStudentProfileApi, 
   completeTeacherProfileApi, 
-  updateParentProfileApi,
   needsProfileCompletion 
 } from "../api/auth.api";
 
@@ -30,9 +29,6 @@ export function useProfileCompletion() {
           break;
         case 'teacher':
           response = await completeTeacherProfileApi(profileData);
-          break;
-        case 'parent':
-          response = await updateParentProfileApi(profileData);
           break;
         default:
           throw new Error(`Profile completion not supported for role: ${user.role}`);

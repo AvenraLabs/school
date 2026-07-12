@@ -23,10 +23,9 @@ import {
   TrendingUp,
   WarningAmber
 } from "@mui/icons-material";
-import { fetchStudentDashboard, fetchParentDashboard, fetchTeacherDashboard } from "./dashboard.api";
+import { fetchStudentDashboard, fetchTeacherDashboard } from "./dashboard.api";
 import { useAuth } from "../../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
-import ParentDashboard from "./ParentDashboard";
 import TeacherDashboard from "./TeacherDashboard";
 import { getAssetUrl } from "../../utils/asset";
 
@@ -42,9 +41,6 @@ export default function DashboardPage() {
       try {
         if (user.role === 'student') {
           const res = await fetchStudentDashboard();
-          setData(res);
-        } else if (user.role === 'parent') {
-          const res = await fetchParentDashboard();
           setData(res);
         } else if (user.role === 'teacher') {
           const res = await fetchTeacherDashboard();
@@ -63,42 +59,6 @@ export default function DashboardPage() {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />
-      </Box>
-    );
-  }
-
-  // PARENT VIEW
-  if (user.role === 'parent') {
-    return (
-      <Box sx={{ pb: 4, bgcolor: '#f8fafc', minHeight: 'calc(100vh - 120px)' }}>
-        <Box
-          sx={{
-            p: 3,
-            pt: 4,
-            background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary?.main || theme.palette.primary.dark} 100%)`,
-            color: 'white',
-            borderBottomLeftRadius: 32,
-            borderBottomRightRadius: 32,
-            boxShadow: (theme) => `0 10px 25px ${alpha(theme.palette.primary.main, 0.12)}`
-          }}
-        >
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <Avatar src={getAssetUrl(user.avatar_url)} sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 44, height: 44, border: '2px solid rgba(255,255,255,0.3)' }}>
-                {user.name?.[0]?.toUpperCase()}
-              </Avatar>
-              <Box>
-                <Typography variant="subtitle2" sx={{ opacity: 0.85, fontSize: '12px', fontWeight: 500 }}>Welcome,</Typography>
-                <Typography variant="h6" fontWeight="bold" sx={{ fontFamily: "'Outfit', sans-serif" }}>{user.name}</Typography>
-              </Box>
-            </Stack>
-            <IconButton color="inherit" onClick={() => navigate('/parent/notifications')} sx={{ bgcolor: 'rgba(255,255,255,0.1)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' } }}>
-              <NotifIcon />
-            </IconButton>
-          </Stack>
-        </Box>
-
-        <ParentDashboard data={data} />
       </Box>
     );
   }

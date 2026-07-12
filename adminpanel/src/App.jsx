@@ -10,6 +10,7 @@ import { SuperAdminPage } from './pages/SuperAdmin/SuperAdminPage';
 
 // School Admin Pages
 import { SchoolAdminDashboard } from './pages/SchoolAdmin/Dashboard';
+import { SchoolAnalyticsPage } from './pages/SchoolAdmin/SchoolAnalyticsPage';
 import { BulkSeeder } from './pages/SchoolAdmin/BulkSeeder';
 import { ClassesManager } from './pages/SchoolAdmin/ClassesManager';
 import { SubjectsManager } from './pages/SchoolAdmin/SubjectsManager';
@@ -27,6 +28,7 @@ import { TransportManager } from './pages/SchoolAdmin/TransportManager';
 import { AcademicYearManager } from './pages/SchoolAdmin/AcademicYearManager';
 import PrivacyPolicy from './pages/Public/PrivacyPolicy';
 import TermsConditions from './pages/Public/TermsConditions';
+import { NotFoundPage } from './pages/Public/NotFoundPage';
 import { LostFoundManager } from './pages/SchoolAdmin/LostFoundManager';
 import { FeedbackSubmit } from './pages/SchoolAdmin/FeedbackSubmit';
 import { AboutAdmin } from './pages/SchoolAdmin/AboutAdmin';
@@ -65,6 +67,7 @@ function App() {
               }
             >
               <Route path="/admin/dashboard" element={<SchoolAdminDashboard />} />
+              <Route path="/admin/analytics" element={<SchoolAnalyticsPage />} />
               <Route path="/admin/directory" element={<SchoolRegistry />} />
               <Route path="/admin/bulk-seeder" element={<BulkSeeder />} />
               <Route path="/admin/classes" element={<ClassesManager />} />
@@ -87,7 +90,7 @@ function App() {
 
             {/* Fallback */}
             <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </ToastProvider>
       </AuthProvider>

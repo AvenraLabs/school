@@ -7,67 +7,39 @@ import {
   Card,
   CardContent,
   Stack,
-  Avatar,
   Paper,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
+  Divider,
+  Skeleton,
 } from "@mui/material";
-import { ArrowBack, TrendingUp, AutoGraph, School, CalendarMonth, EmojiEvents, HelpOutline } from "@mui/icons-material";
+import {
+  ArrowBack,
+  TrendingUp,
+  TrendingDown,
+  AutoGraph,
+  School,
+  CalendarMonth,
+  EmojiEvents,
+  ArrowUpward,
+  ArrowDownward,
+  Remove,
+} from "@mui/icons-material";
+import { alpha, useTheme } from "@mui/material/styles";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
 
-// Circular Ring component for Holistic Index
-function RadialRing({ value, label, size = 120, strokeWidth = 10, color = "#4f46e5" }) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (value / 100) * circumference;
-
-  return (
-    <Box sx={{ position: "relative", width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        {/* Background Circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="transparent"
-          stroke="rgba(0,0,0,0.06)"
-          strokeWidth={strokeWidth}
-        />
-        {/* Foreground Progress Circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="transparent"
-          stroke={color}
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          style={{ transition: "stroke-dashoffset 0.8s ease-out-in" }}
-        />
-      </svg>
-      <Box sx={{ position: "absolute", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <Typography variant="h5" fontWeight="bold" sx={{ color: "text.primary" }}>
-          {value}%
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {label}
-        </Typography>
-      </Box>
-    </Box>
-  );
-}
-
 // Custom SVG Line Chart
-function CustomLineChart({ data }) {
-  if (!data || data.length === 0) return <Typography variant="caption">No trend data available.</Typography>;
+function TrendLineChart({ data }) {
+  const theme = useTheme();
+  if (!data || data.length === 0)
+    return (
+      <Typography variant="caption" color="text.secondary">
+        No trend data available.
+      </Typography>
+    );
 
   const width = 500;
   const height = 200;
@@ -76,7 +48,6 @@ function CustomLineChart({ data }) {
   const chartWidth = width - padding * 2;
   const chartHeight = height - padding * 2;
 
-  // Calculate points
   const points = data.map((d, index) => {
     const x = padding + (index / (data.length - 1 || 1)) * chartWidth;
     const y = padding + chartHeight - (d.percentage / 100) * chartHeight;
@@ -87,39 +58,78 @@ function CustomLineChart({ data }) {
     return i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`;
   }, "");
 
+  const primaryColor = theme.palette.primary.main;
+
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} style={{ overflow: "visible" }}>
-      {/* Grid Lines */}
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      width="100%"
+      height={height}
+      style={{ overflow: "visible" }}
+    >
       {[0, 25, 50, 75, 100].map((level) => {
         const y = padding + chartHeight - (level / 100) * chartHeight;
         return (
           <g key={level}>
-            <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="rgba(0,0,0,0.05)" strokeDasharray="3 3" />
-            <text x={padding - 8} y={y + 4} fontSize="10" fill="#94a3b8" textAnchor="end">{level}%</text>
+            <line
+              x1={padding}
+              y1={y}
+              x2={width - padding}
+              y2={y}
+              stroke="rgba(0,0,0,0.05)"
+              strokeDasharray="3 3"
+            />
+            <text
+              x={padding - 8}
+              y={y + 4}
+              fontSize="10"
+              fill="#94a3b8"
+              textAnchor="end"
+            >
+              {level}%
+            </text>
           </g>
         );
       })}
 
-      {/* Connection Path */}
       {points.length > 1 && (
         <path
           d={pathD}
           fill="none"
-          stroke="#4f46e5"
+          stroke={primaryColor}
           strokeWidth="3.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
       )}
 
-      {/* Nodes */}
       {points.map((p, i) => (
         <g key={i}>
-          <circle cx={p.x} cy={p.y} r="5" fill="#4f46e5" stroke="#ffffff" strokeWidth="2.5" />
-          <text x={p.x} y={p.y - 12} fontSize="11" fontWeight="bold" fill="#334155" textAnchor="middle">
+          <circle
+            cx={p.x}
+            cy={p.y}
+            r="5"
+            fill={primaryColor}
+            stroke="#ffffff"
+            strokeWidth="2.5"
+          />
+          <text
+            x={p.x}
+            y={p.y - 12}
+            fontSize="11"
+            fontWeight="bold"
+            fill="#334155"
+            textAnchor="middle"
+          >
             {p.percentage}%
           </text>
-          <text x={p.x} y={height - 8} fontSize="10" fill="#64748b" textAnchor="middle">
+          <text
+            x={p.x}
+            y={height - 8}
+            fontSize="10"
+            fill="#64748b"
+            textAnchor="middle"
+          >
             {p.name}
           </text>
         </g>
@@ -129,8 +139,14 @@ function CustomLineChart({ data }) {
 }
 
 // Custom SVG Radar Chart
-function CustomRadarChart({ data }) {
-  if (!data || data.length === 0) return <Typography variant="caption">No subject breakdown available.</Typography>;
+function SubjectRadarChart({ data }) {
+  const theme = useTheme();
+  if (!data || data.length === 0)
+    return (
+      <Typography variant="caption" color="text.secondary">
+        No subject breakdown available.
+      </Typography>
+    );
 
   const size = 300;
   const center = size / 2;
@@ -140,47 +156,60 @@ function CustomRadarChart({ data }) {
   const getCoordinates = (index, value) => {
     const angle = (Math.PI * 2 / totalAxes) * index - Math.PI / 2;
     const radius = (value / 100) * maxRadius;
-    const x = center + radius * Math.cos(angle);
-    const y = center + radius * Math.sin(angle);
-    return { x, y };
+    return {
+      x: center + radius * Math.cos(angle),
+      y: center + radius * Math.sin(angle),
+    };
   };
 
-  // Build grid rings (25%, 50%, 75%, 100%)
-  const gridRings = [25, 50, 75, 100].map((percentage) => {
+  const gridRings = [25, 50, 75, 100].map((pct) => {
     const points = [];
     for (let i = 0; i < totalAxes; i++) {
-      const coord = getCoordinates(i, percentage);
-      points.push(`${coord.x},${coord.y}`);
+      const c = getCoordinates(i, pct);
+      points.push(`${c.x},${c.y}`);
     }
     return points.join(" ");
   });
 
-  // Build data shape
-  const dataPoints = data.map((d, index) => {
-    const coord = getCoordinates(index, d.score);
-    return `${coord.x},${coord.y}`;
-  }).join(" ");
+  const dataPoints = data
+    .map((d, i) => {
+      const c = getCoordinates(i, d.score);
+      return `${c.x},${c.y}`;
+    })
+    .join(" ");
+
+  const primaryColor = theme.palette.primary.main;
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} width="100%" height={size} style={{ overflow: "visible" }}>
-      {/* Grid concentric rings */}
-      {gridRings.map((points, i) => (
+    <svg
+      viewBox={`0 0 ${size} ${size}`}
+      width="100%"
+      height={size}
+      style={{ overflow: "visible" }}
+    >
+      {gridRings.map((pts, i) => (
         <polygon
           key={i}
-          points={points}
+          points={pts}
           fill="none"
           stroke="rgba(0,0,0,0.06)"
           strokeWidth="1"
         />
       ))}
 
-      {/* Axis Lines & Labels */}
       {data.map((d, index) => {
         const outerCoord = getCoordinates(index, 100);
         const labelCoord = getCoordinates(index, 115);
         return (
           <g key={index}>
-            <line x1={center} y1={center} x2={outerCoord.x} y2={outerCoord.y} stroke="rgba(0,0,0,0.06)" strokeWidth="1" />
+            <line
+              x1={center}
+              y1={center}
+              x2={outerCoord.x}
+              y2={outerCoord.y}
+              stroke="rgba(0,0,0,0.06)"
+              strokeWidth="1"
+            />
             <text
               x={labelCoord.x}
               y={labelCoord.y + 4}
@@ -195,54 +224,108 @@ function CustomRadarChart({ data }) {
         );
       })}
 
-      {/* Polygon representing scores */}
-      {dataPoints && (
-        <polygon
-          points={dataPoints}
-          fill="rgba(79, 70, 229, 0.15)"
-          stroke="#4f46e5"
-          strokeWidth="2.5"
-        />
-      )}
+      <polygon
+        points={dataPoints}
+        fill={alpha(primaryColor, 0.15)}
+        stroke={primaryColor}
+        strokeWidth="2.5"
+      />
 
-      {/* Data values nodes */}
       {data.map((d, index) => {
-        const coord = getCoordinates(index, d.score);
+        const c = getCoordinates(index, d.score);
         return (
-          <circle key={index} cx={coord.x} cy={coord.y} r="3.5" fill="#4f46e5" />
+          <circle key={index} cx={c.x} cy={c.y} r="3.5" fill={primaryColor} />
         );
       })}
     </svg>
   );
 }
 
+// Improvement arrow component
+function ImprovementArrow({ change }) {
+  if (change === null || change === undefined) return null;
+  const isUp = change > 0;
+  const isFlat = change === 0;
+
+  return (
+    <Stack direction="row" alignItems="center" spacing={0.3}>
+      {isFlat ? (
+        <Remove sx={{ fontSize: 14, color: "text.secondary" }} />
+      ) : isUp ? (
+        <ArrowUpward sx={{ fontSize: 14, color: "success.main" }} />
+      ) : (
+        <ArrowDownward sx={{ fontSize: 14, color: "error.main" }} />
+      )}
+      <Typography
+        variant="caption"
+        fontWeight={700}
+        sx={{
+          color: isFlat
+            ? "text.secondary"
+            : isUp
+            ? "success.main"
+            : "error.main",
+        }}
+      >
+        {isFlat ? "No change" : `${change > 0 ? "+" : ""}${change}%`}
+      </Typography>
+    </Stack>
+  );
+}
+
 export default function StudentPerformancePage() {
+  const theme = useTheme();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [analytics, setAnalytics] = useState(null);
-  const [infoOpen, setInfoOpen] = useState(false);
+  const [scope, setScope] = useState("section");
+
+  const loadAnalytics = async (rankScope) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.get("/analytics/student", {
+        params: { scope: rankScope },
+      });
+      setAnalytics(res.data?.data);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load performance analytics.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadAnalytics() {
-      try {
-        setLoading(true);
-        const res = await api.get("/analytics/student");
-        setAnalytics(res.data?.data);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load performance analytics.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadAnalytics();
-  }, []);
+    loadAnalytics(scope);
+  }, [scope]);
 
-  if (loading) {
+  const handleScopeChange = (_, newScope) => {
+    if (newScope !== null) {
+      setScope(newScope);
+    }
+  };
+
+  // Shared card style
+  const cardSx = {
+    borderRadius: "12px",
+    border: "1px solid rgba(0,0,0,0.06)",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+    overflow: "hidden",
+  };
+
+  if (loading && !analytics) {
     return (
-      <Container sx={{ mt: 8, display: "flex", justifyContent: "center", alignItems: "center" }}>
-        <CircularProgress />
+      <Container maxWidth="sm" sx={{ py: 3 }}>
+        <Skeleton variant="rounded" height={48} sx={{ mb: 2, borderRadius: "12px" }} />
+        <Stack direction="row" spacing={1.5} sx={{ mb: 2 }}>
+          <Skeleton variant="rounded" height={80} sx={{ flex: 1, borderRadius: "12px" }} />
+          <Skeleton variant="rounded" height={80} sx={{ flex: 1, borderRadius: "12px" }} />
+          <Skeleton variant="rounded" height={80} sx={{ flex: 1, borderRadius: "12px" }} />
+        </Stack>
+        <Skeleton variant="rounded" height={200} sx={{ mb: 2, borderRadius: "12px" }} />
+        <Skeleton variant="rounded" height={200} sx={{ borderRadius: "12px" }} />
       </Container>
     );
   }
@@ -250,15 +333,32 @@ export default function StudentPerformancePage() {
   if (error || !analytics) {
     return (
       <Container sx={{ mt: 4 }}>
-        <Alert severity="error" sx={{ borderRadius: 3 }}>{error || "Analytics not available."}</Alert>
-        <Button startIcon={<ArrowBack />} onClick={() => navigate("/student/report-cards")} sx={{ mt: 2, fontWeight: 700 }}>
+        <Alert severity="error" sx={{ borderRadius: "12px" }}>
+          {error || "Analytics not available."}
+        </Alert>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate("/student/report-cards")}
+          sx={{ mt: 2, fontWeight: 700 }}
+        >
           Back
         </Button>
       </Container>
     );
   }
 
-  const { holistic_index, academic_percentage, attendance_percentage, class_rank, trends, radar, strong_subject, focus_subject } = analytics;
+  const {
+    academic_percentage,
+    attendance_percentage,
+    rank,
+    total_students,
+    improvement,
+    trends,
+    radar,
+    strong_subject,
+    focus_subject,
+    leaderboard,
+  } = analytics;
 
   return (
     <Container maxWidth="sm" sx={{ py: 3, pb: 10 }}>
@@ -271,165 +371,460 @@ export default function StudentPerformancePage() {
         Back to Reports
       </Button>
 
-      <Stack spacing={3}>
+      <Stack spacing={2}>
         {/* Page title */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Typography variant="h5" fontWeight={900} sx={{ fontFamily: "'Outfit', sans-serif" }}>
-              Performance & Insights
+        <Typography
+          variant="h5"
+          fontWeight={900}
+          sx={{ fontFamily: "'Outfit', sans-serif" }}
+        >
+          Performance & Insights
+        </Typography>
+
+        {/* Stat Cards Row */}
+        <Stack direction="row" spacing={1.5}>
+          {/* Overall % */}
+          <Paper
+            sx={{
+              flex: 1,
+              p: 2,
+              ...cardSx,
+              textAlign: "center",
+            }}
+          >
+            <Typography
+              variant="caption"
+              fontWeight={700}
+              color="text.secondary"
+              sx={{
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                fontSize: "0.6rem",
+                display: "block",
+                mb: 0.5,
+              }}
+            >
+              Overall
             </Typography>
-          </Box>
-          <IconButton onClick={() => setInfoOpen(true)} color="primary">
-            <HelpOutline />
-          </IconButton>
+            <Typography
+              variant="h5"
+              fontWeight={900}
+              color="primary.main"
+              sx={{ lineHeight: 1 }}
+            >
+              {academic_percentage}%
+            </Typography>
+          </Paper>
+
+          {/* Class Rank */}
+          <Paper
+            sx={{
+              flex: 1,
+              p: 2,
+              ...cardSx,
+              textAlign: "center",
+            }}
+          >
+            <Typography
+              variant="caption"
+              fontWeight={700}
+              color="text.secondary"
+              sx={{
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                fontSize: "0.6rem",
+                display: "block",
+                mb: 0.5,
+              }}
+            >
+              Rank
+            </Typography>
+            <Typography variant="h5" fontWeight={900} sx={{ lineHeight: 1 }}>
+              {rank}
+              <Typography
+                component="span"
+                variant="body2"
+                color="text.secondary"
+                fontWeight={600}
+              >
+                {" "}
+                / {total_students}
+              </Typography>
+            </Typography>
+          </Paper>
+
+          {/* Attendance */}
+          <Paper
+            sx={{
+              flex: 1,
+              p: 2,
+              ...cardSx,
+              textAlign: "center",
+            }}
+          >
+            <Typography
+              variant="caption"
+              fontWeight={700}
+              color="text.secondary"
+              sx={{
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                fontSize: "0.6rem",
+                display: "block",
+                mb: 0.5,
+              }}
+            >
+              Attendance
+            </Typography>
+            <Typography
+              variant="h5"
+              fontWeight={900}
+              color={attendance_percentage >= 75 ? "success.main" : "error.main"}
+              sx={{ lineHeight: 1 }}
+            >
+              {attendance_percentage}%
+            </Typography>
+          </Paper>
         </Stack>
 
-        {/* Holistic Score Indicators */}
-        <Card sx={{ borderRadius: 5, border: "1px solid rgba(0,0,0,0.05)", boxShadow: "none" }}>
-          <CardContent sx={{ p: 3 }}>
-            <Stack spacing={3} alignItems="center">
-              {/* Primary Holistic Ring */}
-              <RadialRing value={holistic_index} label="Holistic Index" color="#4f46e5" size={120} strokeWidth={10} />
-              
-              {/* Supporting Academic and Attendance Rings */}
-              <Stack direction="row" spacing={3} justifyContent="center" sx={{ width: "100%" }}>
-                <RadialRing value={academic_percentage} label="Academics" color="#10b981" size={90} strokeWidth={8} />
-                <RadialRing value={attendance_percentage} label="Attendance" color="#3b82f6" size={90} strokeWidth={8} />
+        {/* Rank Scope Toggle */}
+        <Stack direction="row" justifyContent="center">
+          <ToggleButtonGroup
+            value={scope}
+            exclusive
+            onChange={handleScopeChange}
+            size="small"
+            sx={{
+              "& .MuiToggleButton-root": {
+                textTransform: "none",
+                fontWeight: 700,
+                fontSize: "0.75rem",
+                px: 2,
+                borderRadius: "8px !important",
+              },
+            }}
+          >
+            <ToggleButton value="section">Section Rank</ToggleButton>
+            <ToggleButton value="class">Class-wide Rank</ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
+
+        {/* Improvement Indicator */}
+        {improvement && (
+          <Card sx={cardSx}>
+            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+              >
+                <Box>
+                  <Typography
+                    variant="caption"
+                    fontWeight={700}
+                    color="text.secondary"
+                    sx={{
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      fontSize: "0.6rem",
+                    }}
+                  >
+                    vs {improvement.previous_exam}
+                  </Typography>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    {improvement.change > 0 ? (
+                      <ArrowUpward
+                        sx={{ fontSize: 20, color: "success.main" }}
+                      />
+                    ) : improvement.change < 0 ? (
+                      <ArrowDownward
+                        sx={{ fontSize: 20, color: "error.main" }}
+                      />
+                    ) : (
+                      <Remove sx={{ fontSize: 20, color: "text.secondary" }} />
+                    )}
+                    <Typography
+                      variant="h6"
+                      fontWeight={900}
+                      sx={{
+                        color:
+                          improvement.change > 0
+                            ? "success.main"
+                            : improvement.change < 0
+                            ? "error.main"
+                            : "text.secondary",
+                      }}
+                    >
+                      {improvement.change > 0 ? "+" : ""}
+                      {improvement.change}%
+                    </Typography>
+                  </Stack>
+                </Box>
+                <Box sx={{ textAlign: "right" }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {improvement.previous_exam}: {improvement.previous}%
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    fontWeight={800}
+                    display="block"
+                  >
+                    {improvement.current_exam}: {improvement.current}%
+                  </Typography>
+                </Box>
               </Stack>
-            </Stack>
+            </CardContent>
+          </Card>
+        )}
 
-            <Divider sx={{ my: 2.5 }} />
-
-            <Stack direction="row" justifyContent="space-around" spacing={2}>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="caption" color="text.secondary" display="block">CLASS RANK</Typography>
-                <Typography variant="h6" fontWeight="bold" color="primary.main">{class_rank}</Typography>
-              </Box>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="caption" color="text.secondary" display="block">ATTENDANCE STATUS</Typography>
-                <Typography variant="h6" fontWeight="bold" color={attendance_percentage >= 75 ? "success.main" : "error.main"}>
-                  {attendance_percentage >= 75 ? "Good" : "At Risk"}
-                </Typography>
-              </Box>
+        {/* Best Subject / Needs Focus */}
+        <Stack direction="row" spacing={1.5}>
+          <Paper
+            sx={{
+              flex: 1,
+              p: 2,
+              ...cardSx,
+              bgcolor: alpha(theme.palette.success.main, 0.04),
+              borderColor: alpha(theme.palette.success.main, 0.15),
+            }}
+          >
+            <Stack
+              direction="row"
+              spacing={0.6}
+              alignItems="center"
+              sx={{ mb: 0.5 }}
+            >
+              <TrendingUp sx={{ fontSize: 14, color: "success.main" }} />
+              <Typography
+                variant="caption"
+                fontWeight={800}
+                sx={{
+                  textTransform: "uppercase",
+                  color: "text.secondary",
+                  fontSize: "0.6rem",
+                }}
+              >
+                Best Subject
+              </Typography>
             </Stack>
-          </CardContent>
-        </Card>
-
-        {/* Subject Strength Warnings */}
-        <Stack direction="row" spacing={2}>
-          <Paper sx={{ 
-            flex: 1, 
-            p: 2.5, 
-            borderRadius: "16px", 
-            border: "1px solid rgba(16, 185, 129, 0.16)", 
-            boxShadow: "none", 
-            bgcolor: "rgba(16, 185, 129, 0.04)"
-          }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-              <TrendingUp sx={{ fontSize: 18, color: "#10b981" }} />
-              <Typography variant="caption" fontWeight={800} sx={{ letterSpacing: "0.5px", textTransform: "uppercase", color: "text.secondary" }}>BEST SUBJECT</Typography>
+            <Typography
+              variant="body2"
+              fontWeight={900}
+              color="success.dark"
+              noWrap
+            >
+              {strong_subject?.subject || "--"}
+            </Typography>
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Typography variant="caption" color="text.secondary">
+                {strong_subject ? `${strong_subject.score}% avg` : "No data"}
+              </Typography>
+              {strong_subject?.change != null && (
+                <ImprovementArrow change={strong_subject.change} />
+              )}
             </Stack>
-            <Typography variant="subtitle1" fontWeight="bold" sx={{ color: "#065f46" }}>{strong_subject?.subject || "—"}</Typography>
-            <Typography variant="caption" sx={{ color: "text.secondary", mt: 0.5, display: "block" }}>{strong_subject ? `${strong_subject.score}% avg score` : "No exams graded"}</Typography>
           </Paper>
 
-          <Paper sx={{ 
-            flex: 1, 
-            p: 2.5, 
-            borderRadius: "16px", 
-            border: "1px solid rgba(245, 158, 11, 0.16)", 
-            boxShadow: "none", 
-            bgcolor: "rgba(245, 158, 11, 0.04)"
-          }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-              <AutoGraph sx={{ fontSize: 18, color: "#f59e0b" }} />
-              <Typography variant="caption" fontWeight={800} sx={{ letterSpacing: "0.5px", textTransform: "uppercase", color: "text.secondary" }}>NEEDS FOCUS</Typography>
+          <Paper
+            sx={{
+              flex: 1,
+              p: 2,
+              ...cardSx,
+              bgcolor: alpha(theme.palette.warning.main, 0.04),
+              borderColor: alpha(theme.palette.warning.main, 0.15),
+            }}
+          >
+            <Stack
+              direction="row"
+              spacing={0.6}
+              alignItems="center"
+              sx={{ mb: 0.5 }}
+            >
+              <AutoGraph sx={{ fontSize: 14, color: "warning.main" }} />
+              <Typography
+                variant="caption"
+                fontWeight={800}
+                sx={{
+                  textTransform: "uppercase",
+                  color: "text.secondary",
+                  fontSize: "0.6rem",
+                }}
+              >
+                Needs Focus
+              </Typography>
             </Stack>
-            <Typography variant="subtitle1" fontWeight="bold" sx={{ color: "#92400e" }}>{focus_subject?.subject || "—"}</Typography>
-            <Typography variant="caption" sx={{ color: "text.secondary", mt: 0.5, display: "block" }}>{focus_subject ? `${focus_subject.score}% avg score` : "No exams graded"}</Typography>
+            <Typography
+              variant="body2"
+              fontWeight={900}
+              color="warning.dark"
+              noWrap
+            >
+              {focus_subject?.subject || "--"}
+            </Typography>
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Typography variant="caption" color="text.secondary">
+                {focus_subject ? `${focus_subject.score}% avg` : "No data"}
+              </Typography>
+              {focus_subject?.change != null && (
+                <ImprovementArrow change={focus_subject.change} />
+              )}
+            </Stack>
           </Paper>
         </Stack>
 
-        {/* Exam trend (Line chart) */}
-        <Card sx={{ borderRadius: 5, border: "1px solid rgba(0,0,0,0.05)", boxShadow: "none" }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
-              <School color="primary" sx={{ fontSize: 18 }} /> Exam Score Trend
-            </Typography>
+        {/* Exam Score Trend */}
+        <Card sx={cardSx}>
+          <CardContent sx={{ p: 2.5 }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1}
+              sx={{ mb: 2 }}
+            >
+              <School color="primary" sx={{ fontSize: 18 }} />
+              <Typography variant="subtitle2" fontWeight={900}>
+                Exam Score Trend
+              </Typography>
+            </Stack>
             <Box sx={{ width: "100%", overflowX: "auto" }}>
-              <CustomLineChart data={trends} />
+              <TrendLineChart data={trends} />
             </Box>
           </CardContent>
         </Card>
 
-        {/* Subject comparison (Radar chart) */}
-        <Card sx={{ borderRadius: 5, border: "1px solid rgba(0,0,0,0.05)", boxShadow: "none" }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
-              <CalendarMonth color="primary" sx={{ fontSize: 18 }} /> Subject Comparison
-            </Typography>
+        {/* Subject Comparison Radar */}
+        <Card sx={cardSx}>
+          <CardContent sx={{ p: 2.5 }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1}
+              sx={{ mb: 2 }}
+            >
+              <CalendarMonth color="primary" sx={{ fontSize: 18 }} />
+              <Typography variant="subtitle2" fontWeight={900}>
+                Subject Comparison
+              </Typography>
+            </Stack>
             <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <CustomRadarChart data={radar} />
+              <SubjectRadarChart data={radar} />
             </Box>
+          </CardContent>
+        </Card>
+
+        {/* Class Leaderboard */}
+        <Card sx={cardSx}>
+          <CardContent sx={{ p: 2.5 }}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={1}
+              sx={{ mb: 2 }}
+            >
+              <EmojiEvents sx={{ fontSize: 18, color: "#f59e0b" }} />
+              <Typography variant="subtitle2" fontWeight={900}>
+                {scope === "section" ? "Section" : "Class"} Leaderboard
+              </Typography>
+            </Stack>
+
+            {!leaderboard || leaderboard.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Leaderboard will appear after marks are published.
+              </Typography>
+            ) : (
+              <Stack spacing={1}>
+                {leaderboard.map((entry, idx) => {
+                  // Gap separator before own rank if rank > 5
+                  const showGap =
+                    idx > 0 &&
+                    entry.is_me &&
+                    entry.rank > 5 &&
+                    leaderboard[idx - 1].rank !== entry.rank - 1;
+
+                  return (
+                    <Box key={`${entry.rank}-${idx}`}>
+                      {showGap && (
+                        <Divider sx={{ my: 0.5, borderStyle: "dashed" }} />
+                      )}
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        spacing={1.5}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: "10px",
+                          bgcolor: entry.is_me
+                            ? alpha(theme.palette.primary.main, 0.06)
+                            : "transparent",
+                          border: entry.is_me
+                            ? `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
+                            : "1px solid transparent",
+                        }}
+                      >
+                        {/* Rank badge */}
+                        <Box
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            bgcolor:
+                              entry.rank === 1
+                                ? "#fbbf24"
+                                : entry.rank === 2
+                                ? "#d1d5db"
+                                : entry.rank === 3
+                                ? "#d97706"
+                                : "rgba(0,0,0,0.06)",
+                            color:
+                              entry.rank <= 3 ? "#fff" : "text.secondary",
+                            fontWeight: 900,
+                            fontSize: "0.75rem",
+                          }}
+                        >
+                          {entry.rank}
+                        </Box>
+
+                        <Typography
+                          variant="body2"
+                          fontWeight={entry.is_me ? 900 : 600}
+                          sx={{ flex: 1 }}
+                          noWrap
+                        >
+                          {entry.name}
+                          {entry.is_me && (
+                            <Typography
+                              component="span"
+                              variant="caption"
+                              color="primary.main"
+                              fontWeight={800}
+                              sx={{ ml: 0.5 }}
+                            >
+                              (You)
+                            </Typography>
+                          )}
+                        </Typography>
+
+                        <Typography
+                          variant="body2"
+                          fontWeight={800}
+                          color={
+                            entry.is_me ? "primary.main" : "text.secondary"
+                          }
+                        >
+                          {entry.percentage}%
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            )}
           </CardContent>
         </Card>
       </Stack>
-
-      {/* Explanation Dialog */}
-      <Dialog 
-        open={infoOpen} 
-        onClose={() => setInfoOpen(false)}
-        PaperProps={{
-          sx: { borderRadius: "20px", p: 1 }
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 800, fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", gap: 1 }}>
-          <HelpOutline color="primary" /> Understanding Your Scores
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2.5} sx={{ mt: 1 }}>
-            <Box>
-              <Typography variant="subtitle2" fontWeight="bold" color="primary.main">
-                🎯 Holistic Index
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, lineHeight: 1.5 }}>
-                A balanced score combining both studies and school engagement:
-                <strong> 70% Academic marks + 30% School attendance</strong>.
-                Consistently attending classes improves this score!
-              </Typography>
-            </Box>
-
-            <Divider />
-
-            <Box>
-              <Typography variant="subtitle2" fontWeight="bold" color="success.main">
-                📚 Academics
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, lineHeight: 1.5 }}>
-                The average percentage of marks obtained across all official examinations and tests graded during this academic year.
-              </Typography>
-            </Box>
-
-            <Divider />
-
-            <Box>
-              <Typography variant="subtitle2" fontWeight="bold" color="info.main">
-                📅 Attendance
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, lineHeight: 1.5 }}>
-                The percentage of school days you were marked present. Maintaining an attendance rate of <strong>75% or higher</strong> is recommended for steady progress.
-              </Typography>
-            </Box>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setInfoOpen(false)} variant="contained" sx={{ borderRadius: "10px", textTransform: "none", fontWeight: 700 }}>
-            Got it
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 }
-
-import { Divider } from "@mui/material";

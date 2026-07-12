@@ -145,7 +145,6 @@ export const processApprovalAction = async ({
   const normalizedType = (() => {
     if (!type) return "";
     if (type === "student_profile") return "student";
-    if (type === "parent_profile") return "parent";
     if (type === "teacher_profile") return "teacher";
     return type;
   })();

@@ -8,7 +8,6 @@ import { useTimetable } from "./useTimetable";
 
 import TimetableStudentView from "./TimetableStudentView";
 import TimetableTeacherView from "./TimetableTeacherView";
-import TimetableParentView from "./TimetableParentView";
 
 export default function TimetablePage() {
   const { user } = useAuth();
@@ -16,9 +15,6 @@ export default function TimetablePage() {
     timetable,
     loading,
     error,
-    children,
-    selectedStudentId,
-    setSelectedStudentId,
   } = useTimetable();
 
   if (loading) {
@@ -42,16 +38,6 @@ export default function TimetablePage() {
 
   if (user.role === "teacher")
     return <TimetableTeacherView timetable={timetable} />;
-
-  if (user.role === "parent")
-    return (
-      <TimetableParentView
-        timetable={timetable}
-        children={children}
-        selectedStudentId={selectedStudentId}
-        setSelectedStudentId={setSelectedStudentId}
-      />
-    );
 
   return null;
 }

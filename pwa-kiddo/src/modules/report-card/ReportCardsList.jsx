@@ -181,7 +181,7 @@ export default function ReportCardsList() {
                 {error && <Alert severity="error" sx={{ borderRadius: 3 }}>{error}</Alert>}
 
                 {/* Performance Snapshot */}
-                <Card sx={{ borderRadius: '20px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 12px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
+                <Card sx={{ borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 12px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
                     <Box sx={{
                         px: 2.5, pt: 2.5, pb: 1.5,
                         background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary?.main || theme.palette.primary.dark} 100%)`,
@@ -276,7 +276,7 @@ export default function ReportCardsList() {
 
                 {/* Selected Exam Detail */}
                 {selectedExam && selectedSummary && (
-                    <Card sx={{ borderRadius: '20px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+                    <Card sx={{ borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
                         {/* Exam Header */}
                         <Box sx={{ px: 2.5, pt: 2.5, pb: 2, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="flex-start">

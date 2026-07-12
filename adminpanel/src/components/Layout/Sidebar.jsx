@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import {
   LayoutDashboard,
+  BarChart3,
   School,
   GraduationCap,
   UserCheck,
@@ -29,6 +30,7 @@ import { getApiAssetUrl } from '../../api/axios';
 const schoolAdminLinks = [
   { section: 'Daily Operations' },
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/admin/analytics', icon: BarChart3, label: 'School Analytics' },
   { to: '/admin/directory', icon: School, label: 'School Registry' },
   { to: '/admin/notifications', icon: Bell, label: 'Announcements' },
   { to: '/admin/transport', icon: Truck, label: 'Transport' },

@@ -49,9 +49,7 @@ export default function ProfilePage() {
       ? "/student"
       : user?.role === "teacher"
         ? "/teacher"
-        : user?.role === "parent"
-          ? "/parent"
-          : "";
+        : "";
 
   async function handleProfileSubmit(data) {
     try {

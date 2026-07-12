@@ -129,6 +129,10 @@ export default function ExamMarksEntryPage() {
         );
     }, [assignments, user, sectionId, classId]);
 
+    const filteredSubjects = useMemo(() => {
+        return scheduledSubjects.filter(sub => isSubjectEditable(sub.subject_id));
+    }, [scheduledSubjects, isSubjectEditable]);
+
     const handleMarkChange = (studentId, subjectId, val) => {
         setMarksState((prev) => ({
             ...prev,
@@ -156,7 +160,7 @@ export default function ExamMarksEntryPage() {
             
             // Filter payload to only send subjects this teacher is authorized to edit
             const marksList = [];
-            scheduledSubjects.forEach((sub) => {
+            filteredSubjects.forEach((sub) => {
                 if (isSubjectEditable(sub.subject_id)) {
                     const val = studentMarks[sub.subject_id];
                     marksList.push({
@@ -208,7 +212,7 @@ export default function ExamMarksEntryPage() {
                 
                 // Filter payload to only subjects this teacher can edit
                 const marksPayload = [];
-                scheduledSubjects.forEach((sub) => {
+                filteredSubjects.forEach((sub) => {
                     if (isSubjectEditable(sub.subject_id)) {
                         const val = studentMarks[sub.subject_id];
                         marksPayload.push({
@@ -278,15 +282,17 @@ export default function ExamMarksEntryPage() {
 
                     {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>{error}</Alert>}
 
-                    {scheduledSubjects.length === 0 ? (
-                        <Card sx={{ borderRadius: 5, p: 3, textAlign: "center", border: "1px solid rgba(0,0,0,0.06)", bgcolor: "action.hover", boxShadow: "none" }}>
+                    {filteredSubjects.length === 0 ? (
+                        <Card sx={{ borderRadius: "12px", p: 3, textAlign: "center", border: "1px solid rgba(0,0,0,0.06)", bgcolor: "action.hover", boxShadow: "none" }}>
                             <CardContent>
                                 <Warning color="warning" sx={{ fontSize: 40, mb: 1 }} />
                                 <Typography variant="body1" fontWeight="bold" sx={{ mb: 1 }}>
-                                    No Subjects Scheduled
+                                    No Assigned Subjects
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    There are no subjects scheduled for this test. Go back to the Exams page and schedule at least one subject.
+                                    {user?.role === "teacher" 
+                                        ? "You are not mapped to teach any of the subjects scheduled in this exam."
+                                        : "There are no subjects scheduled for this test."}
                                 </Typography>
                             </CardContent>
                         </Card>
@@ -299,15 +305,15 @@ export default function ExamMarksEntryPage() {
                                     
                                     // Check if marks are already saved for subjects editable by this teacher
                                     const studentMarks = marksState[student.id] || {};
-                                    const hasSavedMarks = scheduledSubjects.some(
-                                        (sub) => isSubjectEditable(sub.subject_id) && studentMarks[sub.subject_id] !== undefined
+                                    const hasSavedMarks = filteredSubjects.some(
+                                        (sub) => studentMarks[sub.subject_id] !== undefined
                                     );
 
                                     return (
                                         <Card
                                             key={student.id}
                                             sx={{
-                                                borderRadius: 4,
+                                                borderRadius: "12px",
                                                 border: "1px solid rgba(0,0,0,0.05)",
                                                 boxShadow: "none",
                                             }}
@@ -342,7 +348,7 @@ export default function ExamMarksEntryPage() {
 
                                                 {/* Subject Inputs Grid */}
                                                 <Grid container spacing={2}>
-                                                    {scheduledSubjects.map((sub) => {
+                                                    {filteredSubjects.map((sub) => {
                                                         const subjectName = sub.subject?.name || sub.Subject?.name || `Subject ${sub.subject_id}`;
                                                         const maxLimit = sub.max_marks || 100;
                                                         const currentMark = marksState[student.id]?.[sub.subject_id] ?? "";
@@ -350,17 +356,27 @@ export default function ExamMarksEntryPage() {
                                                         const editable = isSubjectEditable(sub.subject_id);
 
                                                         return (
-                                                            <Grid item xs={12} sm={6} key={sub.subject_id}>
-                                                                <Grid container alignItems="center" spacing={1}>
-                                                                    <Grid item xs={7}>
-                                                                        <Typography variant="body2" fontWeight="bold" color={editable ? "text.primary" : "text.secondary"}>
+                                                                                           <Grid item xs={12} sm={6} key={sub.subject_id}>
+                                                                <Stack
+                                                                    direction="row"
+                                                                    justifyContent="space-between"
+                                                                    alignItems="center"
+                                                                    spacing={2}
+                                                                    sx={{ width: "100%" }}
+                                                                >
+                                                                    <Box sx={{ minWidth: 0 }}>
+                                                                        <Typography
+                                                                            variant="body2"
+                                                                            fontWeight="bold"
+                                                                            color={editable ? "text.primary" : "text.secondary"}
+                                                                        >
                                                                             {subjectName} {!editable && "🔒"}
                                                                         </Typography>
                                                                         <Typography variant="caption" color="text.secondary">
                                                                             Max Marks: {maxLimit}
                                                                         </Typography>
-                                                                    </Grid>
-                                                                    <Grid item xs={5}>
+                                                                    </Box>
+                                                                    <Box sx={{ width: 120, flexShrink: 0 }}>
                                                                         <TextField
                                                                             type="number"
                                                                             size="small"
@@ -374,8 +390,8 @@ export default function ExamMarksEntryPage() {
                                                                             helperText={isMarkExceeded ? "Exceeds max" : ""}
                                                                             inputProps={{ min: 0, max: maxLimit }}
                                                                         />
-                                                                    </Grid>
-                                                                </Grid>
+                                                                    </Box>
+                                                                </Stack>
                                                             </Grid>
                                                         );
                                                     })}

@@ -11,9 +11,7 @@ export async function loginApi(credentials) {
     
     return res.data; // expected: { token }
   } catch (error) {
-    // Enhanced error handling for different scenarios
     if (error.response) {
-      // Server responded with error status
       const status = error.response.status;
       const message = error.response.data?.message || "Login failed";
       
@@ -30,10 +28,8 @@ export async function loginApi(credentials) {
           throw new Error(message);
       }
     } else if (error.request) {
-      // Network error
       throw new Error("Network error. Please check your connection and try again");
     } else {
-      // Other error
       throw new Error(error.message || "Login failed");
     }
   }
@@ -132,37 +128,6 @@ export async function completeTeacherProfileApi(profileData) {
   }
 }
 
-export async function updateParentProfileApi(profileData) {
-  try {
-    const res = await api.patch("/parents/parents/profile", profileData);
-    return res.data; // expected: { message, token, user }
-  } catch (error) {
-    if (error.response) {
-      const status = error.response.status;
-      const message = error.response.data?.message || "Profile update failed";
-      
-      switch (status) {
-        case 400:
-          throw new Error("Invalid profile data provided");
-        case 401:
-          throw new Error("You must be logged in to update profile");
-        case 403:
-          throw new Error("Access denied");
-        case 404:
-          throw new Error("Parent profile not found");
-        case 500:
-          throw new Error("Server error. Please try again later");
-        default:
-          throw new Error(message);
-      }
-    } else if (error.request) {
-      throw new Error("Network error. Please check your connection and try again");
-    } else {
-      throw new Error(error.message || "Profile update failed");
-    }
-  }
-}
-
 // Get user profile APIs
 export async function getTeacherProfileApi() {
   try {
@@ -219,8 +184,6 @@ export function getProfileCompletionEndpoint(role) {
       return '/students/complete-profile';
     case 'teacher':
       return '/teachers/complete-profile';
-    case 'parent':
-      return '/parents/parents/profile';
     default:
       return null;
   }
@@ -229,11 +192,9 @@ export function getProfileCompletionEndpoint(role) {
 // Logout API (for future use if backend implements it)
 export async function logoutApi() {
   try {
-    // Currently backend doesn't have logout endpoint
-    // This is a placeholder for future implementation
     return { success: true };
   } catch (error) {
     console.warn("Logout API call failed:", error);
-    return { success: true }; // Still return success for local logout
+    return { success: true };
   }
 }

@@ -7,20 +7,11 @@ export function useTimetable() {
   const [timetable, setTimetable] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [children, setChildren] = useState([]);
-  const [selectedStudentId, setSelectedStudentId] = useState(null);
-
-  useEffect(() => {
-    if (!user?.role) return;
-
-    setChildren([]);
-    setSelectedStudentId(null);
-  }, [user?.role]);
 
   useEffect(() => {
     if (!user?.role) return;
     fetchTimetable();
-  }, [user?.role, selectedStudentId]);
+  }, [user?.role]);
 
   async function fetchTimetable() {
     try {
@@ -32,8 +23,6 @@ export function useTimetable() {
 
       targetClassId = user.class_id;
       targetSectionId = user.section_id;
-
-
 
       if (!targetClassId || !targetSectionId) {
         setError("Missing class/section context for timetable.");
@@ -59,9 +48,5 @@ export function useTimetable() {
     timetable,
     loading,
     error,
-    children,
-    selectedStudentId,
-    setSelectedStudentId,
   };
 }
-

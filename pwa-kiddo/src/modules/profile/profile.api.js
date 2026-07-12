@@ -5,7 +5,6 @@ import { processImageForUpload } from "../../utils/imageUtils";
 export const getMyProfile = (role) => {
   if (role === "student") return api.get("/students/me");
   if (role === "teacher") return api.get("/teachers/me");
-  if (role === "parent") return api.get("/parents/parents/profile");
 
   throw new Error("Unsupported role");
 };
@@ -13,7 +12,6 @@ export const getMyProfile = (role) => {
 export const updateMyProfile = (role, data) => {
   if (role === "student") return api.post("/students/complete-profile", data);
   if (role === "teacher") return api.post("/teachers/complete-profile", data);
-  if (role === "parent") return api.patch("/parents/parents/profile", data);
 
   throw new Error("Unsupported role");
 };
