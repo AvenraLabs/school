@@ -9,13 +9,12 @@ module.exports = {
           r RECORD;
       BEGIN
           FOR r IN (
-              SELECT conname 
-              FROM pg_constraint 
-              WHERE conrelid = 'users'::regclass AND contype = 'u' AND conkey @> (
-                  SELECT array_agg(attnum) 
-                  FROM pg_attribute 
-                  WHERE attrelid = 'users'::regclass AND attname = 'phone'
-              )
+              SELECT c.conname
+              FROM pg_constraint c
+              JOIN pg_attribute a ON a.attnum = ANY(c.conkey) AND a.attrelid = c.conrelid
+              WHERE c.conrelid = 'users'::regclass
+                AND c.contype = 'u'
+                AND a.attname = 'phone'
           ) LOOP
               EXECUTE 'ALTER TABLE users DROP CONSTRAINT ' || quote_ident(r.conname);
           END LOOP;
