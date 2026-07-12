@@ -11,9 +11,12 @@ import {
   Stack,
 } from "@mui/material";
 import { School, ArrowForwardIos, Delete } from "@mui/icons-material";
+import { useAuth } from "../../auth/AuthProvider";
 
 export default function GroupChatList({ groups, onDelete }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isStudent = user?.role === "student";
 
   if (!groups || groups.length === 0) {
     return (
@@ -50,10 +53,18 @@ export default function GroupChatList({ groups, onDelete }) {
             <ListItemText
               primary={
                 <Typography fontWeight="bold">
-                  {group.subject?.name || 'Subject'} - Class {group.class?.class_name || 'N/A'} ({group.section?.name || ''})
+                  {(() => {
+                    if (isStudent) {
+                      return group.subject?.name || 'Subject';
+                    }
+                    const className = group.class?.class_name || '';
+                    const sectionName = group.section?.name || '';
+                    const classSection = [className, sectionName].filter(Boolean).join('-');
+                    return [group.subject?.name || 'Subject', classSection].filter(Boolean).join(' ');
+                  })()}
                 </Typography>
               }
-              secondary={`Role: ${group.role || 'member'}`}
+              secondary={null}
             />
             <Stack direction="row" spacing={1} alignItems="center">
               {onDelete && (

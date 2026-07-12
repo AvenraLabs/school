@@ -5,6 +5,7 @@ import GameSessionPlayer from "../modules/game/game-session-player.model.js";
 import { isTimeOver } from "../modules/game/game.utils.js";
 import PlayerAnswer from "../modules/game/player-answer.model.js";
 import QuizQuestion from "../modules/quiz/quiz-question.model.js";
+import { generateQuizFromAi } from "../modules/quiz/quiz-rag.service.js";
 import User from "../modules/users/user.model.js";
 import db from "../config/db.js";
 
@@ -252,6 +253,48 @@ export function initGameSocket(io) {
       if (session.host_user_id !== socket.user.id) return;
       if (session.started_at) return; // prevent restart
 
+      let quizId = session.quiz_id;
+      if (!quizId) {
+        if (!session.settings || !session.settings.topic) {
+          socket.emit("quiz:error", {
+            message: "Missing topic or settings for this game session.",
+          });
+          return;
+        }
+
+        try {
+          // Notify the room that AI is generating the quiz
+          io.to(`quiz:${sessionId}`).emit("quiz:generating");
+
+          const quizResult = await generateQuizFromAi({
+            user: socket.user,
+            topic: session.settings.topic,
+            classLevel: session.settings.classLevel,
+            difficulty: session.settings.difficulty,
+            numQuestions: session.settings.numQuestions,
+          });
+
+          quizId = quizResult.quizId;
+
+          const perQuestionMs = 30000;
+          const totalQuestions = quizResult.questions?.length || session.settings.numQuestions || 5;
+          const totalTimeMs = session.settings.timeLimitMinutes
+            ? session.settings.timeLimitMinutes * 60 * 1000
+            : totalQuestions * perQuestionMs;
+
+          await session.update({
+            quiz_id: quizId,
+            total_time_ms: totalTimeMs,
+          });
+        } catch (err) {
+          console.error("AI quiz generation failed on game start:", err);
+          io.to(`quiz:${sessionId}`).emit("quiz:error", {
+            message: "AI failed to generate quiz questions. Please try starting again.",
+          });
+          return;
+        }
+      }
+
       await session.update({ status: "IN_PROGRESS", started_at: new Date() });
 
       await GameSessionPlayer.update(
@@ -270,7 +313,7 @@ export function initGameSocket(io) {
       });
 
       const questions = await QuizQuestion.findAll({
-        where: { quiz_id: session.quiz_id },
+        where: { quiz_id: quizId },
         order: [["order_index", "ASC"]],
       });
 

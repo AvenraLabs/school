@@ -219,7 +219,7 @@ export default function ApprovalsPage() {
                                             <Chip label="Registration" size="small" color="primary" variant="outlined" sx={{ height: 20, fontSize: "0.68rem", fontWeight: 700 }} />
                                         </Box>
                                         <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.82rem", mt: 0.5 }}>
-                                            Class {className} · Section {sectionName} {username && `· @${username}`}
+                                            {[className, sectionName].filter(Boolean).join("-")} {username && `· @${username}`}
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -339,7 +339,7 @@ export default function ApprovalsPage() {
                                             <Chip label="Profile Update" size="small" color="secondary" variant="outlined" sx={{ height: 20, fontSize: "0.68rem", fontWeight: 700 }} />
                                         </Box>
                                         <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.82rem", mt: 0.5 }}>
-                                            Class {className} · Section {sectionName} · {Object.keys(changes).length} changes requested
+                                            {[className, sectionName].filter(Boolean).join("-")} · {Object.keys(changes).length} changes requested
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -430,9 +430,6 @@ export default function ApprovalsPage() {
             <Box sx={{ mb: 3 }}>
                 <Typography variant="h5" fontWeight={900} sx={{ fontFamily: "'Outfit', sans-serif" }}>
                     Approvals Queue
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    Review registration requests and profile updates from students in your classes.
                 </Typography>
             </Box>
 

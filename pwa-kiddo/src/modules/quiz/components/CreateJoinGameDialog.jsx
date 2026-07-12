@@ -221,8 +221,8 @@ export default function CreateJoinGameDialog({ open, onClose }) {
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && roomCode.trim() && !loading) handleJoin();
                                 }}
-                                inputProps={{ maxLength: 10, style: { letterSpacing: 4, fontWeight: 800, fontSize: 20 } }}
-                                placeholder="e.g. AB3K7T2X"
+                                inputProps={{ maxLength: 4, style: { letterSpacing: 4, fontWeight: 800, fontSize: 20, textAlign: 'center' } }}
+                                placeholder="e.g. AB3K"
                             />
                             <Button
                                 variant="contained"

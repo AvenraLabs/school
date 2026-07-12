@@ -382,7 +382,19 @@ export default function LostFoundPage() {
                           {item.Creator?.name || "Unknown User"}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {item.Creator?.role?.replace(/_/g, " ")} - {new Date(item.createdAt || item.created_at || Date.now()).toLocaleDateString()}
+                          {(() => {
+                            const role = item.Creator?.role;
+                            if (role === "student") {
+                              const student = item.Creator?.student || item.Creator?.Student;
+                              const className = student?.class?.class_name || student?.Class?.class_name || "";
+                              const sectionName = student?.section?.name || student?.Section?.name || "";
+                              return [className, sectionName].filter(Boolean).join("-") || "student";
+                            } else if (role === "teacher") {
+                              return "teacher";
+                            } else {
+                              return role?.replace(/_/g, " ") || "";
+                            }
+                          })()}
                         </Typography>
                       </Box>
                     </Stack>
@@ -408,7 +420,7 @@ export default function LostFoundPage() {
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.8, mb: 2, color: "text.secondary" }}>
                     <Info sx={{ fontSize: 16 }} />
                     <Typography variant="caption" fontWeight="600">
-                      Date: {new Date(item.date).toLocaleDateString()}
+                      {item.type === "lost" ? "Date Lost" : "Date Found"}: {new Date(item.date).toLocaleDateString()}
                     </Typography>
                   </Box>
 

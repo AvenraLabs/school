@@ -35,6 +35,7 @@ import {
   listSectionsForClass,
 } from "./attendance.api";
 import { useSearchParams } from "react-router-dom";
+import { getAssetUrl } from "../../utils/asset";
 
 export default function TeacherAttendancePage() {
   const { user } = useAuth();
@@ -457,7 +458,7 @@ export default function TeacherAttendancePage() {
                       {/* Avatar & Name Info */}
                       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
                         <Avatar
-                          src={s.avatar_url || ""}
+                          src={getAssetUrl(s.avatar_url) || ""}
                           sx={{
                             width: 38,
                             height: 38,

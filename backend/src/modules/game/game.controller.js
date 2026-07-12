@@ -15,7 +15,7 @@ import db from "../../config/db.js";
 // Curated charset: uppercase letters + digits, minus visually confusing chars (0/O, 1/I, 8/B, 2/Z)
 const ROOM_CODE_CHARSET = "ACDEFGHJKLMNPQRSTUVWXY3456789";
 
-function generateRoomCode(length = 8) {
+function generateRoomCode(length = 4) {
   let code = "";
   for (let i = 0; i < length; i++) {
     code += ROOM_CODE_CHARSET[Math.floor(Math.random() * ROOM_CODE_CHARSET.length)];
@@ -157,41 +157,35 @@ export const createMultiplayerQuiz = asyncHandler(async (req, res) => {
     throw new AppError("Topic required", 400);
   }
 
-  const quizResult = await generateQuizFromAi({
-    user: req.user,
-    topic,
-    classLevel,
-    difficulty,
-    numQuestions,
-  });
-
   const perQuestionMs = 30000;
-  const totalQuestions = quizResult.questions?.length || numQuestions || 5;
+  const totalQuestions = numQuestions || 5;
   const totalTimeMs = timeLimitMinutes
     ? timeLimitMinutes * 60 * 1000
     : totalQuestions * perQuestionMs;
 
-  // ── Atomic room code generation ────────────────────────────────────────────
-  // The DB has a UNIQUE constraint on room_code. Instead of pre-checking
-  // (TOCTOU race condition), we attempt the INSERT and retry if it fails
-  // with a UniqueConstraintError. This is safe for concurrent creators.
   let session = null;
   const MAX_RETRIES = 10;
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const candidateCode = generateRoomCode(8);
+    const candidateCode = generateRoomCode(4);
     try {
       session = await GameSession.create({
-        quiz_id: quizResult.quizId,
+        quiz_id: null,
         mode: "MULTI",
         room_code: candidateCode,
         host_user_id: req.user.id,
         max_players: maxPlayers ?? null,
         total_time_ms: totalTimeMs,
         status: "LOBBY",
+        settings: {
+          topic,
+          classLevel,
+          difficulty,
+          numQuestions,
+          timeLimitMinutes,
+        },
       });
       break; // Success — exit loop
     } catch (err) {
-      // Retry only on unique constraint collision; re-throw anything else
       if (err.name === "SequelizeUniqueConstraintError") {
         continue;
       }
@@ -206,7 +200,7 @@ export const createMultiplayerQuiz = asyncHandler(async (req, res) => {
   res.json({
     sessionId: session.id,
     roomCode: session.room_code,
-    quizId: quizResult.quizId,
+    quizId: null,
   });
 });
 
@@ -273,7 +267,7 @@ export const joinMultiplayerQuiz = asyncHandler(async (req, res) => {
     session_id: session.id,
     user_id: req.user.id,
     is_host: session.host_user_id === req.user.id,
-    status: "WAITING",
+    status: "JOINED",
   });
 
   res.json({

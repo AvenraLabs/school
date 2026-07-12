@@ -45,6 +45,10 @@ export function useQuizSession(sessionId) {
         });
 
         // ── Quiz started ──────────────────────────────────────────────────────
+        socket.on("quiz:generating", () => {
+            setStatus("GENERATING");
+        });
+
         socket.on("quiz:started", (data) => {
             setStatus("IN_PROGRESS");
             setTime(data.totalTimeMs);
@@ -73,6 +77,7 @@ export function useQuizSession(sessionId) {
         // ── Errors ────────────────────────────────────────────────────────────
         socket.on("quiz:error", (data) => {
             setError(data.message || "An error occurred");
+            setStatus((prev) => (prev === "GENERATING" ? "WAITING" : prev));
         });
 
         return () => {
@@ -80,6 +85,7 @@ export function useQuizSession(sessionId) {
             socket.off("quiz:players_list");
             socket.off("quiz:player_joined");
             socket.off("quiz:player_left");
+            socket.off("quiz:generating");
             socket.off("quiz:started");
             socket.off("quiz:finished");
             socket.off("quiz:all_finished");

@@ -85,9 +85,6 @@ export default function QuizLandingPage() {
                             </Avatar>
                             <Box>
                                 <Typography variant="h6" fontWeight="bold">Single Player</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Challenge yourself with AI.
-                                </Typography>
                             </Box>
                         </CardContent>
                     </Card>
@@ -112,9 +109,6 @@ export default function QuizLandingPage() {
                             </Avatar>
                             <Box>
                                 <Typography variant="h6" fontWeight="bold">Multiplayer</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Compete with friends.
-                                </Typography>
                             </Box>
                         </CardContent>
                     </Card>

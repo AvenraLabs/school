@@ -1,6 +1,9 @@
 import LostFoundItem from "./lost-found.model.js";
 import User from "../users/user.model.js";
 import { Op } from "sequelize";
+import Student from "../students/student.model.js";
+import Class from "../classes/classes.model.js";
+import Section from "../sections/section.model.js";
 
 export const createLostFoundItem = async ({
   school_id,
@@ -30,6 +33,16 @@ export const getLostFoundItemById = async (id, school_id) => {
         model: User,
         as: "Creator",
         attributes: ["id", "name", "role", "avatar_url"],
+        include: [
+          {
+            model: Student,
+            attributes: ["class_id", "section_id"],
+            include: [
+              { model: Class, attributes: ["class_name"] },
+              { model: Section, attributes: ["name"] },
+            ],
+          },
+        ],
       },
     ],
   });
@@ -72,6 +85,16 @@ export const listLostFoundItems = async ({
         model: User,
         as: "Creator",
         attributes: ["id", "name", "role", "avatar_url"],
+        include: [
+          {
+            model: Student,
+            attributes: ["class_id", "section_id"],
+            include: [
+              { model: Class, attributes: ["class_name"] },
+              { model: Section, attributes: ["name"] },
+            ],
+          },
+        ],
       },
     ],
   });

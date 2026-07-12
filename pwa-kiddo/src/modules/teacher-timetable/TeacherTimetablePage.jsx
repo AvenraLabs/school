@@ -63,9 +63,6 @@ export default function TeacherTimetablePage() {
             <Stack direction="row" alignItems="center" justifyContent="space-between">
               <Box>
                 <Typography fontWeight={600}>Manage Section Timetable</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  You are a class teacher and can update your section timetable.
-                </Typography>
               </Box>
               <Button
                 variant="contained"

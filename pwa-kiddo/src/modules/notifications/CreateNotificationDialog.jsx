@@ -11,7 +11,9 @@ import {
     Select,
     MenuItem,
     Stack,
-    Alert
+    Alert,
+    FormControlLabel,
+    Checkbox
 } from "@mui/material";
 import { useTeacherTimetable } from "../teacher-timetable/useTeacherTimetable";
 import { createNotification } from "./notifications.api";
@@ -24,9 +26,9 @@ export default function CreateNotificationDialog({ open, onClose, onSuccess }) {
     const [formData, setFormData] = useState({
         title: "",
         message: "",
-        target_role: "student",
         class_section: "", // Combined value "classId,sectionId"
     });
+    const [sendWhatsapp, setSendWhatsapp] = useState(false);
 
     // Deduplicate classes from timetable
     const classOptions = useMemo(() => {
@@ -42,7 +44,7 @@ export default function CreateNotificationDialog({ open, onClose, onSuccess }) {
                     unique.set(key, {
                         class_id: t.class_id,
                         section_id: t.section_id,
-                        label: `${t.class?.name || t.Class?.class_name || t.class_id} - ${t.section?.name || t.Section?.name || t.section_id}`,
+                        label: `${t.class?.class_name || t.Class?.class_name || t.class?.name || t.Class?.name || t.class_id} - ${t.section?.name || t.Section?.name || t.section_id}`,
                     });
                 }
             }
@@ -67,7 +69,8 @@ export default function CreateNotificationDialog({ open, onClose, onSuccess }) {
             const payload = {
                 title: formData.title,
                 message: formData.message,
-                target_role: formData.target_role,
+                target_role: "student",
+                send_whatsapp: sendWhatsapp,
             };
 
             if (formData.class_section) {
@@ -114,36 +117,22 @@ export default function CreateNotificationDialog({ open, onClose, onSuccess }) {
                     />
 
                     <FormControl fullWidth>
-                        <InputLabel>Target Audience</InputLabel>
-                        <Select
-                            name="target_role"
-                            label="Target Audience"
-                            value={formData.target_role}
-                            onChange={handleChange}
-                        >
-                            <MenuItem value="student">Students</MenuItem>
-                            <MenuItem value="parent">Parents</MenuItem>
-                            <MenuItem value="all">Everyone</MenuItem>
-                        </Select>
-                    </FormControl>
-
-                    <FormControl fullWidth>
-                        <InputLabel id="target-class-label" shrink>Target Class (Optional)</InputLabel>
+                        <InputLabel id="target-class-label" shrink>Recipient Class</InputLabel>
                         <Select
                             labelId="target-class-label"
                             name="class_section"
-                            label="Target Class (Optional)"
+                            label="Recipient Class"
                             value={formData.class_section}
                             onChange={handleChange}
                             displayEmpty
                             renderValue={(selected) =>
                                 selected
                                     ? classOptions.find((opt) => `${opt.class_id},${opt.section_id}` === selected)?.label
-                                    : "All my associated classes"
+                                    : "All my classes"
                             }
                         >
                             <MenuItem value="">
-                                <em>All my associated classes</em>
+                                <em>All my classes</em>
                             </MenuItem>
                             {classOptions.map((opt) => (
                                 <MenuItem
@@ -155,6 +144,17 @@ export default function CreateNotificationDialog({ open, onClose, onSuccess }) {
                             ))}
                         </Select>
                     </FormControl>
+
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={sendWhatsapp}
+                                onChange={(e) => setSendWhatsapp(e.target.checked)}
+                                color="primary"
+                            />
+                        }
+                        label="Send via WhatsApp"
+                    />
                 </Stack>
             </DialogContent>
             <DialogActions>

@@ -28,6 +28,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
 import DatePickerField from "../../../components/DatePickerField";
 import ConfirmationDialog from "../../../components/ConfirmationDialog";
+import dayjs from "dayjs";
 
 const fetchAssignments = () => api.get("/teacher-assignments/teacher/me");
 
@@ -438,7 +439,7 @@ export default function ExamCreationPage() {
                                                                             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: "text.secondary" }}>
                                                                                 <CalendarMonth sx={{ fontSize: 14 }} />
                                                                                 <Typography variant="caption" fontWeight={600}>
-                                                                                    {es.exam_date}
+                                                                                    {es.exam_date ? dayjs(es.exam_date).format("DD-MM-YYYY") : ""}
                                                                                 </Typography>
                                                                             </Stack>
                                                                             <Typography variant="caption" fontWeight={700} color="primary.main">
@@ -613,6 +614,7 @@ export default function ExamCreationPage() {
                             onChange={(val) => setDialogExamDate(val)}
                             disabled={saveLoading}
                             size="medium"
+                            format="DD-MM-YYYY"
                         />
 
                         {/* Max Marks */}

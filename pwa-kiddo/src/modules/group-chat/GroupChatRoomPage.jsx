@@ -1,4 +1,4 @@
-import { Container } from "@mui/material";
+import { Box } from "@mui/material";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useGroupChatRoom } from "./useGroupChatRoom";
 import GroupChatRoom from "./GroupChatRoom";
@@ -11,7 +11,7 @@ export default function GroupChatRoomPage() {
   const { messages, sendMessage, sendImageMessage } = useGroupChatRoom(id);
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 2, height: "80vh" }}>
+    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <GroupChatRoom
         messages={messages}
         onSend={sendMessage}
@@ -22,6 +22,6 @@ export default function GroupChatRoomPage() {
           navigate(-1);
         }}
       />
-    </Container>
+    </Box>
   );
 }

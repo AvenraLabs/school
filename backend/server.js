@@ -294,6 +294,8 @@ async function runDbMigrations() {
     await db.query(`ALTER TABLE timetables ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
     await db.query(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
     await db.query(`ALTER TABLE homeworks ADD COLUMN IF NOT EXISTS academic_year_id BIGINT;`);
+    await db.query(`ALTER TABLE game_sessions ALTER COLUMN quiz_id DROP NOT NULL;`);
+    await db.query(`ALTER TABLE game_sessions ADD COLUMN IF NOT EXISTS settings JSONB;`);
     await db.query(`ALTER TABLE exam_subjects ADD COLUMN IF NOT EXISTS max_marks FLOAT DEFAULT 100;`);
 
     // Drop old report card tables and create exam_marks

@@ -11,11 +11,15 @@ const GameSession = db.define("game_session", {
   },
   quiz_id: {
     type: DataTypes.BIGINT,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: "quizzes",
       key: "id",
     },
+  },
+  settings: {
+    type: DataTypes.JSONB,
+    allowNull: true,
   },
   mode: {
     type: DataTypes.ENUM("SINGLE", "MULTI"),

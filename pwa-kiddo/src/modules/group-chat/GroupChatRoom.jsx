@@ -57,15 +57,14 @@ export default function GroupChatRoom({ messages, onSend, onSendImage, meta, onC
 
   return (
     <Paper
-      elevation={3}
+      elevation={0}
       sx={{
-        height: '100%',
+        flex: 1,
         display: 'flex',
         flexDirection: 'column',
         bgcolor: '#f5f7fa',
         overflow: 'hidden',
-        borderTopLeftRadius: 16,
-        borderTopRightRadius: 16
+        borderRadius: 0,
       }}
     >
       <Box
@@ -84,9 +83,11 @@ export default function GroupChatRoom({ messages, onSend, onSendImage, meta, onC
           <Typography fontWeight={700}>
             {meta?.subject?.name || "Group Chat"}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Class {meta?.class?.class_name || "–"} ({meta?.section?.name || "–"})
-          </Typography>
+          {user?.role !== "student" && (
+            <Typography variant="body2" color="text.secondary">
+              Class {meta?.class?.class_name || "–"} ({meta?.section?.name || "–"})
+            </Typography>
+          )}
         </Box>
         {onClose && (
           <IconButton onClick={onClose}>

@@ -121,8 +121,8 @@ export default function QuizLobbyPage() {
                 <Box
                     sx={{
                         display: "inline-block",
-                        px: 4,
-                        py: 2,
+                        px: { xs: 3, sm: 4 },
+                        py: { xs: 1.5, sm: 2 },
                         borderRadius: "16px",
                         background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.12)}, ${alpha(theme.palette.secondary?.main || theme.palette.primary.dark, 0.08)})`,
                         border: `2px dashed ${alpha(theme.palette.primary.main, 0.35)}`,
@@ -143,11 +143,11 @@ export default function QuizLobbyPage() {
                         Room Code
                     </Typography>
                     <Typography
-                        variant="h3"
+                        variant="h4"
                         fontWeight={900}
                         color="primary"
                         sx={{
-                            letterSpacing: 6,
+                            letterSpacing: 4,
                             fontFamily: "'Outfit', monospace",
                             lineHeight: 1,
                         }}
@@ -247,9 +247,9 @@ export default function QuizLobbyPage() {
                             variant="contained"
                             size="large"
                             fullWidth
-                            startIcon={<PlayArrow />}
+                            startIcon={status === "GENERATING" ? <CircularProgress size={20} color="inherit" /> : <PlayArrow />}
                             onClick={startQuiz}
-                            disabled={players.length === 0}
+                            disabled={players.length === 0 || status === "GENERATING"}
                             sx={{
                                 py: 1.5,
                                 borderRadius: "14px",
@@ -265,7 +265,7 @@ export default function QuizLobbyPage() {
                                 },
                             }}
                         >
-                            Start Game
+                            {status === "GENERATING" ? "Generating AI Quiz..." : "Start Game"}
                         </Button>
 
                         <Button
@@ -275,6 +275,7 @@ export default function QuizLobbyPage() {
                             fullWidth
                             startIcon={<StopCircleOutlined />}
                             onClick={forceEnd}
+                            disabled={status === "GENERATING"}
                             sx={{
                                 py: 1.2,
                                 borderRadius: "14px",
@@ -298,7 +299,7 @@ export default function QuizLobbyPage() {
                     >
                         <CircularProgress size={20} />
                         <Typography color="text.secondary" fontWeight={600}>
-                            Waiting for host to start…
+                            {status === "GENERATING" ? "Generating AI Quiz..." : "Waiting for host to start…"}
                         </Typography>
                     </Stack>
                 )}

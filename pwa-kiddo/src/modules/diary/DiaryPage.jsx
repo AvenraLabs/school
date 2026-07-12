@@ -133,6 +133,9 @@ function SkeletonCard() {
 
 // ── Homework card (no overdue styling) ──────────────────────────────────────
 function HomeworkCard({ item }) {
+  const { user } = useAuth();
+  const isStudent = user?.role === "student";
+
   const subjectName =
     item.Subject?.name || item.subject?.name || item.subject || "Subject";
   const dueDate = item.homework_date || item.due_date || "";
@@ -207,7 +210,7 @@ function HomeworkCard({ item }) {
         </Stack>
 
         {/* Class + section */}
-        {(className || sectionName) && (
+        {!isStudent && (className || sectionName) && (
           <Typography
             sx={{
               fontSize: "11px",
