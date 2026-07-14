@@ -172,6 +172,13 @@ export function LostFoundManager() {
     }
   };
 
+  const getAssetUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    return `${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/${cleanPath}`;
+  };
+
   const totalPages = Math.ceil(totalCount / LIMIT);
 
   // Calculate statistics based on items currently displayed or in lists
@@ -307,7 +314,7 @@ export function LostFoundManager() {
                   {item.photos && item.photos.length > 0 && (
                     <div className="lostfound-photos-grid">
                       {item.photos.map((p, i) => (
-                        <img key={i} src={p} alt="" className="lostfound-photo" />
+                        <img key={i} src={getAssetUrl(p)} alt="" className="lostfound-photo" />
                       ))}
                     </div>
                   )}

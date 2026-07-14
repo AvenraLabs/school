@@ -9,6 +9,7 @@ import User from "../users/user.model.js";
 import Attendance from "../attendance/attendance.model.js";
 import Section from "../sections/section.model.js";
 import Class from "../classes/classes.model.js";
+import School from "../schools/school.model.js";
 import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 import { Op } from "sequelize";
 
@@ -304,6 +305,13 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
     throw new AppError("class_id and section_id are required", 400);
   }
 
+  const school = await School.findByPk(school_id, {
+    attributes: ["risk_attendance_cutoff", "risk_academic_cutoff", "risk_grade_drop_margin"]
+  });
+  const attCutoff = school?.risk_attendance_cutoff ?? 75;
+  const acadCutoff = school?.risk_academic_cutoff ?? 40;
+  const dropCutoff = school?.risk_grade_drop_margin ?? 15;
+
   const academic_year_id = await getCurrentAcademicYearId(school_id);
 
   // Fetch all students in section
@@ -446,9 +454,9 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
       attendance: attendancePercentage,
     });
 
-    // Pass/fail (40% cutoff)
+    // Pass/fail (acadCutoff cutoff)
     if (stats.max > 0) {
-      if (academicPercentage >= 40) passCount++;
+      if (academicPercentage >= acadCutoff) passCount++;
       else failCount++;
     }
 
@@ -480,26 +488,26 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
       ) {
         const latestPct = (latestStats.obtained / latestStats.max) * 100;
         const prevPct = (prevStats.obtained / prevStats.max) * 100;
-        if (latestPct < prevPct - 15) {
+        if (latestPct < prevPct - dropCutoff) {
           isGradeDropped = true;
           dropMargin = Math.round(prevPct - latestPct);
         }
       }
     }
 
-    const isAttendanceLow = attendancePercentage < 75;
+    const isAttendanceLow = attendancePercentage < attCutoff;
 
     if (
       isAttendanceLow ||
       isGradeDropped ||
-      (stats.max > 0 && academicPercentage < 40)
+      (stats.max > 0 && academicPercentage < acadCutoff)
     ) {
       const reason = [];
       if (isAttendanceLow)
         reason.push(`Low Attendance (${attendancePercentage}%)`);
       if (isGradeDropped)
         reason.push(`Grade dropped by ${dropMargin}% in latest exam`);
-      if (stats.max > 0 && academicPercentage < 40)
+      if (stats.max > 0 && academicPercentage < acadCutoff)
         reason.push(`Low Academic Score (${academicPercentage}%)`);
 
       atRisk.push({
@@ -551,7 +559,15 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
    ========================= */
 export const getSchoolAnalytics = asyncHandler(async (req, res) => {
   const school_id = req.user.school_id;
+  const school = await School.findByPk(school_id, {
+    attributes: ["risk_attendance_cutoff", "risk_academic_cutoff", "risk_grade_drop_margin"]
+  });
+  const attCutoff = school?.risk_attendance_cutoff ?? 75;
+  const acadCutoff = school?.risk_academic_cutoff ?? 40;
+  const dropCutoff = school?.risk_grade_drop_margin ?? 15;
+
   const academic_year_id = await getCurrentAcademicYearId(school_id);
+  const { class_id, section_id } = req.query;
 
   // 1. Get all active classes and sections
   const classes = await Class.findAll({
@@ -565,10 +581,19 @@ export const getSchoolAnalytics = asyncHandler(async (req, res) => {
     attributes: ["id", "class_id", "name"],
   });
 
-  // 2. Get all active students
+  // 2. Get active students matching filters
+  const studentWhere = { school_id, status: "ACTIVE" };
+  if (class_id) {
+    studentWhere.class_id = Number(class_id);
+  }
+  if (section_id) {
+    studentWhere.section_id = Number(section_id);
+  }
+
   const students = await Student.findAll({
-    where: { school_id, status: "ACTIVE" },
-    attributes: ["id", "class_id", "section_id"],
+    where: studentWhere,
+    attributes: ["id", "class_id", "section_id", "user_id"],
+    include: [{ model: User, attributes: ["name", "avatar_url"] }],
   });
   const studentIds = students.map((s) => s.id);
 
@@ -577,9 +602,13 @@ export const getSchoolAnalytics = asyncHandler(async (req, res) => {
       success: true,
       data: {
         section_comparison: [],
+        student_comparison: class_id && section_id ? [] : null,
         subject_difficulty: [],
         school_pass_fail: { pass: 0, fail: 0, total: 0 },
         at_risk_by_class: [],
+        at_risk_students: class_id ? [] : null,
+        classes,
+        sections,
       },
     });
   }
@@ -670,11 +699,11 @@ export const getSchoolAnalytics = asyncHandler(async (req, res) => {
   let schoolFail = 0;
   Object.values(studentTotals).forEach((t) => {
     const pct = t.max > 0 ? Math.round((t.obtained / t.max) * 100) : 0;
-    if (pct >= 40) schoolPass++;
+    if (pct >= acadCutoff) schoolPass++;
     else schoolFail++;
   });
 
-  // --- At-Risk by Class ---
+  // --- At-Risk by Class / Detailed ---
   // Count attendance-low or marks-low students per class
   const attendanceBySid = {};
   allAttendance.forEach((a) => {
@@ -686,42 +715,99 @@ export const getSchoolAnalytics = asyncHandler(async (req, res) => {
     if (a.status === "present") attendanceBySid[sid].present++;
   });
 
-  const atRiskByClassBuckets = {};
-  students.forEach((s) => {
-    const sid = Number(s.id);
-    const classId = Number(s.class_id);
-    const className = classNameMap.get(classId) || `Class #${classId}`;
+  let atRiskByClass = [];
+  if (!class_id) {
+    const atRiskByClassBuckets = {};
+    students.forEach((s) => {
+      const sid = Number(s.id);
+      const classId = Number(s.class_id);
+      const className = classNameMap.get(classId) || `Class #${classId}`;
 
-    if (!atRiskByClassBuckets[classId]) {
-      atRiskByClassBuckets[classId] = { class_name: className, count: 0, total: 0 };
-    }
-    atRiskByClassBuckets[classId].total++;
+      if (!atRiskByClassBuckets[classId]) {
+        atRiskByClassBuckets[classId] = { class_name: className, count: 0, total: 0 };
+      }
+      atRiskByClassBuckets[classId].total++;
 
-    const marks = studentTotals[sid];
-    const att = attendanceBySid[sid];
-    const marksPct = marks && marks.max > 0 ? (marks.obtained / marks.max) * 100 : null;
-    const attPct = att && att.total > 0 ? (att.present / att.total) * 100 : null;
+      const marks = studentTotals[sid];
+      const att = attendanceBySid[sid];
+      const marksPct = marks && marks.max > 0 ? (marks.obtained / marks.max) * 100 : null;
+      const attPct = att && att.total > 0 ? (att.present / att.total) * 100 : null;
 
-    if ((marksPct !== null && marksPct < 40) || (attPct !== null && attPct < 75)) {
-      atRiskByClassBuckets[classId].count++;
-    }
-  });
+      if ((marksPct !== null && marksPct < acadCutoff) || (attPct !== null && attPct < attCutoff)) {
+        atRiskByClassBuckets[classId].count++;
+      }
+    });
 
-  const atRiskByClass = Object.values(atRiskByClassBuckets)
-    .filter((c) => c.total > 0)
-    .sort((a, b) => b.count - a.count);
+    atRiskByClass = Object.values(atRiskByClassBuckets)
+      .filter((c) => c.total > 0)
+      .sort((a, b) => b.count - a.count);
+  }
+
+  const atRiskStudents = [];
+  if (class_id) {
+    students.forEach((s) => {
+      const sid = Number(s.id);
+      const name = s.user?.name || "Unknown Student";
+      const avatarUrl = s.user?.avatar_url || "";
+
+      const marks = studentTotals[sid];
+      const att = attendanceBySid[sid];
+      const marksPct = marks && marks.max > 0 ? Math.round((marks.obtained / marks.max) * 100) : null;
+      const attPct = att && att.total > 0 ? Math.round((att.present / att.total) * 100) : null;
+
+      const isMarksLow = marksPct !== null && marksPct < acadCutoff;
+      const isAttLow = attPct !== null && attPct < attCutoff;
+
+      if (isMarksLow || isAttLow) {
+        atRiskStudents.push({
+          student_id: sid,
+          name,
+          avatar_url: avatarUrl,
+          marks_average: marksPct,
+          attendance_average: attPct,
+          reasons: [
+            isMarksLow ? `Low Marks (<${acadCutoff}%)` : null,
+            isAttLow ? `Low Attendance (<${attCutoff}%)` : null,
+          ].filter(Boolean),
+        });
+      }
+    });
+  }
+
+  const studentComparison = (class_id && section_id)
+    ? students.map((s) => {
+        const sid = Number(s.id);
+        const name = s.user?.name || "Unknown Student";
+        const stats = studentTotals[sid];
+        const avg = stats && stats.max > 0 ? Math.round((stats.obtained / stats.max) * 100) : 0;
+        return {
+          student_id: sid,
+          name,
+          average: avg,
+        };
+      }).sort((a, b) => b.average - a.average)
+    : null;
 
   res.json({
     success: true,
     data: {
       section_comparison: sectionComparison,
+      student_comparison: studentComparison,
       subject_difficulty: subjectDifficulty,
       school_pass_fail: {
         pass: schoolPass,
         fail: schoolFail,
         total: schoolPass + schoolFail,
       },
-      at_risk_by_class: atRiskByClass,
+      at_risk_by_class: !class_id ? atRiskByClass : null,
+      at_risk_students: class_id ? atRiskStudents : null,
+      thresholds: {
+        risk_attendance_cutoff: attCutoff,
+        risk_academic_cutoff: acadCutoff,
+        risk_grade_drop_margin: dropCutoff,
+      },
+      classes,
+      sections,
     },
   });
 });

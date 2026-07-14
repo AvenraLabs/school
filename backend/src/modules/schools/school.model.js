@@ -56,6 +56,36 @@ const School = db.define(
       type: DataTypes.ENUM("pending", "active", "suspended", "expired"),
       defaultValue: "pending",
     },
+
+    whatsapp_bus_start_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+
+    whatsapp_bus_end_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+
+    google_maps_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+
+    risk_attendance_cutoff: {
+      type: DataTypes.INTEGER,
+      defaultValue: 75,
+    },
+
+    risk_academic_cutoff: {
+      type: DataTypes.INTEGER,
+      defaultValue: 40,
+    },
+
+    risk_grade_drop_margin: {
+      type: DataTypes.INTEGER,
+      defaultValue: 15,
+    },
   },
   {
     tableName: "schools",

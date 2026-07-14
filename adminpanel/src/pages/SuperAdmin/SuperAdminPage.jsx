@@ -405,6 +405,9 @@ export function SuperAdminPage() {
         zip: form.zip,
         email: form.email,
         contact_phone: form.contact_phone,
+        whatsapp_bus_start_enabled: form.whatsapp_bus_start_enabled,
+        whatsapp_bus_end_enabled: form.whatsapp_bus_end_enabled,
+        google_maps_enabled: form.google_maps_enabled,
       });
       toast.success('School settings updated!');
       setShowEditSchool(null);
@@ -565,6 +568,9 @@ export function SuperAdminPage() {
                       zip: sch.zip || '',
                       email: sch.email || '',
                       contact_phone: sch.contact_phone || '',
+                      whatsapp_bus_start_enabled: sch.whatsapp_bus_start_enabled || false,
+                      whatsapp_bus_end_enabled: sch.whatsapp_bus_end_enabled || false,
+                      google_maps_enabled: sch.google_maps_enabled || false,
                     });
                     setShowEditSchool(sch);
                   }} className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-100 hover:shadow-indigo-200 transition-all duration-200">
@@ -603,6 +609,25 @@ export function SuperAdminPage() {
                         <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150 sm:col-span-2">
                           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Contact Phone</span>
                           <span className="text-base font-bold text-slate-800">{schools[0].contact_phone || '—'}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150 sm:col-span-2">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">WhatsApp Automation Settings</span>
+                          <div className="space-y-1 mt-1">
+                            <p className="text-sm font-semibold text-slate-700">
+                              Trip Starts Notification: <span className={schools[0].whatsapp_bus_start_enabled ? "text-emerald-600 font-bold" : "text-rose-500 font-bold"}>{schools[0].whatsapp_bus_start_enabled ? 'ENABLED' : 'DISABLED'}</span>
+                            </p>
+                            <p className="text-sm font-semibold text-slate-700">
+                              Trip Ends Notification: <span className={schools[0].whatsapp_bus_end_enabled ? "text-emerald-600 font-bold" : "text-rose-500 font-bold"}>{schools[0].whatsapp_bus_end_enabled ? 'ENABLED' : 'DISABLED'}</span>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150 sm:col-span-2">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Live Tracking Map Settings</span>
+                          <div className="space-y-1 mt-1">
+                            <p className="text-sm font-semibold text-slate-700">
+                              Map Provider: <span className={schools[0].google_maps_enabled ? "text-emerald-600 font-bold" : "text-indigo-500 font-bold"}>{schools[0].google_maps_enabled ? 'GOOGLE MAPS' : 'LEAFLET (DEFAULT)'}</span>
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -825,6 +850,43 @@ export function SuperAdminPage() {
             <div>
               <label className="label">ZIP Code</label>
               <input className="input-field" value={form.zip} onChange={e => setForm({...form, zip: e.target.value})} />
+            </div>
+            <div className="sm:col-span-2 space-y-2 mt-2">
+              <label className="label font-bold text-slate-700 block mb-1">Automated WhatsApp Settings</label>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.whatsapp_bus_start_enabled || false}
+                    onChange={e => setForm({...form, whatsapp_bus_start_enabled: e.target.checked})}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                  />
+                  Send automated WhatsApp when Bus Driver starts trip (leaves school)
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.whatsapp_bus_end_enabled || false}
+                    onChange={e => setForm({...form, whatsapp_bus_end_enabled: e.target.checked})}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                  />
+                  Send automated WhatsApp when Bus Driver ends trip (reaches school)
+                </label>
+              </div>
+            </div>
+            <div className="sm:col-span-2 space-y-2 mt-2">
+              <label className="label font-bold text-slate-700 block mb-1">Map Configuration Settings</label>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.google_maps_enabled || false}
+                    onChange={e => setForm({...form, google_maps_enabled: e.target.checked})}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                  />
+                  Enable Google Maps for live bus tracking (uses Leaflet if disabled)
+                </label>
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">

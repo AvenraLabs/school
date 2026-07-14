@@ -520,7 +520,20 @@ export default function FirstLoginPage() {
           </Stack>
 
           <Button
-            onClick={() => logout()}
+            onClick={async () => {
+              const nextUser = await logout();
+              if (nextUser) {
+                let basePath = "/student";
+                if (nextUser.role === "teacher") {
+                  basePath = "/teacher";
+                } else if (nextUser.role === "driver") {
+                  basePath = "/driver";
+                }
+                window.location.href = `${basePath}/dashboard`;
+              } else {
+                window.location.href = "/login";
+              }
+            }}
             fullWidth
             variant="text"
             sx={{ mt: 2 }}

@@ -10,6 +10,7 @@ import {
   createNotification,
   listNotifications,
   markAllNotificationsAsRead,
+  getActivePosters,
 } from "./notification.controller.js";
 import {
   acknowledgeNotification,
@@ -30,6 +31,7 @@ router.post(
 
 /* all logged-in users */
 router.get("/", listNotifications);
+router.get("/active-posters", getActivePosters);
 
 router.post("/mark-all-read", markAllNotificationsAsRead);
 

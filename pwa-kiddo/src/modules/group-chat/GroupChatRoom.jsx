@@ -9,12 +9,12 @@ import {
   Stack,
   CircularProgress
 } from "@mui/material";
-import { Send, Close, PhotoCamera, CameraAlt } from "@mui/icons-material";
+import { Send, Close, PhotoCamera, CameraAlt, AttachFile, PictureAsPdf } from "@mui/icons-material";
 import { useAuth } from "../../auth/AuthProvider";
 import api from "../../api/axios";
 import { getAssetUrl } from "../../utils/asset";
 
-export default function GroupChatRoom({ messages, onSend, onSendImage, meta, onClose }) {
+export default function GroupChatRoom({ messages, onSend, onSendFile, meta, onClose }) {
   const { user } = useAuth();
   const [text, setText] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -24,9 +24,18 @@ export default function GroupChatRoom({ messages, onSend, onSendImage, meta, onC
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  async function handleImageSelect(e) {
+  async function handleFileSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
+
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert("File size exceeds 10MB limit.");
+      return;
+    }
+
+    const isPdf = file.type === "application/pdf";
+    const type = isPdf ? "pdf" : "image";
 
     setUploading(true);
     try {
@@ -40,10 +49,11 @@ export default function GroupChatRoom({ messages, onSend, onSendImage, meta, onC
       });
 
       if (response.data?.success && response.data.url) {
-        onSendImage?.(response.data.url);
+        onSendFile?.(response.data.url, type);
       }
     } catch (err) {
-      console.error("Chat image upload failed:", err);
+      console.error("Chat file upload failed:", err);
+      alert(err.response?.data?.message || "File upload failed.");
     } finally {
       setUploading(false);
     }
@@ -157,6 +167,27 @@ export default function GroupChatRoom({ messages, onSend, onSendImage, meta, onC
                         }}
                         onClick={() => window.open(getAssetUrl(msg.content), "_blank")}
                       />
+                    ) : msg.type === "pdf" ? (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          cursor: "pointer",
+                          p: 0.5,
+                        }}
+                        onClick={() => window.open(getAssetUrl(msg.content), "_blank")}
+                      >
+                        <PictureAsPdf sx={{ color: isMe ? "#ffebee" : "#ef5350", fontSize: 32 }} />
+                        <Box sx={{ overflow: "hidden", minWidth: 120 }}>
+                          <Typography variant="body2" noWrap sx={{ fontWeight: 600, color: isMe ? "white" : "text.primary", textDecoration: "underline" }}>
+                            {msg.content.split('/').pop() || "Document.pdf"}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: isMe ? "rgba(255,255,255,0.7)" : "text.secondary", display: "block" }}>
+                            PDF Document
+                          </Typography>
+                        </Box>
+                      </Box>
                     ) : (
                       <Typography variant="body2">{msg.content}</Typography>
                     )}
@@ -182,12 +213,12 @@ export default function GroupChatRoom({ messages, onSend, onSendImage, meta, onC
             disabled={uploading}
             sx={{ color: "text.secondary" }}
           >
-            {uploading ? <CircularProgress size={24} /> : <PhotoCamera />}
+            {uploading ? <CircularProgress size={24} /> : <AttachFile />}
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,application/pdf"
               style={{ display: "none" }}
-              onChange={handleImageSelect}
+              onChange={handleFileSelect}
               disabled={uploading}
             />
           </IconButton>

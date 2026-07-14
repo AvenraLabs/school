@@ -3,6 +3,7 @@ import { buildQuizPrompt } from "./quiz-rag.prompts.js";
 import Quiz from "./quiz.model.js";
 import QuizQuestion from "./quiz-question.model.js";
 import AppError from "../../shared/appError.js";
+import { retrieveRagContext } from "../rag/rag.service.js";
 
 const GEMINI_MODEL = (process.env.GEMINI_MODEL || "gemini-2.5-flash-lite").replace(/^models\//, "");
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -29,11 +30,25 @@ export async function generateQuizFromAi({
   const safeDifficulty = difficulty || "MEDIUM";
   const safeClassLevel = classLevel || 5;
 
+  let contextText = "";
+  try {
+    const context = await retrieveRagContext({
+      query: topic,
+      classLevel: safeClassLevel,
+    });
+    if (context && context.chunks && context.chunks.length) {
+      contextText = context.chunks.join("\n\n");
+    }
+  } catch (err) {
+    console.error("Quiz RAG context retrieval failed, using fallback general knowledge:", err);
+  }
+
   const prompt = buildQuizPrompt({
     topic,
     classLevel: safeClassLevel,
     difficulty: safeDifficulty,
     numQuestions: safeNumQuestions,
+    contextText,
   });
 
   const result = await ai.models.generateContent({

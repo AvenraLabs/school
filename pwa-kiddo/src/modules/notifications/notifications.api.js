@@ -22,3 +22,7 @@ export const getNotificationAcknowledgements = (id) =>
 // Mark all notifications as read
 export const markAllNotificationsAsRead = () =>
   api.post("/notifications/mark-all-read");
+
+// Fetch active poster announcements
+export const getActivePosters = () =>
+  api.get("/notifications/active-posters").then(res => res.data);

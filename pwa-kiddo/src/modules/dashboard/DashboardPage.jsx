@@ -28,6 +28,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import TeacherDashboard from "./TeacherDashboard";
 import { getAssetUrl } from "../../utils/asset";
+import { getActivePosters } from "../notifications/notifications.api";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -35,6 +36,7 @@ export default function DashboardPage() {
   const theme = useTheme();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [posters, setPosters] = useState([]);
 
   useEffect(() => {
     async function load() {
@@ -46,6 +48,11 @@ export default function DashboardPage() {
           const res = await fetchTeacherDashboard();
           setData(res);
         }
+
+        const postersRes = await getActivePosters();
+        if (postersRes.success) {
+          setPosters(postersRes.data || []);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -53,6 +60,16 @@ export default function DashboardPage() {
       }
     }
     load();
+
+    const refreshHandler = () => {
+      getActivePosters().then(res => {
+        if (res.success) setPosters(res.data || []);
+      }).catch(console.error);
+    };
+    window.addEventListener("posters:refresh", refreshHandler);
+    return () => {
+      window.removeEventListener("posters:refresh", refreshHandler);
+    };
   }, [user]);
 
   if (loading) {
@@ -62,6 +79,57 @@ export default function DashboardPage() {
       </Box>
     );
   }
+
+  const renderPosters = () => {
+    if (!posters || posters.length === 0) return null;
+    return (
+      <Stack spacing={2} sx={{ mb: 3 }}>
+        {posters.map((poster) => (
+          <Paper
+            key={poster.id}
+            sx={{
+              p: 2.5,
+              borderRadius: "16px",
+              border: "1px solid",
+              borderColor: "primary.light",
+              background: (theme) => `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.1)} 0%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+              {poster.image_url && (
+                <Box
+                  sx={{
+                    width: { xs: "100%", sm: 120 },
+                    height: { xs: 120, sm: 90 },
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    border: "1px solid rgba(0,0,0,0.06)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <img
+                    src={getAssetUrl(poster.image_url)}
+                    alt="poster"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </Box>
+              )}
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle1" fontWeight="bold" color="primary.dark" sx={{ mb: 0.5 }}>
+                  📢 {poster.title}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "pre-line" }}>
+                  {poster.message}
+                </Typography>
+              </Box>
+            </Stack>
+          </Paper>
+        ))}
+      </Stack>
+    );
+  };
 
   // TEACHER VIEW
   if (user.role === 'teacher') {
@@ -171,6 +239,7 @@ export default function DashboardPage() {
         </Box>
 
         <Container sx={{ mt: 3 }}>
+          {renderPosters()}
           <TeacherDashboard data={data} />
         </Container>
       </Box>
@@ -266,6 +335,7 @@ export default function DashboardPage() {
       </Box>
 
       <Container sx={{ mt: 3 }}>
+        {renderPosters()}
         <Stack spacing={2}>
 
           {/* Latest Exam Card */}

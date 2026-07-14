@@ -75,7 +75,11 @@ export function setupAxiosInterceptors({ onLogout, onTokenRefresh }) {
       if (error.response?.status === 401) {
         // If we get a 401, it means the token is invalid or expired
         // Since we don't have a reliable refresh token flow yet, we just logout
-        onLogout();
+        // BUT do not logout if it's the login request itself!
+        const isLoginRequest = originalRequest?.url && originalRequest.url.includes("/auth/login");
+        if (!isLoginRequest) {
+          onLogout();
+        }
         return Promise.reject(error);
       }
 

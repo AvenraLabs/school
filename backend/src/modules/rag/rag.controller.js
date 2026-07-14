@@ -35,6 +35,7 @@ export const askQuestion = asyncHandler(async (req, res) => {
     question,
     classLevel: effectiveClassLevel,
     userId: req.user.id,
+    allowFallback: false,
   });
 
   return res.json({

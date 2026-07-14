@@ -7,6 +7,7 @@ import {
   resetSchoolAdminPasswordService,
   getSchoolStatsService,
   updateSchoolService,
+  updateSchoolSettingsService,
 } from "./school.service.js";
 
 /* CREATE SCHOOL */
@@ -61,4 +62,10 @@ export const resetSchoolAdminPassword = asyncHandler(async (req, res) => {
 export const updateSchool = asyncHandler(async (req, res) => {
   const school = await updateSchoolService(req.params.id, req.body);
   res.json({ message: "School updated successfully", data: school });
+});
+
+/* UPDATE SCHOOL SETTINGS */
+export const updateSchoolSettings = asyncHandler(async (req, res) => {
+  const result = await updateSchoolSettingsService(req.user.school_id, req.body);
+  res.json({ success: true, message: "School settings updated successfully", data: result });
 });

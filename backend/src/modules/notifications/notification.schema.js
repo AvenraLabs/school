@@ -7,10 +7,14 @@ export const createNotificationSchema = z.object({
 
   target_role: z.enum(["teacher", "student", "all"]),
 
-  class_id: z.number().int().positive().optional(),
-  section_id: z.number().int().positive().optional(),
-  send_whatsapp: z.boolean().optional(),
-  image_url: z.string().optional(),
+  class_id: z.number().int().positive().optional().nullable(),
+  section_id: z.number().int().positive().optional().nullable(),
+  send_whatsapp: z.boolean().optional().nullable(),
+  image_url: z.string().optional().nullable(),
+  is_poster: z.boolean().optional().nullable(),
+  start_date: z.string().optional().nullable(),
+  end_date: z.string().optional().nullable(),
+  specific_dates: z.array(z.string()).optional().nullable(),
 });
 
 

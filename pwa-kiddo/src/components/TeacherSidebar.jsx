@@ -28,9 +28,19 @@ export default function TeacherSidebar({ open, onClose }) {
         onClose();
     };
 
-    const handleLogout = () => {
-        logout();
-        navigate("/login", { replace: true });
+    const handleLogout = async () => {
+        const nextUser = await logout();
+        if (nextUser) {
+            let basePath = "/student";
+            if (nextUser.role === "teacher") {
+                basePath = "/teacher";
+            } else if (nextUser.role === "driver") {
+                basePath = "/driver";
+            }
+            window.location.href = `${basePath}/dashboard`;
+        } else {
+            window.location.href = "/login";
+        }
         onClose();
     };
 

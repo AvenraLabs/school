@@ -60,6 +60,26 @@ const Notification = db.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+
+    is_poster: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+
+    start_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
+
+    end_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
+
+    specific_dates: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+    },
   },
   {
     tableName: "notifications",

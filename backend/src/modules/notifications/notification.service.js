@@ -15,6 +15,10 @@ export const createNotificationService = async ({
   class_id,
   section_id,
   image_url,
+  is_poster,
+  start_date,
+  end_date,
+  specific_dates,
 }) => {
   /* Role enforcement */
   if (sender_role === "teacher" && target_role === "teacher") {
@@ -35,6 +39,10 @@ export const createNotificationService = async ({
     class_id,
     section_id,
     image_url,
+    is_poster,
+    start_date,
+    end_date,
+    specific_dates,
   });
 
   return notification;

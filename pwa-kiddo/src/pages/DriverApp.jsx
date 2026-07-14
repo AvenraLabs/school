@@ -360,9 +360,19 @@ function DriverProfile() {
     }
   };
 
-  const handleSignOut = () => {
-    logout();
-    navigate("/login");
+  const handleSignOut = async () => {
+    const nextUser = await logout();
+    if (nextUser) {
+      let basePath = "/student";
+      if (nextUser.role === "teacher") {
+        basePath = "/teacher";
+      } else if (nextUser.role === "driver") {
+        basePath = "/driver";
+      }
+      window.location.href = `${basePath}/dashboard`;
+    } else {
+      window.location.href = "/login";
+    }
   };
 
   return (

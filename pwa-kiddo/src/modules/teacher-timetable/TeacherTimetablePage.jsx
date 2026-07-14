@@ -19,7 +19,6 @@ import {
 } from "@mui/material";
 import { Edit, AccessTime, School, CalendarMonth } from "@mui/icons-material";
 import { useTeacherTimetable } from "./useTeacherTimetable";
-import TeacherTimetableView from "./TeacherTimetableView";
 import ManageTimetableDialog from "./ManageTimetableDialog";
 import { useTeacherAssignments } from "./useTeacherAssignments";
 import { getTimetable } from "./teacherTimetable.api";
@@ -133,20 +132,87 @@ export default function TeacherTimetablePage() {
             Your personal teaching schedule across different sections.
           </Typography>
 
+          {/* Day of Week Selector */}
+          <Tabs
+            value={activeDay}
+            onChange={(_, val) => setActiveDay(val)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ mb: 3, borderBottom: 1, borderColor: "divider", bgcolor: "background.paper", borderRadius: 2 }}
+          >
+            {["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"].map((day) => (
+              <Tab key={day} label={day.slice(0, 3).toUpperCase()} value={day} />
+            ))}
+          </Tabs>
+
           {myTimetableLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
               <CircularProgress />
             </Box>
           ) : myTimetableError ? (
             <Alert severity="error" sx={{ mt: 2 }}>{myTimetableError}</Alert>
-          ) : timetable && Object.values(timetable).some((day) => Array.isArray(day) && day.length > 0) ? (
-            <TeacherTimetableView timetable={timetable} />
-          ) : (
+          ) : !timetable?.[activeDay] || timetable[activeDay].length === 0 ? (
             <Paper sx={{ p: 4, textAlign: "center", borderRadius: 3, border: "1px dashed rgba(0,0,0,0.12)" }}>
               <Typography color="text.secondary">
-                No teaching assignments scheduled for you yet.
+                No classes scheduled for you on {activeDay.charAt(0).toUpperCase() + activeDay.slice(1)} yet.
               </Typography>
             </Paper>
+          ) : (
+            <Stack spacing={2} sx={{ pb: 3 }}>
+              {timetable[activeDay].map((p, idx) => {
+                const isBreak = p.is_break;
+                const className = p.class?.class_name || p.Class?.class_name || "";
+                const sectionName = p.section?.name || p.Section?.name || "";
+                const classSection = [className, sectionName].filter(Boolean).join("-");
+                const start = fmtTime(p.start_time);
+                const end = fmtTime(p.end_time);
+                const dur = durationLabel(p.start_time, p.end_time);
+                const timeLabel = `${start}${end ? ` - ${end}` : ""}`;
+
+                return (
+                  <Paper
+                    key={p.id || idx}
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      borderLeft: 6,
+                      borderColor: isBreak ? "warning.main" : "primary.main",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                      bgcolor: isBreak ? "warning.light" : "background.paper"
+                    }}
+                  >
+                    <Box sx={{ mr: 2, color: "text.secondary" }}>
+                      <AccessTime fontSize="small" sx={{ verticalAlign: "middle", mr: 0.5 }} />
+                      <Typography variant="body2" fontWeight="bold" display="inline-block">
+                        {timeLabel}
+                      </Typography>
+                      {dur && (
+                        <Typography variant="caption" display="block" color="text.secondary">
+                          {dur}
+                        </Typography>
+                      )}
+                    </Box>
+
+                    <Box sx={{ textAlign: "right", flex: 1 }}>
+                      <Typography variant="subtitle1" fontWeight="bold" color={isBreak ? "warning.dark" : "text.primary"}>
+                        {isBreak ? (p.title || "Break") : (p.subject?.name || "Subject")}
+                      </Typography>
+                      {!isBreak && classSection && (
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5, mt: 0.5 }}>
+                          <School fontSize="small" color="action" />
+                          <Typography variant="body2" color="text.secondary">
+                            Class {classSection}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Paper>
+                );
+              })}
+            </Stack>
           )}
         </Box>
       )}

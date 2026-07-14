@@ -203,10 +203,14 @@ export const startTrip = asyncHandler(async (req, res) => {
     io: req.io,
   });
 
-  // Call WhatsApp service in the background
-  whatsappService.sendBusTripStarted(req.body.vehicle_id).catch((err) =>
-    console.error("WhatsApp bus trip started alert background error:", err)
-  );
+  // Call WhatsApp service in the background if enabled
+  const School = (await import("../schools/school.model.js")).default;
+  const school = await School.findByPk(req.user.school_id);
+  if (school && school.whatsapp_bus_start_enabled) {
+    whatsappService.sendBusTripStarted(req.body.vehicle_id).catch((err) =>
+      console.error("WhatsApp bus trip started alert background error:", err)
+    );
+  }
 
   res.json({
     success: true,
@@ -222,8 +226,10 @@ export const stopTrip = asyncHandler(async (req, res) => {
     io: req.io,
   });
 
-  // Call WhatsApp service in the background
-  if (result && result.vehicle_id) {
+  // Call WhatsApp service in the background if enabled
+  const School = (await import("../schools/school.model.js")).default;
+  const school = await School.findByPk(req.user.school_id);
+  if (school && school.whatsapp_bus_end_enabled && result && result.vehicle_id) {
     whatsappService.sendBusTripEnded(result.vehicle_id).catch((err) =>
       console.error("WhatsApp bus trip ended alert background error:", err)
     );
@@ -258,9 +264,11 @@ export const getStudentTransport = asyncHandler(async (req, res) => {
     school_id: req.user.school_id,
     student_id: Number(req.params.student_id),
   });
+  const School = (await import("../schools/school.model.js")).default;
+  const school = await School.findByPk(req.user.school_id, { attributes: ["google_maps_enabled"] });
   res.json({
     success: true,
-    data: result,
+    data: result ? { ...result, google_maps_enabled: school?.google_maps_enabled || false } : null,
   });
 });
 
@@ -296,9 +304,11 @@ export const getStudentTransportDetails = asyncHandler(async (req, res) => {
     school_id: req.user.school_id,
     student_user_id: req.user.id,
   });
+  const School = (await import("../schools/school.model.js")).default;
+  const school = await School.findByPk(req.user.school_id, { attributes: ["google_maps_enabled"] });
   res.json({
     success: true,
-    data: result,
+    data: result ? { ...result.toJSON(), google_maps_enabled: school?.google_maps_enabled || false } : null,
   });
 });
 

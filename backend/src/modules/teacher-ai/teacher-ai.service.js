@@ -67,17 +67,13 @@ ${ragText}
     sourceType = "rag";
     sources = formatRagSources(context.metadatas);
   } else if (requireRag.has(aiType)) {
-    if (!chromaFailed) {
-      // Strict RAG-only for lesson summary & question paper (only if Chroma did not fail)
-      return {
-        text: "I don't know.",
-        source_type: "none",
-        sources: [],
-        filters_used: filtersUsed,
-      };
-    } else {
-      sourceType = "fallback_chroma_failed";
-    }
+    // Strict RAG-only for lesson summary & question paper (always refuse fallback)
+    return {
+      text: "I don't know.",
+      source_type: "none",
+      sources: [],
+      filters_used: filtersUsed,
+    };
   }
 
   // 🤖 Call Gemini

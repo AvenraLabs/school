@@ -9,6 +9,7 @@ export const createSchoolSchema = z.object({
   email: z.union([z.string().email(), z.literal('')]).optional().default(''),
   admin_username: z.string().min(3),
   admin_password: z.string().min(6),
+  google_maps_enabled: z.boolean().optional(),
 });
 
 export const updateSchoolStatusSchema = z.object({
@@ -31,4 +32,7 @@ export const updateSchoolSchema = z.object({
   zip: z.string().optional(),
   email: z.union([z.string().email(), z.literal('')]).optional(),
   contact_phone: z.string().optional(),
+  whatsapp_bus_start_enabled: z.boolean().optional(),
+  whatsapp_bus_end_enabled: z.boolean().optional(),
+  google_maps_enabled: z.boolean().optional(),
 });

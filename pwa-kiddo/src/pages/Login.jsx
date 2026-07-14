@@ -7,6 +7,7 @@ import {
   GlobalStyles,
   IconButton,
   Button,
+  Avatar,
 } from "@mui/material";
 import { SchoolRounded, DownloadRounded, CloseRounded } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
@@ -17,7 +18,7 @@ import { useTheme } from "@mui/material/styles";
 import { setThemeColor } from "../pwa/themeMeta";
 
 export default function Login() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, accounts, switchAccount } = useAuth();
   const [blocked, setBlocked] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const { canInstall, isInstalled, install } = usePwaInstall();
@@ -575,6 +576,43 @@ export default function Login() {
                 </Alert>
               )}
               <LoginForm />
+
+              {accounts && accounts.length > 0 && (
+                <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
+                  <Button
+                    variant="text"
+                    startIcon={
+                      <Avatar 
+                        src={accounts[0].user.avatar_url} 
+                        sx={{ width: 20, height: 20, fontSize: 10, bgcolor: "primary.main" }}
+                      >
+                        {(accounts[0].user.name || accounts[0].user.username || "U")[0].toUpperCase()}
+                      </Avatar>
+                    }
+                    onClick={() => {
+                      switchAccount(accounts[0].user.id);
+                      const basePath = accounts[0].user.role === "teacher" ? "/teacher" : "/student";
+                      window.location.href = `${basePath}/dashboard`;
+                    }}
+                    sx={{
+                      textTransform: "none",
+                      color: "rgba(0, 0, 0, 0.6)",
+                      fontFamily: "'Inter', sans-serif",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      borderRadius: "20px",
+                      px: 2,
+                      py: 0.5,
+                      "&:hover": {
+                        backgroundColor: "rgba(0, 0, 0, 0.04)",
+                        color: "#8f46c3",
+                      }
+                    }}
+                  >
+                    Cancel & Return to {accounts[0].user.name || accounts[0].user.username}
+                  </Button>
+                </Box>
+              )}
             </Box>
           </Box>
 

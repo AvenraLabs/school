@@ -16,6 +16,24 @@ export const createNotification = asyncHandler(async (req, res) => {
     ...notificationData,
   });
 
+  // Real-time socket broadcast for push notifications
+  if (req.io) {
+    const schoolRoom = `school:${req.user.school_id}`;
+    req.io.to(schoolRoom).emit("notification:new", {
+      id: notification.id,
+      title: notification.title,
+      message: notification.message,
+      target_role: notification.target_role,
+      class_id: notification.class_id,
+      section_id: notification.section_id,
+      is_poster: notification.is_poster,
+      start_date: notification.start_date,
+      end_date: notification.end_date,
+      specific_dates: notification.specific_dates,
+      image_url: notification.image_url,
+    });
+  }
+
   if (send_whatsapp) {
     // Resolve and send in the background
     whatsappService.resolveAnnouncementRecipients({
@@ -170,3 +188,78 @@ export const markAllNotificationsAsRead = asyncHandler(async (req, res) => {
     message: "All notifications marked as read",
   });
 });
+
+/* ALL USERS: FETCH ACTIVE POSTERS */
+export const getActivePosters = asyncHandler(async (req, res) => {
+  const school_id = req.user.school_id;
+  const user_role = req.user.role;
+  const user_id = req.user.id;
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const { Op } = (await import("sequelize")).default;
+  const Notification = (await import("./notification.model.js")).default;
+
+  // Resolve target classes/sections for student/teacher
+  let classIds = [];
+  let sectionIds = [];
+
+  if (user_role === "student") {
+    if (req.user.class_id) classIds = [Number(req.user.class_id)];
+    if (req.user.section_id) sectionIds = [Number(req.user.section_id)];
+  } else if (user_role === "teacher") {
+    const TeacherAssignment = (await import("../teacher-assignments/teacher-assignment.model.js")).default;
+    const assignments = await TeacherAssignment.findAll({
+      where: { teacher_id: user_id },
+      attributes: ["class_id", "section_id"],
+    });
+    classIds = assignments.map((a) => Number(a.class_id)).filter(Boolean);
+    sectionIds = assignments.map((a) => Number(a.section_id)).filter(Boolean);
+  }
+
+  const where = {
+    school_id,
+    is_poster: true,
+    is_active: true,
+  };
+
+  if (user_role !== "school_admin") {
+    const audienceFilter = { target_role: { [Op.in]: [user_role, "all"] } };
+    
+    // Class/section scope
+    const scopeConditions = [{ class_id: null }];
+    if (classIds.length) scopeConditions.push({ class_id: { [Op.in]: classIds } });
+    if (sectionIds.length) scopeConditions.push({ section_id: { [Op.in]: sectionIds } });
+
+    where[Op.and] = [
+      audienceFilter,
+      { [Op.or]: scopeConditions },
+    ];
+  }
+
+  const allPosters = await Notification.findAll({
+    where,
+    order: [["created_at", "DESC"]],
+  });
+
+  const activePosters = allPosters.filter((row) => {
+    if (row.specific_dates && Array.isArray(row.specific_dates) && row.specific_dates.length > 0) {
+      return row.specific_dates.includes(today);
+    }
+    if (row.start_date && row.end_date) {
+      return row.start_date <= today && row.end_date >= today;
+    }
+    return false;
+  });
+
+  res.json({
+    success: true,
+    data: activePosters.map((row) => {
+      const plain = row.toJSON();
+      return {
+        ...plain,
+        created_at: plain.created_at || plain.createdAt,
+        updated_at: plain.updated_at || plain.updatedAt,
+      };
+    }),
+  });
+});
+

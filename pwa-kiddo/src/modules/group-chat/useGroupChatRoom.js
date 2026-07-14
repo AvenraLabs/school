@@ -54,21 +54,21 @@ export function useGroupChatRoom(chatId) {
     });
   }
 
-  function sendImageMessage(imageUrl) {
+  function sendFileMessage(fileUrl, fileType) {
     const socket = socketRef.current || connectGroupChatSocket(token);
     socketRef.current = socket;
 
     socket.emit("group:message", {
       chatId,
-      type: "image",
-      imageUrl,
+      type: fileType,
+      imageUrl: fileUrl,
     });
   }
 
   return {
     messages,
     sendMessage,
-    sendImageMessage,
+    sendFileMessage,
   };
 }
 

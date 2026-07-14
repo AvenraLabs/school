@@ -7,8 +7,19 @@ import { useAuth } from "./AuthProvider";
 function AuthErrorFallback({ error, resetErrorBoundary }) {
   const { logout } = useAuth();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    const nextUser = await logout();
+    if (nextUser) {
+      let basePath = "/student";
+      if (nextUser.role === "teacher") {
+        basePath = "/teacher";
+      } else if (nextUser.role === "driver") {
+        basePath = "/driver";
+      }
+      window.location.href = `${basePath}/dashboard`;
+    } else {
+      window.location.href = "/login";
+    }
     resetErrorBoundary();
   };
 

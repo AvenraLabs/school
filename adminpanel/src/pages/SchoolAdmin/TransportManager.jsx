@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { transportAPI, studentsAPI, classesAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { StatusBadge } from '../../components/common/StatusBadge';
@@ -266,9 +266,11 @@ export function TransportManager() {
   const [showMapModal, setShowMapModal] = useState(null);
   const [mapLocation, setMapLocation] = useState(null);
   const [mapLoading, setMapLoading] = useState(false);
-  const [leafletLoaded, setLeafletLoaded] = useState(false);
+  const [googleMapsEnabled, setGoogleMapsEnabled] = useState(false);
+  const [mapsLoaded, setMapsLoaded] = useState(false);
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
+  const markerRef = useRef(null);
   const locationIntervalRef = useRef(null);
 
   // Load Initial Configuration
@@ -288,47 +290,91 @@ export function TransportManager() {
     loadTabData();
   }, [page]);
 
-  // Load Leaflet dynamically when Active Trips is viewed
+  // Reset maps when switcher toggle changes to prevent conflicts
+  useEffect(() => {
+    if (mapRef.current) {
+      try {
+        if (typeof mapRef.current.remove === "function") {
+          mapRef.current.remove();
+        }
+      } catch (e) {
+        console.error("Cleanup map error:", e);
+      }
+      mapRef.current = null;
+    }
+    if (markerRef.current) {
+      markerRef.current = null;
+    }
+    if (mapContainerRef.current) {
+      mapContainerRef.current.innerHTML = "";
+    }
+    setMapsLoaded(false);
+  }, [googleMapsEnabled]);
+
+  // Dynamic Map Script Loader (Google Maps or Leaflet)
   useEffect(() => {
     if (activeTab !== 'active-trips' && !showMapModal) return;
 
-    // Add pulse animation style to document head if not already present
-    if (!document.getElementById("leaflet-pulse-style")) {
-      const style = document.createElement("style");
-      style.id = "leaflet-pulse-style";
-      style.innerHTML = `
-        @keyframes marker-pulse {
-          0% {
-            transform: scale(0.6);
-            opacity: 0.9;
+    if (googleMapsEnabled) {
+      if (window.google && window.google.maps) {
+        setMapsLoaded(true);
+        return;
+      }
+      const scriptId = "google-maps-api-script";
+      if (document.getElementById(scriptId)) {
+        const checkExist = setInterval(() => {
+          if (window.google && window.google.maps) {
+            setMapsLoaded(true);
+            clearInterval(checkExist);
           }
-          100% {
-            transform: scale(2.2);
-            opacity: 0;
+        }, 100);
+        return;
+      }
+      const script = document.createElement("script");
+      script.id = scriptId;
+      const key = import.meta.env.VITE_GOOGLE_MAPS_KEY || "";
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${key}`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => setMapsLoaded(true);
+      document.head.appendChild(script);
+    } else {
+      if (!document.getElementById("leaflet-pulse-style")) {
+        const style = document.createElement("style");
+        style.id = "leaflet-pulse-style";
+        style.innerHTML = `
+          @keyframes marker-pulse {
+            0% {
+              transform: scale(0.6);
+              opacity: 0.9;
+            }
+            100% {
+              transform: scale(2.2);
+              opacity: 0;
+            }
           }
-        }
-      `;
-      document.head.appendChild(style);
+        `;
+        document.head.appendChild(style);
+      }
+
+      if (window.L) {
+        setMapsLoaded(true);
+        return;
+      }
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
+      script.async = true;
+      script.onload = () => {
+        setMapsLoaded(true);
+      };
+      document.head.appendChild(script);
     }
-
-    if (window.L) {
-      setLeafletLoaded(true);
-      return;
-    }
-
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
-    script.async = true;
-    script.onload = () => {
-      setLeafletLoaded(true);
-    };
-    document.head.appendChild(script);
-  }, [activeTab, showMapModal]);
+  }, [activeTab, showMapModal, googleMapsEnabled]);
 
   const loadClasses = async () => {
     try {
@@ -363,6 +409,7 @@ export function TransportManager() {
       if (activeTab === 'dashboard') {
         const res = await transportAPI.getDashboardStats();
         setStats(res.data);
+        setGoogleMapsEnabled(res.data?.google_maps_enabled || false);
       } else if (activeTab === 'vehicles') {
         const res = await transportAPI.listVehicles({ limit, offset: page * limit });
         setVehicles(res.data || []);
@@ -382,6 +429,7 @@ export function TransportManager() {
         setStats(res.data);
         setTrips(res.data?.runningBuses || []);
         setTotalItems(res.data?.runningBuses?.length || 0);
+        setGoogleMapsEnabled(res.data?.google_maps_enabled || false);
       } else if (activeTab === 'trip-history') {
         const res = await transportAPI.listTrips({ limit, offset: page * limit });
         setTrips(res.data || []);
@@ -595,81 +643,139 @@ export function TransportManager() {
       clearInterval(locationIntervalRef.current);
     }
     if (mapRef.current) {
-      mapRef.current.remove();
+      try {
+        if (typeof mapRef.current.remove === "function") {
+          mapRef.current.remove();
+        }
+      } catch (e) {
+        console.error("Cleanup map error:", e);
+      }
       mapRef.current = null;
+    }
+    if (markerRef.current) {
+      markerRef.current = null;
     }
     setShowMapModal(null);
     setMapLocation(null);
+    setMapsLoaded(false);
   };
 
   useEffect(() => {
-    if (!leafletLoaded || !mapContainerRef.current || !mapLocation || !showMapModal) return;
-
-    const L = window.L;
-    if (!L) return;
+    if (!mapsLoaded || !mapContainerRef.current || !mapLocation || !showMapModal) return;
 
     const lat = Number(mapLocation.latitude);
     const lng = Number(mapLocation.longitude);
 
-    // Create a beautiful custom pulsing SVG bus icon
-    const busIcon = L.divIcon({
-      html: `
-        <div style="
-          position: relative;
-          width: 36px;
-          height: 36px;
-          background: #1976d2;
-          border: 2px solid #ffffff;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        ">
+    if (googleMapsEnabled) {
+      const google = window.google;
+      if (!google || !google.maps) return;
+
+      const busSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36">
+          <circle cx="12" cy="12" r="11" fill="#1976d2" stroke="#ffffff" stroke-width="2"/>
+          <path d="M7 15c0 .37.3.7.7.7h.7c.36 0 .7-.33.7-.7v-.7h5.8v.7c0 .37.3.7.7.7h.7c.37 0 .7-.33.7-.7v-2.3c0-2.33-2.39-3-5.33-3s-5.34.67-5.34 3V15zm1-2.7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm8.7 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zM16 7H8V5.7h8V7z" fill="#ffffff"/>
+        </svg>
+      `;
+      const busIconUrl = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(busSvg);
+
+      if (!mapRef.current) {
+        const map = new google.maps.Map(mapContainerRef.current, {
+          center: { lat, lng },
+          zoom: 15,
+          mapTypeId: "roadmap",
+          disableDefaultUI: true,
+          zoomControl: true,
+        });
+        mapRef.current = map;
+
+        const marker = new google.maps.Marker({
+          position: { lat, lng },
+          map: mapRef.current,
+          icon: {
+            url: busIconUrl,
+            size: new google.maps.Size(36, 36),
+            scaledSize: new google.maps.Size(36, 36),
+            origin: new google.maps.Point(0, 0),
+            anchor: new google.maps.Point(18, 18),
+          },
+          title: showMapModal.vehicle_name || "Bus",
+        });
+        markerRef.current = marker;
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `<b>${showMapModal.vehicle_name}</b><br/>Driver: ${showMapModal.driver_name}`,
+        });
+        infoWindow.open(mapRef.current, marker);
+        marker.addListener("click", () => {
+          infoWindow.open(mapRef.current, marker);
+        });
+      } else {
+        mapRef.current.setCenter({ lat, lng });
+        if (markerRef.current) {
+          markerRef.current.setPosition({ lat, lng });
+        }
+      }
+    } else {
+      const L = window.L;
+      if (!L) return;
+
+      const busIcon = L.divIcon({
+        html: `
           <div style="
-            position: absolute;
-            top: -2px;
-            left: -2px;
+            position: relative;
             width: 36px;
             height: 36px;
-            border: 2px solid #1976d2;
+            background: #1976d2;
+            border: 2px solid #ffffff;
             border-radius: 50%;
-            animation: marker-pulse 1.8s infinite ease-out;
-            pointer-events: none;
-          "></div>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="#ffffff">
-            <path d="M4 16c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h10v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-3.5c0-3.5-3.58-4.5-8-4.5s-8 1-8 4.5V16zm1.5-4c-.83 0-1.5-.67-1.5-1.5S4.67 9 5.5 9 7 9.67 7 10.5 6.33 12 5.5 12zm13 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM18 4H6V2h12v2z"/>
-          </svg>
-        </div>
-      `,
-      className: 'custom-bus-marker',
-      iconSize: [36, 36],
-      iconAnchor: [18, 18],
-      popupAnchor: [0, -18]
-    });
-
-    if (!mapRef.current) {
-      const map = L.map(mapContainerRef.current).setView([lat, lng], 15);
-      mapRef.current = map;
-
-      // Use premium CartoDB Positron map tiles instead of default OpenStreetMap tiles
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
-      }).addTo(map);
-
-      L.marker([lat, lng], { icon: busIcon }).addTo(map).bindPopup(`<b>${showMapModal.vehicle_name}</b><br/>Driver: ${showMapModal.driver_name}`).openPopup();
-    } else {
-      mapRef.current.setView([lat, lng]);
-      mapRef.current.eachLayer((layer) => {
-        if (layer instanceof L.Marker) {
-          mapRef.current.removeLayer(layer);
-        }
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+          ">
+            <div style="
+              position: absolute;
+              top: -2px;
+              left: -2px;
+              width: 36px;
+              height: 36px;
+              border: 2px solid #1976d2;
+              border-radius: 50%;
+              animation: marker-pulse 1.8s infinite ease-out;
+              pointer-events: none;
+            "></div>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="#ffffff">
+              <path d="M4 16c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h10v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-3.5c0-3.5-3.58-4.5-8-4.5s-8 1-8 4.5V16zm1.5-4c-.83 0-1.5-.67-1.5-1.5S4.67 9 5.5 9 7 9.67 7 10.5 6.33 12 5.5 12zm13 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM18 4H6V2h12v2z"/>
+            </svg>
+          </div>
+        `,
+        className: 'custom-bus-marker',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -18]
       });
-      L.marker([lat, lng], { icon: busIcon }).addTo(mapRef.current).bindPopup(`<b>${showMapModal.vehicle_name}</b><br/>Driver: ${showMapModal.driver_name}`).openPopup();
+
+      if (!mapRef.current) {
+        const map = L.map(mapContainerRef.current).setView([lat, lng], 15);
+        mapRef.current = map;
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
+          maxZoom: 20
+        }).addTo(map);
+        
+        L.marker([lat, lng], { icon: busIcon }).addTo(map).bindPopup(`<b>${showMapModal.vehicle_name}</b><br/>Driver: ${showMapModal.driver_name}`).openPopup();
+      } else {
+        mapRef.current.setView([lat, lng]);
+        mapRef.current.eachLayer((layer) => {
+          if (layer instanceof L.Marker) {
+            mapRef.current.removeLayer(layer);
+          }
+        });
+        L.marker([lat, lng], { icon: busIcon }).addTo(mapRef.current).bindPopup(`<b>${showMapModal.vehicle_name}</b><br/>Driver: ${showMapModal.driver_name}`).openPopup();
+      }
     }
-  }, [leafletLoaded, mapLocation, showMapModal]);
+  }, [mapsLoaded, mapLocation, showMapModal, googleMapsEnabled]);
 
   const totalPages = Math.ceil(totalItems / limit);
   const selectedClassDetails = classes.find(c => String(c.id) === String(filterClass));

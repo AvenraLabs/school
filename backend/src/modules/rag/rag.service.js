@@ -126,20 +126,26 @@ export async function retrieveRagContext({
     name: COLLECTION_NAME,
   });
 
+  const where = {};
+  if (classLevel) {
+    where.class = String(normalizeClassLevel(classLevel));
+  }
+
   const results = await collection.query({
     queryTexts: [query],
     nResults: 5,
+    where: Object.keys(where).length > 0 ? where : undefined,
   });
 
   return {
-    chunks: results.documents.flat(),
-    metadatas: results.metadatas.flat(),
-    filter: "global",
+    chunks: (results.documents || []).flat(),
+    metadatas: (results.metadatas || []).flat(),
+    filter: classLevel ? "class" : "global",
     classLevel: normalizeClassLevel(classLevel),
   };
 }
 
-export async function askRag({ question, classLevel, userId }) {
+export async function askRag({ question, classLevel, userId, allowFallback = true }) {
   let answer;
   let tokensUsed = 0;
   let usedFilter = "none";
@@ -270,9 +276,13 @@ Answer (simple, clear, student-friendly):
 
   // Fallback to direct Gemini query if Chroma/RAG failed OR if no RAG answer was found/resolved
   if (chromaFailed || !finalChunks.length || (answer && answer.trim().toLowerCase() === "i don't know") || answer === "I could not find an answer in the textbook.") {
-    usedFilter = chromaFailed ? "fallback_chroma_failed" : "fallback_no_context";
-    
-    const prompt = `
+    if (!allowFallback) {
+      answer = "I could not find an answer in the textbook.";
+      usedFilter = "no_fallback_refused";
+    } else {
+      usedFilter = chromaFailed ? "fallback_chroma_failed" : "fallback_no_context";
+      
+      const prompt = `
 You are a school tutor.
 Answer the student's question in a simple, clear, student-friendly way.
 
@@ -285,17 +295,18 @@ ${question}
 Answer:
 `;
 
-    const result = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: prompt,
-    });
-    
-    const usage = result.usageMetadata || {};
-    tokensUsed = usage.totalTokenCount || tokensUsed;
-    answer =
-      result.text ||
-      result?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ||
-      "";
+      const result = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: prompt,
+      });
+      
+      const usage = result.usageMetadata || {};
+      tokensUsed = usage.totalTokenCount || tokensUsed;
+      answer =
+        result.text ||
+        result?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ||
+        "";
+    }
   }
 
   // 🔹 Log AI usage

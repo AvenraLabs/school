@@ -270,3 +270,40 @@ export const updateSchoolService = async (school_id, payload) => {
   await school.update(payload);
   return school;
 };
+
+/* =========================
+   SCHOOL ADMIN: UPDATE SETTINGS
+   ========================= */
+export const updateSchoolSettingsService = async (school_id, { risk_attendance_cutoff, risk_academic_cutoff, risk_grade_drop_margin }) => {
+  const school = await School.findByPk(school_id);
+  if (!school) {
+    throw new AppError("School not found", 404);
+  }
+
+  if (risk_attendance_cutoff !== undefined) {
+    const val = Number(risk_attendance_cutoff);
+    if (isNaN(val) || val < 1 || val > 100) {
+      throw new AppError("Attendance cutoff must be between 1 and 100", 400);
+    }
+    school.risk_attendance_cutoff = val;
+  }
+
+  if (risk_academic_cutoff !== undefined) {
+    const val = Number(risk_academic_cutoff);
+    if (isNaN(val) || val < 1 || val > 100) {
+      throw new AppError("Academic score cutoff must be between 1 and 100", 400);
+    }
+    school.risk_academic_cutoff = val;
+  }
+
+  if (risk_grade_drop_margin !== undefined) {
+    const val = Number(risk_grade_drop_margin);
+    if (isNaN(val) || val < 1 || val > 100) {
+      throw new AppError("Grade drop margin must be between 1 and 100", 400);
+    }
+    school.risk_grade_drop_margin = val;
+  }
+
+  await school.save();
+  return school;
+};

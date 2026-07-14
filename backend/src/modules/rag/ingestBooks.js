@@ -92,11 +92,25 @@ async function ingest() {
     console.log(`\n📄 Processing: ${filePath}`);
 
     // ---- Extract metadata from path ----
-    // Example: books/class7/science.pdf
-    // Example: books/class6/english/chapter-1.pdf
+    // Examples:
+    // - books/1/science.pdf
+    // - books/cbse/10/english.pdf
+    // - books/class7/history.pdf
     const parts = filePath.split(path.sep);
-    const classIndex = parts.findIndex((p) => p.toLowerCase().startsWith("class"));
-    const className = classIndex >= 0 ? parts[classIndex] : "unknown";
+    
+    let classSegment = "unknown";
+    let classIndex = -1;
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i].toLowerCase();
+      const num = parseInt(p, 10);
+      if ((!isNaN(num) && num >= 1 && num <= 12) || p.startsWith("class")) {
+        classSegment = p;
+        classIndex = i;
+        break;
+      }
+    }
+
+    const className = classSegment;
     const subjectName =
       classIndex >= 0 && classIndex + 1 < parts.length - 1
         ? parts[classIndex + 1]

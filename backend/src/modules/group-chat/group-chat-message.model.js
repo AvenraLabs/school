@@ -30,7 +30,7 @@ const GroupChatMessage = db.define(
     },
 
     message_type: {
-      type: DataTypes.ENUM("text", "image"),
+      type: DataTypes.ENUM("text", "image", "pdf"),
       allowNull: false,
     },
 

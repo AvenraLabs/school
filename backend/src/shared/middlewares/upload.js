@@ -35,11 +35,18 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+  let allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+  if (file.fieldname === "chat") {
+    allowedTypes.push("application/pdf");
+  }
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only JPEG, PNG, WEBP and GIF images are allowed"), false);
+    if (file.fieldname === "chat") {
+      cb(new Error("Only JPEG, PNG, WEBP, GIF images and PDF documents are allowed"), false);
+    } else {
+      cb(new Error("Only JPEG, PNG, WEBP and GIF images are allowed"), false);
+    }
   }
 };
 

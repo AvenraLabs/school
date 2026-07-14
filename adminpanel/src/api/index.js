@@ -73,8 +73,11 @@ export const schoolAPI = {
     return response.data;
   },
 
-  getSchoolAnalytics: async () => {
-    const response = await axiosInstance.get('/analytics/school');
+  getSchoolAnalytics: async (classId, sectionId) => {
+    const params = {};
+    if (classId) params.class_id = classId;
+    if (sectionId) params.section_id = sectionId;
+    const response = await axiosInstance.get('/analytics/school', { params });
     return response.data;
   },
 
@@ -96,6 +99,11 @@ export const schoolAPI = {
 
   update: async (schoolId, schoolData) => {
     const response = await axiosInstance.patch(`/schools/${schoolId}`, schoolData);
+    return response.data;
+  },
+
+  updateSchoolSettings: async (settingsData) => {
+    const response = await axiosInstance.patch('/schools/my-settings', settingsData);
     return response.data;
   },
 };
@@ -400,7 +408,7 @@ export const teacherAssignmentsAPI = {
 
 // Notifications API
 export const notificationsAPI = {
-  create: async (title, message, targetRole, classId, sectionId, sendWhatsApp, imageUrl) => {
+  create: async (title, message, targetRole, classId, sectionId, sendWhatsApp, imageUrl, isPoster = false, startDate = null, endDate = null, specificDates = null) => {
     const response = await axiosInstance.post('/notifications', {
       title,
       message,
@@ -409,6 +417,10 @@ export const notificationsAPI = {
       section_id: sectionId,
       send_whatsapp: sendWhatsApp,
       image_url: imageUrl,
+      is_poster: isPoster,
+      start_date: startDate,
+      end_date: endDate,
+      specific_dates: specificDates,
     });
     return response.data;
   },

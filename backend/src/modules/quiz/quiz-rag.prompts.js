@@ -3,11 +3,17 @@ export function buildQuizPrompt({
   classLevel,
   difficulty,
   numQuestions,
+  contextText,
 }) {
+  let contextInstruction = "";
+  if (contextText) {
+    contextInstruction = `Use the following textbook content as the source to construct the quiz questions. All questions, options, and correct answers MUST be derived from or be fully aligned with this text:\n\n${contextText}\n\n`;
+  }
+
   return `
 You are a school exam question setter.
 
-Create a quiz for:
+${contextInstruction}Create a quiz for:
 Class: ${classLevel}
 Topic: ${topic}
 Difficulty: ${difficulty}

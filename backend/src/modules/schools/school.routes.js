@@ -11,6 +11,7 @@ import {
   updateSchoolAdminStatus,
   resetSchoolAdminPassword,
   updateSchool,
+  updateSchoolSettings,
 } from "./school.controller.js";
 
 import {
@@ -38,6 +39,7 @@ router.get("/directory/sections/:sectionId", protect, allowRoles("school_admin",
 router.get("/directory/students/:studentId", protect, allowRoles("school_admin", "super_admin", "teacher"), getStudentProfile);
 router.get("/directory/students/:studentId/attendance-logs", protect, allowRoles("school_admin", "super_admin", "teacher"), getStudentAttendanceLogs);
 router.get("/dashboard-stats", protect, allowRoles("school_admin", "super_admin"), getDashboardStats);
+router.patch("/my-settings", protect, allowRoles("school_admin"), updateSchoolSettings);
 
 router.use(protect, allowRoles("super_admin"));
 

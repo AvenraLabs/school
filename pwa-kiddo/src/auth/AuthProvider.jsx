@@ -3,6 +3,8 @@ import { jwtDecode } from "jwt-decode";
 import { setupAxiosInterceptors } from "../api/axios.interceptors";
 import api from "../api/axios";
 import { validateToken, logoutApi } from "../api/auth.api";
+import { io } from "socket.io-client";
+import { SOCKET_BASE_URL } from "../api/config";
 
 const AuthContext = createContext(null);
 
@@ -11,6 +13,7 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [accounts, setAccounts] = useState(() => getSavedAccounts());
 
   // ---------- helpers ----------
   function decodeToken(jwt) {
@@ -39,6 +42,7 @@ export function AuthProvider({ children }) {
   // Save accounts helper
   function saveAccounts(accs) {
     localStorage.setItem("accounts", JSON.stringify(accs));
+    setAccounts(accs);
   }
 
   // ---------- bootstrap (restore session) ----------
@@ -129,16 +133,27 @@ export function AuthProvider({ children }) {
         const rejectionReason = data?.rejection_reason || normalized?.rejection_reason || null;
 
         if (!cancelled) {
-          setUser((prev) => ({
-            ...prev,
-            name: normalized?.name ?? prev?.name,
-            phone: normalized?.phone ?? prev?.phone,
-            email: normalized?.email ?? prev?.email,
-            avatar_url: avatarUrl || prev?.avatar_url || "",
-            // Always update approval_status so RequireApproval reads from context
-            ...(approvalStatus !== null ? { approval_status: approvalStatus } : {}),
-            rejection_reason: rejectionReason,
-          }));
+          setUser((prev) => {
+            if (!prev) return prev;
+            const updated = {
+              ...prev,
+              name: normalized?.name ?? prev?.name,
+              phone: normalized?.phone ?? prev?.phone,
+              email: normalized?.email ?? prev?.email,
+              avatar_url: avatarUrl || prev?.avatar_url || "",
+              // Always update approval_status so RequireApproval reads from context
+              ...(approvalStatus !== null ? { approval_status: approvalStatus } : {}),
+              rejection_reason: rejectionReason,
+            };
+            if (updated.id) {
+              const accs = getSavedAccounts();
+              if (accs[updated.id]) {
+                accs[updated.id].user = { ...accs[updated.id].user, ...updated };
+                saveAccounts(accs);
+              }
+            }
+            return updated;
+          });
         }
       } catch (err) {
         if (import.meta.env.DEV) {
@@ -153,6 +168,89 @@ export function AuthProvider({ children }) {
       cancelled = true;
     };
   }, [token, user?.role]);
+
+  // Request browser notification permission on token change
+  useEffect(() => {
+    if (token && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+  }, [token]);
+
+  // Connect to notification socket for push alerts
+  useEffect(() => {
+    if (!token || !user) return;
+
+    let socket;
+    try {
+      const baseUrl = SOCKET_BASE_URL || import.meta.env.VITE_API_URL || "";
+      socket = io(baseUrl, {
+        path: "/api/socket.io",
+        auth: { token },
+      });
+
+      socket.on("notification:new", (notif) => {
+        // Check targeting
+        const role = user.role;
+        const matchesRole = notif.target_role === "all" || notif.target_role === role;
+
+        let matchesScope = true;
+        if (role === "student") {
+          if (notif.class_id && Number(notif.class_id) !== Number(user.class_id)) {
+            matchesScope = false;
+          }
+          if (notif.section_id && Number(notif.section_id) !== Number(user.section_id)) {
+            matchesScope = false;
+          }
+        }
+
+        if (matchesRole && matchesScope) {
+          // Check if today matches specific_dates or start_date/end_date range
+          const today = new Date().toISOString().split("T")[0];
+          let isDisplayToday = false;
+
+          if (notif.is_poster) {
+            if (notif.specific_dates && Array.isArray(notif.specific_dates) && notif.specific_dates.length > 0) {
+              isDisplayToday = notif.specific_dates.includes(today);
+            } else if (notif.start_date && notif.end_date) {
+              isDisplayToday = notif.start_date <= today && notif.end_date >= today;
+            }
+          } else {
+            isDisplayToday = true;
+          }
+
+          if (isDisplayToday) {
+            // Trigger browser native notification
+            if ("Notification" in window && Notification.permission === "granted") {
+              try {
+                new Notification(notif.title, {
+                  body: notif.message,
+                  icon: "/icon-192.png",
+                });
+              } catch (err) {
+                console.error("Browser push notification failed:", err);
+              }
+            }
+
+            // Dispatch client events to trigger refresh
+            window.dispatchEvent(new Event("notifications:refresh"));
+            if (notif.is_poster) {
+              window.dispatchEvent(new Event("posters:refresh"));
+            }
+          }
+        }
+      });
+    } catch (err) {
+      console.error("Notification socket connection failed:", err);
+    }
+
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, [token, user]);
 
   // ---------- actions ----------
   function login(jwt) {
@@ -205,13 +303,16 @@ export function AuthProvider({ children }) {
         localStorage.setItem("token", nextAcc.token);
         localStorage.setItem("activeUserId", nextAcc.user.id);
         setToken(nextAcc.token);
-        setUser(decodeToken(nextAcc.token));
+        const decoded = decodeToken(nextAcc.token);
+        setUser(decoded);
+        return decoded;
       } else {
         localStorage.removeItem("token");
         localStorage.removeItem("accounts");
         localStorage.removeItem("activeUserId");
         setToken(null);
         setUser(null);
+        return null;
       }
     }
   }
@@ -267,13 +368,25 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!user,
     loading,
     error,
-    updateUser: (partial) =>
-      setUser((prev) => (prev ? { ...prev, ...partial } : partial)),
+    updateUser: (partial) => {
+      setUser((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev, ...partial };
+        if (updated.id) {
+          const accs = getSavedAccounts();
+          if (accs[updated.id]) {
+            accs[updated.id].user = { ...accs[updated.id].user, ...partial };
+            saveAccounts(accs);
+          }
+        }
+        return updated;
+      });
+    },
     login,
     logout,
     switchAccount,
     addAccount,
-    accounts: Object.values(getSavedAccounts()),
+    accounts: Object.values(accounts),
     refreshToken,
     clearError: () => setError(null),
   };
