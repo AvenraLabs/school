@@ -10,7 +10,7 @@ export const API_ORIGIN_URL = API_BASE_URL.replace(/\/api$/, '');
 
 export const getApiAssetUrl = (path) => {
   if (!path) return '';
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
 
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   return cleanPath.startsWith('/api')

@@ -236,8 +236,9 @@ export function StudentsManager() {
                             <button onClick={() => openStatusModal(s, 'DROPPED')} className="btn-sm btn-ghost text-red-600 hover:text-red-800">
                               Drop
                             </button>
-                            <button onClick={() => { setShowMove(s); setMoveSection(''); }} className="btn-sm btn-ghost" title="Move section">
+                            <button onClick={() => { setShowMove(s); setMoveSection(''); }} className="btn-sm btn-secondary flex items-center gap-1" title="Move section">
                               <ArrowRightLeft className="w-3.5 h-3.5" />
+                              <span>Move</span>
                             </button>
                           </>
                         ) : (
@@ -327,7 +328,14 @@ export function StudentsManager() {
             <label className="label">New Section</label>
             <select className="select-field" value={moveSection} onChange={(e) => setMoveSection(e.target.value)}>
               <option value="">Select section</option>
-              {allSections.map((s) => <option key={s.id} value={s.id}>{s.class_name} — Section {s.name}</option>)}
+              {(classes.find((c) => String(c.id) === String(showMove?.class_id || showMove?.class?.id))?.sections || []).map((s) => {
+                const isCurrent = String(s.id) === String(showMove?.section_id || showMove?.section?.id);
+                return (
+                  <option key={s.id} value={s.id} disabled={isCurrent}>
+                    Section {s.name} {isCurrent ? '(Current)' : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div className="flex justify-end gap-3">

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { schoolAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../context/ToastContext';
+import { getApiAssetUrl } from '../../api/axios';
 import {
   TrendingDown,
   TrendingUp,
@@ -566,7 +567,7 @@ export function SchoolAnalyticsPage() {
                           overflow: 'hidden'
                         }}>
                           {student.avatar_url ? (
-                            <img src={student.avatar_url} alt={student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={getApiAssetUrl(student.avatar_url)} alt={student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                             (student.name || 'S')[0].toUpperCase()
                           )}

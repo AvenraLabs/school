@@ -4,6 +4,7 @@ import { useAiChat } from "../hooks/useAiChat";
 import ChatList from "../components/ChatList";
 import ChatInput from "../components/ChatInput";
 import { useAuth } from "../../../auth/AuthProvider";
+import { getAssetUrl } from "../../../utils/asset";
 
 export default function AiChatPage() {
   const { user } = useAuth();
@@ -99,7 +100,7 @@ export default function AiChatPage() {
           px: 1,
         }}
       >
-        <ChatList messages={messages} userAvatar={user?.avatar_url} />
+        <ChatList messages={messages} userAvatar={getAssetUrl(user?.avatar_url)} />
 
         {loading && (
           <Box sx={{ p: 2, display: "flex", gap: 1.5, alignItems: "center" }}>

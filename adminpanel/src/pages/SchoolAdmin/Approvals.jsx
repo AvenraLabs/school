@@ -63,7 +63,7 @@ export function Approvals() {
         <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
           <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0">
             {user.avatar_url ? (
-              <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+              <img src={getAssetUrl(user.avatar_url)} alt={user.name} className="w-full h-full object-cover" />
             ) : (
               <span className="text-xl font-bold text-indigo-600">
                 {(user.name || 'P')[0].toUpperCase()}

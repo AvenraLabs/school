@@ -372,7 +372,7 @@ export default function LostFoundPage() {
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
                     <Stack direction="row" spacing={1.5} alignItems="center">
                       <Avatar
-                        src={item.Creator?.avatar_url}
+                        src={getAssetUrl(item.Creator?.avatar_url)}
                         sx={{ width: 36, height: 36, bgcolor: "primary.main", fontSize: "14px", fontWeight: 700 }}
                       >
                         {item.Creator?.name?.[0]?.toUpperCase()}

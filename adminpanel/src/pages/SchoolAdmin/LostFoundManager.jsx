@@ -174,7 +174,7 @@ export function LostFoundManager() {
 
   const getAssetUrl = (path) => {
     if (!path) return '';
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
     return `${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/${cleanPath}`;
   };
@@ -321,13 +321,48 @@ export function LostFoundManager() {
                 </div>
 
                 <div className="lostfound-card-footer">
-                  <div className="lostfound-creator">
-                    <span className="lostfound-creator-name">
-                      By {item.Creator?.name || 'Unknown'}
-                    </span>
-                    <span className="lostfound-creator-role">
-                      {item.Creator?.role?.replace(/_/g, ' ')}
-                    </span>
+                  <div className="lostfound-creator" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      backgroundColor: item.Creator?.role === 'teacher' ? '#eef2ff' : '#ecfdf5',
+                      color: item.Creator?.role === 'teacher' ? '#4f46e5' : '#047857',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '11px',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      border: '1px solid currentColor'
+                    }}>
+                      {item.Creator?.avatar_url ? (
+                        <img src={getAssetUrl(item.Creator.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        (item.Creator?.name || 'U')[0].toUpperCase()
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span className="lostfound-creator-name">
+                        By {item.Creator?.name || 'Unknown'}
+                      </span>
+                      <span className="lostfound-creator-role">
+                        {item.Creator?.role?.replace(/_/g, ' ')}
+                        {(() => {
+                          const student = item.Creator?.student || item.Creator?.Student;
+                          if (student) {
+                            const className = student.class?.class_name || student.Class?.class_name || '';
+                            const sectionName = student.section?.name || student.Section?.name || '';
+                            const cleanClass = className.replace(/class\s+/gi, '').trim();
+                            if (cleanClass || sectionName) {
+                              return ` (${cleanClass}-${sectionName})`;
+                            }
+                          }
+                          return '';
+                        })()}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="lostfound-actions">

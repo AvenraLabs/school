@@ -38,6 +38,7 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
+import { getAssetUrl } from "../../../utils/asset";
 
 // Subject average bar
 function SubjectBar({ name, score, isHardest }) {
@@ -512,7 +513,7 @@ export default function TeacherInsightsPage() {
 
                       {/* Student Avatar */}
                       <Avatar
-                        src={student.avatar_url}
+                        src={getAssetUrl(student.avatar_url)}
                         alt={student.name}
                         sx={{
                           width: 28,
@@ -594,7 +595,7 @@ export default function TeacherInsightsPage() {
                         <Stack direction="row" alignItems="center" spacing={1.5}>
                           {/* Student Avatar */}
                           <Avatar
-                            src={student.avatar_url}
+                            src={getAssetUrl(student.avatar_url)}
                             alt={student.name}
                             sx={{
                               width: 32,

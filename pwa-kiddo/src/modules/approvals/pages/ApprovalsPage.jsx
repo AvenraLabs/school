@@ -30,6 +30,7 @@ import {
     processProfileUpdate,
 } from "../approvals.api";
 import { useAuth } from "../../../auth/AuthProvider";
+import { getAssetUrl } from "../../../utils/asset";
 
 const fieldLabels = {
     name: "Full Name",
@@ -207,7 +208,7 @@ export default function ApprovalsPage() {
                         >
                             <CardContent sx={{ p: 2.5 }}>
                                 <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                                    <Avatar src={avatarUrl} sx={{ width: 48, height: 48, bgcolor: "primary.main", fontWeight: "bold" }}>
+                                    <Avatar src={getAssetUrl(avatarUrl)} sx={{ width: 48, height: 48, bgcolor: "primary.main", fontWeight: "bold" }}>
                                         {initial}
                                     </Avatar>
 
@@ -327,7 +328,7 @@ export default function ApprovalsPage() {
                         >
                             <CardContent sx={{ p: 2.5 }}>
                                 <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                                    <Avatar src={avatarUrl} sx={{ width: 48, height: 48, bgcolor: "secondary.main", fontWeight: "bold" }}>
+                                    <Avatar src={getAssetUrl(avatarUrl)} sx={{ width: 48, height: 48, bgcolor: "secondary.main", fontWeight: "bold" }}>
                                         {initial}
                                     </Avatar>
 

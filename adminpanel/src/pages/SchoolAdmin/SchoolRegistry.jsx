@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { schoolAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
+import { getApiAssetUrl } from '../../api/axios';
 import {
   GraduationCap,
   Users,
@@ -340,7 +341,7 @@ export function SchoolRegistry() {
                           >
                             <div className="sr-person-row__avatar sr-person-row__avatar--student" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {avatarUrl ? (
-                                <img src={avatarUrl} alt={cleanName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={getApiAssetUrl(avatarUrl)} alt={cleanName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
                                 cleanName[0]?.toUpperCase() || 'S'
                               )}
@@ -426,7 +427,7 @@ export function SchoolRegistry() {
               <div className="sr-profile-header">
                 <div className="sr-profile-header__avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {selectedStudent.user?.avatar_url ? (
-                    <img src={selectedStudent.user.avatar_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={getApiAssetUrl(selectedStudent.user.avatar_url)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     (selectedStudent.user?.name || 'S')[0].toUpperCase()
                   )}

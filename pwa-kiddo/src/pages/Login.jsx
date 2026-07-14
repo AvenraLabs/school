@@ -13,6 +13,7 @@ import { SchoolRounded, DownloadRounded, CloseRounded } from "@mui/icons-materia
 import { useAuth } from "../auth/AuthProvider";
 import LoginForm from "../modules/login/LoginForm";
 import { useEffect, useState } from "react";
+import { getAssetUrl } from "../utils/asset";
 import { usePwaInstall } from "../pwa/usePwaInstall";
 import { useTheme } from "@mui/material/styles";
 import { setThemeColor } from "../pwa/themeMeta";
@@ -583,7 +584,7 @@ export default function Login() {
                     variant="text"
                     startIcon={
                       <Avatar 
-                        src={accounts[0].user.avatar_url} 
+                        src={getAssetUrl(accounts[0].user.avatar_url)} 
                         sx={{ width: 20, height: 20, fontSize: 10, bgcolor: "primary.main" }}
                       >
                         {(accounts[0].user.name || accounts[0].user.username || "U")[0].toUpperCase()}

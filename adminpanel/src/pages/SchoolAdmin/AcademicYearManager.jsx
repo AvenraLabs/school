@@ -13,18 +13,22 @@ export function AcademicYearManager() {
   const [wizardStep, setWizardStep] = useState(1);
   const toast = useToast();
 
-  // Create Year Form
-  const [createForm, setCreateForm] = useState({
-    name: '',
-    start_date: '',
-    end_date: '',
+  const currentSystemYear = new Date().getFullYear();
+
+  // Create Year Form state using Year & Month selections
+  const [createYears, setCreateYears] = useState({
+    startYear: currentSystemYear,
+    startMonth: 6, // June
+    endYear: currentSystemYear + 1,
+    endMonth: 4, // April
   });
 
-  // Wizard States
-  const [nextYearForm, setNextYearForm] = useState({
-    next_year_name: '',
-    start_date: '',
-    end_date: '',
+  // Wizard Year Form state using Year & Month selections
+  const [wizardYears, setWizardYears] = useState({
+    startYear: currentSystemYear + 1,
+    startMonth: 6,
+    endYear: currentSystemYear + 2,
+    endMonth: 4,
   });
   const [studentsList, setStudentsList] = useState([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
@@ -53,11 +57,15 @@ export function AcademicYearManager() {
 
   const handleCreateYear = async (e) => {
     e.preventDefault();
+    const start_date = `${createYears.startYear}-${String(createYears.startMonth).padStart(2, '0')}-01`;
+    const lastDay = new Date(createYears.endYear, createYears.endMonth, 0).getDate();
+    const end_date = `${createYears.endYear}-${String(createYears.endMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    const name = `${createYears.startYear}-${createYears.endYear}`;
+
     try {
-      await academicYearsAPI.create(createForm);
+      await academicYearsAPI.create({ name, start_date, end_date });
       toast.success('Academic Year created successfully');
       setShowCreate(false);
-      setCreateForm({ name: '', start_date: '', end_date: '' });
       loadAcademicYears();
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to create academic year');
@@ -77,7 +85,37 @@ export function AcademicYearManager() {
   const startWizard = async () => {
     setShowWizard(true);
     setWizardStep(1);
-    setNextYearForm({ next_year_name: '', start_date: '', end_date: '' });
+
+    // Parse current active academic year or max configured year to default the wizard next year
+    let nextStartYear = currentSystemYear;
+    if (currentYear && currentYear.name) {
+      const parts = currentYear.name.split('-');
+      if (parts.length === 2) {
+        const parsed = parseInt(parts[1]);
+        if (!isNaN(parsed)) {
+          nextStartYear = parsed;
+        }
+      }
+    } else if (academicYears.length > 0) {
+      const maxYear = academicYears.reduce((max, y) => new Date(y.start_date) > new Date(max.start_date) ? y : max, academicYears[0]);
+      if (maxYear && maxYear.name) {
+        const parts = maxYear.name.split('-');
+        if (parts.length === 2) {
+          const parsed = parseInt(parts[1]);
+          if (!isNaN(parsed)) {
+            nextStartYear = parsed;
+          }
+        }
+      }
+    }
+
+    setWizardYears({
+      startYear: nextStartYear,
+      startMonth: 6,
+      endYear: nextStartYear + 1,
+      endMonth: 4,
+    });
+
     setRepeatStudentIds([]);
     setConfirmCheckbox(false);
     setPreviewReport(null);
@@ -101,10 +139,6 @@ export function AcademicYearManager() {
   };
 
   const fetchPreviewReport = async () => {
-    if (!nextYearForm.next_year_name || !nextYearForm.start_date || !nextYearForm.end_date) {
-      toast.error('Please fill next year details first');
-      return;
-    }
     setPreviewLoading(true);
     setWizardStep(3);
     try {
@@ -124,11 +158,17 @@ export function AcademicYearManager() {
       return;
     }
     setPromoting(true);
+
+    const start_date = `${wizardYears.startYear}-${String(wizardYears.startMonth).padStart(2, '0')}-01`;
+    const lastDay = new Date(wizardYears.endYear, wizardYears.endMonth, 0).getDate();
+    const end_date = `${wizardYears.endYear}-${String(wizardYears.endMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    const next_year_name = `${wizardYears.startYear}-${wizardYears.endYear}`;
+
     try {
       await academicYearsAPI.promote({
-        next_year_name: nextYearForm.next_year_name,
-        start_date: nextYearForm.start_date,
-        end_date: nextYearForm.end_date,
+        next_year_name,
+        start_date,
+        end_date,
         repeat_student_ids: repeatStudentIds,
       });
       toast.success('Promotion completed transactionally!');
@@ -262,38 +302,70 @@ export function AcademicYearManager() {
       {/* Create Year Modal */}
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Create Academic Year">
         <form onSubmit={handleCreateYear} className="space-y-4" style={{ padding: '4px' }}>
-          <div className="ay-form-group">
-            <label className="ay-label">Year Name (e.g. 2026-2027)</label>
-            <input
-              type="text"
-              required
-              className="ay-input"
-              placeholder="e.g. 2026-2027"
-              value={createForm.name}
-              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-            />
-          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="ay-form-group">
-              <label className="ay-label">Start Date</label>
-              <input
-                type="date"
-                required
+              <label className="ay-label">Start Year</label>
+              <select
                 className="ay-input"
-                value={createForm.start_date}
-                onChange={(e) => setCreateForm({ ...createForm, start_date: e.target.value })}
-              />
+                value={createYears.startYear}
+                onChange={(e) => {
+                  const y = parseInt(e.target.value);
+                  setCreateYears({ ...createYears, startYear: y, endYear: y + 1 });
+                }}
+              >
+                {Array.from({ length: 16 }, (_, i) => 2020 + i).map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
             </div>
             <div className="ay-form-group">
-              <label className="ay-label">End Date</label>
-              <input
-                type="date"
-                required
+              <label className="ay-label">Start Month</label>
+              <select
                 className="ay-input"
-                value={createForm.end_date}
-                onChange={(e) => setCreateForm({ ...createForm, end_date: e.target.value })}
-              />
+                value={createYears.startMonth}
+                onChange={(e) => setCreateYears({ ...createYears, startMonth: parseInt(e.target.value) })}
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>
+                    {new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="ay-form-group">
+              <label className="ay-label">End Year</label>
+              <select
+                className="ay-input"
+                value={createYears.endYear}
+                onChange={(e) => setCreateYears({ ...createYears, endYear: parseInt(e.target.value) })}
+              >
+                {Array.from({ length: 16 }, (_, i) => 2020 + i).map((y) => (
+                  <option key={y} value={y} disabled={y <= createYears.startYear}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <div className="ay-form-group">
+              <label className="ay-label">End Month</label>
+              <select
+                className="ay-input"
+                value={createYears.endMonth}
+                onChange={(e) => setCreateYears({ ...createYears, endMonth: parseInt(e.target.value) })}
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>
+                    {new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '13px' }}>
+            <span style={{ color: '#64748b', fontWeight: 600 }}>Academic Year Name Preview: </span>
+            <strong style={{ color: '#4f46e5', fontWeight: 800 }}>{createYears.startYear}-{createYears.endYear}</strong>
           </div>
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
             <button
@@ -367,44 +439,76 @@ export function AcademicYearManager() {
                   <p>Promoting the academic year migrates all active student profiles in the school to their next grade placement. Ensure classes and target sections are configured first in the registry.</p>
                 </div>
               </div>
-              <div className="ay-form-group">
-                <label className="ay-label">Next Year Name (e.g. 2027-2028)</label>
-                <input
-                  type="text"
-                  required
-                  className="ay-input"
-                  placeholder="e.g. 2027-2028"
-                  value={nextYearForm.next_year_name}
-                  onChange={(e) => setNextYearForm({ ...nextYearForm, next_year_name: e.target.value })}
-                />
-              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="ay-form-group">
-                  <label className="ay-label">Start Date</label>
-                  <input
-                    type="date"
-                    required
+                  <label className="ay-label">Next Year - Start Year</label>
+                  <select
                     className="ay-input"
-                    value={nextYearForm.start_date}
-                    onChange={(e) => setNextYearForm({ ...nextYearForm, start_date: e.target.value })}
-                  />
+                    value={wizardYears.startYear}
+                    onChange={(e) => {
+                      const y = parseInt(e.target.value);
+                      setWizardYears({ ...wizardYears, startYear: y, endYear: y + 1 });
+                    }}
+                  >
+                    {Array.from({ length: 16 }, (_, i) => 2020 + i).map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="ay-form-group">
-                  <label className="ay-label">End Date</label>
-                  <input
-                    type="date"
-                    required
+                  <label className="ay-label">Start Month</label>
+                  <select
                     className="ay-input"
-                    value={nextYearForm.end_date}
-                    onChange={(e) => setNextYearForm({ ...nextYearForm, end_date: e.target.value })}
-                  />
+                    value={wizardYears.startMonth}
+                    onChange={(e) => setWizardYears({ ...wizardYears, startMonth: parseInt(e.target.value) })}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <option key={m} value={m}>
+                        {new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' })}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="ay-form-group">
+                  <label className="ay-label">Next Year - End Year</label>
+                  <select
+                    className="ay-input"
+                    value={wizardYears.endYear}
+                    onChange={(e) => setWizardYears({ ...wizardYears, endYear: parseInt(e.target.value) })}
+                  >
+                    {Array.from({ length: 16 }, (_, i) => 2020 + i).map((y) => (
+                      <option key={y} value={y} disabled={y <= wizardYears.startYear}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="ay-form-group">
+                  <label className="ay-label">End Month</label>
+                  <select
+                    className="ay-input"
+                    value={wizardYears.endMonth}
+                    onChange={(e) => setWizardYears({ ...wizardYears, endMonth: parseInt(e.target.value) })}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <option key={m} value={m}>
+                        {new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '13px' }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>Next Academic Year Name: </span>
+                <strong style={{ color: '#4f46e5', fontWeight: 800 }}>{wizardYears.startYear}-{wizardYears.endYear}</strong>
+              </div>
+
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                 <button type="button" onClick={() => setShowWizard(false)} className="ay-btn ay-btn-soft">Cancel</button>
                 <button
                   type="button"
-                  disabled={!nextYearForm.next_year_name || !nextYearForm.start_date || !nextYearForm.end_date}
                   onClick={() => setWizardStep(2)}
                   className="ay-btn ay-btn-primary"
                 >

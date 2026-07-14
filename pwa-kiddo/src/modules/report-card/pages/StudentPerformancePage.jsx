@@ -37,6 +37,7 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
+import { getAssetUrl } from "../../../utils/asset";
 
 // Custom SVG Line Chart
 function TrendLineChart({ data }) {
@@ -802,7 +803,7 @@ export default function StudentPerformancePage() {
 
                         {/* Student Avatar */}
                         <Avatar
-                          src={entry.avatar_url}
+                          src={getAssetUrl(entry.avatar_url)}
                           alt={entry.name}
                           sx={{
                             width: 28,
