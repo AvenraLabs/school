@@ -274,8 +274,30 @@ Answer (simple, clear, student-friendly):
     chromaFailed = true;
   }
 
+  const isNegativeResponse = (text) => {
+    if (!text) return true;
+    const normalized = text.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "");
+    return (
+      normalized === "i dont know" ||
+      normalized === "i do not know" ||
+      normalized.includes("could not find") ||
+      normalized.includes("not found in the textbook") ||
+      normalized.includes("not present in the textbook") ||
+      normalized.includes("not mentioned in the textbook") ||
+      normalized.includes("cannot find") ||
+      normalized.includes("failed") ||
+      normalized === "எனக்கு தெரியாது" ||
+      normalized === "எனக்குத் தெரியாது"
+    );
+  };
+
   // Fallback to direct Gemini query if Chroma/RAG failed OR if no RAG answer was found/resolved
-  if (chromaFailed || !finalChunks.length || (answer && answer.trim().toLowerCase() === "i don't know") || answer === "I could not find an answer in the textbook.") {
+  if (
+    chromaFailed ||
+    !finalChunks.length ||
+    isNegativeResponse(answer) ||
+    answer === "I could not find an answer in the textbook."
+  ) {
     if (!allowFallback) {
       answer = "I could not find an answer in the textbook.";
       usedFilter = "no_fallback_refused";
@@ -284,10 +306,11 @@ Answer (simple, clear, student-friendly):
       
       const prompt = `
 You are a school tutor.
-Answer the student's question in a simple, clear, student-friendly way.
+Answer the student's question in a simple, clear, student-friendly way using your general knowledge.
 
 Guidelines:
 - DO NOT use or include any emojis (such as smiley faces, symbols, or illustrative icons) in your response under any circumstances.
+- DO NOT say "I don't know", "I cannot find this", "failed", "information not found", or similar negative/empty responses. Provide a helpful, clear, and encouraging explanation of the topic to help the student learn.
 
 Question:
 ${question}
@@ -295,17 +318,26 @@ ${question}
 Answer:
 `;
 
-      const result = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: prompt,
-      });
-      
-      const usage = result.usageMetadata || {};
-      tokensUsed = usage.totalTokenCount || tokensUsed;
-      answer =
-        result.text ||
-        result?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ||
-        "";
+      try {
+        const result = await ai.models.generateContent({
+          model: GEMINI_MODEL,
+          contents: prompt,
+        });
+        
+        const usage = result.usageMetadata || {};
+        tokensUsed = usage.totalTokenCount || tokensUsed;
+        answer =
+          result.text ||
+          result?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ||
+          "";
+          
+        if (isNegativeResponse(answer)) {
+          answer = "Let's explore this topic together! Could you try asking your question in a different way or check your textbooks? I'm always ready to help you learn.";
+        }
+      } catch (geminiErr) {
+        console.error("Direct Gemini query fallback failed:", geminiErr);
+        answer = "Let's explore this topic together! Could you try asking your question in a different way or check your textbooks? I'm always ready to help you learn.";
+      }
     }
   }
 
