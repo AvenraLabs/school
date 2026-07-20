@@ -1,4 +1,5 @@
 import asyncHandler from "../../shared/asyncHandler.js";
+import AppError from "../../shared/appError.js";
 import {
   createNotificationService,
   listNotificationsForUserService,
@@ -260,6 +261,84 @@ export const getActivePosters = asyncHandler(async (req, res) => {
         updated_at: plain.updated_at || plain.updatedAt,
       };
     }),
+  });
+});
+
+/* ADMIN / TEACHER: UPDATE POSTER */
+export const updateNotification = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const Notification = (await import("./notification.model.js")).default;
+
+  const notification = await Notification.findOne({
+    where: {
+      id,
+      school_id: req.user.school_id,
+      is_poster: true,
+    },
+  });
+
+  if (!notification) {
+    throw new AppError("Poster announcement not found", 404);
+  }
+
+  const {
+    title,
+    message,
+    target_role,
+    class_id,
+    section_id,
+    image_url,
+    is_poster,
+    start_date,
+    end_date,
+    specific_dates,
+  } = req.body;
+
+  if (title !== undefined) notification.title = title;
+  if (message !== undefined) notification.message = message;
+  if (target_role !== undefined) notification.target_role = target_role;
+  notification.class_id = class_id ? Number(class_id) : null;
+  notification.section_id = section_id ? Number(section_id) : null;
+  if (image_url !== undefined) notification.image_url = image_url;
+  if (is_poster !== undefined) notification.is_poster = is_poster;
+  notification.start_date = start_date || null;
+  notification.end_date = end_date || null;
+  notification.specific_dates = specific_dates || null;
+
+  await notification.save();
+
+  res.json({
+    success: true,
+    data: notification,
+  });
+});
+
+/* ADMIN / TEACHER: DELETE POSTER */
+export const deleteNotification = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const Notification = (await import("./notification.model.js")).default;
+  const NotificationAck = (await import("./notification-ack.model.js")).default;
+
+  const notification = await Notification.findOne({
+    where: {
+      id,
+      school_id: req.user.school_id,
+      is_poster: true,
+    },
+  });
+
+  if (!notification) {
+    throw new AppError("Poster announcement not found", 404);
+  }
+
+  // Delete associated acknowledgements first
+  await NotificationAck.destroy({ where: { notification_id: id } });
+
+  await notification.destroy();
+
+  res.json({
+    success: true,
+    message: "Poster announcement deleted successfully",
   });
 });
 

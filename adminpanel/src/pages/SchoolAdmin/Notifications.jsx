@@ -28,7 +28,13 @@ import {
   Sparkles,
   Users,
   Camera,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Calendar,
 } from 'lucide-react';
+
+
 import './Notifications.css';
 
 const audienceMeta = {
@@ -63,15 +69,26 @@ export function Notifications() {
   const [newSpecificDate, setNewSpecificDate] = useState('');
   const [sending, setSending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [editingNotification, setEditingNotification] = useState(null);
+  const [deletingNotification, setDeletingNotification] = useState(null);
+  const [activeMenuId, setActiveMenuId] = useState(null);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const LIMIT = 15;
   const toast = useToast();
 
+
+  useEffect(() => {
+    const handleClickOutside = () => setActiveMenuId(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
   useEffect(() => {
     loadNotifications();
     loadClasses();
   }, [page]);
+
 
   const loadNotifications = async () => {
     try {
@@ -155,6 +172,41 @@ export function Notifications() {
     }
   };
 
+  const handleEditPoster = (notification) => {
+    setEditingNotification(notification);
+    setForm({
+      title: notification.title || '',
+      message: notification.message || '',
+      target_role: notification.target_role || 'all',
+      class_id: notification.class_id ? String(notification.class_id) : '',
+      section_id: notification.section_id ? String(notification.section_id) : '',
+      send_whatsapp: false,
+      image_url: notification.image_url || '',
+      start_date: notification.start_date || '',
+      end_date: notification.end_date || '',
+    });
+    if (notification.specific_dates && Array.isArray(notification.specific_dates) && notification.specific_dates.length > 0) {
+      setDateMode('specific');
+      setSpecificDates([...notification.specific_dates]);
+    } else {
+      setDateMode('range');
+      setSpecificDates([]);
+    }
+    setShowPoster(true);
+  };
+
+  const confirmDeletePoster = async () => {
+    if (!deletingNotification) return;
+    try {
+      await notificationsAPI.delete(deletingNotification.id);
+      toast.success('Poster announcement deleted!');
+      setDeletingNotification(null);
+      loadNotifications();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to delete poster');
+    }
+  };
+
   const handleSendPoster = async (e) => {
     e.preventDefault();
     if (dateMode === 'range' && (!form.start_date || !form.end_date)) {
@@ -165,22 +217,41 @@ export function Notifications() {
     }
     setSending(true);
     const capitalizedTitle = form.title ? form.title.charAt(0).toUpperCase() + form.title.slice(1) : '';
+    const payload = {
+      title: capitalizedTitle,
+      message: form.message,
+      target_role: form.target_role,
+      class_id: form.class_id ? Number(form.class_id) : null,
+      section_id: form.section_id ? Number(form.section_id) : null,
+      image_url: form.image_url,
+      is_poster: true,
+      start_date: dateMode === 'range' ? form.start_date : null,
+      end_date: dateMode === 'range' ? form.end_date : null,
+      specific_dates: dateMode === 'specific' ? specificDates : null,
+    };
+
     try {
-      await notificationsAPI.create(
-        capitalizedTitle,
-        form.message,
-        form.target_role,
-        form.class_id ? Number(form.class_id) : undefined,
-        form.section_id ? Number(form.section_id) : undefined,
-        false,
-        form.image_url,
-        true,
-        dateMode === 'range' ? form.start_date : null,
-        dateMode === 'range' ? form.end_date : null,
-        dateMode === 'specific' ? specificDates : null
-      );
-      toast.success('Poster announcement created!');
+      if (editingNotification) {
+        await notificationsAPI.update(editingNotification.id, payload);
+        toast.success('Poster announcement updated!');
+      } else {
+        await notificationsAPI.create(
+          payload.title,
+          payload.message,
+          payload.target_role,
+          payload.class_id,
+          payload.section_id,
+          false,
+          payload.image_url,
+          true,
+          payload.start_date,
+          payload.end_date,
+          payload.specific_dates
+        );
+        toast.success('Poster announcement created!');
+      }
       setShowPoster(false);
+      setEditingNotification(null);
       setForm({ title: '', message: '', target_role: 'all', class_id: '', section_id: '', send_whatsapp: false, image_url: '', start_date: '', end_date: '' });
       setSpecificDates([]);
       setDateMode('range');
@@ -190,11 +261,12 @@ export function Notifications() {
         setPage(0);
       }
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed to create poster');
+      toast.error(e.response?.data?.message || (editingNotification ? 'Failed to update poster' : 'Failed to create poster'));
     } finally {
       setSending(false);
     }
   };
+
 
   const viewAcks = async (notif) => {
     setShowAcks(notif);
@@ -397,15 +469,83 @@ export function Notifications() {
             const meta = audienceMeta[role] || audienceMeta.all;
             const AudienceIcon = meta.icon;
             return (
-              <article key={notification.id} className="notification-card">
+              <article key={notification.id} className="notification-card" style={{ position: 'relative' }}>
                 <div className="notification-card-top">
-                  <div className={`notification-icon ${meta.tone}`}>
-                    <AudienceIcon size={20} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className={`notification-icon ${meta.tone}`}>
+                      <AudienceIcon size={20} />
+                    </div>
+                    <span className={`notification-chip ${meta.tone}`}>{meta.label}</span>
+                    {notification.is_poster && (
+                      <span className="notification-chip" style={{ backgroundColor: '#e0e7ff', color: '#4338ca' }}>
+                        Poster
+                      </span>
+                    )}
                   </div>
-                  <span className={`notification-chip ${meta.tone}`}>{meta.label}</span>
+
+                  {notification.is_poster && (
+                    <div className="notification-card-actions" style={{ position: 'relative' }}>
+                      <button
+                        type="button"
+                        className="notification-more-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuId(activeMenuId === notification.id ? null : notification.id);
+                        }}
+                        title="Poster Options"
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+
+                      {activeMenuId === notification.id && (
+                        <div
+                          className="notification-card-menu"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className="notification-menu-item"
+                            onClick={() => {
+                              setActiveMenuId(null);
+                              handleEditPoster(notification);
+                            }}
+                          >
+                            <Pencil size={14} />
+                            Edit Poster
+                          </button>
+                          <button
+                            type="button"
+                            className="notification-menu-item danger"
+                            onClick={() => {
+                              setActiveMenuId(null);
+                              setDeletingNotification(notification);
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            Delete Poster
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <h3>{notification.title}</h3>
                 <p>{notification.message}</p>
+
+                {notification.is_poster && (
+                  <div style={{ margin: '8px 0', padding: '6px 12px', backgroundColor: '#eef2ff', borderRadius: '8px', border: '1px solid #c7d2fe', fontSize: '12px', color: '#4338ca', fontWeight: 650, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <Calendar size={14} style={{ color: '#4f46e5', flexShrink: 0 }} />
+                    <span>
+                      {notification.specific_dates && Array.isArray(notification.specific_dates) && notification.specific_dates.length > 0
+                        ? `Specific Dates (${notification.specific_dates.length}): ${notification.specific_dates.join(', ')}`
+                        : (notification.start_date && notification.end_date)
+                          ? `Display: ${notification.start_date} to ${notification.end_date}`
+                          : 'Active Poster'}
+                    </span>
+                  </div>
+                )}
+
+
                 {notification.image_url && (
                   <div className="notification-card-image" style={{ margin: '12px 0', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', maxHeight: '160px' }}>
                     <img
@@ -426,6 +566,7 @@ export function Notifications() {
                   </button>
                 </div>
               </article>
+
             );
           })
         )}
@@ -577,7 +718,7 @@ export function Notifications() {
         </form>
       ))}
 
-      {renderSidebar(showPoster, () => setShowPoster(false), "Create Poster Announcement", (
+      {renderSidebar(showPoster, () => { setShowPoster(false); setEditingNotification(null); }, editingNotification ? "Edit Poster Announcement" : "Create Poster Announcement", (
         <form onSubmit={handleSendPoster} className="notify-form">
           <label>
             <span>Title</span>
@@ -790,10 +931,10 @@ export function Notifications() {
             </label>
           </div>
           <div className="notify-form-actions" style={{ marginTop: '20px' }}>
-            <button type="button" onClick={() => setShowPoster(false)} className="notify-btn notify-btn-soft">Cancel</button>
+            <button type="button" onClick={() => { setShowPoster(false); setEditingNotification(null); }} className="notify-btn notify-btn-soft">Cancel</button>
             <button type="submit" disabled={sending} className="notify-btn notify-btn-primary" style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}>
               <Megaphone size={16} />
-              {sending ? 'Creating...' : 'Create Poster'}
+              {sending ? (editingNotification ? 'Saving...' : 'Creating...') : (editingNotification ? 'Save Changes' : 'Create Poster')}
             </button>
           </div>
         </form>
@@ -842,6 +983,37 @@ export function Notifications() {
           </div>
         )}
       </Modal>
+
+      {/* Delete Poster Confirmation Modal */}
+      <Modal
+        isOpen={!!deletingNotification}
+        onClose={() => setDeletingNotification(null)}
+        title="Delete Poster Announcement"
+      >
+        <div style={{ padding: '8px 0' }}>
+          <p style={{ fontSize: '14px', color: '#475569', marginBottom: '20px', lineHeight: 1.5 }}>
+            Are you sure you want to delete poster <strong>"{deletingNotification?.title}"</strong>? This action cannot be undone and will remove the poster from student and teacher dashboards.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <button
+              type="button"
+              className="notify-btn notify-btn-soft"
+              onClick={() => setDeletingNotification(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="notify-btn"
+              style={{ backgroundColor: '#ef4444', color: '#ffffff' }}
+              onClick={confirmDeletePoster}
+            >
+              Delete Poster
+            </button>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   );
 }

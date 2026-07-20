@@ -18,5 +18,9 @@ export const createNotificationSchema = z.object({
 });
 
 
+/* admin / teacher: update announcement / poster */
+export const updateNotificationSchema = createNotificationSchema.partial();
+
 /* teacher: acknowledge */
 export const acknowledgeNotificationSchema = z.object({});
+

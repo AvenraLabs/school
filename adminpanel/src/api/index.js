@@ -439,7 +439,18 @@ export const notificationsAPI = {
     const response = await axiosInstance.get(`/notifications/${id}/acknowledgements`);
     return response.data;
   },
+
+  update: async (id, data) => {
+    const response = await axiosInstance.put(`/notifications/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await axiosInstance.delete(`/notifications/${id}`);
+    return response.data;
+  },
 };
+
 
 // Exams API
 export const examsAPI = {
