@@ -11,7 +11,9 @@ import {
   CardContent,
   Avatar,
   Stack,
-  Chip
+  Chip,
+  Button,
+  Tooltip
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import {
@@ -21,7 +23,8 @@ import {
   AutoGraph,
   Book,
   TrendingUp,
-  WarningAmber
+  WarningAmber,
+  ArrowForward
 } from "@mui/icons-material";
 import { fetchStudentDashboard, fetchTeacherDashboard } from "./dashboard.api";
 import { useAuth } from "../../auth/AuthProvider";
@@ -258,10 +261,7 @@ export default function DashboardPage() {
   const aiTokens = metrics.ai_tokens || { remaining: 0, used: 0, total: 0 };
   const performance = metrics.performance || {};
   const trend = performance.trend || [];
-  const subjectAverages = performance.subject_averages || [];
-  const latestExam = performance.latest_exam;
   const focusSubject = performance.focus_subject;
-  const strongSubject = performance.strong_subject;
   const weakSyllabus = performance.weak_syllabus;
 
   // Shared card style matching teacher dashboard
@@ -338,37 +338,38 @@ export default function DashboardPage() {
         {renderPosters()}
         <Stack spacing={2}>
 
-          {/* Latest Exam Card */}
-          <Card sx={cardSx}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Stack direction="row" alignItems="center" spacing={1.5}>
-                <Box sx={{ width: 4, borderRadius: 2, bgcolor: theme.palette.primary.main, alignSelf: 'stretch', minHeight: 40 }} />
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 900, color: 'text.primary', fontSize: '0.95rem', mb: 0.3 }}>
-                    {latestExam ? latestExam.name : 'No published exam yet'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {latestExam
-                      ? `Score: ${latestExam.obtained}/${latestExam.max_marks}`
-                      : 'Will appear after report card is published'}
-                  </Typography>
-                </Box>
-                {latestExam && (
-                  <Chip
-                    label={`${latestExam.percentage}%`}
-                    size="small"
-                    sx={{
-                      fontWeight: 900,
-                      bgcolor: alpha(theme.palette.primary.main, 0.1),
-                      color: theme.palette.primary.main,
-                      fontSize: '0.8rem',
-                      borderRadius: '8px',
-                    }}
-                  />
-                )}
-              </Stack>
-            </CardContent>
-          </Card>
+          {/* View Performance Insights Button */}
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => navigate("/student/report-cards/performance")}
+            startIcon={<AutoGraph />}
+            endIcon={<ArrowForward />}
+            sx={{
+              py: 1.5,
+              px: 3,
+              borderRadius: "16px",
+              fontWeight: 800,
+              fontSize: "0.95rem",
+              textTransform: "none",
+              background: (theme) =>
+                `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${
+                  theme.palette.secondary?.main || theme.palette.primary.dark
+                } 100%)`,
+              boxShadow: (theme) =>
+                `0 4px 14px ${alpha(theme.palette.primary.main, 0.35)}`,
+              "&:hover": {
+                background: (theme) =>
+                  `linear-gradient(135deg, ${
+                    theme.palette.secondary?.main || theme.palette.primary.dark
+                  } 0%, ${theme.palette.primary.main} 100%)`,
+                boxShadow: (theme) =>
+                  `0 6px 18px ${alpha(theme.palette.primary.main, 0.45)}`,
+              },
+            }}
+          >
+            View Performance Insights
+          </Button>
 
           {/* Exam Trend Card */}
           <Card sx={cardSx}>
@@ -397,9 +398,11 @@ export default function DashboardPage() {
                               transition: 'height 0.4s ease',
                             }}
                           />
-                          <Typography sx={{ fontSize: '0.55rem', color: 'text.disabled', mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
-                            {item.name?.split(' ').slice(-1)[0] || item.date || ''}
-                          </Typography>
+                          <Tooltip title={item.name || item.date || ''} arrow placement="top">
+                            <Typography sx={{ fontSize: '0.6rem', color: 'text.secondary', fontWeight: 600, mt: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center' }}>
+                              {item.name || item.date || ''}
+                            </Typography>
+                          </Tooltip>
                         </Box>
                       );
                     });
@@ -432,48 +435,6 @@ export default function DashboardPage() {
                     />
                   )}
                 </Box>
-              </Stack>
-            </CardContent>
-          </Card>
-
-          {/* Subject Overview Card */}
-          <Card sx={cardSx}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 850, letterSpacing: '-0.3px', fontSize: '1rem' }}>Subject Overview</Typography>
-                {strongSubject && (
-                  <Chip
-                    size="small"
-                    label={`Best: ${strongSubject.subject}`}
-                    sx={{ fontWeight: 800, bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontSize: '0.7rem', height: 20, borderRadius: '6px' }}
-                  />
-                )}
-              </Stack>
-              <Stack spacing={1.5}>
-                {subjectAverages.length > 0 ? subjectAverages.slice(0, 5).map((subject) => (
-                  <Box key={subject.subject}>
-                    <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 800, color: 'text.primary' }}>{subject.subject}</Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>{subject.percentage}%</Typography>
-                    </Stack>
-                    {/* Clean progress bar using Box instead of LinearProgress */}
-                    <Box sx={{ height: 6, borderRadius: 6, bgcolor: 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-                      <Box
-                        sx={{
-                          height: '100%',
-                          width: `${subject.percentage}%`,
-                          borderRadius: 6,
-                          bgcolor: theme.palette.primary.main,
-                          transition: 'width 0.6s ease',
-                        }}
-                      />
-                    </Box>
-                  </Box>
-                )) : (
-                  <Box sx={{ textAlign: 'center', py: 3, bgcolor: '#f8fafc', borderRadius: '14px', border: '1px dashed rgba(0,0,0,0.06)' }}>
-                    <Typography variant="body2" color="text.secondary">Subject analytics appear after marks are published.</Typography>
-                  </Box>
-                )}
               </Stack>
             </CardContent>
           </Card>

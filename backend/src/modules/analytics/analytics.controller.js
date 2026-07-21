@@ -473,6 +473,7 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
     // Determine performance drop (>15% drop between last two tests)
     let isGradeDropped = false;
     let dropMargin = 0;
+    let droppedExamName = "";
     if (exams.length >= 2) {
       const latestExamId = exams[0].id;
       const prevExamId = exams[1].id;
@@ -491,6 +492,7 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
         if (latestPct < prevPct - dropCutoff) {
           isGradeDropped = true;
           dropMargin = Math.round(prevPct - latestPct);
+          droppedExamName = exams[0].name;
         }
       }
     }
@@ -506,7 +508,7 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
       if (isAttendanceLow)
         reason.push(`Low Attendance (${attendancePercentage}%)`);
       if (isGradeDropped)
-        reason.push(`Grade dropped by ${dropMargin}% in latest exam`);
+        reason.push(`Grade dropped by ${dropMargin}% in ${droppedExamName || "latest exam"}`);
       if (stats.max > 0 && academicPercentage < acadCutoff)
         reason.push(`Low Academic Score (${academicPercentage}%)`);
 
