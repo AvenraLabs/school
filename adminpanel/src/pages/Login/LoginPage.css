@@ -289,3 +289,24 @@
   cursor: not-allowed;
   filter: none;
 }
+
+/* ===== Login Footer ===== */
+.login-footer {
+  margin-top: 40px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+  transition: opacity 0.2s ease;
+}
+
+.login-footer-link {
+  color: #a855f7;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.login-footer-link:hover {
+  color: #7e22ce;
+  text-decoration: underline;
+}

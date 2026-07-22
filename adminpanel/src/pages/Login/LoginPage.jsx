@@ -135,6 +135,18 @@ export function LoginPage() {
             )}
           </button>
         </form>
+
+        <div className="login-footer">
+          Powered by{' '}
+          <a
+            href="https://avenra.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="login-footer-link"
+          >
+            Avenra
+          </a>
+        </div>
       </div>
     </div>
   );
