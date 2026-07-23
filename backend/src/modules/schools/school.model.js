@@ -72,6 +72,11 @@ const School = db.define(
       defaultValue: false,
     },
 
+    promotion_wizard_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+
     risk_attendance_cutoff: {
       type: DataTypes.INTEGER,
       defaultValue: 75,

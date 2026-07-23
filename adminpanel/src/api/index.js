@@ -97,8 +97,23 @@ export const schoolAPI = {
     return response.data;
   },
 
+  deleteStudent: async (studentId) => {
+    const response = await axiosInstance.delete(`/schools/super-admin/students/${studentId}`);
+    return response.data;
+  },
+
+  deleteSectionStudents: async (sectionId) => {
+    const response = await axiosInstance.delete(`/schools/super-admin/sections/${sectionId}/students`);
+    return response.data;
+  },
+
   update: async (schoolId, schoolData) => {
     const response = await axiosInstance.patch(`/schools/${schoolId}`, schoolData);
+    return response.data;
+  },
+
+  updateStatus: async (schoolId, status) => {
+    const response = await axiosInstance.patch(`/schools/${schoolId}/status`, { status });
     return response.data;
   },
 
@@ -150,6 +165,10 @@ export const classesAPI = {
 
 // Sections API
 export const sectionsAPI = {
+  listByClass: async (classId) => {
+    const response = await axiosInstance.get(`/sections/classes/${classId}/sections`);
+    return response.data;
+  },
   create: async (classId, name, studentCount = 0) => {
     const response = await axiosInstance.post('/sections', {
       class_id: classId,
@@ -569,20 +588,20 @@ export const tokenPoliciesAPI = {
     return response.data;
   },
 
-  update: async (role, monthlyTokens, mode = 'replace') => {
+  update: async (role, annualTokens, mode = 'replace') => {
     const response = await axiosInstance.post('/tokens/policies', {
       role,
-      monthly_tokens: monthlyTokens,
+      annual_tokens: annualTokens,
       mode,
     });
     return response.data;
   },
 
   // Sets both student + teacher policies in one call
-  updateBoth: async (studentMonthly, teacherMonthly, mode = 'replace') => {
+  updateBoth: async (studentAnnual, teacherAnnual, mode = 'replace') => {
     const response = await axiosInstance.post('/tokens/policies', {
-      student_monthly: studentMonthly,
-      teacher_monthly: teacherMonthly,
+      student_annual: studentAnnual,
+      teacher_annual: teacherAnnual,
       mode,
     });
     return response.data;
@@ -784,13 +803,21 @@ export const uploadAPI = {
   uploadAnnouncement: async (file) => {
     const formData = new FormData();
     formData.append('announcement', file);
-    const response = await axiosInstance.post('/upload/announcement', formData);
+    const response = await axiosInstance.post('/upload/announcement', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
   uploadAvatar: async (file) => {
     const formData = new FormData();
     formData.append('avatar', file);
-    const response = await axiosInstance.post('/upload/avatar', formData);
+    const response = await axiosInstance.post('/upload/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
   deleteFile: async (filePath) => {
@@ -798,4 +825,72 @@ export const uploadAPI = {
     return response.data;
   },
 };
+
+export const feeAPI = {
+  getCategories: async () => {
+    const response = await axiosInstance.get('/fees/categories');
+    return response.data;
+  },
+  createCategory: async (name) => {
+    const response = await axiosInstance.post('/fees/categories', { name });
+    return response.data;
+  },
+  updateCategory: async (id, payload) => {
+    const response = await axiosInstance.patch(`/fees/categories/${id}`, payload);
+    return response.data;
+  },
+  deleteCategory: async (id) => {
+    const response = await axiosInstance.delete(`/fees/categories/${id}`);
+    return response.data;
+  },
+
+  getClassPlans: async (classId) => {
+    const response = await axiosInstance.get(`/fees/plans/${classId}`);
+    return response.data;
+  },
+  upsertClassPlans: async (classId, payload) => {
+    const response = await axiosInstance.post(`/fees/plans/${classId}`, payload);
+    return response.data;
+  },
+  getAllClassPlansSummary: async () => {
+    const response = await axiosInstance.get('/fees/plans/summary');
+    return response.data;
+  },
+
+  getStudentLedger: async (studentId) => {
+    const response = await axiosInstance.get(`/fees/ledgers/${studentId}`);
+    return response.data;
+  },
+  adjustLedger: async (ledgerId, payload) => {
+    const response = await axiosInstance.patch(`/fees/ledgers/${ledgerId}/adjust`, payload);
+    return response.data;
+  },
+
+  recordPayment: async (payload) => {
+    const response = await axiosInstance.post('/fees/payments', payload);
+    return response.data;
+  },
+  getSchoolPaymentHistory: async (params = {}) => {
+    const response = await axiosInstance.get('/fees/payments', { params });
+    return response.data;
+  },
+  voidPayment: async (paymentId, void_reason) => {
+    const response = await axiosInstance.patch(`/fees/payments/${paymentId}/void`, { void_reason });
+    return response.data;
+  },
+  sendWhatsAppReceipt: async (paymentId) => {
+    const response = await axiosInstance.post(`/fees/payments/${paymentId}/send-whatsapp`);
+    return response.data;
+  },
+
+  getCollectionSummary: async () => {
+    const response = await axiosInstance.get('/fees/summary');
+    return response.data;
+  },
+  getDefaulters: async (params = {}) => {
+    const response = await axiosInstance.get('/fees/defaulters', { params });
+    return response.data;
+  },
+};
+
 

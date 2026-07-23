@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { authAPI } from '../../api';
@@ -12,7 +12,21 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user, isAuthenticated, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && user) {
+      if (user.role === 'super_admin') {
+        navigate('/super-admin', { replace: true });
+      } else if (user.role === 'school_admin') {
+        navigate('/admin/dashboard', { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, authLoading, navigate]);
+
+  if (authLoading) {
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

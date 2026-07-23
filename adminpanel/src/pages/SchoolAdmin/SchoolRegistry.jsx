@@ -44,40 +44,15 @@ export function SchoolRegistry() {
   // Detail Drawer states
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
-  const [selectedParent, setSelectedParent] = useState(null);
-
   // Attendance calendar states
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
 
   // Production Optimization & Lazy Loading states
-  const [parents, setParents] = useState([]);
-  const [parentsLoading, setParentsLoading] = useState(false);
   const [sectionStudents, setSectionStudents] = useState([]);
   const [sectionLoading, setSectionLoading] = useState(false);
   const [calendarLogs, setCalendarLogs] = useState([]);
   const [calendarLogsLoading, setCalendarLogsLoading] = useState(false);
-
-  // Lazy load parents when tab is clicked
-  useEffect(() => {
-    if (activeMainTab !== 'parents') return;
-    if (parents.length > 0) return; // already loaded
-
-    async function loadParents() {
-      try {
-        setParentsLoading(true);
-        const res = await schoolAPI.getParentsDirectory();
-        setParents(res.data || []);
-      } catch (err) {
-        console.error('Failed to load parents list', err);
-        showToast('Failed to load parents.', 'error');
-      } finally {
-        setParentsLoading(false);
-      }
-    }
-
-    loadParents();
-  }, [activeMainTab]);
 
   // Lazy load roster when selectedSectionId changes
   useEffect(() => {
@@ -156,42 +131,7 @@ export function SchoolRegistry() {
     t.teacher_assignments?.some(ta => ta.class_id === selectedClassId && ta.section_id === selectedSectionId)
   ) : [];
 
-  // Cross-link helpers: navigate between student ↔ parent drawers
-  const openParentFromStudent = (parentRecord) => {
-    // Inject current student profile as parent's child
-    const parentWithChild = {
-      ...parentRecord,
-      student: selectedStudent
-    };
-    setSelectedStudent(null);
-    setSelectedParent(parentWithChild);
-  };
 
-  const openStudentFromParent = async (parentRecord) => {
-    const studentId = parentRecord.student?.id;
-    if (!studentId) return;
-
-    // Check if the student is already loaded in the active section list
-    const foundLocal = sectionStudents.find(s => s.id === studentId);
-    if (foundLocal) {
-      setSelectedParent(null);
-      setSelectedStudent(foundLocal);
-      return;
-    }
-
-    // Otherwise, fetch the full student details on demand
-    try {
-      showToast('Loading student profile...', 'info');
-      const res = await schoolAPI.getStudentProfile(studentId);
-      if (res.data) {
-        setSelectedParent(null);
-        setSelectedStudent(res.data);
-      }
-    } catch (err) {
-      console.error('Failed to load child profile', err);
-      showToast('Failed to load student details.', 'error');
-    }
-  };
 
   // Calendar rendering helpers
   const prevMonth = () => {
@@ -330,8 +270,6 @@ export function SchoolRegistry() {
                         const userObj = stud.user || stud.User || {};
                         const studentName = userObj.name || 'Student';
                         const cleanName = studentName.replace(/^(Student Class|Student)\s+/gi, '').trim() || 'Student';
-                        const parentNameRaw = stud.parents?.[0]?.user?.name || '';
-                        const cleanParentName = parentNameRaw.replace(/^(Parent of Student Class|Parent of Student|Parent)\s+/gi, '').trim() || parentNameRaw;
                         const avatarUrl = userObj.avatar_url;
                         return (
                           <div
@@ -348,9 +286,6 @@ export function SchoolRegistry() {
                             </div>
                             <div className="sr-person-row__info">
                               <h4 className="sr-person-row__name">{cleanName}</h4>
-                              {cleanParentName && cleanParentName !== '—' && (
-                                <p className="sr-person-row__meta">Parent: {cleanParentName}</p>
-                              )}
                             </div>
                             <ChevronRight className="sr-person-row__chevron" style={{ width: 16, height: 16 }} />
                           </div>
@@ -486,60 +421,45 @@ export function SchoolRegistry() {
                 </div>
               </div>
 
-              {/* Linked Parent Details */}
+              {/* Parent / Guardian Details */}
               <div className="sr-drawer-section">
                 <h4 className="sr-drawer-section__title">Parent / Guardian Details</h4>
-                {(!selectedStudent.parents || selectedStudent.parents.length === 0) ? (
-                  <p className="sr-empty" style={{ padding: '8px 0' }}>No parent information linked.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {selectedStudent.parents.map((p, idx) => {
-                      const parentUser = p.user || p.User || {};
-                      const pName = parentUser.name || '—';
-                      const pPhone = parentUser.phone || '—';
-                      const pEmail = parentUser.email || '—';
-                      const relation = p.relation_type || 'Parent';
-                      return (
-                        <div key={p.id || idx} style={{
-                          padding: '12px 14px',
-                          background: 'var(--sr-slate-50)',
-                          border: '1px solid var(--sr-slate-100)',
-                          borderRadius: 'var(--sr-radius-md)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '6px'
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--sr-slate-800)' }}>{pName}</span>
-                            <span style={{
-                              fontSize: '10px',
-                              fontWeight: '700',
-                              padding: '2px 8px',
-                              background: 'var(--sr-primary-faint)',
-                              color: 'var(--sr-primary)',
-                              borderRadius: '4px',
-                              textTransform: 'capitalize'
-                            }}>{relation}</span>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: 'var(--sr-slate-600)' }}>
-                            {pPhone && pPhone !== '—' && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Phone style={{ width: 12, height: 12, color: 'var(--sr-slate-400)' }} />
-                                <span>{pPhone}</span>
-                              </div>
-                            )}
-                            {pEmail && pEmail !== '—' && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Mail style={{ width: 12, height: 12, color: 'var(--sr-slate-400)' }} />
-                                <span>{pEmail}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                <div style={{
+                  padding: '12px 14px',
+                  background: 'var(--sr-slate-50)',
+                  border: '1px solid var(--sr-slate-100)',
+                  borderRadius: 'var(--sr-radius-md)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: 'var(--sr-slate-600)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--sr-slate-400)' }}>Father Name:</span>
+                      <span style={{ fontWeight: '600', color: 'var(--sr-slate-800)' }}>{selectedStudent.father_name || '—'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--sr-slate-400)' }}>Mother Name:</span>
+                      <span style={{ fontWeight: '600', color: 'var(--sr-slate-800)' }}>{selectedStudent.mother_name || '—'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--sr-slate-400)' }}>Guardian Name:</span>
+                      <span style={{ fontWeight: '600', color: 'var(--sr-slate-800)' }}>{selectedStudent.guardian_name || '—'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '6px', borderTop: '1px solid var(--sr-slate-100)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--sr-slate-400)' }}>
+                        <Phone style={{ width: 12, height: 12, color: 'var(--sr-slate-400)' }} /> Parents Phone:
+                      </span>
+                      <span style={{ fontWeight: '700', color: 'var(--sr-slate-800)' }}>{selectedStudent.user?.phone || '—'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--sr-slate-400)' }}>
+                        <Phone style={{ width: 12, height: 12, color: 'var(--sr-slate-400)' }} /> Emergency Contact:
+                      </span>
+                      <span style={{ fontWeight: '700', color: 'var(--sr-slate-800)' }}>{selectedStudent.emergency_contact || '—'}</span>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
 
 
@@ -690,10 +610,6 @@ export function SchoolRegistry() {
                     <span className="sr-info-grid__label">QUALIFICATION</span>
                     <span className="sr-info-grid__value">{selectedTeacher.qualification || '—'}</span>
                   </div>
-                  <div className="sr-info-grid__item" style={{ paddingTop: 10, borderTop: '1px solid var(--sr-slate-100)' }}>
-                    <span className="sr-info-grid__label">JOIN DATE</span>
-                    <span className="sr-info-grid__value">{selectedTeacher.join_date || '—'}</span>
-                  </div>
                 </div>
               </div>
 
@@ -728,82 +644,7 @@ export function SchoolRegistry() {
         </div>
       )}
 
-      {/* 3. Parent Detail Drawer */}
-      {selectedParent && (
-        <div className="sr-drawer-overlay">
-          <div className="sr-drawer-backdrop" onClick={() => setSelectedParent(null)} />
-          <div className="sr-drawer">
-            <div className="sr-drawer__header">
-              <h2 className="sr-drawer__header-title">Parent Profile Summary</h2>
-              <button onClick={() => setSelectedParent(null)} className="sr-drawer__close">
-                <X style={{ width: 22, height: 22 }} />
-              </button>
-            </div>
 
-            <div className="sr-drawer__body">
-              <div className="sr-profile-header">
-                <div className="sr-profile-header__avatar">
-                  {(selectedParent.user?.name || 'P')[0].toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="sr-profile-header__name">{selectedParent.user?.name}</h3>
-                  <p className="sr-profile-header__role">Parent Account</p>
-                </div>
-              </div>
-
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Contact Details</h4>
-                <div className="sr-contact-box">
-                  <div className="sr-contact-row">
-                    <Mail className="sr-contact-row__icon" style={{ width: 16, height: 16 }} />
-                    <span>{selectedParent.user?.email || '—'}</span>
-                  </div>
-                  <div className="sr-contact-row">
-                    <Phone className="sr-contact-row__icon" style={{ width: 16, height: 16 }} />
-                    <span>{selectedParent.user?.phone || '—'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Linked Children</h4>
-                {selectedParent.student ? (
-                  <div
-                    className="sr-linked-person"
-                    onClick={() => openStudentFromParent(selectedParent)}
-                  >
-                    <div className="sr-linked-person__avatar sr-linked-person__avatar--student">
-                      {(selectedParent.student?.user?.name || 'S')[0].toUpperCase()}
-                    </div>
-                    <div className="sr-linked-person__info">
-                      <p className="sr-linked-person__name">
-                        {(selectedParent.student?.user?.name || 'Student').replace(/^(Student Class|Student)\s+/gi, '').trim()}
-                      </p>
-                      <p className="sr-linked-person__username">@{selectedParent.student?.user?.username || '—'}</p>
-                      <div className="sr-child-grid" style={{ marginTop: 8 }}>
-                        <div>
-                          <span className="sr-child-grid__label">CLASS</span>
-                          <span className="sr-child-grid__value">{selectedParent.student?.class?.class_name || '—'}</span>
-                        </div>
-                        <div>
-                          <span className="sr-child-grid__label">SECTION</span>
-                          <span className="sr-child-grid__value">Section {selectedParent.student?.section?.name || '—'}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <span className="sr-linked-person__relation">
-                      {selectedParent.relation_type || 'Son/Daughter'}
-                    </span>
-                    <ChevronRight className="sr-linked-person__arrow" style={{ width: 16, height: 16 }} />
-                  </div>
-                ) : (
-                  <p className="sr-empty" style={{ padding: '16px 0' }}>No children linked to this parent.</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Attendance Calendar Modal */}
       {calendarOpen && selectedStudent && (

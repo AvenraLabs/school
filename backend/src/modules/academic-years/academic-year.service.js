@@ -30,10 +30,20 @@ const getNextClassName = (currentName) => {
  * LIST ACADEMIC YEARS
  */
 export const listAcademicYearsService = async (school_id) => {
-  return AcademicYear.findAll({
+  const School = (await import("../schools/school.model.js")).default;
+  const school = await School.findByPk(school_id, {
+    attributes: ["promotion_wizard_enabled"]
+  });
+
+  const years = await AcademicYear.findAll({
     where: { school_id },
     order: [["start_date", "DESC"]],
   });
+
+  return {
+    years: years || [],
+    promotion_wizard_enabled: school ? school.promotion_wizard_enabled : true
+  };
 };
 
 /**
@@ -376,6 +386,10 @@ export const promoteAcademicYearService = async (
       { where: { school_id }, transaction: t }
     );
     await nextYear.update({ is_current: true }, { transaction: t });
+
+    // 8. Replenish yearly tokens for all students and teachers in the school
+    const { replenishSchoolYearlyTokens } = await import("../tokens/token.service.js");
+    await replenishSchoolYearlyTokens(school_id, t);
 
     return {
       success: true,

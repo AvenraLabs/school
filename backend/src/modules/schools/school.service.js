@@ -10,60 +10,10 @@ import { getPagination } from "../../shared/utils/pagination.js";
 import { Op } from "sequelize";
 
 /* =========================
-   SUPER ADMIN: CREATE SCHOOL
+   SUPER ADMIN: GET THE ACTIVE SINGLE SCHOOL
 ========================= */
-export const createSchoolService = async ({
-  name,
-  address,
-  city,
-  state,
-  zip,
-  email,
-  admin_username,
-  admin_password,
-}) => {
-  const school = await School.create({
-    school_name: name,
-    address: address || null,
-    city: city || null,
-    state: state || null,
-    zip: zip || null,
-    email: email || null,
-    status: "active",
-  });
-
-  const existingUser = await User.findOne({
-  where: { username: admin_username },
-});
-
-if (existingUser) {
-  throw new AppError("Admin username already exists", 409);
-}
-
-  const admin = await User.create({
-    role: "school_admin",
-    school_id: school.id,
-    username: admin_username,
-    password: admin_password,
-    first_login: true,
-    is_active: true,
-    name: "School Admin",
-  });
-
-  return {
-    school,
-    admin: { username: admin.username },
-  };
-};
-
-/* =========================
-   SUPER ADMIN: LIST SCHOOLS
-========================= */
-export const listSchoolsService = async ({ query }) => {
-  const { limit, offset } = getPagination(query);
-  return School.findAndCountAll({
-    limit,
-    offset,
+export const getActiveSchoolService = async () => {
+  const school = await School.findOne({
     include: [
       {
         model: User,
@@ -73,6 +23,26 @@ export const listSchoolsService = async ({ query }) => {
       },
     ],
   });
+
+  if (school) {
+    const [studentsCount, teachersCount, schoolAdminsCount, driversCount, activeUsersCount, inactiveUsersCount] = await Promise.all([
+      User.count({ where: { school_id: school.id, role: "student" } }),
+      User.count({ where: { school_id: school.id, role: "teacher" } }),
+      User.count({ where: { school_id: school.id, role: "school_admin" } }),
+      User.count({ where: { school_id: school.id, role: "driver" } }),
+      User.count({ where: { school_id: school.id, is_active: true } }),
+      User.count({ where: { school_id: school.id, is_active: false } }),
+    ]);
+
+    school.setDataValue("studentsCount", studentsCount);
+    school.setDataValue("teachersCount", teachersCount);
+    school.setDataValue("schoolAdminsCount", schoolAdminsCount);
+    school.setDataValue("driversCount", driversCount);
+    school.setDataValue("activeUsersCount", activeUsersCount);
+    school.setDataValue("inactiveUsersCount", inactiveUsersCount);
+  }
+
+  return school;
 };
 
 /* =========================

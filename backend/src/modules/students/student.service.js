@@ -125,6 +125,14 @@ export const createStudentService = async ({
       { transaction: t }
     );
 
+    // Auto-generate fee ledger for new student
+    try {
+      const { generateStudentLedgerService } = await import("../fees/fee.service.js");
+      await generateStudentLedgerService(school_id, student.id, {}, t);
+    } catch {
+      // quiet if academic year not yet configured
+    }
+
 
 
     /**
@@ -165,12 +173,24 @@ export const listStudentsService = async ({ school_id, query }) => {
     where.approval_status = "approved";
   }
 
+  if (query?.search && query.search.trim()) {
+    const searchVal = `%${query.search.trim()}%`;
+    where[Op.or] = [
+      { admission_no: { [Op.iLike]: searchVal } },
+      { roll_no: { [Op.iLike]: searchVal } },
+      { emergency_contact: { [Op.iLike]: searchVal } },
+      { "$user.name$": { [Op.iLike]: searchVal } },
+      { "$user.phone$": { [Op.iLike]: searchVal } },
+      { "$user.username$": { [Op.iLike]: searchVal } },
+    ];
+  }
+
   return Student.findAndCountAll({
     where,
     limit,
     offset,
     include: [
-      { model: User, attributes: ["id", "username", "name", "is_active"] },
+      { model: User, attributes: ["id", "username", "name", "phone", "is_active"] },
       { model: Class, attributes: ["id", "class_name"] },
       { model: Section, attributes: ["id", "name"] },
     ],
@@ -294,6 +314,12 @@ export const updateStudentStatusService = async ({
       if (db.models.student_transport) {
         await db.models.student_transport.update(
           { is_active: false },
+          { where: { student_id, school_id }, transaction: t }
+        );
+      }
+      if (db.models.student_fee_ledger) {
+        await db.models.student_fee_ledger.update(
+          { status: "frozen" },
           { where: { student_id, school_id }, transaction: t }
         );
       }

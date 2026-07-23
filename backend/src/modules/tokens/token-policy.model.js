@@ -15,7 +15,7 @@ const TokenPolicy = db.define(
       allowNull: false,
     },
 
-    monthly_tokens: {
+    annual_tokens: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,

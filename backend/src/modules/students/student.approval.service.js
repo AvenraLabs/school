@@ -35,7 +35,7 @@ export const requestStudentProfileUpdateService = async (
     approval_status: "pending",
     approved_by: null,
     approved_at: null,
-    rejection_reason: null, // ✅ IMPORTANT
+    rejection_reason: null,
   });
 
   return {
@@ -44,14 +44,14 @@ export const requestStudentProfileUpdateService = async (
 };
 
 /* =========================
-   TEACHER: APPROVE / REJECT
+   TEACHER / ADMIN: APPROVE / REJECT
 ========================= */
 export const approveStudentProfileService = async ({
   student_id,
   teacher_user_id,
   school_id,
   action,
-  remark, // ✅ NOW DEFINED
+  remark,
 }) => {
   return db.transaction(async (t) => {
     const student = await Student.findOne({
@@ -77,6 +77,14 @@ export const approveStudentProfileService = async ({
         },
         { transaction: t }
       );
+
+      // Auto-generate fee ledger
+      try {
+        const { generateStudentLedgerService } = await import("../fees/fee.service.js");
+        await generateStudentLedgerService(school_id, student.id, {}, t);
+      } catch (err) {
+        console.warn("Fee ledger auto-generation notice:", err.message);
+      }
     }
 
     if (action === "reject") {
@@ -91,7 +99,7 @@ export const approveStudentProfileService = async ({
       );
     }
 
-    // ✅ AUDIT LOG (inside transaction)
+    // AUDIT LOG (inside transaction)
     await logApprovalAction({
       entity_type: "student",
       entity_id: student.id,

@@ -4,7 +4,7 @@ import TokenAccount from "./token-account.model.js";
 import TokenTransaction from "./token-transaction.model.js";
 import User from "../users/user.model.js";
 import {
-  setRoleMonthlyTokens,
+  setRoleAnnualTokens,
   adjustUserTokens,
 } from "./token.service.js";
 import { getPagination } from "../../shared/utils/pagination.js";
@@ -16,44 +16,44 @@ export const getTokenPolicies = asyncHandler(async (req, res) => {
 
 export const setTokenPolicies = asyncHandler(async (req, res) => {
   const {
-    student_monthly,
-    teacher_monthly,
+    student_annual,
+    teacher_annual,
     role,
-    monthly_tokens,
+    annual_tokens,
     mode = "replace",
     school_id = null,
   } = req.body;
 
-  if (student_monthly !== undefined) {
-    await setRoleMonthlyTokens({
+  if (student_annual !== undefined) {
+    await setRoleAnnualTokens({
       role: "student",
-      monthly_tokens: Number(student_monthly),
+      annual_tokens: Number(student_annual),
       mode,
       school_id,
       updated_by: req.user.id,
     });
-  } else if (role === "student" && monthly_tokens !== undefined) {
-    await setRoleMonthlyTokens({
+  } else if (role === "student" && annual_tokens !== undefined) {
+    await setRoleAnnualTokens({
       role: "student",
-      monthly_tokens: Number(monthly_tokens),
+      annual_tokens: Number(annual_tokens),
       mode,
       school_id,
       updated_by: req.user.id,
     });
   }
 
-  if (teacher_monthly !== undefined) {
-    await setRoleMonthlyTokens({
+  if (teacher_annual !== undefined) {
+    await setRoleAnnualTokens({
       role: "teacher",
-      monthly_tokens: Number(teacher_monthly),
+      annual_tokens: Number(teacher_annual),
       mode,
       school_id,
       updated_by: req.user.id,
     });
-  } else if (role === "teacher" && monthly_tokens !== undefined) {
-    await setRoleMonthlyTokens({
+  } else if (role === "teacher" && annual_tokens !== undefined) {
+    await setRoleAnnualTokens({
       role: "teacher",
-      monthly_tokens: Number(monthly_tokens),
+      annual_tokens: Number(annual_tokens),
       mode,
       school_id,
       updated_by: req.user.id,

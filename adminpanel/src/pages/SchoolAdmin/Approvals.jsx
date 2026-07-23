@@ -107,10 +107,7 @@ export function Approvals() {
               <span className="text-slate-400 block mb-1">Phone Number</span>
               <span className="font-medium text-slate-800">{user.phone || '—'}</span>
             </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Joining Date</span>
-              <span className="font-medium text-slate-800">{selectedItem.joining_date || '—'}</span>
-            </div>
+
           </div>
         )}
 

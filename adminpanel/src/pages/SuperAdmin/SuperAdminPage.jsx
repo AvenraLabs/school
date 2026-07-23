@@ -21,7 +21,7 @@ import {
   Plus, RotateCcw, Copy, ChevronDown, ChevronUp,
   GraduationCap, UserCog, Users, ChevronLeft, ChevronRight,
   Cpu, RefreshCw, Check, Edit3, Database, Layers,
-  MessageSquare
+  MessageSquare, Trash2
 } from 'lucide-react';
 
 /* ════════════════════════════════════════════════════════════════════
@@ -48,129 +48,6 @@ function TableWrap({ children }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════
-   SCHOOL SECTION — helpers
-════════════════════════════════════════════════════════════════════ */
-const ROLE_STYLES = {
-  student: { activeBg: '#0284c7', activeBorder: '#0284c7', idleBg: '#fff', idleColor: '#0369a1', idleBorder: '#bae6fd', countBg: '#e0f2fe', countColor: '#0369a1', countActiveBg: 'rgba(255,255,255,0.2)', countActiveColor: '#fff' },
-  teacher: { activeBg: '#7c3aed', activeBorder: '#7c3aed', idleBg: '#fff', idleColor: '#6d28d9', idleBorder: '#ddd6fe', countBg: '#ede9fe', countColor: '#6d28d9', countActiveBg: 'rgba(255,255,255,0.2)', countActiveColor: '#fff' },
-};
-const SCHOOL_PAGE_SIZE = 20;
-
-function SchoolStatsPanel({ school }) {
-  const [data, setData]           = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [role, setRole]           = useState('');
-  const [classId, setClassId]     = useState('');
-  const [sectionId, setSectionId] = useState('');
-  const [page, setPage]           = useState(0);
-  const toast = useToast();
-
-  const load = useCallback(async (pg = 0) => {
-    setLoading(true);
-    try {
-      const params = { limit: SCHOOL_PAGE_SIZE, offset: pg * SCHOOL_PAGE_SIZE };
-      if (role)      params.role       = role;
-      if (classId)   params.class_id   = classId;
-      if (sectionId) params.section_id = sectionId;
-      const res = await schoolAPI.getStats(school.id, params);
-      setData(res);
-      setPage(pg);
-    } catch {
-      toast.error('Failed to load school stats');
-    } finally {
-      setLoading(false);
-    }
-  }, [school.id, role, classId, sectionId, toast]);
-
-  useEffect(() => { load(0); }, [load]);
-
-  const sections = classId
-    ? (data?.classes?.find(c => String(c.id) === String(classId))?.sections || [])
-    : [];
-  const pages = data ? Math.ceil(data.total / SCHOOL_PAGE_SIZE) : 0;
-
-  return (
-    <div className="border-t border-slate-100 bg-slate-50/60 p-5 space-y-4">
-      <div className="flex flex-wrap gap-3">
-        {[
-          { label: 'Students', roleKey: 'student', countKey: 'students', icon: GraduationCap },
-          { label: 'Teachers', roleKey: 'teacher', countKey: 'teachers', icon: UserCog },
-        ].map(({ label, roleKey, countKey, icon: Icon }) => {
-          const active = role === roleKey;
-          const s = ROLE_STYLES[roleKey];
-          return (
-            <button
-              key={roleKey}
-              onClick={() => { setRole(r => r === roleKey ? '' : roleKey); setClassId(''); setSectionId(''); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '8px 16px', borderRadius: '12px',
-                border: `1px solid ${active ? s.activeBorder : s.idleBorder}`,
-                background: active ? s.activeBg : s.idleBg,
-                color: active ? '#fff' : s.idleColor,
-                fontSize: '14px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-              }}
-            >
-              <Icon style={{ width: '16px', height: '16px' }} />
-              {label}
-              <span style={{ marginLeft: '2px', padding: '1px 6px', borderRadius: '999px', fontSize: '12px', fontWeight: 700, background: active ? s.countActiveBg : s.countBg, color: active ? s.countActiveColor : s.countColor }}>
-                {data?.counts?.[countKey] ?? '…'}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        <select className="select-field text-sm" style={{ height: '38px', minWidth: '130px', maxWidth: '160px' }} value={classId} onChange={e => { setClassId(e.target.value); setSectionId(''); }}>
-          <option value="">All Classes</option>
-          {data?.classes?.map(c => <option key={c.id} value={c.id}>{c.class_name}</option>)}
-        </select>
-        <select className="select-field text-sm" style={{ height: '38px', minWidth: '120px', maxWidth: '140px', opacity: classId ? 1 : 0.45 }} value={sectionId} onChange={e => setSectionId(e.target.value)} disabled={!classId}>
-          <option value="">All Sections</option>
-          {sections.map(s => <option key={s.id} value={s.id}>Section {s.name}</option>)}
-        </select>
-        {(classId || sectionId || role) && (
-          <button onClick={() => { setClassId(''); setSectionId(''); setRole(''); }} style={{ height: '38px', padding: '0 12px', borderRadius: '10px', fontSize: '13px', fontWeight: 500, color: '#64748b', background: '#f1f5f9', border: '1px solid #e2e8f0', cursor: 'pointer' }}>
-            Clear filters
-          </button>
-        )}
-      </div>
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <TableWrap>
-          <table className="data-table min-w-[560px]">
-            <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Class</th><th>Section</th><th>Status</th></tr></thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={6} className="text-center py-8 text-slate-400">Loading…</td></tr>
-              ) : !data?.items?.length ? (
-                <tr><td colSpan={6} className="text-center py-8 text-slate-400">No records found</td></tr>
-              ) : data.items.map((u, i) => (
-                <tr key={i}>
-                  <td className="font-medium text-slate-900 text-sm">{u.name}</td>
-                  <td className="font-mono text-xs text-slate-500">@{u.username}</td>
-                  <td><RolePill role={u.role} /></td>
-                  <td className="text-sm text-slate-600">{u.class}</td>
-                  <td className="text-sm text-slate-600">{u.section}</td>
-                  <td><StatusBadge status={u.is_active ? 'active' : 'inactive'} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </TableWrap>
-        {pages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-            <p className="text-xs text-slate-400">Page {page + 1} of {pages} · {data.total} records</p>
-            <div className="flex gap-2">
-              <button disabled={page === 0} onClick={() => load(page - 1)} className="btn-secondary btn-sm disabled:opacity-40"><ChevronLeft className="w-3.5 h-3.5" /></button>
-              <button disabled={page >= pages - 1} onClick={() => load(page + 1)} className="btn-secondary btn-sm disabled:opacity-40"><ChevronRight className="w-3.5 h-3.5" /></button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /* ════════════════════════════════════════════════════════════════════
    COMBINED TOKEN EDITOR — edits and saves both limits together
@@ -179,18 +56,18 @@ function CombinedTokenEditor({ policies, onSaved }) {
   const studentPol = policies.find(p => p.role === 'student');
   const teacherPol = policies.find(p => p.role === 'teacher');
 
-  const [studentVal, setStudentVal] = useState(studentPol?.monthly_tokens ?? 0);
-  const [teacherVal, setTeacherVal] = useState(teacherPol?.monthly_tokens ?? 0);
+  const [studentVal, setStudentVal] = useState(studentPol?.annual_tokens ?? 0);
+  const [teacherVal, setTeacherVal] = useState(teacherPol?.annual_tokens ?? 0);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
-    setStudentVal(studentPol?.monthly_tokens ?? 0);
-  }, [studentPol?.monthly_tokens]);
+    setStudentVal(studentPol?.annual_tokens ?? 0);
+  }, [studentPol?.annual_tokens]);
 
   useEffect(() => {
-    setTeacherVal(teacherPol?.monthly_tokens ?? 0);
-  }, [teacherPol?.monthly_tokens]);
+    setTeacherVal(teacherPol?.annual_tokens ?? 0);
+  }, [teacherPol?.annual_tokens]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -227,7 +104,7 @@ function CombinedTokenEditor({ policies, onSaved }) {
           <Coins style={{ width: '22px', height: '22px', color: '#fff' }} />
         </div>
         <div>
-          <p style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>Monthly Token Limits</p>
+          <p style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>Annual Token Limits</p>
           <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Adjust AI token budgets for all users in the school</p>
         </div>
       </div>
@@ -243,7 +120,7 @@ function CombinedTokenEditor({ policies, onSaved }) {
           <div style={{ background: '#f0f9ff', borderRadius: '10px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', color: '#0369a1', fontWeight: 500 }}>Current limit</span>
             <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', color: '#0369a1' }}>
-              {(studentPol?.monthly_tokens ?? 0).toLocaleString()}
+              {(studentPol?.annual_tokens ?? 0).toLocaleString()}
             </span>
           </div>
 
@@ -273,7 +150,7 @@ function CombinedTokenEditor({ policies, onSaved }) {
           <div style={{ background: '#f5f3ff', borderRadius: '10px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', color: '#6d28d9', fontWeight: 500 }}>Current limit</span>
             <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', color: '#6d28d9' }}>
-              {(teacherPol?.monthly_tokens ?? 0).toLocaleString()}
+              {(teacherPol?.annual_tokens ?? 0).toLocaleString()}
             </span>
           </div>
 
@@ -355,6 +232,7 @@ export function SuperAdminPage() {
   const [form, setForm] = useState({
     name: '', address: '',
     city: '', state: '', zip: '', email: '', contact_phone: '', admin_username: '', admin_password: '',
+    promotion_wizard_enabled: true,
   });
 
   /* ── ANALYTICS state ── */
@@ -408,6 +286,7 @@ export function SuperAdminPage() {
         whatsapp_bus_start_enabled: form.whatsapp_bus_start_enabled,
         whatsapp_bus_end_enabled: form.whatsapp_bus_end_enabled,
         google_maps_enabled: form.google_maps_enabled,
+        promotion_wizard_enabled: form.promotion_wizard_enabled,
       });
       toast.success('School settings updated!');
       setShowEditSchool(null);
@@ -571,6 +450,7 @@ export function SuperAdminPage() {
                       whatsapp_bus_start_enabled: sch.whatsapp_bus_start_enabled || false,
                       whatsapp_bus_end_enabled: sch.whatsapp_bus_end_enabled || false,
                       google_maps_enabled: sch.google_maps_enabled || false,
+                      promotion_wizard_enabled: sch.promotion_wizard_enabled ?? true,
                     });
                     setShowEditSchool(sch);
                   }} className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-100 hover:shadow-indigo-200 transition-all duration-200">
@@ -588,7 +468,8 @@ export function SuperAdminPage() {
                   <p className="empty-state-desc">Use the Bulk Seeder or database seed to create a school</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   {/* Left Column: General Info and Address */}
                   <div className="lg:col-span-2 space-y-8">
                     {/* General Info Card */}
@@ -628,6 +509,40 @@ export function SuperAdminPage() {
                               Map Provider: <span className={schools[0].google_maps_enabled ? "text-emerald-600 font-bold" : "text-indigo-500 font-bold"}>{schools[0].google_maps_enabled ? 'GOOGLE MAPS' : 'LEAFLET (DEFAULT)'}</span>
                             </p>
                           </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* School User Counts Card (For Billing) */}
+                    <div className="card p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm">
+                      <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6 flex items-center gap-2">
+                        <span className="w-1.5 h-5 bg-indigo-500 rounded-full inline-block"></span>
+                        School User Counts (Billing Metrics)
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Total Students</span>
+                          <span className="text-2xl font-bold text-slate-800">{schools[0].studentsCount ?? 0}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Total Teachers</span>
+                          <span className="text-2xl font-bold text-slate-800">{schools[0].teachersCount ?? 0}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">School Admins</span>
+                          <span className="text-2xl font-bold text-slate-800">{schools[0].schoolAdminsCount ?? 0}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Drivers</span>
+                          <span className="text-2xl font-bold text-slate-800">{schools[0].driversCount ?? 0}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Active Accounts</span>
+                          <span className="text-2xl font-bold text-emerald-600">{schools[0].activeUsersCount ?? 0}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Inactive Accounts</span>
+                          <span className="text-2xl font-bold text-rose-500">{schools[0].inactiveUsersCount ?? 0}</span>
                         </div>
                       </div>
                     </div>
@@ -698,9 +613,63 @@ export function SuperAdminPage() {
                         })()}
                       </div>
                     </div>
+
+                    <div className="card p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm">
+                      <h3 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6 flex items-center gap-2">
+                        <span className="w-1.5 h-5 bg-indigo-500 rounded-full inline-block"></span>
+                        School Subscription Status
+                      </h3>
+                      <div className="space-y-6">
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Subscription Status</span>
+                            <span className="inline-block mt-0.5">
+                              <StatusBadge status={schools[0].status === 'active' ? 'active' : 'inactive'} />
+                            </span>
+                          </div>
+                        </div>
+                        <div className="pt-4 border-t border-slate-100">
+                          {schools[0].status === 'active' ? (
+                            <button
+                              onClick={async () => {
+                                if (window.confirm('Are you sure you want to pause all operations for this school?')) {
+                                  try {
+                                    await schoolAPI.updateStatus(schools[0].id, 'suspended');
+                                    toast.success('School operations paused!');
+                                    loadSchools();
+                                  } catch {
+                                    toast.error('Failed to pause school operations');
+                                  }
+                                }
+                              }}
+                              className="w-full py-3 px-4 rounded-xl font-semibold text-sm bg-rose-50 text-rose-600 hover:bg-rose-100/80 border border-rose-200/50 transition-all duration-150 flex items-center justify-center gap-2"
+                            >
+                              Pause School Operations
+                            </button>
+                          ) : (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await schoolAPI.updateStatus(schools[0].id, 'active');
+                                  toast.success('School operations resumed!');
+                                  loadSchools();
+                                } catch {
+                                  toast.error('Failed to resume school operations');
+                                }
+                              }}
+                              className="w-full py-3 px-4 rounded-xl font-semibold text-sm bg-emerald-50 text-emerald-600 hover:bg-emerald-100/80 border border-emerald-200/50 transition-all duration-150 flex items-center justify-center gap-2"
+                            >
+                              Resume School Operations
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
+
+              </>
+            )}
             </div>
           )}
 
@@ -885,6 +854,20 @@ export function SuperAdminPage() {
                     className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
                   />
                   Enable Google Maps for live bus tracking (uses Leaflet if disabled)
+                </label>
+              </div>
+            </div>
+            <div className="sm:col-span-2 space-y-2 mt-2">
+              <label className="label font-bold text-slate-700 block mb-1">License & Wizard Settings</label>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.promotion_wizard_enabled || false}
+                    onChange={e => setForm({...form, promotion_wizard_enabled: e.target.checked})}
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                  />
+                  Enable Student Promotion & Graduation Wizard in School Admin panel
                 </label>
               </div>
             </div>

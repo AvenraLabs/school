@@ -167,12 +167,27 @@ export function initGameSocket(io) {
       });
 
       if (!player) {
-        player = await GameSessionPlayer.create({
-          session_id: sessionId,
-          user_id: socket.user.id,
-          is_host: session.host_user_id === socket.user.id,
-          status: "JOINED",
-        });
+        try {
+          player = await GameSessionPlayer.create({
+            session_id: sessionId,
+            user_id: socket.user.id,
+            is_host: session.host_user_id === socket.user.id,
+            status: "JOINED",
+          });
+        } catch (createErr) {
+          // Race condition: another socket beat us — re-fetch the existing record
+          if (createErr.name === "SequelizeUniqueConstraintError") {
+            player = await GameSessionPlayer.findOne({
+              where: { session_id: sessionId, user_id: socket.user.id },
+            });
+            if (!player) {
+              socket.emit("quiz:error", { message: "Could not join session. Please try again." });
+              return;
+            }
+          } else {
+            throw createErr;
+          }
+        }
       }
 
       // Prevent multi-join from different tab/device
@@ -496,6 +511,12 @@ export function initGameSocket(io) {
           // If host disconnects while in LOBBY, cancel the session
           if (player.is_host && session.status === "LOBBY") {
             await cancelSession(player.session_id);
+            continue;
+          }
+
+          // If host disconnects while game IN_PROGRESS, end the session for everyone
+          if (player.is_host && session.status === "IN_PROGRESS") {
+            await endSession(player.session_id, "host_disconnected");
             continue;
           }
 

@@ -4,14 +4,15 @@ import { allowRoles } from "../../shared/middlewares/role.js";
 import { validate } from "../../shared/middlewares/validate.js";
 
 import {
-  createSchool,
-  listSchools,
+  getActiveSchool,
   getSchoolStats,
   updateSchoolStatus,
   updateSchoolAdminStatus,
   resetSchoolAdminPassword,
   updateSchool,
   updateSchoolSettings,
+  deleteStudent,
+  deleteSectionStudents,
 } from "./school.controller.js";
 
 import {
@@ -23,7 +24,6 @@ import {
 } from "./school.directory.controller.js";
 
 import {
-  createSchoolSchema,
   updateSchoolStatusSchema,
   updateSchoolAdminStatusSchema,
   resetSchoolAdminPasswordSchema,
@@ -43,9 +43,7 @@ router.patch("/my-settings", protect, allowRoles("school_admin"), updateSchoolSe
 
 router.use(protect, allowRoles("super_admin"));
 
-router.post("/", validate(createSchoolSchema), createSchool);
-
-router.get("/", listSchools);
+router.get("/", getActiveSchool);
 router.get("/:id/stats", getSchoolStats);
 router.patch("/:id/status", validate(updateSchoolStatusSchema), updateSchoolStatus);
 router.patch(
@@ -63,5 +61,8 @@ router.patch(
   validate(updateSchoolSchema),
   updateSchool
 );
+
+router.delete("/super-admin/students/:studentId", deleteStudent);
+router.delete("/super-admin/sections/:sectionId/students", deleteSectionStudents);
 
 export default router;

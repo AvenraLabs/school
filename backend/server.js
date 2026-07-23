@@ -143,6 +143,7 @@ import quizRoutes from "./src/modules/quiz/quiz.routes.js";
 import transportRoutes from "./src/modules/transport/transport.routes.js";
 import academicYearRoutes from "./src/modules/academic-years/academic-year.routes.js";
 import analyticsRoutes from "./src/modules/analytics/analytics.routes.js";
+import feeRoutes from "./src/modules/fees/fee.routes.js";
 
 
 
@@ -180,6 +181,7 @@ app.use("/api/report-cards", reportCardRoutes);
 app.use("/api/exams", examRoutes);
 app.use("/api/exam-masters", examMasterRoutes);
 app.use("/api/academic-years", academicYearRoutes);
+app.use("/api/fees", feeRoutes);
 
 // approvals
 app.use("/api", approvalRoutes);

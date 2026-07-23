@@ -268,7 +268,17 @@ export const getStudentDashboardService = async ({ student_user_id }) => {
             ai_tokens: aiTokens,
             homework_pending: pendingHomeworkCount,
             performance,
-            unread_notifications: 0 // Placeholder
+            unread_notifications: 0,
+            fee_balance: await (async () => {
+              try {
+                const StudentFeeLedger = (await import("../fees/student-fee-ledger.model.js")).default;
+                const ledger = await StudentFeeLedger.findOne({
+                  where: { school_id: student.school_id, academic_year_id: academicYearId, student_id: student.id },
+                  attributes: ["balance"]
+                });
+                return ledger ? Number(ledger.balance) : 0;
+              } catch { return 0; }
+            })()
         }
     };
 };

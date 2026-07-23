@@ -1,7 +1,6 @@
 import asyncHandler from "../../shared/asyncHandler.js";
 import {
-  createSchoolService,
-  listSchoolsService,
+  getActiveSchoolService,
   updateSchoolStatusService,
   updateSchoolAdminStatusService,
   resetSchoolAdminPasswordService,
@@ -10,16 +9,14 @@ import {
   updateSchoolSettingsService,
 } from "./school.service.js";
 
-/* CREATE SCHOOL */
-export const createSchool = asyncHandler(async (req, res) => {
-  const result = await createSchoolService(req.body);
-  res.status(201).json(result);
-});
-
-/* LIST SCHOOLS */
-export const listSchools = asyncHandler(async (req, res) => {
-  const schools = await listSchoolsService({ query: req.query });
-  res.json(schools);
+/* GET ACTIVE SINGLE SCHOOL */
+export const getActiveSchool = asyncHandler(async (req, res) => {
+  const school = await getActiveSchoolService();
+  res.json({
+    success: true,
+    total: school ? 1 : 0,
+    items: school ? [school] : [],
+  });
 });
 
 /* GET SCHOOL STATS */
@@ -68,4 +65,18 @@ export const updateSchool = asyncHandler(async (req, res) => {
 export const updateSchoolSettings = asyncHandler(async (req, res) => {
   const result = await updateSchoolSettingsService(req.user.school_id, req.body);
   res.json({ success: true, message: "School settings updated successfully", data: result });
+});
+
+/* DELETE SINGLE STUDENT */
+export const deleteStudent = asyncHandler(async (req, res) => {
+  const { deleteSingleStudentService } = await import("../students/student-delete.service.js");
+  const result = await deleteSingleStudentService(req.params.studentId);
+  res.json(result);
+});
+
+/* DELETE ALL STUDENTS IN SECTION */
+export const deleteSectionStudents = asyncHandler(async (req, res) => {
+  const { deleteSectionStudentsService } = await import("../students/student-delete.service.js");
+  const result = await deleteSectionStudentsService(req.params.sectionId);
+  res.json(result);
 });

@@ -11,8 +11,15 @@ export async function ensureTokenAccount(userId) {
   let account = await TokenAccount.findOne({ where: { user_id: userId } });
   if (account) return account;
 
-  const policy = await TokenPolicy.findOne({ where: { role: user.role } });
-  const initialBalance = policy?.monthly_tokens ?? 0;
+  let policy = await TokenPolicy.findOne({ where: { role: user.role } });
+  if (!policy) {
+    const defaultTokens = user.role === "student" ? 3000000 : (user.role === "teacher" ? 10000000 : 0);
+    policy = await TokenPolicy.create({
+      role: user.role,
+      annual_tokens: defaultTokens,
+    });
+  }
+  const initialBalance = policy.annual_tokens ?? 0;
 
   account = await TokenAccount.create({
     user_id: userId,
@@ -67,13 +74,12 @@ export async function deductTokens({ userId, amount, reason, refId }) {
     change: -amount,
     balance_before: before,
     balance_after: after,
-    // legacy reference_id is not stored in this model
   });
 }
 
-export async function setRoleMonthlyTokens({
+export async function setRoleAnnualTokens({
   role,
-  monthly_tokens,
+  annual_tokens,
   mode = "replace",
   school_id = null,
   updated_by = null,
@@ -82,13 +88,13 @@ export async function setRoleMonthlyTokens({
     throw new AppError("Invalid role", 400);
   }
 
-  if (Number.isNaN(Number(monthly_tokens)) || monthly_tokens < 0) {
-    throw new AppError("Invalid monthly_tokens", 400);
+  if (Number.isNaN(Number(annual_tokens)) || annual_tokens < 0) {
+    throw new AppError("Invalid annual_tokens", 400);
   }
 
   await TokenPolicy.upsert({
     role,
-    monthly_tokens,
+    annual_tokens,
     updated_by,
   });
 
@@ -106,7 +112,7 @@ export async function setRoleMonthlyTokens({
 
     const before = account.balance;
     const after =
-      mode === "add" ? before + Number(monthly_tokens) : Number(monthly_tokens);
+      mode === "add" ? before + Number(annual_tokens) : Number(annual_tokens);
 
     if (after !== before) {
       account.balance = after;
@@ -146,4 +152,59 @@ export async function adjustUserTokens({ user_id, amount, mode = "add" }) {
   });
 
   return account;
+}
+
+export async function replenishSchoolYearlyTokens(schoolId, transaction = null) {
+  const tOpt = transaction ? { transaction } : {};
+
+  // Fetch policies (or auto-create default policies if they don't exist yet)
+  let studentPolicy = await TokenPolicy.findOne({ where: { role: "student" }, ...tOpt });
+  if (!studentPolicy) {
+    studentPolicy = await TokenPolicy.create({ role: "student", annual_tokens: 3000000 }, tOpt);
+  }
+
+  let teacherPolicy = await TokenPolicy.findOne({ where: { role: "teacher" }, ...tOpt });
+  if (!teacherPolicy) {
+    teacherPolicy = await TokenPolicy.create({ role: "teacher", annual_tokens: 10000000 }, tOpt);
+  }
+
+  const users = await User.findAll({
+    where: { school_id: schoolId, role: ["student", "teacher"] },
+    ...tOpt,
+  });
+
+  for (const u of users) {
+    let account = await TokenAccount.findOne({ where: { user_id: u.id }, ...tOpt });
+    const baseline = u.role === "student" ? studentPolicy.annual_tokens : teacherPolicy.annual_tokens;
+
+    if (!account) {
+      account = await TokenAccount.create({
+        user_id: u.id,
+        balance: baseline,
+        expires_at: null,
+      }, tOpt);
+
+      await TokenTransaction.create({
+        user_id: u.id,
+        type: "admin_adjustment",
+        change: baseline,
+        balance_before: 0,
+        balance_after: baseline,
+      }, tOpt);
+    } else {
+      const before = account.balance;
+      account.balance = baseline;
+      await account.save(tOpt);
+
+      if (baseline !== before) {
+        await TokenTransaction.create({
+          user_id: u.id,
+          type: "admin_adjustment",
+          change: baseline - before,
+          balance_before: before,
+          balance_after: baseline,
+        }, tOpt);
+      }
+    }
+  }
 }

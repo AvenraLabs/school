@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { academicYearsAPI, studentsAPI } from '../../api';
+import { academicYearsAPI, studentsAPI, classesAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../context/ToastContext';
 import { Calendar, Plus, ChevronRight, AlertTriangle, CheckCircle, RefreshCw, ArrowRight, UserCheck, ShieldAlert, GraduationCap, XCircle, Search, Sparkles } from 'lucide-react';
@@ -8,20 +8,12 @@ import './AcademicYear.css';
 export function AcademicYearManager() {
   const [academicYears, setAcademicYears] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
+  const [wizardEnabled, setWizardEnabled] = useState(true);
   const toast = useToast();
 
   const currentSystemYear = new Date().getFullYear();
-
-  // Create Year Form state using Year & Month selections
-  const [createYears, setCreateYears] = useState({
-    startYear: currentSystemYear,
-    startMonth: 6, // June
-    endYear: currentSystemYear + 1,
-    endMonth: 4, // April
-  });
 
   // Wizard Year Form state using Year & Month selections
   const [wizardYears, setWizardYears] = useState({
@@ -30,10 +22,22 @@ export function AcademicYearManager() {
     endYear: currentSystemYear + 2,
     endMonth: 4,
   });
+
+  const [wizardConfig, setWizardConfig] = useState({
+    next_year_name: '',
+    start_date: '',
+    end_date: '',
+  });
+
+  const [classes, setClasses] = useState([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [selectedSectionId, setSelectedSectionId] = useState('');
+  const [repeatStudents, setRepeatStudents] = useState([]);
+  const repeatStudentIds = repeatStudents.map((s) => s.id);
+
   const [studentsList, setStudentsList] = useState([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [searchStudent, setSearchStudent] = useState('');
-  const [repeatStudentIds, setRepeatStudentIds] = useState([]);
   const [previewReport, setPreviewReport] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [confirmCheckbox, setConfirmCheckbox] = useState(false);
@@ -47,7 +51,8 @@ export function AcademicYearManager() {
     setLoading(true);
     try {
       const res = await academicYearsAPI.list();
-      setAcademicYears(res || []);
+      setAcademicYears(res?.years || []);
+      setWizardEnabled(res?.promotion_wizard_enabled !== false);
     } catch (e) {
       toast.error('Failed to load academic years');
     } finally {
@@ -55,22 +60,7 @@ export function AcademicYearManager() {
     }
   };
 
-  const handleCreateYear = async (e) => {
-    e.preventDefault();
-    const start_date = `${createYears.startYear}-${String(createYears.startMonth).padStart(2, '0')}-01`;
-    const lastDay = new Date(createYears.endYear, createYears.endMonth, 0).getDate();
-    const end_date = `${createYears.endYear}-${String(createYears.endMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    const name = `${createYears.startYear}-${createYears.endYear}`;
 
-    try {
-      await academicYearsAPI.create({ name, start_date, end_date });
-      toast.success('Academic Year created successfully');
-      setShowCreate(false);
-      loadAcademicYears();
-    } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed to create academic year');
-    }
-  };
 
   const handleSetCurrent = async (id) => {
     try {
@@ -116,27 +106,62 @@ export function AcademicYearManager() {
       endMonth: 4,
     });
 
-    setRepeatStudentIds([]);
+    setRepeatStudents([]);
     setConfirmCheckbox(false);
     setPreviewReport(null);
+    setSelectedClassId('');
+    setSelectedSectionId('');
+    setStudentsList([]);
 
-    // Fetch active students for failures list
-    setStudentsLoading(true);
+    // Fetch classes
     try {
-      const res = await studentsAPI.getOptions();
-      setStudentsList(res.items || []);
+      const res = await classesAPI.list();
+      setClasses(res.items || []);
     } catch (e) {
-      toast.error('Failed to load students list');
-    } finally {
-      setStudentsLoading(false);
+      toast.error('Failed to load classes');
     }
   };
 
-  const toggleRepeatStudent = (id) => {
-    setRepeatStudentIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+  const toggleRepeatStudent = (student) => {
+    setRepeatStudents((prev) => {
+      const exists = prev.some((s) => s.id === student.id);
+      if (exists) {
+        return prev.filter((s) => s.id !== student.id);
+      } else {
+        return [
+          ...prev,
+          {
+            id: student.id,
+            name: student.user?.name || 'Student',
+            class_name: student.class?.class_name || '',
+            section_name: student.section?.name || '',
+          },
+        ];
+      }
+    });
   };
+
+  useEffect(() => {
+    if (!showWizard || wizardStep !== 2) return;
+    if (!selectedClassId || !selectedSectionId) {
+      setStudentsList([]);
+      return;
+    }
+
+    const loadSectionStudents = async () => {
+      setStudentsLoading(true);
+      try {
+        const res = await studentsAPI.getOptions(Number(selectedClassId), Number(selectedSectionId));
+        setStudentsList(res.items || res || []);
+      } catch (e) {
+        toast.error('Failed to load students list');
+      } finally {
+        setStudentsLoading(false);
+      }
+    };
+
+    loadSectionStudents();
+  }, [selectedClassId, selectedSectionId, showWizard, wizardStep]);
 
   const fetchPreviewReport = async () => {
     setPreviewLoading(true);
@@ -204,15 +229,23 @@ export function AcademicYearManager() {
           <p>Configure year mappings, student promotions, and graduation lifecycle settings.</p>
         </div>
         <div className="ay-actions">
-          <button onClick={() => setShowCreate(true)} className="ay-btn ay-btn-soft">
-            <Plus size={18} />
-            Create Academic Year
-          </button>
-          <button onClick={startWizard} className="ay-btn ay-btn-primary">
-            Start Promotion Wizard
-          </button>
+          {wizardEnabled && (
+            <button onClick={startWizard} className="ay-btn ay-btn-primary">
+              Start Promotion Wizard
+            </button>
+          )}
         </div>
       </section>
+
+      {!wizardEnabled && (
+        <div className="ay-callout ay-callout-error" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <ShieldAlert size={24} style={{ flexShrink: 0, color: '#be123c' }} />
+          <div>
+            <h4 style={{ fontWeight: 800, color: '#9f1239', fontSize: '15px' }}>Promotion Wizard Locked</h4>
+            <p style={{ fontSize: '13px', color: '#be123c', marginTop: '2px' }}>Student promotions are locked. Please contact your support representative to renew your annual license.</p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards Row */}
       <section className="ay-stats">
@@ -251,7 +284,7 @@ export function AcademicYearManager() {
           </div>
         ) : academicYears.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>
-            No academic years found. Use the composer to create one.
+            No academic years found. Start the promotion wizard to create one.
           </div>
         ) : (
           <table className="ay-table">
@@ -299,93 +332,7 @@ export function AcademicYearManager() {
         )}
       </div>
 
-      {/* Create Year Modal */}
-      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Create Academic Year">
-        <form onSubmit={handleCreateYear} className="space-y-4" style={{ padding: '4px' }}>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="ay-form-group">
-              <label className="ay-label">Start Year</label>
-              <select
-                className="ay-input"
-                value={createYears.startYear}
-                onChange={(e) => {
-                  const y = parseInt(e.target.value);
-                  setCreateYears({ ...createYears, startYear: y, endYear: y + 1 });
-                }}
-              >
-                {Array.from({ length: 16 }, (_, i) => 2020 + i).map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-            <div className="ay-form-group">
-              <label className="ay-label">Start Month</label>
-              <select
-                className="ay-input"
-                value={createYears.startMonth}
-                onChange={(e) => setCreateYears({ ...createYears, startMonth: parseInt(e.target.value) })}
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    {new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' })}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="ay-form-group">
-              <label className="ay-label">End Year</label>
-              <select
-                className="ay-input"
-                value={createYears.endYear}
-                onChange={(e) => setCreateYears({ ...createYears, endYear: parseInt(e.target.value) })}
-              >
-                {Array.from({ length: 16 }, (_, i) => 2020 + i).map((y) => (
-                  <option key={y} value={y} disabled={y <= createYears.startYear}>{y}</option>
-                ))}
-              </select>
-            </div>
-            <div className="ay-form-group">
-              <label className="ay-label">End Month</label>
-              <select
-                className="ay-input"
-                value={createYears.endMonth}
-                onChange={(e) => setCreateYears({ ...createYears, endMonth: parseInt(e.target.value) })}
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    {new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' })}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '13px' }}>
-            <span style={{ color: '#64748b', fontWeight: 600 }}>Academic Year Name Preview: </span>
-            <strong style={{ color: '#4f46e5', fontWeight: 800 }}>{createYears.startYear}-{createYears.endYear}</strong>
-          </div>
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setShowCreate(false)}
-              className="ay-btn ay-btn-soft"
-              style={{ minHeight: '38px', borderRadius: '12px' }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="ay-btn ay-btn-primary"
-              style={{ minHeight: '38px', borderRadius: '12px' }}
-            >
-              Create Year
-            </button>
-          </div>
-        </form>
-      </Modal>
 
       {/* Promotion Wizard Full Modal */}
       <Modal
@@ -524,6 +471,64 @@ export function AcademicYearManager() {
               <div style={{ fontSize: '14px', color: '#475569', fontWeight: 650 }}>
                 Check the boxes next to students who should **repeat** their current class grade (they will not be promoted). All unchecked students will progress.
               </div>
+
+              {/* Class & Section Selection */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '8px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Select Class</label>
+                  <select
+                    value={selectedClassId}
+                    onChange={(e) => {
+                      setSelectedClassId(e.target.value);
+                      setSelectedSectionId('');
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '12px',
+                      border: '1px solid #cbd5e1',
+                      background: '#fff',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#0f172a',
+                      outline: 'none',
+                      boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                    }}
+                  >
+                    <option value="">-- Choose Class --</option>
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>{c.class_name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Select Section</label>
+                  <select
+                    value={selectedSectionId}
+                    onChange={(e) => setSelectedSectionId(e.target.value)}
+                    disabled={!selectedClassId}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '12px',
+                      border: '1px solid #cbd5e1',
+                      background: '#fff',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#0f172a',
+                      outline: 'none',
+                      boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                    }}
+                  >
+                    <option value="">-- Choose Section --</option>
+                    {(classes.find(c => c.id === Number(selectedClassId))?.sections || []).map((sec) => (
+                      <option key={sec.id} value={sec.id}>Section {sec.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between gap-4">
                 <div className="notifications-search" style={{ flex: 1, minHeight: '42px', borderRadius: '12px' }}>
                   <Search size={18} />
@@ -532,24 +537,29 @@ export function AcademicYearManager() {
                     placeholder="Search student by name or roll number..."
                     value={searchStudent}
                     onChange={(e) => setSearchStudent(e.target.value)}
+                    disabled={!selectedClassId || !selectedSectionId}
                   />
                 </div>
-                {repeatStudentIds.length > 0 && (
+                {repeatStudents.length > 0 && (
                   <span className="ay-badge ay-badge-active" style={{ color: '#be123c', backgroundColor: '#fff1f2', borderColor: '#fecdd3', fontSize: '13px' }}>
                     <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-ping" />
-                    {repeatStudentIds.length} Repeaters selected
+                    {repeatStudents.length} Repeaters selected
                   </span>
                 )}
               </div>
 
               <div className="ay-table-card" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                {studentsLoading ? (
+                {!selectedClassId || !selectedSectionId ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>
+                    Please select a Class and Section above to list students.
+                  </div>
+                ) : studentsLoading ? (
                   <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
                     <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 12px', color: '#4f46e5' }} />
                     <span style={{ fontWeight: 700 }}>Loading student registry...</span>
                   </div>
                 ) : filteredStudents.length === 0 ? (
-                  <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>No active students found matching search</div>
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>No active students found in this section matching search</div>
                 ) : (
                   <table className="ay-table">
                     <thead>
@@ -569,7 +579,7 @@ export function AcademicYearManager() {
                               <input
                                 type="checkbox"
                                 checked={isChecked}
-                                onChange={() => toggleRepeatStudent(s.id)}
+                                onChange={() => toggleRepeatStudent(s)}
                                 style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                               />
                             </td>
@@ -583,6 +593,57 @@ export function AcademicYearManager() {
                   </table>
                 )}
               </div>
+
+              {/* Selected Repeaters Summary List */}
+              {repeatStudents.length > 0 && (
+                <div style={{
+                  padding: '12px 16px',
+                  background: '#fff1f2',
+                  border: '1px solid #fecdd3',
+                  borderRadius: '14px',
+                  marginTop: '16px'
+                }}>
+                  <h5 style={{ margin: '0 0 10px', fontSize: '12px', fontWeight: '850', color: '#be123c', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Selected Repeaters Across All Sections ({repeatStudents.length})
+                  </h5>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {repeatStudents.map((s) => (
+                      <div
+                        key={s.id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: '#fff',
+                          border: '1px solid #fecdd3',
+                          borderRadius: '8px',
+                          padding: '4px 10px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          color: '#9f1239'
+                        }}
+                      >
+                        <span>{s.name} ({s.class_name} - {s.section_name})</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleRepeatStudent(s)}
+                          style={{
+                            border: 'none',
+                            background: 'none',
+                            color: '#f43f5e',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '900',
+                            padding: '0 2px'
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-between items-center pt-4 border-t border-slate-100">
                 <button type="button" onClick={() => setWizardStep(1)} className="ay-btn ay-btn-soft">Back</button>
@@ -725,7 +786,7 @@ export function AcademicYearManager() {
                           style={{ width: '20px', height: '20px', flexShrink: 0, marginTop: '2px', cursor: 'pointer' }}
                         />
                         <span style={{ fontSize: '12px', fontWeight: 750, color: '#475569', lineHeight: '1.45' }}>
-                          I confirm that I want to finalize student placements for {previewReport.totals?.promoted} students into {nextYearForm.next_year_name} and graduate {previewReport.totals?.graduating} senior-most Class 12 students. I understand that this migration process is irreversible and updates the current active workspace.
+                          I confirm that I want to finalize student placements for {previewReport.totals?.promoted} students into the next academic year ({wizardYears.startYear}-{wizardYears.endYear}) and graduate {previewReport.totals?.graduating} senior-most Class 12 students. I understand that this migration process is irreversible and updates the current active workspace.
                         </span>
                       </label>
                     </div>

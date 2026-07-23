@@ -74,6 +74,14 @@ import TransportRequest from "../modules/transport/transport-request.model.js";
 import AcademicYear from "../modules/academic-years/academic-year.model.js";
 import StudentEnrollment from "../modules/students/student-enrollment.model.js";
 
+/* ===================== FEES ===================== */
+import FeeCategory from "../modules/fees/fee-category.model.js";
+import ClassFeePlan from "../modules/fees/class-fee-plan.model.js";
+import ClassFeeSchedule from "../modules/fees/class-fee-schedule.model.js";
+import StudentFeeLedger from "../modules/fees/student-fee-ledger.model.js";
+import StudentTermLedger from "../modules/fees/student-term-ledger.model.js";
+import FeePayment from "../modules/fees/fee-payment.model.js";
+
 
 const initAssociations = () => {
   /* ==================== SCHOOL ==================== */
@@ -354,6 +362,48 @@ const initAssociations = () => {
 
   Section.hasMany(StudentEnrollment, { foreignKey: "section_id", onDelete: "CASCADE" });
   StudentEnrollment.belongsTo(Section, { foreignKey: "section_id" });
+
+  /* ==================== FEES ==================== */
+  School.hasMany(FeeCategory, { foreignKey: "school_id", onDelete: "CASCADE" });
+  FeeCategory.belongsTo(School, { foreignKey: "school_id" });
+
+  School.hasMany(ClassFeePlan, { foreignKey: "school_id", onDelete: "CASCADE" });
+  ClassFeePlan.belongsTo(School, { foreignKey: "school_id" });
+
+  ClassFeePlan.belongsTo(Class, { foreignKey: "class_id", onDelete: "CASCADE" });
+  Class.hasMany(ClassFeePlan, { foreignKey: "class_id" });
+
+  ClassFeePlan.belongsTo(AcademicYear, { foreignKey: "academic_year_id", onDelete: "CASCADE" });
+  AcademicYear.hasMany(ClassFeePlan, { foreignKey: "academic_year_id" });
+
+  ClassFeePlan.belongsTo(FeeCategory, { foreignKey: "fee_category_id", onDelete: "CASCADE" });
+  FeeCategory.hasMany(ClassFeePlan, { foreignKey: "fee_category_id" });
+
+  Student.hasMany(StudentFeeLedger, { foreignKey: "student_id", onDelete: "CASCADE" });
+  StudentFeeLedger.belongsTo(Student, { foreignKey: "student_id" });
+
+  StudentFeeLedger.belongsTo(AcademicYear, { foreignKey: "academic_year_id" });
+  AcademicYear.hasMany(StudentFeeLedger, { foreignKey: "academic_year_id" });
+
+  Student.hasMany(FeePayment, { foreignKey: "student_id", onDelete: "CASCADE" });
+  FeePayment.belongsTo(Student, { foreignKey: "student_id" });
+
+  StudentFeeLedger.hasMany(FeePayment, { foreignKey: "ledger_id", onDelete: "CASCADE" });
+  FeePayment.belongsTo(StudentFeeLedger, { foreignKey: "ledger_id" });
+
+  FeePayment.belongsTo(User, { as: "VoidedBy", foreignKey: "voided_by" });
+
+  Class.hasMany(ClassFeeSchedule, { foreignKey: "class_id", onDelete: "CASCADE" });
+  ClassFeeSchedule.belongsTo(Class, { foreignKey: "class_id" });
+
+  Student.hasMany(StudentTermLedger, { foreignKey: "student_id", onDelete: "CASCADE" });
+  StudentTermLedger.belongsTo(Student, { foreignKey: "student_id" });
+
+  StudentFeeLedger.hasMany(StudentTermLedger, { foreignKey: "student_id" });
+  StudentTermLedger.belongsTo(ClassFeeSchedule, { foreignKey: "schedule_id" });
+
+  StudentTermLedger.hasMany(FeePayment, { foreignKey: "term_ledger_id" });
+  FeePayment.belongsTo(StudentTermLedger, { foreignKey: "term_ledger_id" });
 };
 
 initAssociations();

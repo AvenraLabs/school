@@ -26,6 +26,7 @@ import { AuditLogs } from './pages/SchoolAdmin/AuditLogs';
 import { SchoolRegistry } from './pages/SchoolAdmin/SchoolRegistry';
 import { TransportManager } from './pages/SchoolAdmin/TransportManager';
 import { AcademicYearManager } from './pages/SchoolAdmin/AcademicYearManager';
+import { FeeManager } from './pages/SchoolAdmin/Fees';
 import PrivacyPolicy from './pages/Public/PrivacyPolicy';
 import TermsConditions from './pages/Public/TermsConditions';
 import { NotFoundPage } from './pages/Public/NotFoundPage';
@@ -68,6 +69,7 @@ function App() {
             >
               <Route path="/admin/dashboard" element={<SchoolAdminDashboard />} />
               <Route path="/admin/analytics" element={<SchoolAnalyticsPage />} />
+              <Route path="/admin/fees" element={<FeeManager />} />
               <Route path="/admin/directory" element={<SchoolRegistry />} />
               <Route path="/admin/bulk-seeder" element={<BulkSeeder />} />
               <Route path="/admin/classes" element={<ClassesManager />} />
