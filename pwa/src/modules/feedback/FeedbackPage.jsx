@@ -87,7 +87,7 @@ export default function FeedbackPage() {
         description,
         screenshot_url: screenshot || undefined,
         browser: getBrowserInfo(),
-        app_version: "1.1.0",
+        app_version: "1.0.0",
       });
       setSuccess(true);
       setTitle("");

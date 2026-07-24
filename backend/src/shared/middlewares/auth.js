@@ -4,6 +4,7 @@ import School from "../../modules/schools/school.model.js";
 import Teacher from "../../modules/teachers/teacher.model.js";
 import Student from "../../modules/students/student.model.js";
 import AppError from "../appError.js";
+import { getCache, setCache } from "../../config/redis.js";
 
 export async function protect(req, res, next) {
   try {
@@ -18,7 +19,15 @@ export async function protect(req, res, next) {
     // 2️⃣ Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 3️⃣ Load user
+    // ⚡ Fast Path: Check Redis cache first (key: auth:identity:<userId>)
+    const cacheKey = `auth:identity:${decoded.id}`;
+    const cachedIdentity = await getCache(cacheKey);
+    if (cachedIdentity) {
+      req.user = cachedIdentity;
+      return next();
+    }
+
+    // 3️⃣ Load user from DB
     const user = await User.findByPk(decoded.id);
     if (!user) {
       throw new AppError("User not found", 401);
@@ -89,6 +98,9 @@ export async function protect(req, res, next) {
       }
       identity.driver_id = driver.id;
     }
+
+    // ⚡ Cache resolved identity in Redis for 5 minutes (300 seconds)
+    await setCache(cacheKey, identity, 300);
 
     req.user = identity;
 

@@ -20,7 +20,7 @@ export function AboutAdmin() {
       <div className="about-card">
         <div className="about-brand-header">
           <h2 className="about-brand-title">SchoolIQ</h2>
-          <p className="about-brand-version">Version 1.3.0</p>
+          <p className="about-brand-version">Version 1.0.0</p>
         </div>
 
         <hr className="about-divider" />

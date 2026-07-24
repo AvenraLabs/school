@@ -59,7 +59,7 @@ export function FeedbackSubmit() {
         description,
         screenshot_url: screenshot || undefined,
         browser: getBrowserInfo(),
-        app_version: '1.3.0',
+        app_version: '1.0.0',
       });
       toast.success('Thank you! Feedback submitted successfully.');
       setTitle('');

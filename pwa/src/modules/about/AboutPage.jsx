@@ -22,7 +22,7 @@ export default function AboutPage() {
             SchoolIQ
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 3, fontWeight: 700 }}>
-            Version 1.1.0
+            Version 1.0.0
           </Typography>
 
           <Divider sx={{ my: 2 }} />
