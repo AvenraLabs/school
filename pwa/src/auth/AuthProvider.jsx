@@ -182,73 +182,65 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!token || !user) return;
 
-    let socket;
-    try {
-      const baseUrl = SOCKET_BASE_URL || import.meta.env.VITE_API_URL || "";
-      socket = io(baseUrl, {
-        path: "/api/socket.io",
-        auth: { token },
-      });
+    const socket = getSharedSocket(token);
+    if (!socket) return;
 
-      socket.on("notification:new", (notif) => {
-        // Check targeting
-        const role = user.role;
-        const matchesRole = notif.target_role === "all" || notif.target_role === role;
+    const handleNotification = (notif) => {
+      // Check targeting
+      const role = user.role;
+      const matchesRole = notif.target_role === "all" || notif.target_role === role;
 
-        let matchesScope = true;
-        if (role === "student") {
-          if (notif.class_id && Number(notif.class_id) !== Number(user.class_id)) {
-            matchesScope = false;
+      let matchesScope = true;
+      if (role === "student") {
+        if (notif.class_id && Number(notif.class_id) !== Number(user.class_id)) {
+          matchesScope = false;
+        }
+        if (notif.section_id && Number(notif.section_id) !== Number(user.section_id)) {
+          matchesScope = false;
+        }
+      }
+
+      if (matchesRole && matchesScope) {
+        // Check if today matches specific_dates or start_date/end_date range
+        const today = new Date().toISOString().split("T")[0];
+        let isDisplayToday = false;
+
+        if (notif.is_poster) {
+          if (notif.specific_dates && Array.isArray(notif.specific_dates) && notif.specific_dates.length > 0) {
+            isDisplayToday = notif.specific_dates.includes(today);
+          } else if (notif.start_date && notif.end_date) {
+            isDisplayToday = notif.start_date <= today && notif.end_date >= today;
           }
-          if (notif.section_id && Number(notif.section_id) !== Number(user.section_id)) {
-            matchesScope = false;
-          }
+        } else {
+          isDisplayToday = true;
         }
 
-        if (matchesRole && matchesScope) {
-          // Check if today matches specific_dates or start_date/end_date range
-          const today = new Date().toISOString().split("T")[0];
-          let isDisplayToday = false;
+        if (isDisplayToday) {
+          // Trigger browser native notification
+          if ("Notification" in window && Notification.permission === "granted") {
+            try {
+              new Notification(notif.title, {
+                body: notif.message,
+                icon: "/icon-192.png",
+              });
+            } catch (err) {
+              console.error("Browser push notification failed:", err);
+            }
+          }
 
+          // Dispatch client events to trigger refresh
+          window.dispatchEvent(new Event("notifications:refresh"));
           if (notif.is_poster) {
-            if (notif.specific_dates && Array.isArray(notif.specific_dates) && notif.specific_dates.length > 0) {
-              isDisplayToday = notif.specific_dates.includes(today);
-            } else if (notif.start_date && notif.end_date) {
-              isDisplayToday = notif.start_date <= today && notif.end_date >= today;
-            }
-          } else {
-            isDisplayToday = true;
-          }
-
-          if (isDisplayToday) {
-            // Trigger browser native notification
-            if ("Notification" in window && Notification.permission === "granted") {
-              try {
-                new Notification(notif.title, {
-                  body: notif.message,
-                  icon: "/icon-192.png",
-                });
-              } catch (err) {
-                console.error("Browser push notification failed:", err);
-              }
-            }
-
-            // Dispatch client events to trigger refresh
-            window.dispatchEvent(new Event("notifications:refresh"));
-            if (notif.is_poster) {
-              window.dispatchEvent(new Event("posters:refresh"));
-            }
+            window.dispatchEvent(new Event("posters:refresh"));
           }
         }
-      });
-    } catch (err) {
-      console.error("Notification socket connection failed:", err);
-    }
+      }
+    };
+
+    socket.on("notification:new", handleNotification);
 
     return () => {
-      if (socket) {
-        socket.disconnect();
-      }
+      socket.off("notification:new", handleNotification);
     };
   }, [token, user]);
 
@@ -306,6 +298,7 @@ export function AuthProvider({ children }) {
         setUser(nextAcc.user || decodeToken(nextAcc.token));
         return decoded;
       } else {
+        disconnectSharedSocket();
         localStorage.removeItem("token");
         localStorage.removeItem("accounts");
         localStorage.removeItem("activeUserId");

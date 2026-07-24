@@ -1,24 +1,13 @@
-import { io } from "socket.io-client";
-import { SOCKET_BASE_URL } from "../../../api/config";
+import { getSharedSocket } from "../../../services/socket.service";
 
-let socket;
 export function connectQuizSocket(token) {
-  if (!socket) {
-    socket = io(SOCKET_BASE_URL, {
-      path: "/api/socket.io",
-      auth: { token },
-    });
-  }
-  return socket;
+  return getSharedSocket(token);
 }
 
 export function disconnectQuizSocket() {
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
+  // Shared socket remains connected across pages; listeners are cleaned up by React components.
 }
 
 export function getQuizSocket() {
-  return socket;
+  return getSharedSocket();
 }

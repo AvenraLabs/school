@@ -17,19 +17,18 @@ export function useGroupChatRoom(chatId) {
     const socket = connectGroupChatSocket(token);
     socketRef.current = socket;
 
-    socket.emit("group:join", { chatId });
-
-    socket.on("group:message:new", (msg) => {
+    const handleNewMessage = (msg) => {
       const normalized = normalizeSocketMessage(msg, user);
       setMessages((prev) => addUnique(prev, normalized));
-    });
+    };
 
+    socket.on("group:message:new", handleNewMessage);
     socket.on("group:error", () => {});
 
     return () => {
       socket.emit("group:leave", { chatId });
-      socket.disconnect?.();
-      disconnectGroupChatSocket();
+      socket.off("group:message:new", handleNewMessage);
+      socket.off("group:error");
       socketRef.current = null;
     };
   }, [chatId, token]);
