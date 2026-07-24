@@ -12,6 +12,7 @@ import {
   createSection,
   listSections,
   updateSectionStatus,
+  deleteSection,
 } from "./section.controller.js";
 
 const router = express.Router();
@@ -40,6 +41,13 @@ router.patch(
   allowRoles("school_admin", "super_admin"),
   validate(updateSectionStatusSchema),
   updateSectionStatus
+);
+
+router.delete(
+  "/:id",
+  protect,
+  allowRoles("school_admin", "super_admin"),
+  deleteSection
 );
 
 export default router;

@@ -51,12 +51,49 @@ export const updateClassService = async (id, school_id, payload) => {
   return cls;
 };
 
+import AppError from "../../shared/appError.js";
+import db from "../../config/db.js";
+
 export const deleteClassService = async (id, school_id) => {
   const cls = await Class.findOne({ where: { id, school_id } });
 
   if (!cls) return null;
 
-  await cls.destroy();
+  const studentCount = await Student.count({ where: { class_id: id, school_id } });
+  if (studentCount > 0) {
+    throw new AppError(
+      `Cannot delete class "${cls.class_name}" because ${studentCount} student(s) are assigned to it. Please reassign or remove students first.`,
+      400
+    );
+  }
+
+  const sectionCount = await Section.count({ where: { class_id: id, school_id } });
+  if (sectionCount > 0) {
+    throw new AppError(
+      `Cannot delete class "${cls.class_name}" because ${sectionCount} section(s) exist under it. Please delete sections first.`,
+      400
+    );
+  }
+
+  await db.transaction(async (t) => {
+    if (db.models.teacher_assignment) {
+      await db.models.teacher_assignment.destroy({ where: { class_id: id }, transaction: t });
+    }
+    if (db.models.timetable) {
+      await db.models.timetable.destroy({ where: { class_id: id }, transaction: t });
+    }
+    if (db.models.class_fee_plan) {
+      await db.models.class_fee_plan.destroy({ where: { class_id: id }, transaction: t });
+    }
+    if (db.models.class_fee_schedule) {
+      await db.models.class_fee_schedule.destroy({ where: { class_id: id }, transaction: t });
+    }
+    if (db.models.student_enrollment) {
+      await db.models.student_enrollment.destroy({ where: { class_id: id }, transaction: t });
+    }
+    await cls.destroy({ transaction: t });
+  });
+
   return true;
 };
 

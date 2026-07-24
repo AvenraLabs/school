@@ -189,6 +189,11 @@ export const sectionsAPI = {
     });
     return response.data;
   },
+
+  delete: async (id) => {
+    const response = await axiosInstance.delete(`/sections/${id}`);
+    return response.data;
+  },
 };
 
 // Subjects API

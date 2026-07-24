@@ -4,6 +4,7 @@ import {
   createSectionService,
   listSectionsService,
   updateSectionStatusService,
+  deleteSectionService,
 } from "./section.service.js";
 
 /* =========================
@@ -67,5 +68,24 @@ export const updateSectionStatus = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: section,
+  });
+});
+
+/* =========================
+   DELETE SECTION
+========================= */
+export const deleteSection = asyncHandler(async (req, res) => {
+  const deleted = await deleteSectionService({
+    school_id: req.user.school_id,
+    section_id: req.params.id,
+  });
+
+  if (!deleted) {
+    throw new AppError("Section not found", 404);
+  }
+
+  res.json({
+    success: true,
+    message: "Section deleted successfully",
   });
 });

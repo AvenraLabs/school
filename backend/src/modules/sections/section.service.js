@@ -139,3 +139,48 @@ export const updateSectionStatusService = async ({
 
   return section;
 };
+
+/* =========================
+   ADMIN: DELETE SECTION
+========================= */
+export const deleteSectionService = async ({ school_id, section_id }) => {
+  const section = await Section.findOne({
+    where: { id: section_id, school_id },
+  });
+
+  if (!section) {
+    return null;
+  }
+
+  await db.transaction(async (t) => {
+    await Student.update(
+      { section_id: null },
+      { where: { section_id, school_id }, transaction: t }
+    );
+
+    if (db.models.teacher_assignment) {
+      await db.models.teacher_assignment.destroy({
+        where: { section_id },
+        transaction: t,
+      });
+    }
+
+    if (db.models.timetable) {
+      await db.models.timetable.destroy({
+        where: { section_id },
+        transaction: t,
+      });
+    }
+
+    if (db.models.student_enrollment) {
+      await db.models.student_enrollment.destroy({
+        where: { section_id },
+        transaction: t,
+      });
+    }
+
+    await section.destroy({ transaction: t });
+  });
+
+  return true;
+};

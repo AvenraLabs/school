@@ -32,6 +32,7 @@ export function ClassesManager() {
   const [showEditClass, setShowEditClass] = useState(null);
   const [showAddSection, setShowAddSection] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteSectionTarget, setDeleteSectionTarget] = useState(null);
   const [newClassName, setNewClassName] = useState('');
   const [editClassName, setEditClassName] = useState('');
   const [newSectionName, setNewSectionName] = useState('');
@@ -49,6 +50,18 @@ export function ClassesManager() {
       toast.error('Failed to load classes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteSection = async () => {
+    if (!deleteSectionTarget) return;
+    try {
+      await sectionsAPI.delete(deleteSectionTarget.id);
+      toast.success(`Section "${deleteSectionTarget.name}" deleted`);
+      setDeleteSectionTarget(null);
+      loadClasses();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to delete section');
     }
   };
 
@@ -207,13 +220,21 @@ export function ClassesManager() {
                         <div className="section-letter">{sec.name}</div>
                         <span className="section-info-text">Section {sec.name}</span>
                       </div>
-                      <div className="section-pill-actions">
+                      <div className="section-pill-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <button
                           className={`status-badge ${sec.is_active ? 'status-active' : 'status-inactive'}`}
                           onClick={() => toggleSectionStatus(sec.id, sec.is_active)}
                           title="Toggle Status"
                         >
                           {sec.is_active ? 'Active' : 'Inactive'}
+                        </button>
+                        <button
+                          className="btn-card-action danger"
+                          style={{ width: '28px', height: '28px', minWidth: '28px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          title="Delete Section"
+                          onClick={() => setDeleteSectionTarget(sec)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
@@ -323,8 +344,18 @@ export function ClassesManager() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteClass}
         title="Delete Class"
-        message={`Are you sure you want to delete "${deleteTarget?.class_name}"? This will also remove all sections under it.`}
-        confirmText="Delete"
+        message={`Are you sure you want to delete "${deleteTarget?.class_name}"?`}
+        confirmText="Delete Class"
+        danger
+      />
+
+      <ConfirmDialog
+        isOpen={!!deleteSectionTarget}
+        onClose={() => setDeleteSectionTarget(null)}
+        onConfirm={handleDeleteSection}
+        title="Delete Section"
+        message={`Are you sure you want to delete section "${deleteSectionTarget?.name}"? Students in this section will be unassigned from the section.`}
+        confirmText="Delete Section"
         danger
       />
     </div>

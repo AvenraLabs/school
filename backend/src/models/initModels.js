@@ -137,10 +137,7 @@ const initAssociations = () => {
 
   /* ==================== STUDENT (LEGACY – KEEP) ==================== */
   Student.belongsTo(School, { foreignKey: "school_id" });
-  Student.belongsTo(Class, {
-    foreignKey: "class_id",
-    onDelete: "SET NULL",
-  });
+  Student.belongsTo(Class, { foreignKey: "class_id" });
   Student.belongsTo(Section, { foreignKey: "section_id" });
 
   Class.hasMany(Student, { foreignKey: "class_id" });
