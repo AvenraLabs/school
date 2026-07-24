@@ -75,13 +75,13 @@ export function FeeCategories() {
           <Tag className="w-5 h-5 text-indigo-600" />
           <h3 className="text-base font-bold text-slate-900">Fee Categories Master</h3>
         </div>
-        <p className="text-xs text-slate-500">Categories used for receipt itemization (e.g. Tuition, Books, Transport, Exam)</p>
+        <p className="text-xs text-slate-500">Categories used for receipt itemization</p>
       </div>
 
       <form onSubmit={handleAddCategory} className="flex items-center gap-3">
         <input
           type="text"
-          placeholder="New Category Name (e.g. Tuition Fee)..."
+          placeholder="New Category Name..."
           className="input-field text-xs font-semibold flex-1"
           value={newCategoryName}
           onChange={(e) => setNewCategoryName(e.target.value)}

@@ -201,7 +201,7 @@ export function FeeClassPlans() {
                   type="text"
                   required
                   autoFocus
-                  placeholder="e.g. Term 1 Fee, Annual Fee, Lab Fee"
+                  placeholder="Enter fee name..."
                   className="input-field"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}

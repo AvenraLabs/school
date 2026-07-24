@@ -27,6 +27,7 @@ jobs:
             
             cd backend
             npm install
+            pm2 stop school-backend || true
             npm run migrate
             pm2 restart school-backend || pm2 start server.js --name school-backend
             pm2 save
