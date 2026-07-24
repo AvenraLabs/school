@@ -79,16 +79,6 @@ const Student = db.define(
       unique: true,
     },
 
-    father_occupation: DataTypes.STRING,
-    mother_occupation: DataTypes.STRING,
-
-    family_income: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: true,
-    },
-
-    guardian_occupation: DataTypes.STRING,
-    
     emergency_contact: DataTypes.STRING,
 
     residential_status: {

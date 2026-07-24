@@ -134,19 +134,12 @@ export function Approvals() {
               <span className="font-medium text-slate-800 uppercase">{selectedItem.blood_group || '—'}</span>
             </div>
             <div>
-              <span className="text-slate-400 block mb-0.5">Family Annual Income</span>
-              <span className="font-medium text-slate-800">{selectedItem.family_income ? `$${selectedItem.family_income}` : '—'}</span>
-            </div>
-            <div className="col-span-2 border-t border-slate-100 pt-3 mt-1">
-              <h5 className="font-semibold text-slate-900 mb-2">Family & Contact Details</h5>
-            </div>
-            <div>
               <span className="text-slate-400 block mb-0.5">Father's Name</span>
-              <span className="font-medium text-slate-800">{selectedItem.father_name || '—'} {selectedItem.father_occupation ? `(${selectedItem.father_occupation})` : ''}</span>
+              <span className="font-medium text-slate-800">{selectedItem.father_name || '—'}</span>
             </div>
             <div>
               <span className="text-slate-400 block mb-0.5">Mother's Name</span>
-              <span className="font-medium text-slate-800">{selectedItem.mother_name || '—'} {selectedItem.mother_occupation ? `(${selectedItem.mother_occupation})` : ''}</span>
+              <span className="font-medium text-slate-800">{selectedItem.mother_name || '—'}</span>
             </div>
             <div>
               <span className="text-slate-400 block mb-0.5">Guardian Name</span>

@@ -8,21 +8,74 @@ import TeacherQuiz from "../quiz/teacher-quiz.model.js";
 import TeacherQuizQuestion from "../quiz/teacher-quiz-question.model.js";
 import AppError from "../../shared/appError.js";
 
-/** Extract JSON safely from Gemini output */
+/** Extract JSON safely from Gemini output with multi-stage sanitization */
 function parseGeminiJson(rawText) {
-  const cleaned = rawText.replace(/```json|```/g, "").trim();
+  if (!rawText || typeof rawText !== "string") {
+    throw new AppError("AI returned empty content. Please try again.", 500);
+  }
+
+  // 1. Remove markdown fences
+  let cleaned = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+
+  // 2. Locate JSON object bounds
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) {
-    throw new AppError("AI returned invalid structured output format", 500);
+  if (start === -1) {
+    throw new AppError("AI response did not contain valid structured JSON. Please click Generate again.", 500);
   }
-  return JSON.parse(cleaned.slice(start, end + 1));
+
+  let jsonCandidate = end > start ? cleaned.slice(start, end + 1) : cleaned.slice(start);
+
+  // Attempt 1: Standard JSON parse
+  try {
+    return JSON.parse(jsonCandidate);
+  } catch (err1) {
+    // Attempt 2: Sanitize control characters & trailing commas
+    try {
+      let sanitized = jsonCandidate
+        .replace(/,\s*([\}\]])/g, "$1")
+        .replace(/[\u0000-\u001F]+/g, (match) => {
+          return match === "\n" ? "\\n" : match === "\r" ? "\\r" : match === "\t" ? "\\t" : "";
+        });
+      return JSON.parse(sanitized);
+    } catch (err2) {
+      // Attempt 3: Repair truncated JSON by closing open brackets/braces
+      try {
+        let repaired = jsonCandidate.replace(/,\s*([\}\]])/g, "$1");
+        let openBraces = (repaired.match(/\{/g) || []).length;
+        let closeBraces = (repaired.match(/\}/g) || []).length;
+        let openBrackets = (repaired.match(/\[/g) || []).length;
+        let closeBrackets = (repaired.match(/\]/g) || []).length;
+
+        while (closeBrackets < openBrackets) {
+          repaired += "]";
+          closeBrackets++;
+        }
+        while (closeBraces < openBraces) {
+          repaired += "}";
+          closeBraces++;
+        }
+        return JSON.parse(repaired);
+      } catch (err3) {
+        console.error("[parseGeminiJson] Failed all JSON parse attempts. Raw snippet:", rawText.slice(0, 300));
+        throw new AppError("AI generated an improperly formatted response. Please click Generate again.", 500);
+      }
+    }
+  }
 }
 
-/** Safely call Gemini API with retry for 503 capacity limits */
+/** Safely call Gemini API with structured JSON response config & retry */
 async function safeGenerateContent(ai, model, prompt) {
+  const reqPayload = {
+    model,
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+    },
+  };
+
   try {
-    return await ai.models.generateContent({ model, contents: prompt });
+    return await ai.models.generateContent(reqPayload);
   } catch (err) {
     const errStr = String(err?.message || err);
     console.error("[TeacherAIService] Gemini API error:", errStr);
@@ -30,7 +83,7 @@ async function safeGenerateContent(ai, model, prompt) {
       // Wait 1.5 seconds and retry once
       await new Promise((resolve) => setTimeout(resolve, 1500));
       try {
-        return await ai.models.generateContent({ model, contents: prompt });
+        return await ai.models.generateContent(reqPayload);
       } catch (retryErr) {
         throw new AppError(
           "Gemini AI server is currently experiencing high demand. Please try clicking Generate again in a few seconds.",
@@ -69,6 +122,7 @@ export async function generateTeacherAiService({
   showExplanations = true,
   availableUntil = null,
   classId = null,
+  sectionId = null,
   instructions = "",
   skipRag = false, // When true, bypass RAG and go direct to Gemini
   topic = "", // Teacher specified topic / focus area
@@ -76,6 +130,13 @@ export async function generateTeacherAiService({
   if (user.role !== "teacher" && user.role !== "school_admin" && user.role !== "super_admin") {
     throw new AppError("Only teachers or administrators can generate AI content", 403);
   }
+
+  // ── SPAM PROTECTION & HARD LIMITS ──
+  const safeNumQuestions = Math.min(Math.max(Number(numQuestions) || 5, 1), 50); // Hard cap: max 50 questions
+  const safeTotalMarks = Math.min(Math.max(Number(totalMarks) || 10, 1), 500); // Hard cap: max 500 marks
+  const safeDuration = Math.min(Math.max(Number(duration) || 15, 1), 300); // Hard cap: max 300 minutes
+  const safeTitle = (title || "").slice(0, 200);
+  const safeInstructions = (instructions || "").slice(0, 500);
 
   const school = await School.findByPk(user.school_id);
   const finalBoard = (board || school?.board || "CBSE").toUpperCase();
@@ -325,7 +386,7 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
     };
   }
 
-  // 4. AI Teacher Quiz (Creates assignment published to target class)
+  // 4. AI Teacher Quiz (Creates assignment published to target class & section)
   if (feature === "teacher_quiz") {
     if (!classId) {
       throw new AppError("Target class selection is required to assign quiz homework", 400);
@@ -334,20 +395,20 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
     const quizPrompt = `
 You are an expert curriculum designer creating a Student Homework Quiz for Grade ${finalGrade} ${finalSubject} (${finalBoard} Board).
 
-Quiz Title: ${title || `${finalSubject} Quiz`}
+Quiz Title: ${safeTitle || `${finalSubject} Quiz`}
 Topic / Focus Area: ${topic || chapList.join(", ") || "General Topic"}
 Selected Chapters: ${chapList.join(", ") || "General"}
-Number of Questions: ${Math.min(Math.max(numQuestions, 3), 20)}
+Number of Questions: ${safeNumQuestions}
 Difficulty: ${difficulty}
 Question Types: ${(questionTypes.length > 0 ? questionTypes : ["MCQ", "True/False"]).join(", ")}
 
 System Rules:
 1. Return ONLY valid JSON matching this exact structure:
 {
-  "title": "${title || `${finalSubject} Quiz Homework`}",
+  "title": "${safeTitle || `${finalSubject} Quiz Homework`}",
   "instructions": "Complete all questions carefully.",
   "difficulty": "${difficulty}",
-  "estimated_minutes": ${duration || 15},
+  "estimated_minutes": ${safeDuration || 15},
   "questions": [
     {
       "order_index": 1,
@@ -363,7 +424,7 @@ System Rules:
 2. Ensure options contain 4 distinct choices for MCQs.
 3. correct_answer MUST match one of the choices in options exactly.
 4. NO emojis. NO text outside JSON.
-${instructions ? `Teacher Directive: ${instructions}` : ""}
+${safeInstructions ? `Teacher Directive: ${safeInstructions}` : ""}
 
 ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
 `;
@@ -377,28 +438,35 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
       school_id: user.school_id,
       teacher_id: user.id,
       class_id: classId,
+      section_id: sectionId || null,
       subject: finalSubject,
       chapter: chapList.join(", "),
-      title: parsed.title || title || `${finalSubject} Quiz`,
-      instructions: parsed.instructions || "Complete the quiz assignment.",
+      title: parsed.title || safeTitle || `${finalSubject} Quiz`,
+      instructions: parsed.instructions || safeInstructions || "Complete the quiz assignment.",
       difficulty,
       total_marks: (parsed.questions || []).reduce((sum, q) => sum + (q.marks || 1), 0),
-      estimated_minutes: parsed.estimated_minutes || duration || 15,
+      estimated_minutes: parsed.estimated_minutes || safeDuration || 15,
       show_correct_answers: Boolean(showCorrectAnswers),
       show_explanations: Boolean(showExplanations),
       due_date: availableUntil || null,
       status: "published",
     });
 
-    const questionsToCreate = (parsed.questions || []).map((q, idx) => ({
-      quiz_id: quiz.id,
-      order_index: idx + 1,
-      question_text: q.question_text,
-      options: q.options || ["True", "False"],
-      correct_answer: q.correct_answer,
-      explanation: q.explanation || "",
-      marks: q.marks || 1,
-    }));
+    const questionsToCreate = (parsed.questions || []).map((q, idx) => {
+      const opts = Array.isArray(q.options) && q.options.length > 0 ? q.options : ["Option A", "Option B", "Option C", "Option D"];
+      const rawAns = q.correct_answer || q.correctAnswer || q.answer || q.correct_option || q.correct || opts[0] || "Option A";
+      const finalAns = String(rawAns).trim();
+
+      return {
+        quiz_id: quiz.id,
+        order_index: idx + 1,
+        question_text: q.question_text || q.question || `Question ${idx + 1}`,
+        options: opts,
+        correct_answer: finalAns,
+        explanation: q.explanation || "",
+        marks: Number(q.marks) || 1,
+      };
+    });
 
     await TeacherQuizQuestion.bulkCreate(questionsToCreate);
 

@@ -39,9 +39,6 @@ export default function ProfileForm({
       father_name: profile?.father_name || "",
       mother_name: profile?.mother_name || "",
       guardian_name: profile?.guardian_name || "",
-      father_occupation: profile?.father_occupation || "",
-      mother_occupation: profile?.mother_occupation || "",
-      family_income: profile?.family_income || "",
       address: profile?.address || "",
       designation: profile?.designation || "",
       qualification: profile?.qualification || "",
@@ -324,15 +321,7 @@ export default function ProfileForm({
               <TextField label="Mother's Name" fullWidth {...register("mother_name")} />
             </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: '100%' }}>
-              <TextField label="Father's Occupation" fullWidth {...register("father_occupation")} />
-              <TextField label="Mother's Occupation" fullWidth {...register("mother_occupation")} />
-            </Stack>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: '100%' }}>
               <TextField label="Guardian Name" fullWidth {...register("guardian_name")} />
-              <TextField label="Guardian Occupation" fullWidth {...register("guardian_occupation")} />
-            </Stack>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: '100%' }}>
-              <TextField label="Family Income" type="number" fullWidth {...register("family_income")} />
               <TextField label="Emergency Contact" fullWidth {...register("emergency_contact")} />
             </Stack>
             <TextField

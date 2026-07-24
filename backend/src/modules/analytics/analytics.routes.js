@@ -13,7 +13,7 @@ router.use(protect);
 
 router.get(
   "/student",
-  allowRoles("student", "teacher", "school_admin"),
+  allowRoles("student", "teacher", "school_admin", "parent"),
   getStudentAnalytics
 );
 router.get(

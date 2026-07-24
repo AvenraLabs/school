@@ -33,6 +33,14 @@ const TeacherQuiz = db.define(
         key: "id",
       },
     },
+    section_id: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+      references: {
+        model: "sections",
+        key: "id",
+      },
+    },
     subject: {
       type: DataTypes.STRING,
       allowNull: false,

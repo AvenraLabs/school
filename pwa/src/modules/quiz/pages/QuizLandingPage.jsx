@@ -1,20 +1,32 @@
-import { Container, Grid, Card, CardContent, Typography, Box, Avatar, Stack, CircularProgress, Divider, Button } from "@mui/material";
-import { Person, People } from "@mui/icons-material";
+import { Container, Grid, Card, CardContent, Typography, Box, Avatar, Stack, CircularProgress, Divider, Button, Chip } from "@mui/material";
+import { Person, People, School } from "@mui/icons-material";
+import { useTheme } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../auth/AuthProvider";
 import { getAssetUrl } from "../../../utils/asset";
 import { useEffect, useState } from "react";
 import CreateJoinGameDialog from "../components/CreateJoinGameDialog";
 import { getQuizHistory } from "../api/quiz.api";
+import api from "../../../api/axios";
 
 export default function QuizLandingPage() {
     const navigate = useNavigate();
+    const theme = useTheme();
     const { user } = useAuth();
     const [multiplayerOpen, setMultiplayerOpen] = useState(false);
     const [history, setHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
+    const [pendingCount, setPendingCount] = useState(0);
+
+    useEffect(() => {
+        api.get("/quizzes/student/pending")
+            .then((res) => {
+                setPendingCount(res.data?.quizzes?.length || 0);
+            })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         let mounted = true;
@@ -62,58 +74,153 @@ export default function QuizLandingPage() {
     }
 
     return (
-        <Container maxWidth="sm" sx={{ mt: 4, pb: 4 }}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ textAlign: 'center', mb: 4 }}>
+        <Container maxWidth="sm" sx={{ mt: 2, pb: 4, px: 2 }}>
+            <Typography variant="h5" sx={{ fontWeight: 900, color: "#0f172a", textAlign: 'center', mb: 3 }}>
                 Quiz Zone
             </Typography>
 
-            <Grid container spacing={3}>
-                <Grid item xs={12}>
-                    <Card
-                        sx={{
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            bgcolor: '#e3f2fd',
-                            transition: 'transform 0.2s',
-                            '&:hover': { transform: 'scale(1.02)' }
-                        }}
-                        onClick={() => navigate('single')}
-                    >
-                        <CardContent sx={{ display: 'flex', alignItems: 'center', p: 3 }}>
-                            <Avatar sx={{ bgcolor: 'primary.main', width: 60, height: 60, mr: 3 }}>
-                                <Person fontSize="large" />
-                            </Avatar>
-                            <Box>
-                                <Typography variant="h6" fontWeight="bold">Single Player</Typography>
+            <Stack spacing={2}>
+                {/* Card 1: Tasks */}
+                <Card
+                    onClick={() => navigate('/student/homework-quizzes')}
+                    sx={{
+                        borderRadius: "20px",
+                        border: "1px solid #e2e8f0",
+                        bgcolor: "#ffffff",
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': { transform: 'translateY(-2px)', borderColor: '#4f46e5' }
+                    }}
+                >
+                    <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box
+                                sx={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: "12px",
+                                    bgcolor: '#e0e7ff',
+                                    color: '#4f46e5',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <School />
                             </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0f172a' }}>
+                                Tasks
+                            </Typography>
+                        </Box>
+                        <Chip 
+                            label={`Tasks (${pendingCount})`} 
+                            size="small"
+                            sx={{ 
+                                bgcolor: pendingCount > 0 ? '#ef4444' : '#e0e7ff', 
+                                color: pendingCount > 0 ? '#ffffff' : '#3730a3', 
+                                fontWeight: 800,
+                                fontSize: '12px',
+                                px: 0.5
+                            }} 
+                        />
+                    </CardContent>
+                </Card>
 
-
-                {/* Multiplayer */}
-                <Grid item xs={12}>
-                    <Card
-                        sx={{
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            bgcolor: '#f3e5f5',
-                            transition: 'transform 0.2s',
-                            '&:hover': { transform: 'scale(1.02)' }
-                        }}
-                        onClick={() => setMultiplayerOpen(true)}
-                    >
-                        <CardContent sx={{ display: 'flex', alignItems: 'center', p: 3 }}>
-                            <Avatar sx={{ bgcolor: 'secondary.main', width: 60, height: 60, mr: 3 }}>
-                                <People fontSize="large" />
-                            </Avatar>
-                            <Box>
-                                <Typography variant="h6" fontWeight="bold">Multiplayer</Typography>
+                {/* Card 2: Single Player */}
+                <Card
+                    onClick={() => navigate('single')}
+                    sx={{
+                        borderRadius: "20px",
+                        border: "1px solid #e2e8f0",
+                        bgcolor: "#ffffff",
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': { transform: 'translateY(-2px)', borderColor: '#10b981' }
+                    }}
+                >
+                    <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box
+                                sx={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: "12px",
+                                    bgcolor: '#d1fae5',
+                                    color: '#10b981',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <Person />
                             </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0f172a' }}>
+                                Single Player
+                            </Typography>
+                        </Box>
+                        <Chip 
+                            label="Practice" 
+                            size="small"
+                            sx={{ 
+                                bgcolor: '#d1fae5', 
+                                color: '#065f46', 
+                                fontWeight: 800,
+                                fontSize: '12px',
+                                px: 0.5
+                            }} 
+                        />
+                    </CardContent>
+                </Card>
+
+                {/* Card 3: Multiplayer */}
+                <Card
+                    onClick={() => setMultiplayerOpen(true)}
+                    sx={{
+                        borderRadius: "20px",
+                        border: "1px solid #e2e8f0",
+                        bgcolor: "#ffffff",
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': { transform: 'translateY(-2px)', borderColor: '#ec4899' }
+                    }}
+                >
+                    <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box
+                                sx={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: "12px",
+                                    bgcolor: '#fce7f3',
+                                    color: '#ec4899',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <People />
+                            </Box>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0f172a' }}>
+                                Multiplayer
+                            </Typography>
+                        </Box>
+                        <Chip 
+                            label="Class Games" 
+                            size="small"
+                            sx={{ 
+                                bgcolor: '#fce7f3', 
+                                color: '#9d174d', 
+                                fontWeight: 800,
+                                fontSize: '12px',
+                                px: 0.5
+                            }} 
+                        />
+                    </CardContent>
+                </Card>
+            </Stack>
 
             <CreateJoinGameDialog
                 open={multiplayerOpen}

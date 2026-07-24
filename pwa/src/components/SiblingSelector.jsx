@@ -10,9 +10,11 @@ import {
   ListItemText,
   Divider,
   CircularProgress,
+  Badge,
 } from "@mui/material";
 import { SwapHoriz, Add } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
+import { getAssetUrl } from "../utils/asset";
 import { useNavigate } from "react-router-dom";
 
 /**
@@ -85,7 +87,10 @@ export default function SiblingSelector() {
             sx={{ gap: 1 }}
           >
             <ListItemAvatar sx={{ minWidth: 36 }}>
-              <Avatar sx={{ width: 28, height: 28, bgcolor: "primary.main", fontSize: 12 }}>
+              <Avatar
+                src={getAssetUrl(acc.user?.avatar_url)}
+                sx={{ width: 30, height: 30, bgcolor: "primary.main", fontSize: 12 }}
+              >
                 {acc.user.name?.[0]?.toUpperCase() || "U"}
               </Avatar>
             </ListItemAvatar>

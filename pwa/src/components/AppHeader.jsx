@@ -28,14 +28,6 @@ export default function AppHeader() {
 
   function handleProfileClick() {
     if (!user) return;
-    if (user.role === "teacher") {
-      window.dispatchEvent(new Event("toggle-teacher-sidebar"));
-      return;
-    }
-    if (user.role === "student") {
-      window.dispatchEvent(new Event("toggle-student-sidebar"));
-      return;
-    }
     navigate(`${basePath}/profile`);
   }
 

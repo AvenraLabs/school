@@ -34,8 +34,6 @@ export const startLibraryCron = () => {
       // Schedule again for next day
       scheduleNextRun();
     }, msUntilNext8AM);
-
-    console.log(`[LibraryCron] Next overdue reminder run scheduled for ${next8AM.toISOString()}`);
   };
 
   scheduleNextRun();

@@ -355,9 +355,8 @@ export const processProfileUpdateService = async ({
       const studentUpdates = {};
       const fields = [
         "dob", "gender", "blood_group", "father_name", "mother_name",
-        "guardian_name", "father_occupation", "mother_occupation",
-        "guardian_occupation", "emergency_contact", "residential_status",
-        "address", "family_income", "roll_no"
+        "guardian_name", "emergency_contact", "residential_status",
+        "address", "roll_no"
       ];
       fields.forEach(f => {
         if (data[f] !== undefined) studentUpdates[f] = data[f];

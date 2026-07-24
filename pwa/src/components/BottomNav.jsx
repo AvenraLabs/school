@@ -4,9 +4,10 @@ import {
   Quiz,
   SmartToy,
   Chat,
-  Person,
   HowToReg,
   Book,
+  AutoAwesome,
+  Menu as MenuIcon,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
@@ -39,17 +40,18 @@ export default function BottomNav() {
       { label: "Quiz",    icon: <Quiz />,      path: `${base}/quiz` },
       { label: "AI Chat", icon: <SmartToy />,  path: `${base}/ai-chat` },
       { label: "Chat",    icon: <Chat />,      path: `${base}/group-chat` },
-      { label: "Me",      icon: <Person />,    path: `${base}/profile` },
+      { label: "Menu",    icon: <MenuIcon />,  path: "toggle-sidebar", isSidebarToggle: true },
     ],
     teacher: [
-      { label: "Home",       icon: <Home />,     path: `${base}/dashboard` },
-      { label: "Attendance", icon: <HowToReg />, path: `${base}/attendance` },
-      { label: "Homework",   icon: <Book />,     path: `${base}/diary` },
-      { label: "Me",         icon: <Person />,   path: `${base}/profile` },
+      { label: "Home",       icon: <Home />,        path: `${base}/dashboard` },
+      { label: "Attendance", icon: <HowToReg />,    path: `${base}/attendance` },
+      { label: "AI Tools",   icon: <AutoAwesome />, path: `${base}/ai-tools` },
+      { label: "Homework",   icon: <Book />,        path: `${base}/diary` },
+      { label: "Menu",       icon: <MenuIcon />,    path: "toggle-sidebar", isSidebarToggle: true },
     ],
     driver: [
-      { label: "Home",    icon: <Home />,    path: `${base}/dashboard` },
-      { label: "Profile", icon: <Person />,  path: `${base}/profile` },
+      { label: "Home", icon: <Home />,     path: `${base}/dashboard` },
+      { label: "Menu", icon: <MenuIcon />, path: "toggle-sidebar", isSidebarToggle: true },
     ],
   };
 
@@ -57,7 +59,7 @@ export default function BottomNav() {
 
   // Highlight deepest matching tab (e.g. /student/quiz/123/play -> quiz tab)
   const activeValue =
-    items.find((item) => location.pathname.startsWith(item.path))?.path ||
+    items.find((item) => item.path !== "toggle-sidebar" && location.pathname.startsWith(item.path))?.path ||
     location.pathname;
 
   return (
@@ -78,6 +80,15 @@ export default function BottomNav() {
       <BottomNavigation
         value={activeValue}
         onChange={(_, newValue) => {
+          const selected = items.find((i) => i.path === newValue);
+          if (selected?.isSidebarToggle) {
+            if (user.role === "teacher") {
+              window.dispatchEvent(new Event("toggle-teacher-sidebar"));
+            } else {
+              window.dispatchEvent(new Event("toggle-student-sidebar"));
+            }
+            return;
+          }
           setValue(newValue);
           navigate(newValue);
         }}

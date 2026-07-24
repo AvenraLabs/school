@@ -27,9 +27,6 @@ export const createStudentService = async ({
   guardian_phone,
   address,
   aadhar_no,
-  father_occupation,
-  mother_occupation,
-  family_income,
   admission_no,
 }) => {
   if (!section_id || !class_id) {
@@ -116,9 +113,6 @@ export const createStudentService = async ({
         address: address || null,
         blood_group: blood_group || null,
         aadhar_no: aadhar_no || null,
-        father_occupation: father_occupation || null,
-        mother_occupation: mother_occupation || null,
-        family_income: family_income || null,
         approval_status: "pending",
         is_active: true,
       },

@@ -40,6 +40,7 @@ import AuditLog from "../modules/audit/audit-log.model.js";
 import StudentChatSession from "../modules/rag/models/student-chat-session.model.js";
 import StudentChatMessage from "../modules/rag/models/student-chat-message.model.js";
 import TextbookChapter from "../modules/rag/models/textbook-chapter.model.js";
+import VideoGeneration from "../modules/ai-video/video-generation.model.js";
 
 /* ===================== QUIZZES / HOMEWORK ===================== */
 import TeacherQuiz from "../modules/quiz/teacher-quiz.model.js";
@@ -450,12 +451,18 @@ const initAssociations = () => {
   TeacherQuiz.hasMany(TeacherQuizQuestion, { foreignKey: "quiz_id", onDelete: "CASCADE", as: "Questions" });
   TeacherQuizQuestion.belongsTo(TeacherQuiz, { foreignKey: "quiz_id" });
 
+  TeacherQuiz.belongsTo(Class, { foreignKey: "class_id" });
+  TeacherQuiz.belongsTo(Section, { foreignKey: "section_id" });
+
   TeacherQuiz.hasMany(StudentQuizSubmission, { foreignKey: "quiz_id", onDelete: "CASCADE", as: "Submissions" });
   StudentQuizSubmission.belongsTo(TeacherQuiz, { foreignKey: "quiz_id" });
 
-  User.hasMany(StudentQuizSubmission, { foreignKey: "student_id", onDelete: "CASCADE" });
-  StudentQuizSubmission.belongsTo(User, { foreignKey: "student_id" });
-
+  /* ==================== VIDEO GENERATIONS ==================== */
+  Teacher.hasMany(VideoGeneration, { foreignKey: "teacher_id", onDelete: "SET NULL" });
+  VideoGeneration.belongsTo(Teacher, { foreignKey: "teacher_id" });
+  VideoGeneration.belongsTo(Class, { foreignKey: "class_id" });
+  VideoGeneration.belongsTo(Section, { foreignKey: "section_id" });
+  VideoGeneration.belongsTo(School, { foreignKey: "school_id" });
 };
 
 initAssociations();

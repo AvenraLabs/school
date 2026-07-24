@@ -32,12 +32,8 @@ export const createStudent = asyncHandler(async (req, res) => {
     guardian_phone: req.body.guardian_phone,
     address: req.body.address,
     aadhar_no: req.body.aadhar_no,
-    father_occupation: req.body.father_occupation,
-    mother_occupation: req.body.mother_occupation,
-    guardian_occupation: req.body.guardian_occupation,
     emergency_contact: req.body.emergency_contact,
     residential_status: req.body.residential_status,
-    family_income: req.body.family_income,
     admission_no: req.body.admission_no,
   });
 
@@ -95,13 +91,9 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     father_name,
     mother_name,
     guardian_name,
-    father_occupation,
-    mother_occupation,
-    guardian_occupation,
     emergency_contact,
     residential_status,
     address,
-    family_income,
     avatar_url,
     roll_no,
   } = req.body;
@@ -156,9 +148,8 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
 
     const studentFields = [
       "dob", "gender", "blood_group", "father_name", "mother_name",
-      "guardian_name", "father_occupation", "mother_occupation",
-      "guardian_occupation", "emergency_contact", "residential_status",
-      "address", "family_income", "roll_no"
+      "guardian_name", "emergency_contact", "residential_status",
+      "address", "roll_no"
     ];
     studentFields.forEach(field => {
       if (req.body[field] !== undefined) {
@@ -227,13 +218,9 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     father_name,
     mother_name,
     guardian_name,
-    father_occupation,
-    mother_occupation,
-    guardian_occupation,
     emergency_contact,
     residential_status,
     address,
-    family_income,
     roll_no: roll_no || null,
     approval_status: "pending",
     approved_by: null,

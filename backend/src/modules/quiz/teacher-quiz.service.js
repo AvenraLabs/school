@@ -1,9 +1,11 @@
+import { Op } from "sequelize";
 import TeacherQuiz from "./teacher-quiz.model.js";
 import TeacherQuizQuestion from "./teacher-quiz-question.model.js";
 import StudentQuizSubmission from "./student-quiz-submission.model.js";
 import User from "../users/user.model.js";
 import Student from "../students/student.model.js";
 import Class from "../classes/classes.model.js";
+import Section from "../sections/section.model.js";
 import School from "../schools/school.model.js";
 import AppError from "../../shared/appError.js";
 import { getTeacherChapter } from "../rag/runtime/getTeacherChapter.js";
@@ -101,12 +103,19 @@ export async function getPendingStudentQuizzes(userId, schoolId) {
   });
   const completedQuizIds = completedSubmissions.map((s) => s.quiz_id);
 
-  // Find published quizzes for student's class
+  // Find published quizzes for student's class & section
   const where = {
     school_id: schoolId,
     class_id: student.class_id,
     status: "published",
   };
+
+  if (student.section_id) {
+    where[Op.or] = [
+      { section_id: student.section_id },
+      { section_id: null },
+    ];
+  }
 
   const quizzes = await TeacherQuiz.findAll({
     where,
@@ -205,5 +214,115 @@ export async function submitStudentQuiz({ userId, quizId, answers }) {
     totalMarks,
     percentage: ((totalScore / (totalMarks || 1)) * 100).toFixed(1),
     breakdown: detailedBreakdown,
+  };
+}
+
+/**
+ * Gets all quizzes created by a teacher with submission statistics.
+ */
+export async function getTeacherQuizzesService(teacherUserId, schoolId) {
+  const quizzes = await TeacherQuiz.findAll({
+    where: {
+      school_id: schoolId,
+      teacher_id: teacherUserId,
+    },
+    include: [
+      { model: Class, attributes: ["id", "class_name"] },
+      { model: Section, attributes: ["id", "name"] },
+    ],
+    order: [["created_at", "DESC"]],
+  });
+
+  const quizIds = quizzes.map((q) => q.id);
+  const submissions = await StudentQuizSubmission.findAll({
+    where: { quiz_id: quizIds },
+    attributes: ["quiz_id", "score", "total_marks"],
+  });
+
+  return quizzes.map((q) => {
+    const qSubs = submissions.filter((s) => String(s.quiz_id) === String(q.id));
+    const clsName = q.Class?.class_name ? String(q.Class.class_name).replace(/^Class\s+/i, "") : "";
+    const secName = q.Section?.name || "";
+    const targetDisplay = clsName 
+      ? `Class ${clsName}${secName ? `-${secName}` : ""}`
+      : "Class 6-A";
+
+    return {
+      id: q.id,
+      title: q.title,
+      subject: q.subject,
+      total_marks: q.total_marks,
+      created_at: q.created_at,
+      target_class: targetDisplay,
+      submissions_count: qSubs.length,
+    };
+  });
+}
+
+/**
+ * Gets detailed student submission list for a specific quiz (who completed & who pending).
+ */
+export async function getTeacherQuizSubmissionsService(quizId, teacherUserId) {
+  const quiz = await TeacherQuiz.findByPk(quizId, {
+    include: [
+      { model: Class, attributes: ["id", "class_name"] },
+      { model: Section, attributes: ["id", "name"] },
+    ],
+  });
+
+  if (!quiz) throw new AppError("Quiz assignment not found", 404);
+
+  // Fetch all students in target class (and section if specified)
+  const studentWhere = { school_id: quiz.school_id, class_id: quiz.class_id };
+  if (quiz.section_id) {
+    studentWhere.section_id = quiz.section_id;
+  }
+
+  const students = await Student.findAll({
+    where: studentWhere,
+    include: [{ model: User, attributes: ["id", "name", "avatar_url", "email"] }],
+    order: [["roll_no", "ASC"], ["id", "ASC"]],
+  });
+
+  const submissions = await StudentQuizSubmission.findAll({
+    where: { quiz_id: quizId },
+  });
+
+  const submissionMap = new Map();
+  submissions.forEach((s) => {
+    submissionMap.set(String(s.student_id), s);
+  });
+
+  const studentList = students.map((st) => {
+    const sub = submissionMap.get(String(st.user_id));
+    return {
+      student_id: st.id,
+      user_id: st.user_id,
+      name: st.User?.name || `Student #${st.roll_no || st.id}`,
+      avatar_url: st.User?.avatar_url || null,
+      roll_number: st.roll_no,
+      status: sub ? "completed" : "pending",
+      score: sub ? sub.score : null,
+      total_marks: sub ? sub.total_marks : quiz.total_marks,
+      percentage: sub ? ((sub.score / (sub.total_marks || 1)) * 100).toFixed(1) : null,
+      submitted_at: sub ? sub.submitted_at : null,
+    };
+  });
+
+  return {
+    quiz: {
+      id: quiz.id,
+      title: quiz.title,
+      subject: quiz.subject,
+      chapter: quiz.chapter,
+      class_name: quiz.Class?.class_name,
+      section_name: quiz.Section?.name,
+      total_marks: quiz.total_marks,
+      created_at: quiz.created_at,
+    },
+    students: studentList,
+    total_students: studentList.length,
+    completed_count: studentList.filter((s) => s.status === "completed").length,
+    pending_count: studentList.filter((s) => s.status === "pending").length,
   };
 }

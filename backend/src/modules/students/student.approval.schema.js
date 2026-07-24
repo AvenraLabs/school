@@ -14,9 +14,6 @@ export const requestStudentProfileUpdateSchema = z.object({
     address: z.string().optional(),
     blood_group: z.string().optional(),
     aadhar_no: z.string().optional(),
-    father_occupation: z.string().optional(),
-    mother_occupation: z.string().optional(),
-    family_income: z.number().optional(),
   }),
 });
 

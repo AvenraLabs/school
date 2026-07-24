@@ -21,6 +21,8 @@ import {
   DirectionsBus,
   Assessment,
   LocalLibrary,
+  OndemandVideo,
+  Person,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
@@ -45,6 +47,7 @@ export default function StudentSidebar({ open, onClose }) {
     { label: "My Classes",        icon: <CalendarMonth />, path: "/student/timetable" },
     { label: "Attendance",       icon: <FactCheck />,     path: "/student/attendance" },
     { label: "Homework",         icon: <Book />,          path: "/student/diary" },
+    { label: "Class Videos",     icon: <OndemandVideo />, path: "/student/videos" },
     { label: "Exams & Reports",  icon: <Assessment />,    path: "/student/report-cards" },
     { label: "Fees & Billing",   icon: <ReceiptLong />,   path: "/student/fees" },
     { label: "Library Books",    icon: <LocalLibrary />,  path: "/student/library" },
@@ -85,7 +88,7 @@ export default function StudentSidebar({ open, onClose }) {
         </IconButton>
       </Box>
 
-      {/* Profile Preview � tapping navigates to profile */}
+      {/* Profile Preview */}
       <Box
         onClick={() => handleNavigate("/student/profile")}
         sx={{
@@ -113,7 +116,7 @@ export default function StudentSidebar({ open, onClose }) {
             {user?.name}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            View Profile ?
+            View Profile →
           </Typography>
         </Box>
       </Box>

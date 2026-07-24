@@ -18,12 +18,8 @@ export const createStudentSchema = z.object({
   guardian_name: z.string().optional(),
   address: z.string().optional(),
   aadhar_no: z.string().optional(),
-  father_occupation: z.string().optional(),
-  mother_occupation: z.string().optional(),
-  guardian_occupation: z.string().optional(),
   emergency_contact: z.string().optional(),
   residential_status: z.enum(["dayscholar", "hosteler"]).optional(),
-  family_income: z.preprocess(emptyToUndefined, z.coerce.number().positive().optional()),
 });
 
 /* student: first login */
@@ -37,13 +33,9 @@ export const completeStudentProfileSchema = z.object({
   father_name: z.string().optional(),
   mother_name: z.string().optional(),
   guardian_name: z.string().optional(),
-  father_occupation: z.string().optional(),
-  mother_occupation: z.string().optional(),
-  guardian_occupation: z.string().optional(),
   emergency_contact: z.string().optional(),
   residential_status: z.preprocess(emptyToUndefined, z.enum(["dayscholar", "hosteler"]).optional()),
   address: z.string().optional(),
-  family_income: z.preprocess(emptyToUndefined, z.coerce.number().optional()),
   avatar_url: z.string().optional().or(z.literal("")).or(z.null()),
   roll_no: z.preprocess(emptyToUndefined, z.coerce.number().int().positive().optional()),
 });

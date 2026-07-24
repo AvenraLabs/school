@@ -15,7 +15,7 @@ import {
   Select,
   MenuItem
 } from "@mui/material";
-import { EmojiEvents, School } from "@mui/icons-material";
+import { EmojiEvents, School, ArrowBack } from "@mui/icons-material";
 import { generateQuiz, startSingleQuiz, submitSingleQuiz } from "../api/quiz.api";
 import QuestionCard from "../components/QuestionCard";
 import { useAuth } from "../../../auth/AuthProvider";
@@ -146,8 +146,15 @@ export default function SinglePlayerQuizPage() {
   // Render Setup
   if (gameState === "setup") {
     return (
-      <Container maxWidth="xs" sx={{ mt: 8, textAlign: 'center' }}>
-        <Paper sx={{ p: 4, borderRadius: 4 }}>
+      <Container maxWidth="xs" sx={{ mt: 3, pb: 4 }}>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate("/student/quiz")}
+          sx={{ fontWeight: 800, color: "#475569", textTransform: "none", mb: 2 }}
+        >
+          Back
+        </Button>
+        <Paper sx={{ p: 4, borderRadius: "20px", textAlign: 'center', border: "1px solid #f1f5f9", boxShadow: "0 4px 16px rgba(0,0,0,0.03)" }}>
           <School sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
           <Typography variant="h5" fontWeight="bold" gutterBottom>
             AI Quiz Master

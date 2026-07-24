@@ -25,6 +25,9 @@ const AttendancePage = lazy(() =>
 const DiaryPage = lazy(() =>
   import("../modules/diary/DiaryPage")
 );
+const StudentVideosPage = lazy(() =>
+  import("../modules/videos/StudentVideosPage")
+);
 const NotificationsPage = lazy(() =>
   import("../modules/notifications/NotificationsPage")
 );
@@ -113,6 +116,7 @@ export default function StudentApp() {
               <Route path="timetable" element={<TimetablePage />} />
               <Route path="attendance" element={<AttendancePage />} />
               <Route path="diary" element={<DiaryPage />} />
+              <Route path="videos" element={<StudentVideosPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="report-cards" element={<ReportCardsList />} />

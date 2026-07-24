@@ -49,14 +49,9 @@ export default function FirstLoginPage() {
     phone: "",
     email: "",
 
-    // Student Family (if student)
     father_name: "",
     mother_name: "",
     guardian_name: "",
-    guardian_occupation: "",
-    father_occupation: "",
-    mother_occupation: "",
-    family_income: "",
     emergency_contact: "",
     address: "",
     residential_status: "dayscholar",
@@ -163,7 +158,6 @@ export default function FirstLoginPage() {
     try {
       const submitData = {
         ...formData,
-        family_income: formData.family_income ? parseFloat(formData.family_income) : 0,
         experience: formData.experience ? parseInt(formData.experience) : 0,
       };
 
@@ -372,23 +366,9 @@ export default function FirstLoginPage() {
                 />
 
                 <TextField
-                  label="Father's Occupation"
-                  value={formData.father_occupation}
-                  onChange={(e) => handleInputChange("father_occupation", e.target.value)}
-                  fullWidth
-                />
-
-                <TextField
                   label="Mother's Name"
                   value={formData.mother_name}
                   onChange={(e) => handleInputChange("mother_name", e.target.value)}
-                  fullWidth
-                />
-
-                <TextField
-                  label="Mother's Occupation"
-                  value={formData.mother_occupation}
-                  onChange={(e) => handleInputChange("mother_occupation", e.target.value)}
                   fullWidth
                 />
 
@@ -397,22 +377,6 @@ export default function FirstLoginPage() {
                   value={formData.guardian_name}
                   onChange={(e) => handleInputChange("guardian_name", e.target.value)}
                   fullWidth
-                />
-
-                <TextField
-                  label="Guardian's Occupation (if applicable)"
-                  value={formData.guardian_occupation}
-                  onChange={(e) => handleInputChange("guardian_occupation", e.target.value)}
-                  fullWidth
-                />
-
-                <TextField
-                  label="Family Annual Income"
-                  type="number"
-                  value={formData.family_income}
-                  onChange={(e) => handleInputChange("family_income", e.target.value)}
-                  fullWidth
-                  inputProps={{ step: "0.01" }}
                 />
               </Stack>
             )}

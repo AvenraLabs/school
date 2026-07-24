@@ -88,6 +88,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/storage", express.static(path.join(__dirname, "storage")));
+app.use("/api/storage", express.static(path.join(__dirname, "storage")));
 
 
 // HEALTH CHECK
@@ -132,6 +134,7 @@ import ragRoutes from "./src/modules/rag/rag.routes.js";
 import teacherAiRoutes from "./src/modules/teacher-ai/teacher-ai.routes.js";
 import aiAnalyticsRoutes from "./src/modules/ai-analytics/ai-analytics.routes.js";
 import tokenRoutes from "./src/modules/tokens/token.routes.js";
+import videoRoutes from "./src/modules/ai-video/video-generation.routes.js";
 
 // teacher planning & tracking
 import teacherAssignmentRoutes from "./src/modules/teacher-assignments/teacher-assignment.routes.js";
@@ -212,7 +215,7 @@ app.use("/api", tokenRoutes);
 // AI
 app.use("/api/rag", ragRoutes);
 app.use("/api/teacher-ai", teacherAiRoutes);
-app.use("/api", teacherAiRoutes);
+app.use("/api/ai/videos", videoRoutes);
 app.use("/api", aiAnalyticsRoutes);
 app.use("/api/analytics", analyticsRoutes);
 

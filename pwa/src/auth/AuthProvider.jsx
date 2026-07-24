@@ -68,7 +68,7 @@ export function AuthProvider({ children }) {
 
     if (activeAccount) {
       setToken(activeAccount.token);
-      setUser(decodeToken(activeAccount.token));
+      setUser(activeAccount.user || decodeToken(activeAccount.token));
       localStorage.setItem("token", activeAccount.token);
       localStorage.setItem("activeUserId", activeAccount.user.id);
     } else {
@@ -77,7 +77,7 @@ export function AuthProvider({ children }) {
         const firstId = remainingIds[0];
         const acc = cleanedAccs[firstId];
         setToken(acc.token);
-        setUser(decodeToken(acc.token));
+        setUser(acc.user || decodeToken(acc.token));
         localStorage.setItem("token", acc.token);
         localStorage.setItem("activeUserId", acc.user.id);
       } else {
@@ -303,8 +303,7 @@ export function AuthProvider({ children }) {
         localStorage.setItem("token", nextAcc.token);
         localStorage.setItem("activeUserId", nextAcc.user.id);
         setToken(nextAcc.token);
-        const decoded = decodeToken(nextAcc.token);
-        setUser(decoded);
+        setUser(nextAcc.user || decodeToken(nextAcc.token));
         return decoded;
       } else {
         localStorage.removeItem("token");
@@ -346,7 +345,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem("token", target.token);
       localStorage.setItem("activeUserId", target.user.id);
       setToken(target.token);
-      setUser(decodeToken(target.token));
+      setUser(target.user || decodeToken(target.token));
       return target.user;
     } catch (err) {
       setError(err.message || "Switch failed");

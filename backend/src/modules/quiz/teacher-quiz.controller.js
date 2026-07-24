@@ -6,6 +6,8 @@ import {
   getCompletedStudentQuizzes,
   getQuizDetails,
   submitStudentQuiz,
+  getTeacherQuizzesService,
+  getTeacherQuizSubmissionsService,
 } from "./teacher-quiz.service.js";
 
 // Generate AI Quiz (Teacher)
@@ -65,4 +67,17 @@ export const submitQuiz = asyncHandler(async (req, res) => {
   });
 
   res.json(result);
+});
+
+// Teacher Quiz History List
+export const getTeacherQuizzes = asyncHandler(async (req, res) => {
+  const quizzes = await getTeacherQuizzesService(req.user.id, req.user.school_id);
+  res.json({ quizzes });
+});
+
+// Teacher Quiz Submissions Detail (Who finished & who pending)
+export const getTeacherQuizSubmissions = asyncHandler(async (req, res) => {
+  const { quizId } = req.params;
+  const data = await getTeacherQuizSubmissionsService(quizId, req.user.id);
+  res.json(data);
 });

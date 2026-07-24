@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -17,6 +18,7 @@ import {
   Tab,
   Tabs,
   Alert,
+  Stack,
   useTheme,
 } from "@mui/material";
 import {
@@ -33,6 +35,7 @@ import api from "../../../api/axios";
 import { formatDate } from "../../../utils/date";
 
 export default function StudentQuizPage() {
+  const navigate = useNavigate();
   const theme = useTheme();
   const [tab, setTab] = useState(0); // 0 = pending, 1 = completed
   const [pendingQuizzes, setPendingQuizzes] = useState([]);
@@ -261,7 +264,7 @@ export default function StudentQuizPage() {
                   onClick={handleSubmitQuiz}
                   sx={{ px: 3, fontWeight: 700 }}
                 >
-                  {submitting ? "Submitting..." : "Submit Homework Quiz"}
+                  {submitting ? "Submitting..." : "Submit"}
                 </Button>
               ) : (
                 <Button
@@ -282,100 +285,168 @@ export default function StudentQuizPage() {
 
   // Quiz List Screen
   return (
-    <Box sx={{ p: 2.5, maxWidth: 750, mx: "auto" }}>
-      <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
-        <QuizOutlined sx={{ color: theme.palette.primary.main, fontSize: 32 }} />
-        Homework Quizzes
-      </Typography>
-      <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
-        Complete teacher-assigned quizzes at your own pace to revise textbook chapters.
+    <Box sx={{ p: 2.5, maxWidth: 650, mx: "auto", width: "100%", minHeight: "80vh", boxSizing: "border-box" }}>
+      <Button
+        startIcon={<ArrowBack />}
+        onClick={() => navigate("/student/quiz")}
+        sx={{ fontWeight: 800, color: "#475569", textTransform: "none", mb: 1.5 }}
+      >
+        Back
+      </Button>
+
+      <Typography variant="h5" sx={{ fontWeight: 900, color: "#0f172a", mb: 2 }}>
+        Tasks
       </Typography>
 
-      <Tabs value={tab} onChange={(e, val) => setTab(val)} sx={{ mb: 2 }}>
-        <Tab label={`Pending (${pendingQuizzes.length})`} sx={{ fontWeight: 700 }} />
-        <Tab label={`Completed (${completedSubmissions.length})`} sx={{ fontWeight: 700 }} />
+      <Tabs
+        value={tab}
+        onChange={(e, val) => setTab(val)}
+        sx={{
+          mb: 2.5,
+          "& .MuiTab-root": { fontWeight: 800, textTransform: "none", fontSize: "0.95rem" },
+        }}
+      >
+        <Tab label={`Pending (${pendingQuizzes.length})`} />
+        <Tab label={`Completed (${completedSubmissions.length})`} />
       </Tabs>
 
       {tab === 0 && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <Stack spacing={2}>
           {pendingQuizzes.length === 0 ? (
-            <Alert severity="info" sx={{ borderRadius: 2 }}>
-              No pending homework quizzes right now. Great job staying up to date!
+            <Alert severity="info" sx={{ borderRadius: "16px", fontWeight: 600 }}>
+              No pending quizzes right now.
             </Alert>
           ) : (
             pendingQuizzes.map((q) => (
-              <Card key={q.id} sx={{ borderRadius: 3, boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
+              <Card
+                key={q.id}
+                sx={{
+                  borderRadius: "20px",
+                  border: "1px solid #f1f5f9",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
+                  bgcolor: "#ffffff",
+                }}
+              >
                 <CardContent sx={{ p: 2.5 }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
                     <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#0f172a" }}>
                         {q.title}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                        Subject: {q.subject} {q.chapter && `• Chapter ${q.chapter}`}
+                      <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600 }}>
+                        {q.subject} {q.chapter && `• Ch ${q.chapter}`}
                       </Typography>
                     </Box>
-                    <Chip label={q.difficulty || "MEDIUM"} size="small" color="primary" variant="outlined" />
+                    <Chip
+                      label={`${q.total_marks || 10} Marks`}
+                      size="small"
+                      sx={{ fontWeight: 800, bgcolor: "#e0e7ff", color: "#3730a3" }}
+                    />
                   </Box>
 
                   {q.instructions && (
-                    <Typography variant="body2" sx={{ color: "text.secondary", my: 1 }}>
+                    <Typography variant="body2" sx={{ color: "text.secondary", my: 1, fontWeight: 500 }}>
                       {q.instructions}
                     </Typography>
                   )}
 
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 2 }}>
-                    <Box sx={{ display: "flex", gap: 1.5, alignItems: "center" }}>
-                      <Chip icon={<Assignment sx={{ fontSize: 16 }} />} label={`${q.total_marks || 10} Marks`} size="small" />
-                      <Chip icon={<Timer sx={{ fontSize: 16 }} />} label={`${q.estimated_minutes || 15} Mins`} size="small" />
-                    </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 2, pt: 1.5, borderTop: "1px solid #f1f5f9" }}>
+                    <Chip
+                      icon={<Timer sx={{ fontSize: 14 }} />}
+                      label={`${q.estimated_minutes || 15} mins`}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontWeight: 700 }}
+                    />
 
                     <Button
                       variant="contained"
                       onClick={() => startQuiz(q.id)}
                       endIcon={<ArrowForward />}
-                      sx={{ borderRadius: 2, fontWeight: 700, px: 2.5 }}
+                      sx={{
+                        borderRadius: "12px",
+                        fontWeight: 800,
+                        textTransform: "none",
+                        px: 2.5,
+                        bgcolor: theme.palette.primary.main,
+                        "&:hover": { bgcolor: theme.palette.primary.dark },
+                      }}
                     >
-                      Start Homework
+                      Start Quiz
                     </Button>
                   </Box>
                 </CardContent>
               </Card>
             ))
           )}
-        </Box>
+        </Stack>
       )}
 
       {tab === 1 && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <Stack spacing={2}>
+          {completedSubmissions.length > 0 && (
+            <Paper
+              sx={{
+                p: 2,
+                borderRadius: "16px",
+                bgcolor: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Box>
+                <Typography variant="caption" sx={{ color: "#166534", fontWeight: 800, textTransform: "uppercase" }}>
+                  Total Points
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 900, color: "#15803d" }}>
+                  {completedSubmissions.reduce((sum, s) => sum + (s.score || 0), 0)} Pts
+                </Typography>
+              </Box>
+              <Chip
+                icon={<CheckCircle sx={{ fontSize: 14 }} />}
+                label={`${completedSubmissions.length} Completed`}
+                color="success"
+                size="small"
+                sx={{ fontWeight: 800 }}
+              />
+            </Paper>
+          )}
+
           {completedSubmissions.length === 0 ? (
-            <Alert severity="info" sx={{ borderRadius: 2 }}>
-              No completed homework quizzes yet.
+            <Alert severity="info" sx={{ borderRadius: "16px", fontWeight: 600 }}>
+              No completed quizzes yet.
             </Alert>
           ) : (
-            completedSubmissions.map((sub) => (
-              <Card key={sub.id} sx={{ borderRadius: 3, boxShadow: "0 2px 10px rgba(0,0,0,0.03)" }}>
-                <CardContent sx={{ p: 2.5 }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                        {sub.teacher_quiz?.title || "Homework Quiz"}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                        Submitted on {formatDate(sub.submitted_at)}
-                      </Typography>
+            completedSubmissions.map((sub) => {
+              const totalM = sub.total_marks || sub.teacher_quiz?.total_marks || 10;
+              const pct = ((sub.score / (totalM || 1)) * 100).toFixed(0);
+              return (
+                <Card key={sub.id} sx={{ borderRadius: "16px", border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                  <CardContent sx={{ p: 2 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#0f172a" }}>
+                          {sub.teacher_quiz?.title || "Quiz Assignment"}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600 }}>
+                          {sub.teacher_quiz?.subject} • {formatDate(sub.submitted_at)}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={`${sub.score}/${totalM} Pts (${pct}%)`}
+                        color="success"
+                        size="small"
+                        sx={{ fontWeight: 900 }}
+                      />
                     </Box>
-                    <Chip
-                      label={`Score: ${sub.score} / ${sub.total_marks}`}
-                      color="success"
-                      sx={{ fontWeight: 800, fontSize: "14px", px: 1 }}
-                    />
-                  </Box>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              );
+            })
           )}
-        </Box>
+        </Stack>
       )}
     </Box>
   );

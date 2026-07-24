@@ -20,6 +20,7 @@ import {
   Chat,
   Search,
   LocalLibrary,
+  Person,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
@@ -44,7 +45,6 @@ export default function TeacherSidebar({ open, onClose }) {
     { label: "My Classes",       icon: <School />,      path: "/teacher/timetable" },
     { label: "Approvals",     icon: <Assignment />,  path: "/teacher/approvals" },
     { label: "Exams & Reports", icon: <Assessment />, path: "/teacher/exams/create" },
-    { label: "AI Tools",      icon: <AutoAwesome />, path: "/teacher/ai-tools" },
   ];
 
   const schoolLifeItems = [
@@ -111,7 +111,7 @@ export default function TeacherSidebar({ open, onClose }) {
             {user?.name}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            View Profile ?
+            View Profile →
           </Typography>
         </Box>
       </Box>
