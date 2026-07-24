@@ -1,18 +1,29 @@
-import { Box, Typography, useTheme, Zoom, Avatar, IconButton } from "@mui/material";
-import { SmartToy, DeleteOutline } from "@mui/icons-material";
+import React, { useState } from "react";
+import { Box, Typography, useTheme, Zoom, Avatar, IconButton, Tooltip } from "@mui/material";
+import { SmartToy, History, AddComment } from "@mui/icons-material";
 import { useAiChat } from "../hooks/useAiChat";
 import ChatList from "../components/ChatList";
 import ChatInput from "../components/ChatInput";
+import ChatHistoryDrawer from "../components/ChatHistoryDrawer";
 import { useAuth } from "../../../auth/AuthProvider";
 import { getAssetUrl } from "../../../utils/asset";
 
 export default function AiChatPage() {
   const { user } = useAuth();
   const theme = useTheme();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const { messages, loading, sendMessage, clearChat } = useAiChat({
-    classLevel: user.class_level,
-  });
+  const {
+    sessions,
+    activeSessionId,
+    messages,
+    loading,
+    sessionsLoading,
+    sendMessage,
+    selectSession,
+    startNewChat,
+    removeSession,
+  } = useAiChat();
 
   return (
     <Box
@@ -25,7 +36,7 @@ export default function AiChatPage() {
         overflow: "hidden",
       }}
     >
-      {/* Premium Header */}
+      {/* Header */}
       <Box
         sx={{
           px: 2.5,
@@ -39,6 +50,19 @@ export default function AiChatPage() {
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+          <IconButton
+            onClick={() => setDrawerOpen(true)}
+            size="medium"
+            sx={{
+              color: theme.palette.primary.main,
+              bgcolor: "rgba(0,0,0,0.03)",
+              "&:hover": { bgcolor: "rgba(0,0,0,0.06)" },
+            }}
+            title="Chat History"
+          >
+            <History />
+          </IconButton>
+
           <Avatar
             sx={{
               bgcolor: theme.palette.primary.main,
@@ -51,7 +75,7 @@ export default function AiChatPage() {
           </Avatar>
           <Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "text.primary", lineHeight: 1.2 }}>
-              SchoolIQ Assistant
+              SchoolIQ Tutor
             </Typography>
             <Box sx={{ display: "flex", alignItems: "center", gap: 0.6, mt: 0.2 }}>
               <Box
@@ -70,23 +94,34 @@ export default function AiChatPage() {
           </Box>
         </Box>
 
-        {messages.length > 0 && (
+        <Tooltip title="New Chat">
           <IconButton
-            onClick={clearChat}
+            onClick={startNewChat}
             size="medium"
             sx={{
               color: "text.secondary",
               "&:hover": {
-                color: theme.palette.error.main,
-                bgcolor: "rgba(239, 68, 68, 0.08)",
+                color: theme.palette.primary.main,
+                bgcolor: "rgba(0,0,0,0.04)",
               },
             }}
-            title="Clear conversation"
           >
-            <DeleteOutline />
+            <AddComment />
           </IconButton>
-        )}
+        </Tooltip>
       </Box>
+
+      {/* History Drawer */}
+      <ChatHistoryDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        onSelectSession={selectSession}
+        onNewChat={startNewChat}
+        onDeleteSession={removeSession}
+        loading={sessionsLoading}
+      />
 
       {/* Messages Scroll Container */}
       <Box
@@ -137,7 +172,7 @@ export default function AiChatPage() {
       <Box
         sx={{
           p: 2,
-          bgcolor: "#F5EDE3", // matches the screen container
+          bgcolor: "#F5EDE3",
           borderTop: "1px solid rgba(0,0,0,0.04)",
         }}
       >
@@ -167,4 +202,3 @@ export default function AiChatPage() {
     </Box>
   );
 }
-

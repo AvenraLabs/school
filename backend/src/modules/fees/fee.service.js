@@ -12,6 +12,7 @@ import Section from "../sections/section.model.js";
 import User from "../users/user.model.js";
 import School from "../schools/school.model.js";
 import AppError from "../../shared/appError.js";
+import { getPagination } from "../../shared/utils/pagination.js";
 import { Op } from "sequelize";
 
 /* ============================================================================
@@ -919,7 +920,10 @@ export const voidPaymentService = async (payment_id, school_id, user_id, { void_
   });
 };
 
-export const listSchoolPaymentHistoryService = async (school_id, { search, class_id, section_id, mode, limit = 50 }) => {
+export const listSchoolPaymentHistoryService = async (school_id, query = {}) => {
+  const { limit, offset } = getPagination(query);
+  const { search, class_id, section_id, mode } = query;
+
   const where = { school_id };
   const studentWhere = {};
 
@@ -937,9 +941,10 @@ export const listSchoolPaymentHistoryService = async (school_id, { search, class
     ];
   }
 
-  const payments = await FeePayment.findAll({
+  const { count, rows } = await FeePayment.findAndCountAll({
     where,
-    limit: Number(limit) || 50,
+    limit,
+    offset,
     order: [["paid_at", "DESC"]],
     include: [
       {
@@ -956,25 +961,28 @@ export const listSchoolPaymentHistoryService = async (school_id, { search, class
     ],
   });
 
-  return payments.map((p) => ({
-    id: p.id,
-    receipt_no: p.receipt_no,
-    amount: Number(p.amount),
-    late_fee_amount: Number(p.late_fee_amount || 0),
-    mode: p.mode,
-    reference: p.reference,
-    paid_at: p.paid_at,
-    is_void: p.is_void,
-    voided_at: p.voided_at,
-    void_reason: p.void_reason,
-    voided_by_name: p.VoidedBy?.name,
-    student_id: p.student_id,
-    student_name: p.student?.user?.name,
-    student_phone: p.student?.user?.phone,
-    roll_no: p.student?.roll_no || p.student?.admission_no,
-    class_name: p.student?.class?.class_name,
-    section_name: p.student?.section?.name,
-  }));
+  return {
+    total: count,
+    payments: rows.map((p) => ({
+      id: p.id,
+      receipt_no: p.receipt_no,
+      amount: Number(p.amount),
+      late_fee_amount: Number(p.late_fee_amount || 0),
+      mode: p.mode,
+      reference: p.reference,
+      paid_at: p.paid_at,
+      is_void: p.is_void,
+      voided_at: p.voided_at,
+      void_reason: p.void_reason,
+      voided_by_name: p.VoidedBy?.name,
+      student_id: p.student_id,
+      student_name: p.student?.user?.name,
+      student_phone: p.student?.user?.phone,
+      roll_no: p.student?.roll_no || p.student?.admission_no,
+      class_name: p.student?.class?.class_name,
+      section_name: p.student?.section?.name,
+    })),
+  };
 };
 
 /* ============================================================================
@@ -1070,20 +1078,30 @@ export const getFeeCollectionSummaryService = async (school_id) => {
   };
 };
 
-export const getDefaultersListService = async (school_id, { class_id = null, min_balance = 0 }) => {
+export const getDefaultersListService = async (school_id, query = {}) => {
+  const { limit, offset } = getPagination(query);
   const currentYear = await getCurrentAcademicYear(school_id);
+
+  const minBal = Number(query.min_balance) || 0;
 
   const where = {
     school_id,
     academic_year_id: currentYear.id,
     status: "active",
+    balance: { [Op.gt]: minBal },
   };
 
-  const ledgers = await StudentFeeLedger.findAll({
+  const studentWhere = {};
+  if (query.class_id) studentWhere.class_id = Number(query.class_id);
+
+  const { count, rows } = await StudentFeeLedger.findAndCountAll({
     where,
+    limit,
+    offset,
     include: [
       {
         model: Student,
+        where: Object.keys(studentWhere).length > 0 ? studentWhere : undefined,
         attributes: ["id", "admission_no", "roll_no", "father_name", "emergency_contact"],
         include: [
           { model: User, attributes: ["name", "username", "phone"] },
@@ -1095,27 +1113,24 @@ export const getDefaultersListService = async (school_id, { class_id = null, min
     order: [["balance", "DESC"]],
   });
 
-  const minBal = Number(min_balance) || 0;
-  const filtered = ledgers.filter((l) => {
-    if (class_id && String(l.student?.class_id) !== String(class_id)) return false;
-    return Number(l.balance) > minBal;
-  });
-
-  return filtered.map((l) => ({
-    ledger_id: l.id,
-    student_id: l.student_id,
-    name: l.student?.user?.name,
-    username: l.student?.user?.username,
-    admission_no: l.student?.admission_no,
-    roll_no: l.student?.roll_no,
-    father_name: l.student?.father_name,
-    phone: l.student?.user?.phone || l.student?.emergency_contact || "—",
-    class_name: l.student?.class?.class_name,
-    section_name: l.student?.section?.name,
-    total: Number(l.total),
-    paid: Number(l.paid),
-    balance: Number(l.balance),
-  }));
+  return {
+    total: count,
+    defaulters: rows.map((l) => ({
+      ledger_id: l.id,
+      student_id: l.student_id,
+      name: l.student?.user?.name,
+      username: l.student?.user?.username,
+      admission_no: l.student?.admission_no,
+      roll_no: l.student?.roll_no,
+      father_name: l.student?.father_name,
+      phone: l.student?.user?.phone || l.student?.emergency_contact || "—",
+      class_name: l.student?.class?.class_name,
+      section_name: l.student?.section?.name,
+      total: Number(l.total),
+      paid: Number(l.paid),
+      balance: Number(l.balance),
+    })),
+  };
 };
 
 export const sendPaymentWhatsAppReceiptService = async (payment_id, school_id) => {

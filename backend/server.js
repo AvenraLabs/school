@@ -140,10 +140,14 @@ import notificationRoutes from "./src/modules/notifications/notification.routes.
 import groupChatRoutes from "./src/modules/group-chat/group-chat.routes.js";
 import gameRoutes from "./src/modules/game/game.routes.js";
 import quizRoutes from "./src/modules/quiz/quiz.routes.js";
+import teacherQuizRoutes from "./src/modules/quiz/teacher-quiz.routes.js";
 import transportRoutes from "./src/modules/transport/transport.routes.js";
 import academicYearRoutes from "./src/modules/academic-years/academic-year.routes.js";
 import analyticsRoutes from "./src/modules/analytics/analytics.routes.js";
 import feeRoutes from "./src/modules/fees/fee.routes.js";
+import libraryRoutes from "./src/modules/library/library.routes.js";
+import { startLibraryCron } from "./src/modules/library/library.cron.js";
+
 
 
 
@@ -182,6 +186,9 @@ app.use("/api/exams", examRoutes);
 app.use("/api/exam-masters", examMasterRoutes);
 app.use("/api/academic-years", academicYearRoutes);
 app.use("/api/fees", feeRoutes);
+app.use("/api/library", libraryRoutes);
+
+
 
 // approvals
 app.use("/api", approvalRoutes);
@@ -204,12 +211,14 @@ app.use("/api", tokenRoutes);
 
 // AI
 app.use("/api/rag", ragRoutes);
+app.use("/api/teacher-ai", teacherAiRoutes);
 app.use("/api", teacherAiRoutes);
 app.use("/api", aiAnalyticsRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
 // quiz
 app.use("/api/quiz", quizRoutes);
+app.use("/api/quizzes", teacherQuizRoutes);
 
 // teacher planning & tracking
 app.use("/api/teacher-assignments", teacherAssignmentRoutes);
@@ -236,7 +245,9 @@ try {
 
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server + Socket running on port ${PORT}`);
+    startLibraryCron();
   });
+
 } catch (err) {
   console.error("DB connection failed", err);
   process.exit(1);

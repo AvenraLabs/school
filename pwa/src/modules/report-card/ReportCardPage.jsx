@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import { useReportCard } from "./useReportCard";
+import { formatDate } from "../../utils/date";
 import { 
   EmojiEvents, 
   ArrowBack, 
@@ -217,7 +218,7 @@ export default function ReportCardPage() {
                   />
                   {slot && (
                     <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary', fontSize: '0.72rem' }}>
-                      Date: {new Date(slot.exam_date).toLocaleDateString()}
+                      Date: {formatDate(slot.exam_date)}
                       {slot.syllabus ? ` • Syllabus: ${slot.syllabus}` : ''}
                     </Typography>
                   )}

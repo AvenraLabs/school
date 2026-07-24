@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { formatDate } from './date';
 
 /**
  * Generate PDF with all credentials from bulk create response
@@ -17,7 +18,7 @@ export function generateBulkCredentialsPDF(summary) {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100);
-  doc.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, y, { align: 'center' });
+  doc.text(`Generated on ${formatDate(new Date())} at ${new Date().toLocaleTimeString()}`, pageWidth / 2, y, { align: 'center' });
   y += 5;
   doc.setTextColor(0);
 
@@ -145,7 +146,7 @@ export function generateSingleCredentialPDF(username, passwordHint, role) {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100);
-  doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, 38, { align: 'center' });
+  doc.text(`Generated on ${formatDate(new Date())}`, pageWidth / 2, 38, { align: 'center' });
   doc.setTextColor(0);
 
   // Credential box

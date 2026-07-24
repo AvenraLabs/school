@@ -820,6 +820,16 @@ export const uploadAPI = {
     });
     return response.data;
   },
+  uploadBookImage: async (file) => {
+    const formData = new FormData();
+    formData.append('book', file);
+    const response = await axiosInstance.post('/upload/book', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
   deleteFile: async (filePath) => {
     const response = await axiosInstance.post('/upload/delete-file', { filePath });
     return response.data;
@@ -892,5 +902,86 @@ export const feeAPI = {
     return response.data;
   },
 };
+
+export const libraryAPI = {
+  /* Settings */
+  getSettings: async () => {
+    const response = await axiosInstance.get('/library/settings');
+    return response.data;
+  },
+  updateSettings: async (data) => {
+    const response = await axiosInstance.patch('/library/settings', data);
+    return response.data;
+  },
+
+  /* Books */
+  listBooks: async (params = {}) => {
+    const response = await axiosInstance.get('/library/books', { params });
+    return response.data;
+  },
+  addBook: async (data) => {
+    const response = await axiosInstance.post('/library/books', data);
+    return response.data;
+  },
+  editBook: async (id, data) => {
+    const response = await axiosInstance.patch(`/library/books/${id}`, data);
+    return response.data;
+  },
+  archiveBook: async (id) => {
+    const response = await axiosInstance.patch(`/library/books/${id}/archive`);
+    return response.data;
+  },
+
+  /* Issues */
+  issueBook: async (data) => {
+    const response = await axiosInstance.post('/library/issues', data);
+    return response.data;
+  },
+  returnBook: async (id, data) => {
+    const response = await axiosInstance.patch(`/library/issues/${id}/return`, data);
+    return response.data;
+  },
+  cancelIssue: async (id, data = {}) => {
+    const response = await axiosInstance.patch(`/library/issues/${id}/cancel`, data);
+    return response.data;
+  },
+  undoReturn: async (id, data = {}) => {
+    const response = await axiosInstance.patch(`/library/issues/${id}/undo-return`, data);
+    return response.data;
+  },
+
+  /* History */
+  listIssues: async (params = {}) => {
+    const response = await axiosInstance.get('/library/issues', { params });
+    return response.data;
+  },
+
+  /* Student summary */
+  getStudentSummary: async (studentId) => {
+    const response = await axiosInstance.get(`/library/students/${studentId}/summary`);
+    return response.data;
+  },
+
+  /* Reports */
+  reportBooks: async (params = {}) => {
+    const response = await axiosInstance.get('/library/reports/books', { params });
+    return response.data;
+  },
+  reportIssued: async (params = {}) => {
+    const response = await axiosInstance.get('/library/reports/issued', { params });
+    return response.data;
+  },
+  reportOverdue: async (params = {}) => {
+    const response = await axiosInstance.get('/library/reports/overdue', { params });
+    return response.data;
+  },
+  reportLost: async (params = {}) => {
+    const response = await axiosInstance.get('/library/reports/lost', { params });
+    return response.data;
+  },
+};
+
+
+
 
 

@@ -24,7 +24,9 @@ import {
   CheckCircle2,
   X,
   IndianRupee,
+  Library,
 } from 'lucide-react';
+
 import { authAPI, uploadAPI } from '../../api';
 import { getApiAssetUrl } from '../../api/axios';
 
@@ -32,7 +34,9 @@ const schoolAdminLinks = [
   { section: 'Daily Operations' },
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/admin/fees', icon: IndianRupee, label: 'Fee Management' },
+  { to: '/admin/library', icon: Library, label: 'Library' },
   { to: '/admin/analytics', icon: BarChart3, label: 'School Analytics' },
+
   { to: '/admin/directory', icon: School, label: 'School Registry' },
   { to: '/admin/notifications', icon: Bell, label: 'Announcements' },
   { to: '/admin/transport', icon: Truck, label: 'Transport' },

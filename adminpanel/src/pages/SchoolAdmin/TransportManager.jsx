@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { formatDate } from '../../utils/date';
 import { transportAPI, studentsAPI, classesAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { StatusBadge } from '../../components/common/StatusBadge';
@@ -1262,7 +1263,7 @@ export function TransportManager() {
                           const durMin = end ? Math.round((end - start) / 60000) : 0;
                           return (
                             <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '14px 16px', fontWeight: 600 }}>{start.toLocaleDateString()}</td>
+                              <td style={{ padding: '14px 16px', fontWeight: 600 }}>{formatDate(start)}</td>
                               <td style={{ padding: '14px 16px', fontWeight: 700 }}>{t.vehicle?.vehicle_name || 'Bus'}</td>
                               <td style={{ padding: '14px 16px' }}>{(t.driver?.user ?? t.driver?.User)?.name || '—'}</td>
                               <td style={{ padding: '14px 16px' }}><span style={{ fontSize: '10px', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '12px', backgroundColor: '#f1f5f9', fontWeight: 700 }}>{t.trip_type}</span></td>

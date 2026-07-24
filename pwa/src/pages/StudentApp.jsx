@@ -49,6 +49,9 @@ const AiChatPage = lazy(() =>
 const QuizLandingPage = lazy(() =>
   import("../modules/quiz/pages/QuizLandingPage")
 );
+const StudentQuizPage = lazy(() =>
+  import("../modules/quiz/pages/StudentQuizPage")
+);
 const SinglePlayerQuizPage = lazy(() =>
   import("../modules/quiz/pages/SinglePlayerQuizPage")
 );
@@ -76,9 +79,13 @@ const FeedbackPage = lazy(() =>
 const FeesPage = lazy(() =>
   import("../modules/fees/FeesPage")
 );
+const LibraryPage = lazy(() =>
+  import("../modules/library/LibraryPage")
+);
 const AboutPage = lazy(() =>
   import("../modules/about/AboutPage")
 );
+
 
 export default function StudentApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -118,13 +125,16 @@ export default function StudentApp() {
               <Route path="ai-chat" element={<AiChatPage />} />
 
               <Route path="quiz" element={<QuizLandingPage />} />
+              <Route path="homework-quizzes" element={<StudentQuizPage />} />
               <Route path="quiz/single" element={<SinglePlayerQuizPage />} />
               <Route path="quiz/:id/lobby" element={<QuizLobbyPage />} />
               <Route path="quiz/:id/play" element={<QuizPlayPage />} />
               <Route path="quiz/:id/results" element={<QuizResultPage />} />
               <Route path="themes" element={<ThemePage />} />
               <Route path="fees" element={<FeesPage />} />
+              <Route path="library" element={<LibraryPage />} />
               <Route path="transport" element={<StudentTransportPage />} />
+
               <Route path="lost-found" element={<LostFoundPage />} />
               <Route path="feedback" element={<FeedbackPage />} />
               <Route path="about" element={<AboutPage />} />

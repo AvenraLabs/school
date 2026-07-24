@@ -19,6 +19,7 @@ import {
   Close,
   Chat,
   Search,
+  LocalLibrary,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
@@ -49,6 +50,7 @@ export default function TeacherSidebar({ open, onClose }) {
   const schoolLifeItems = [
     { label: "Group Chat",   icon: <Chat />,   path: "/teacher/group-chat" },
     { label: "Lost & Found", icon: <Search />, path: "/teacher/lost-found" },
+    { label: "Library Books", icon: <LocalLibrary />, path: "/teacher/library" },
   ];
 
   const handleNavigate = (path) => {

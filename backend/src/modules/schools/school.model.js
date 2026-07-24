@@ -16,6 +16,12 @@ const School = db.define(
       allowNull: false,
     },
 
+    board: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "CBSE",
+    },
+
     address: {
       type: DataTypes.TEXT,
       allowNull: true,
@@ -90,6 +96,32 @@ const School = db.define(
     risk_grade_drop_margin: {
       type: DataTypes.INTEGER,
       defaultValue: 15,
+    },
+
+    /* ── Library Settings ── */
+    library_loan_period_days: {
+      type: DataTypes.INTEGER,
+      defaultValue: 14,
+    },
+
+    library_fine_to_fees: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+
+    library_overdue_whatsapp_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+
+    library_overdue_reminder_days: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1,
+    },
+
+    library_overdue_fine_per_day: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 0.00,
     },
   },
   {

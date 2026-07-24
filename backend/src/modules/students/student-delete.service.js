@@ -17,7 +17,9 @@ import GroupChatMessage from "../group-chat/group-chat-message.model.js";
 import Feedback from "../feedback/feedback.model.js";
 import ProfileUpdateRequest from "../approvals/profile-update-request.model.js";
 import AiChatLog from "../ai-chat-logs/ai-chat-log.model.js";
+import BookIssue from "../library/book-issue.model.js";
 import AppError from "../../shared/appError.js";
+
 
 /**
  * Clean up all associated student and user data in a transaction
@@ -69,9 +71,13 @@ export const deleteStudentData = async (studentId, userId, transaction) => {
   await ProfileUpdateRequest.destroy({ where: { user_id: userId }, transaction });
   await AiChatLog.destroy({ where: { user_id: userId }, transaction });
 
+  // Library — remove all issue records
+  await BookIssue.destroy({ where: { student_id: studentId }, transaction });
+
   // 5. Delete student and user accounts
   await Student.destroy({ where: { id: studentId }, transaction });
   await User.destroy({ where: { id: userId }, transaction });
+
 };
 
 /**
@@ -81,6 +87,17 @@ export const deleteSingleStudentService = async (studentId) => {
   const student = await Student.findByPk(studentId);
   if (!student) {
     throw new AppError("Student not found", 404);
+  }
+
+  // Check for pending library books before deletion
+  const pendingBooks = await BookIssue.count({
+    where: { student_id: studentId, status: "issued" },
+  });
+  if (pendingBooks > 0) {
+    throw new AppError(
+      `Student has ${pendingBooks} library book(s) still issued. Please collect and return them before deleting the student.`,
+      400
+    );
   }
 
   const t = await db.transaction();
@@ -93,6 +110,7 @@ export const deleteSingleStudentService = async (studentId) => {
     throw error;
   }
 };
+
 
 /**
  * Delete all students in a section and all their contents fully

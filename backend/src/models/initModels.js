@@ -34,9 +34,17 @@ import GameSession from "../modules/game/game-session.model.js";
 import GameSessionPlayer from "../modules/game/game-session-player.model.js";
 import PlayerAnswer from "../modules/game/player-answer.model.js";
 
-/* ===================== AI / LOGS ===================== */
+/* ===================== AI / LOGS / CHAT ===================== */
 import AiChatLog from "../modules/ai-chat-logs/ai-chat-log.model.js";
 import AuditLog from "../modules/audit/audit-log.model.js";
+import StudentChatSession from "../modules/rag/models/student-chat-session.model.js";
+import StudentChatMessage from "../modules/rag/models/student-chat-message.model.js";
+import TextbookChapter from "../modules/rag/models/textbook-chapter.model.js";
+
+/* ===================== QUIZZES / HOMEWORK ===================== */
+import TeacherQuiz from "../modules/quiz/teacher-quiz.model.js";
+import TeacherQuizQuestion from "../modules/quiz/teacher-quiz-question.model.js";
+import StudentQuizSubmission from "../modules/quiz/student-quiz-submission.model.js";
 
 /* ===================== TOKENS / BILLING ===================== */
 import TokenAccount from "../modules/tokens/token-account.model.js";
@@ -81,6 +89,11 @@ import ClassFeeSchedule from "../modules/fees/class-fee-schedule.model.js";
 import StudentFeeLedger from "../modules/fees/student-fee-ledger.model.js";
 import StudentTermLedger from "../modules/fees/student-term-ledger.model.js";
 import FeePayment from "../modules/fees/fee-payment.model.js";
+
+/* ===================== LIBRARY ===================== */
+import Book from "../modules/library/book.model.js";
+import BookIssue from "../modules/library/book-issue.model.js";
+
 
 
 const initAssociations = () => {
@@ -404,6 +417,45 @@ const initAssociations = () => {
 
   StudentTermLedger.hasMany(FeePayment, { foreignKey: "term_ledger_id" });
   FeePayment.belongsTo(StudentTermLedger, { foreignKey: "term_ledger_id" });
+
+  /* ==================== LIBRARY ==================== */
+  School.hasMany(Book, { foreignKey: "school_id", onDelete: "CASCADE" });
+  Book.belongsTo(School, { foreignKey: "school_id" });
+
+  Book.belongsTo(User, { as: "Creator", foreignKey: "created_by" });
+
+  School.hasMany(BookIssue, { foreignKey: "school_id", onDelete: "CASCADE" });
+  BookIssue.belongsTo(School, { foreignKey: "school_id" });
+
+  Book.hasMany(BookIssue, { foreignKey: "book_id", onDelete: "CASCADE" });
+  BookIssue.belongsTo(Book, { as: "Book", foreignKey: "book_id" });
+
+  Student.hasMany(BookIssue, { foreignKey: "student_id", onDelete: "CASCADE" });
+  BookIssue.belongsTo(Student, { as: "Student", foreignKey: "student_id" });
+
+  Teacher.hasMany(BookIssue, { foreignKey: "teacher_id", onDelete: "CASCADE" });
+  BookIssue.belongsTo(Teacher, { as: "Teacher", foreignKey: "teacher_id" });
+
+  BookIssue.belongsTo(User, { as: "IssuedBy", foreignKey: "issued_by" });
+  BookIssue.belongsTo(User, { as: "ReturnedBy", foreignKey: "returned_by" });
+
+  /* ==================== CHAT HISTORY ==================== */
+  User.hasMany(StudentChatSession, { foreignKey: "student_id", onDelete: "CASCADE" });
+  StudentChatSession.belongsTo(User, { foreignKey: "student_id" });
+
+  StudentChatSession.hasMany(StudentChatMessage, { foreignKey: "session_id", onDelete: "CASCADE" });
+  StudentChatMessage.belongsTo(StudentChatSession, { foreignKey: "session_id" });
+
+  /* ==================== TEACHER QUIZZES / HOMEWORK ==================== */
+  TeacherQuiz.hasMany(TeacherQuizQuestion, { foreignKey: "quiz_id", onDelete: "CASCADE", as: "Questions" });
+  TeacherQuizQuestion.belongsTo(TeacherQuiz, { foreignKey: "quiz_id" });
+
+  TeacherQuiz.hasMany(StudentQuizSubmission, { foreignKey: "quiz_id", onDelete: "CASCADE", as: "Submissions" });
+  StudentQuizSubmission.belongsTo(TeacherQuiz, { foreignKey: "quiz_id" });
+
+  User.hasMany(StudentQuizSubmission, { foreignKey: "student_id", onDelete: "CASCADE" });
+  StudentQuizSubmission.belongsTo(User, { foreignKey: "student_id" });
+
 };
 
 initAssociations();

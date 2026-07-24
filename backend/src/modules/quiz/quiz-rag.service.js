@@ -1,12 +1,9 @@
-import { GoogleGenAI } from "@google/genai";
+import { getAiClient, getGeminiModel } from "../rag/shared/aiClient.js";
 import { buildQuizPrompt } from "./quiz-rag.prompts.js";
 import Quiz from "./quiz.model.js";
 import QuizQuestion from "./quiz-question.model.js";
 import AppError from "../../shared/appError.js";
 import { retrieveRagContext } from "../rag/rag.service.js";
-
-const GEMINI_MODEL = (process.env.GEMINI_MODEL || "gemini-2.5-flash-lite").replace(/^models\//, "");
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 function extractJson(text) {
   const cleaned = text.replace(/```json|```/g, "").trim();
@@ -50,6 +47,9 @@ export async function generateQuizFromAi({
     numQuestions: safeNumQuestions,
     contextText,
   });
+
+  const ai = getAiClient();
+  const GEMINI_MODEL = getGeminiModel();
 
   const result = await ai.models.generateContent({
     model: GEMINI_MODEL,

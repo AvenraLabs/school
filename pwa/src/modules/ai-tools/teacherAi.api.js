@@ -1,7 +1,16 @@
 import api from "../../api/axios";
 
-export const runTeacherAi = (aiType, payload) =>
-  api.post("/teacher/ai", { aiType, payload });
+export const generateTeacherAiApi = (payload) =>
+  api.post("/teacher-ai/generate", payload);
 
-export const getTeacherAiHistory = () =>
-  api.get("/teacher/ai/history");
+export const saveTeacherAiDocumentApi = (payload) =>
+  api.post("/teacher-ai/documents", payload);
+
+export const updateTeacherAiDocumentApi = (id, payload) =>
+  api.put(`/teacher-ai/documents/${id}`, payload);
+
+export const listTeacherAiDocumentsApi = (params) =>
+  api.get("/teacher-ai/documents", { params });
+
+export const deleteTeacherAiDocumentApi = (id) =>
+  api.delete(`/teacher-ai/documents/${id}`);

@@ -17,11 +17,12 @@ import {
 } from 'lucide-react';
 import './ExamsManager.css';
 
+import { formatDate } from '../../utils/date';
+
 const getExamName = (exam) => exam?.name || exam?.master?.name || exam?.exam_master?.name || `Exam #${exam?.id}`;
 const getSubjectSlots = (exam) => [...(exam?.exam_subjects || exam?.examSubjects || [])]
   .sort((a, b) => String(a.exam_date || '').localeCompare(String(b.exam_date || '')));
 const getSubjectName = (slot) => slot?.subject?.name || slot?.Subject?.name || `Subject #${slot?.subject_id}`;
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '—');
 
 export function ExamsManager() {
   const [classes, setClasses] = useState([]);

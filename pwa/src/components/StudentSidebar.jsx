@@ -20,6 +20,7 @@ import {
   Search,
   DirectionsBus,
   Assessment,
+  LocalLibrary,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
@@ -46,6 +47,7 @@ export default function StudentSidebar({ open, onClose }) {
     { label: "Homework",         icon: <Book />,          path: "/student/diary" },
     { label: "Exams & Reports",  icon: <Assessment />,    path: "/student/report-cards" },
     { label: "Fees & Billing",   icon: <ReceiptLong />,   path: "/student/fees" },
+    { label: "Library Books",    icon: <LocalLibrary />,  path: "/student/library" },
   ];
 
   const schoolLifeItems = [
@@ -83,7 +85,7 @@ export default function StudentSidebar({ open, onClose }) {
         </IconButton>
       </Box>
 
-      {/* Profile Preview — tapping navigates to profile */}
+      {/* Profile Preview ï¿½ tapping navigates to profile */}
       <Box
         onClick={() => handleNavigate("/student/profile")}
         sx={{

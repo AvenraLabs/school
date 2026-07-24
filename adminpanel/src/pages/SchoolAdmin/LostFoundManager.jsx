@@ -14,6 +14,7 @@ import {
   Megaphone,
   Clock3
 } from 'lucide-react';
+import { formatDate } from '../../utils/date';
 import './LostFoundManager.css';
 
 export function LostFoundManager() {
@@ -300,11 +301,7 @@ export function LostFoundManager() {
                       {item.type}
                     </span>
                     <span className="lostfound-card-date">
-                      {new Date(item.date).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
+                      {formatDate(item.date)}
                     </span>
                   </div>
 

@@ -46,6 +46,7 @@ import {
 import { processImageForUpload } from "../../utils/imageUtils";
 import cloudStorageService from "../../services/cloudStorage";
 import { getAssetUrl } from "../../utils/asset";
+import { formatDate } from "../../utils/date";
 import ConfirmationDialog from "../../components/ConfirmationDialog";
 
 export default function LostFoundPage() {
@@ -420,7 +421,7 @@ export default function LostFoundPage() {
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.8, mb: 2, color: "text.secondary" }}>
                     <Info sx={{ fontSize: 16 }} />
                     <Typography variant="caption" fontWeight="600">
-                      {item.type === "lost" ? "Date Lost" : "Date Found"}: {new Date(item.date).toLocaleDateString()}
+                      {item.type === "lost" ? "Date Lost" : "Date Found"}: {formatDate(item.date)}
                     </Typography>
                   </Box>
 

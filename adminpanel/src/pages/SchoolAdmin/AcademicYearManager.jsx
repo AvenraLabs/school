@@ -3,6 +3,7 @@ import { academicYearsAPI, studentsAPI, classesAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../context/ToastContext';
 import { Calendar, Plus, ChevronRight, AlertTriangle, CheckCircle, RefreshCw, ArrowRight, UserCheck, ShieldAlert, GraduationCap, XCircle, Search, Sparkles } from 'lucide-react';
+import { formatDate } from '../../utils/date';
 import './AcademicYear.css';
 
 export function AcademicYearManager() {
@@ -268,7 +269,7 @@ export function AcademicYearManager() {
           <span>Duration Schedule</span>
           <span style={{ marginTop: '8px', color: '#475569', fontSize: '13px', textTransform: 'none', fontWeight: 600 }}>
             {currentYear 
-              ? `${new Date(currentYear.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })} - ${new Date(currentYear.end_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}`
+              ? `${formatDate(currentYear.start_date)} - ${formatDate(currentYear.end_date)}`
               : '—'
             }
           </span>
@@ -301,8 +302,8 @@ export function AcademicYearManager() {
               {academicYears.map((year) => (
                 <tr key={year.id} className={year.is_current ? 'active-row' : ''}>
                   <td style={{ color: '#0f172a', fontWeight: 800 }}>{year.name}</td>
-                  <td>{new Date(year.start_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
-                  <td>{new Date(year.end_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
+                  <td>{formatDate(year.start_date)}</td>
+                  <td>{formatDate(year.end_date)}</td>
                   <td>
                     {year.is_current ? (
                       <span className="ay-badge ay-badge-active">

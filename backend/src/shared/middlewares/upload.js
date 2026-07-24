@@ -6,7 +6,8 @@ import fs from "fs";
 const folders = [
   "uploads/avatars",
   "uploads/chat",
-  "uploads/announcements"
+  "uploads/announcements",
+  "uploads/books",
 ];
 
 folders.forEach((folder) => {
@@ -24,6 +25,8 @@ const storage = multer.diskStorage({
       folder += "chat/";
     } else if (file.fieldname === "announcement") {
       folder += "announcements/";
+    } else if (file.fieldname === "book") {
+      folder += "books/";
     }
     cb(null, folder);
   },

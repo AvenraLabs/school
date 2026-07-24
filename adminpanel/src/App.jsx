@@ -27,7 +27,9 @@ import { SchoolRegistry } from './pages/SchoolAdmin/SchoolRegistry';
 import { TransportManager } from './pages/SchoolAdmin/TransportManager';
 import { AcademicYearManager } from './pages/SchoolAdmin/AcademicYearManager';
 import { FeeManager } from './pages/SchoolAdmin/Fees';
+import { LibraryManager } from './pages/SchoolAdmin/Library';
 import PrivacyPolicy from './pages/Public/PrivacyPolicy';
+
 import TermsConditions from './pages/Public/TermsConditions';
 import { NotFoundPage } from './pages/Public/NotFoundPage';
 import { LostFoundManager } from './pages/SchoolAdmin/LostFoundManager';
@@ -87,7 +89,9 @@ function App() {
               <Route path="/admin/audit-logs" element={<AuditLogs />} />
               <Route path="/admin/lost-found" element={<LostFoundManager />} />
               <Route path="/admin/feedback" element={<FeedbackSubmit />} />
+              <Route path="/admin/library" element={<LibraryManager />} />
               <Route path="/admin/about" element={<AboutAdmin />} />
+
             </Route>
 
             {/* Fallback */}

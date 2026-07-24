@@ -22,6 +22,8 @@ import {
   CheckCircle,
 } from "@mui/icons-material";
 import { getMyFeeLedgerApi } from "./fees.api";
+import { formatDate } from "../../utils/date";
+import html2pdf from "html2pdf.js";
 
 export default function FeesPage() {
   const [loading, setLoading] = useState(true);
@@ -46,58 +48,39 @@ export default function FeesPage() {
   }, []);
 
   const handleDownload = (item) => {
-    const printWindow = window.open("", "_blank", "width=650,height=800");
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Receipt_${item.receipt_no}</title>
-          <style>
-            @page { size: auto; margin: 15mm; }
-            body { font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 24px; color: #0f172a; background: #fff; }
-            .box { border: 2px solid #e2e8f0; border-radius: 16px; padding: 24px; max-width: 480px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
-            .header { text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 20px; }
-            .school { font-size: 18px; font-weight: 900; color: #312e81; text-transform: uppercase; letter-spacing: 0.5px; }
-            .sub { font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-top: 4px; letter-spacing: 1px; }
-            .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-            .label { color: #64748b; font-weight: 600; }
-            .val { font-weight: 800; color: #0f172a; }
-            .amount-card { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; text-align: center; margin: 20px 0; }
-            .amount-lbl { font-size: 11px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.5px; }
-            .amount { font-size: 26px; font-weight: 900; color: #15803d; margin-top: 4px; }
-            .footer { text-align: center; font-size: 10px; color: #94a3b8; margin-top: 20px; font-weight: 600; }
-          </style>
-        </head>
-        <body>
-          <div class="box">
-            <div class="header">
-              <div class="school">${data?.student?.school_name || 'OFFICIAL RECEIPT'}</div>
-              <div class="sub">#${item.receipt_no}</div>
-            </div>
-            <div class="row"><span class="label">ID:</span><span class="val">#${item.receipt_no}</span></div>
-            <div class="row"><span class="label">Date & Time:</span><span class="val">${new Date(item.paid_at).toLocaleString()}</span></div>
-            <div class="row"><span class="label">Student Name:</span><span class="val">${data?.student?.name || ''}</span></div>
-            <div class="row"><span class="label">Class & Section:</span><span class="val">${data?.student?.class_name || ''} - ${data?.student?.section_name || ''}</span></div>
-            <div class="row"><span class="label">Payment Mode:</span><span class="val" style="text-transform:uppercase">${item.mode}</span></div>
-            
-            <div class="amount-card">
-              <div class="amount-lbl">AMOUNT PAID</div>
-              <div class="amount">₹${Number(item.amount).toLocaleString('en-IN')}</div>
-            </div>
+    const container = document.createElement("div");
+    container.style.padding = "20px";
+    container.innerHTML = `
+      <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 24px; color: #0f172a; background: #fff; border: 2px solid #e2e8f0; border-radius: 16px; max-width: 480px; margin: 0 auto;">
+        <div style="text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 20px;">
+          <div style="font-size: 18px; font-weight: 900; color: #312e81; text-transform: uppercase; letter-spacing: 0.5px;">${data?.student?.school_name || 'OFFICIAL RECEIPT'}</div>
+          <div style="font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-top: 4px; letter-spacing: 1px;">#${item.receipt_no}</div>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Receipt ID:</span><span style="font-weight: 800; color: #0f172a;">#${item.receipt_no}</span></div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Date:</span><span style="font-weight: 800; color: #0f172a;">${formatDate(item.paid_at)}</span></div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Student Name:</span><span style="font-weight: 800; color: #0f172a;">${data?.student?.name || ''}</span></div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Class & Section:</span><span style="font-weight: 800; color: #0f172a;">${data?.student?.class_name || ''} - ${data?.student?.section_name || ''}</span></div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Payment Mode:</span><span style="font-weight: 800; color: #0f172a; text-transform: uppercase;">${item.mode}</span></div>
+        
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; text-align: center; margin: 20px 0;">
+          <div style="font-size: 11px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.5px;">AMOUNT PAID</div>
+          <div style="font-size: 26px; font-weight: 900; color: #15803d; margin-top: 4px;">₹${Number(item.amount).toLocaleString('en-IN')}</div>
+        </div>
 
-            <div class="row"><span class="label">Remaining Balance:</span><span class="val" style="color:#e11d48">₹${Number(data?.ledger?.balance || 0).toLocaleString('en-IN')}</span></div>
-            <div class="footer">Computer generated payment document.</div>
-          </div>
-          <script>
-            window.onload = function() {
-              window.print();
-            };
-          </script>
-        </body>
-      </html>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Remaining Balance:</span><span style="font-weight: 800; color: #e11d48;">₹${Number(data?.ledger?.balance || 0).toLocaleString('en-IN')}</span></div>
+        <div style="text-align: center; font-size: 10px; color: #94a3b8; margin-top: 20px; font-weight: 600;">Computer generated payment document.</div>
+      </div>
     `;
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
+
+    const opt = {
+      margin: 8,
+      filename: `Receipt_${item.receipt_no}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(container).save();
   };
 
   if (loading) {
@@ -276,7 +259,7 @@ export default function FeesPage() {
 
                       {t.due_date && (
                         <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5, fontWeight: 600 }}>
-                          <CalendarMonth sx={{ fontSize: 14 }} /> Due: {t.due_date}
+                          <CalendarMonth sx={{ fontSize: 14 }} /> Due: {formatDate(t.due_date)}
                         </Typography>
                       )}
                     </Box>
@@ -322,7 +305,7 @@ export default function FeesPage() {
                         #{p.receipt_no}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                        {new Date(p.paid_at).toLocaleDateString()} · {p.mode?.toUpperCase()}
+                        {formatDate(p.paid_at)} · {p.mode?.toUpperCase()}
                       </Typography>
                     </Box>
 

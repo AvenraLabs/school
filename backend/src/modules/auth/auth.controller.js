@@ -24,11 +24,13 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   // school check (except super admin)
+  let schoolBoard = null;
   if (user.role !== "super_admin") {
     const school = await School.findByPk(user.school_id);
     if (!school || school.status !== "active") {
       throw new AppError("School is inactive", 403);
     }
+    schoolBoard = school.board || null;
   }
 
   // For students/drivers, fetch additional profile info
@@ -61,6 +63,7 @@ export const login = asyncHandler(async (req, res) => {
       id: user.id,
       role: user.role,
       school_id: user.school_id,
+      school_board: schoolBoard, // board from schools table — no extra API call needed
       name: user.name,
       username: user.username,
       phone: user.phone,

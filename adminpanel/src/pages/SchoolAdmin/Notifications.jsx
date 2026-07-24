@@ -37,20 +37,17 @@ import {
 
 import './Notifications.css';
 
+import { formatDate } from '../../utils/date';
+
 const audienceMeta = {
   all: { label: 'Everyone', icon: Users, tone: 'all' },
   student: { label: 'Students', icon: GraduationCap, tone: 'student' },
   teacher: { label: 'Teachers', icon: Users, tone: 'teacher' },
 };
 
-const formatDate = (value) => {
+const formatNotificationDate = (value) => {
   if (!value) return 'Just now';
-  return new Date(value).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return formatDate(value);
 };
 
 export function Notifications() {
