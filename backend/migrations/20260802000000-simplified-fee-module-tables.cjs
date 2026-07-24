@@ -35,6 +35,8 @@ module.exports = {
         student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
         fee_definition_id BIGINT NOT NULL REFERENCES fee_definitions(id) ON DELETE CASCADE,
         total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+        concession_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+        concession_reason VARCHAR(255),
         paid_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
         balance_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
         status VARCHAR(20) NOT NULL DEFAULT 'pending',

@@ -47,26 +47,31 @@ export default function FeesPage() {
   }, []);
 
   const handleDownload = (item) => {
+    const matchedFee = fees.find((f) => String(f.id) === String(item.student_fee_id));
+    const concAmt = Number(matchedFee?.concession_amount || 0);
+
     const container = document.createElement("div");
     container.style.padding = "20px";
     container.innerHTML = `
-      <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 24px; color: #0f172a; background: #fff; border: 2px solid #e2e8f0; border-radius: 16px; max-width: 480px; margin: 0 auto;">
+      <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 24px; color: #0f172a; background: #fff; border: 2px solid #e2e8f0; border-radius: 16px; max-width: 420px; margin: 0 auto;">
         <div style="text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 20px;">
           <div style="font-size: 18px; font-weight: 900; color: #312e81; text-transform: uppercase; letter-spacing: 0.5px;">${data?.student?.school_name || 'OFFICIAL RECEIPT'}</div>
-          <div style="font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-top: 4px; letter-spacing: 1px;">#${item.receipt_no}</div>
+          <div style="font-size: 12px; color: #6366f1; font-weight: 700; text-transform: uppercase; margin-top: 4px; letter-spacing: 1px;">#${item.receipt_no}</div>
         </div>
-        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Receipt ID:</span><span style="font-weight: 800; color: #0f172a;">#${item.receipt_no}</span></div>
-        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Date:</span><span style="font-weight: 800; color: #0f172a;">${formatDate(item.paid_at)}</span></div>
-        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Student Name:</span><span style="font-weight: 800; color: #0f172a;">${data?.student?.name || ''}</span></div>
-        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Class & Section:</span><span style="font-weight: 800; color: #0f172a;">${data?.student?.class_name || ''} - ${data?.student?.section_name || ''}</span></div>
-        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Payment Mode:</span><span style="font-weight: 800; color: #0f172a; text-transform: uppercase;">${item.mode}</span></div>
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Receipt ID:</span><span style="font-weight: 800; color: #0f172a;">#${item.receipt_no}</span></div>
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Date:</span><span style="font-weight: 800; color: #0f172a;">${formatDate(item.paid_at)}</span></div>
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Student Name:</span><span style="font-weight: 800; color: #0f172a;">${data?.student?.name || ''}</span></div>
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Class:</span><span style="font-weight: 800; color: #0f172a;">Class ${data?.student?.class_name || ''} ${data?.student?.section_name ? '— ' + data.student.section_name : ''}</span></div>
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Fee Item:</span><span style="font-weight: 800; color: #4f46e5;">${matchedFee?.title || 'Fee Payment'}</span></div>
+        ${concAmt > 0 ? `<div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #7e22ce;"><span style="font-weight: 600;">Discount / Concession:</span><span style="font-weight: 800;">-₹${concAmt.toLocaleString('en-IN')}${matchedFee?.concession_reason ? ' (' + matchedFee.concession_reason + ')' : ''}</span></div>` : ''}
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Payment Mode:</span><span style="font-weight: 800; color: #0f172a; text-transform: uppercase;">${item.mode}</span></div>
         
-        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; text-align: center; margin: 20px 0;">
-          <div style="font-size: 11px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.5px;">AMOUNT PAID</div>
-          <div style="font-size: 26px; font-weight: 900; color: #15803d; margin-top: 4px;">₹${Number(item.amount).toLocaleString('en-IN')}</div>
+        <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 14px; text-align: center; margin: 16px 0;">
+          <div style="font-size: 10px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.5px;">AMOUNT PAID</div>
+          <div style="font-size: 26px; font-weight: 900; color: #15803d; margin-top: 2px;">₹${Number(item.amount).toLocaleString('en-IN')}</div>
         </div>
 
-        <div style="text-align: center; font-size: 10px; color: #94a3b8; margin-top: 20px; font-weight: 600;">Computer generated payment document.</div>
+        <div style="text-align: center; font-size: 10px; color: #94a3b8; margin-top: 16px; font-weight: 600;">Computer-generated payment receipt. No signature required.</div>
       </div>
     `;
 
@@ -125,10 +130,10 @@ export default function FeesPage() {
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
               <Box>
                 <Typography variant="caption" sx={{ fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  School Fees & Fines
+                  School Fees & Collections
                 </Typography>
                 <Typography variant="h5" sx={{ fontWeight: 900, color: "#0f172a" }}>
-                  My Fees
+                  My Fee Ledger
                 </Typography>
               </Box>
 
@@ -219,7 +224,7 @@ export default function FeesPage() {
         <Card sx={cardSx}>
           <CardContent sx={{ p: 2.5 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#1e293b", mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
-              <AccessTime sx={{ fontSize: 20, color: "#4f46e5" }} /> Assigned Fees & Fines
+              <AccessTime sx={{ fontSize: 20, color: "#4f46e5" }} /> Assigned Fees ({fees.length})
             </Typography>
 
             <Stack spacing={1.5}>
@@ -241,14 +246,23 @@ export default function FeesPage() {
                     }}
                   >
                     <Box>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
                         <Typography variant="body1" sx={{ fontWeight: 800, color: "#0f172a" }}>
                           {f.title}
                         </Typography>
                         {isPaid ? (
                           <Chip label="Paid ✓" size="small" sx={{ height: 22, fontSize: 11, fontWeight: 800, bgcolor: "#dcfce7", color: "#15803d" }} />
+                        ) : f.status === 'partial' ? (
+                          <Chip label="Partially Paid" size="small" sx={{ height: 22, fontSize: 11, fontWeight: 800, bgcolor: "#fef3c7", color: "#b45309" }} />
                         ) : (
                           <Chip label="Pending" size="small" sx={{ height: 22, fontSize: 11, fontWeight: 800, bgcolor: "#ffedd5", color: "#c2410c" }} />
+                        )}
+                        {Number(f.concession_amount) > 0 && (
+                          <Chip
+                            label={`Discount: -₹${Number(f.concession_amount).toLocaleString('en-IN')}`}
+                            size="small"
+                            sx={{ height: 22, fontSize: 10, fontWeight: 800, bgcolor: "#f3e8ff", color: "#6b21a8", border: "1px solid #e9d5ff" }}
+                          />
                         )}
                       </Box>
 
@@ -268,9 +282,14 @@ export default function FeesPage() {
                       )}
                     </Box>
 
-                    <Typography variant="body1" sx={{ fontWeight: 900, color: isPaid ? "#16a34a" : "#ea580c" }}>
-                      {isPaid ? "₹0" : `₹${f.balance_amount.toLocaleString("en-IN")}`}
-                    </Typography>
+                    <Box sx={{ textAlign: "right" }}>
+                      <Typography variant="body1" sx={{ fontWeight: 900, color: isPaid ? "#16a34a" : "#ea580c" }}>
+                        {isPaid ? "₹0" : `₹${f.balance_amount.toLocaleString("en-IN")}`}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 700 }}>
+                        of ₹{Number(f.total_amount).toLocaleString("en-IN")}
+                      </Typography>
+                    </Box>
                   </Box>
                 );
               })}
@@ -291,53 +310,68 @@ export default function FeesPage() {
               </Typography>
             ) : (
               <Stack spacing={1.5}>
-                {payments.map((p) => (
-                  <Box
-                    key={p.id}
-                    sx={{
-                      p: 2,
-                      borderRadius: "20px",
-                      border: "1px solid #f1f5f9",
-                      bgcolor: "#fafafa",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="body1" sx={{ fontWeight: 800, color: "#0f172a" }}>
-                        #{p.receipt_no}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                        {formatDate(p.paid_at)} · {p.mode?.toUpperCase()}
-                      </Typography>
-                    </Box>
+                {payments.map((p) => {
+                  const matchedFee = fees.find((f) => String(f.id) === String(p.student_fee_id));
 
-                    <Box sx={{ textAlign: "right" }}>
-                      <Typography variant="body1" sx={{ fontWeight: 900, color: "#16a34a", mb: 0.5 }}>
-                        ₹{Number(p.amount).toLocaleString("en-IN")}
-                      </Typography>
-                      <Button
-                        size="small"
-                        onClick={() => handleDownload(p)}
-                        startIcon={<Download sx={{ fontSize: 14 }} />}
-                        sx={{
-                          fontSize: 12,
-                          fontWeight: 800,
-                          textTransform: "none",
-                          py: 0.5,
-                          px: 1.5,
-                          color: "#4f46e5",
-                          bgcolor: "#eef2ff",
-                          borderRadius: "12px",
-                          "&:hover": { bgcolor: "#e0e7ff" },
-                        }}
-                      >
-                        Download
-                      </Button>
+                  return (
+                    <Box
+                      key={p.id}
+                      sx={{
+                        p: 2,
+                        borderRadius: "20px",
+                        border: "1px solid #f1f5f9",
+                        bgcolor: p.is_void ? "#fff1f2" : "#fafafa",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        opacity: p.is_void ? 0.7 : 1,
+                      }}
+                    >
+                      <Box>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 800, color: p.is_void ? "#94a3b8" : "#0f172a", textDecoration: p.is_void ? "line-through" : "none" }}>
+                            #{p.receipt_no}
+                          </Typography>
+                          {matchedFee?.title && (
+                            <Chip label={matchedFee.title} size="small" sx={{ height: 20, fontSize: 10, fontWeight: 800, bgcolor: "#e0e7ff", color: "#3730a3" }} />
+                          )}
+                          {p.is_void && (
+                            <Chip label={`VOIDED — ${p.void_reason || 'Voided'}`} size="small" sx={{ height: 20, fontSize: 10, fontWeight: 800, bgcolor: "#ffe4e6", color: "#e11d48" }} />
+                          )}
+                        </Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mt: 0.5, display: "block" }}>
+                          {formatDate(p.paid_at)} · {p.mode?.toUpperCase()}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ textAlign: "right" }}>
+                        <Typography variant="body1" sx={{ fontWeight: 900, color: p.is_void ? "#f43f5e" : "#16a34a", mb: 0.5, textDecoration: p.is_void ? "line-through" : "none" }}>
+                          ₹{Number(p.amount).toLocaleString("en-IN")}
+                        </Typography>
+                        {!p.is_void && (
+                          <Button
+                            size="small"
+                            onClick={() => handleDownload(p)}
+                            startIcon={<Download sx={{ fontSize: 14 }} />}
+                            sx={{
+                              fontSize: 12,
+                              fontWeight: 800,
+                              textTransform: "none",
+                              py: 0.5,
+                              px: 1.5,
+                              color: "#4f46e5",
+                              bgcolor: "#eef2ff",
+                              borderRadius: "12px",
+                              "&:hover": { bgcolor: "#e0e7ff" },
+                            }}
+                          >
+                            Download
+                          </Button>
+                        )}
+                      </Box>
                     </Box>
-                  </Box>
-                ))}
+                  );
+                })}
               </Stack>
             )}
           </CardContent>

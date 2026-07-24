@@ -46,7 +46,6 @@ export const undoReturnSchema = z.object({
 
 export const updateLibrarySettingsSchema = z.object({
   library_loan_period_days: z.coerce.number().int().min(1).max(365).optional(),
-  library_fine_to_fees: z.boolean().optional(),
   library_overdue_whatsapp_enabled: z.boolean().optional(),
   library_overdue_reminder_days: z.coerce.number().int().min(0).max(30).optional(),
   library_overdue_fine_per_day: z.coerce.number().min(0).optional(),

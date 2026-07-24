@@ -245,16 +245,22 @@ function AddEditBookModal({ mode, book, onClose, onSaved }) {
 function ArchiveConfirmModal({ book, onClose, onConfirmed }) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
+  const isArchived = book.status === 'archived';
 
-  const handleArchive = async () => {
+  const handleToggleArchive = async () => {
     setLoading(true);
     try {
-      await libraryAPI.archiveBook(book.id);
-      toast.success('Book archived');
+      if (isArchived) {
+        await libraryAPI.unarchiveBook(book.id);
+        toast.success('Book restored to active catalog');
+      } else {
+        await libraryAPI.archiveBook(book.id);
+        toast.success('Book archived');
+      }
       onConfirmed();
       onClose();
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Failed to archive book');
+      toast.error(err?.response?.data?.message || `Failed to ${isArchived ? 'restore' : 'archive'} book`);
     } finally {
       setLoading(false);
     }
@@ -270,16 +276,20 @@ function ArchiveConfirmModal({ book, onClose, onConfirmed }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
-            <Archive className="h-5 w-5 text-amber-600" />
+          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isArchived ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+            <Archive className={`h-5 w-5 ${isArchived ? 'text-emerald-600' : 'text-amber-600'}`} />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Archive Book?</h3>
-            <p className="text-xs text-slate-500">This book will be hidden from active lists.</p>
+            <h3 className="text-sm font-semibold text-slate-900">
+              {isArchived ? 'Restore Book?' : 'Archive Book?'}
+            </h3>
+            <p className="text-xs text-slate-500">
+              {isArchived ? 'Re-activate book for issuing to students.' : 'This book will be hidden from active lists.'}
+            </p>
           </div>
         </div>
         <p className="text-sm text-slate-700">
-          Archive <span className="font-semibold">{book.book_name}</span> ({book.book_no})?
+          {isArchived ? 'Restore' : 'Archive'} <span className="font-semibold">{book.book_name}</span> ({book.book_no})?
         </p>
         <div className="flex justify-end gap-3">
           <button
@@ -290,12 +300,14 @@ function ArchiveConfirmModal({ book, onClose, onConfirmed }) {
             Cancel
           </button>
           <button
-            onClick={handleArchive}
+            onClick={handleToggleArchive}
             disabled={loading}
-            className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-60"
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 ${
+              isArchived ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'
+            }`}
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            Archive
+            {isArchived ? 'Restore Book' : 'Archive Book'}
           </button>
         </div>
       </div>
@@ -342,8 +354,8 @@ export function LibraryBooks() {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-2 flex-wrap items-center">
+      <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
@@ -351,7 +363,7 @@ export function LibraryBooks() {
               placeholder="Search books..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setOffset(0); }}
-              className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 w-56"
+              className="pl-9 pr-4 h-[38px] rounded-xl border border-slate-200 text-sm bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 w-48 sm:w-60"
             />
           </div>
 
@@ -359,17 +371,18 @@ export function LibraryBooks() {
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }}
-              className="appearance-none pl-3 pr-8 py-2 rounded-xl border border-slate-200 text-sm bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 cursor-pointer"
+              style={{ WebkitAppearance: 'none', appearance: 'none' }}
+              className="pl-3 pr-8 h-[38px] rounded-xl border border-slate-200 text-sm bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 cursor-pointer font-medium text-slate-700"
             >
-              <option value="active">Active</option>
-              <option value="archived">Archived</option>
-              <option value="">All</option>
+              <option value="active">Active Books</option>
+              <option value="archived">Archived Books</option>
+              <option value="">All Books</option>
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
           </div>
 
           {/* View Toggle */}
-          <div className="flex rounded-xl border border-slate-200 bg-white p-0.5">
+          <div className="flex h-[38px] items-center rounded-xl border border-slate-200 bg-white p-0.5">
             <button
               onClick={() => setViewMode('grid')}
               className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-900'}`}
@@ -390,7 +403,7 @@ export function LibraryBooks() {
         <button
           id="library-add-book-btn"
           onClick={() => setAddModal(true)}
-          className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+          className="flex h-[38px] items-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors flex-shrink-0"
         >
           <Plus className="h-4 w-4" />
           Add Book
@@ -465,24 +478,35 @@ export function LibraryBooks() {
                       <span className="font-semibold text-slate-700">{book.available_copies}</span> / {book.total_copies} copies
                     </div>
 
-                    {book.status === 'active' && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setEditModal(book)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
+                    <div className="flex items-center gap-1">
+                      {book.status === 'active' ? (
+                        <>
+                          <button
+                            onClick={() => setEditModal(book)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                            title="Edit Book"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setArchiveModal(book)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-amber-500 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                            title="Archive Book"
+                          >
+                            <Archive className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      ) : (
                         <button
                           onClick={() => setArchiveModal(book)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
-                          title="Archive"
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                          title="Restore to Active Catalog"
                         >
                           <Archive className="h-3.5 w-3.5" />
+                          Restore
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -530,23 +554,32 @@ export function LibraryBooks() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
-                        {book.status === 'active' && (
+                        {book.status === 'active' ? (
                           <>
                             <button
                               onClick={() => setEditModal(book)}
                               className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-                              title="Edit"
+                              title="Edit Book"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
                             </button>
                             <button
                               onClick={() => setArchiveModal(book)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
-                              title="Archive"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-amber-500 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                              title="Archive Book"
                             >
                               <Archive className="h-3.5 w-3.5" />
                             </button>
                           </>
+                        ) : (
+                          <button
+                            onClick={() => setArchiveModal(book)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                            title="Restore to Active Catalog"
+                          >
+                            <Archive className="h-3.5 w-3.5" />
+                            Restore
+                          </button>
                         )}
                       </div>
                     </td>

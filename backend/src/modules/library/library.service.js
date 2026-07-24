@@ -43,7 +43,6 @@ export const getLibrarySettingsService = async (school_id) => {
   const school = await School.findByPk(school_id, {
     attributes: [
       "library_loan_period_days",
-      "library_fine_to_fees",
       "library_overdue_whatsapp_enabled",
       "library_overdue_reminder_days",
       "library_overdue_fine_per_day",
@@ -169,6 +168,14 @@ export const archiveBookService = async (bookId, school_id) => {
 
   await book.update({ status: "archived" });
   return { success: true, message: "Book archived successfully" };
+};
+
+export const unarchiveBookService = async (bookId, school_id) => {
+  const book = await Book.findOne({ where: { id: bookId, school_id } });
+  if (!book) throw new AppError("Book not found", 404);
+
+  await book.update({ status: "active" });
+  return { success: true, message: "Book restored to active catalog successfully" };
 };
 
 /* ============================================================================

@@ -104,11 +104,6 @@ const School = db.define(
       defaultValue: 14,
     },
 
-    library_fine_to_fees: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
-    },
-
     library_overdue_whatsapp_enabled: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

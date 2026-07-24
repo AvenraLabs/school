@@ -6,6 +6,7 @@ import {
   addBookService,
   editBookService,
   archiveBookService,
+  unarchiveBookService,
   issueBookService,
   returnBookService,
   cancelIssueService,
@@ -49,6 +50,11 @@ export const editBook = asyncHandler(async (req, res) => {
 
 export const archiveBook = asyncHandler(async (req, res) => {
   const result = await archiveBookService(req.params.id, req.user.school_id);
+  res.json(result);
+});
+
+export const unarchiveBook = asyncHandler(async (req, res) => {
+  const result = await unarchiveBookService(req.params.id, req.user.school_id);
   res.json(result);
 });
 

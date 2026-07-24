@@ -10,7 +10,6 @@ export function LibrarySettings() {
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     library_loan_period_days: 14,
-    library_fine_to_fees: true,
     library_overdue_whatsapp_enabled: false,
     library_overdue_reminder_days: 1,
     library_overdue_fine_per_day: 0,
@@ -21,7 +20,6 @@ export function LibrarySettings() {
       .then((s) => {
         setForm({
           library_loan_period_days: s.library_loan_period_days ?? 14,
-          library_fine_to_fees: s.library_fine_to_fees ?? true,
           library_overdue_whatsapp_enabled: s.library_overdue_whatsapp_enabled ?? false,
           library_overdue_reminder_days: s.library_overdue_reminder_days ?? 1,
           library_overdue_fine_per_day: s.library_overdue_fine_per_day ?? 0,
@@ -38,7 +36,6 @@ export function LibrarySettings() {
     try {
       await libraryAPI.updateSettings({
         library_loan_period_days: parseInt(form.library_loan_period_days, 10),
-        library_fine_to_fees: form.library_fine_to_fees,
         library_overdue_whatsapp_enabled: form.library_overdue_whatsapp_enabled,
         library_overdue_reminder_days: parseInt(form.library_overdue_reminder_days, 10),
         library_overdue_fine_per_day: parseFloat(form.library_overdue_fine_per_day || 0),
@@ -112,28 +109,6 @@ export function LibrarySettings() {
               />
               <span className="text-sm text-slate-500">₹ / day overdue</span>
             </div>
-          </div>
-
-          {/* Lost Fine to Fees */}
-          <div className="px-5 py-4 flex items-center justify-between gap-4">
-            <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-slate-800">Auto-create Fee Entry for Lost/Damaged Fines</p>
-              <p className="text-xs text-slate-500">
-                When a book fine is entered for a student, automatically create a "Library Fine" entry in their fee record.
-              </p>
-            </div>
-            <button
-              id="library-fine-to-fees-toggle"
-              type="button"
-              onClick={() => setForm({ ...form, library_fine_to_fees: !form.library_fine_to_fees })}
-              className={`relative flex-shrink-0 h-6 w-11 rounded-full transition-colors duration-200 focus:outline-none ${
-                form.library_fine_to_fees ? 'bg-indigo-600' : 'bg-slate-200'
-              }`}
-            >
-              <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
-                form.library_fine_to_fees ? 'translate-x-5' : 'translate-x-0'
-              }`} />
-            </button>
           </div>
 
           {/* WhatsApp Overdue */}

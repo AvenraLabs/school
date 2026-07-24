@@ -3,6 +3,7 @@ import { jwtDecode } from "jwt-decode";
 import { setupAxiosInterceptors } from "../api/axios.interceptors";
 import api from "../api/axios";
 import { validateToken, logoutApi } from "../api/auth.api";
+import { getSharedSocket } from "../services/socket.service";
 import { io } from "socket.io-client";
 import { SOCKET_BASE_URL } from "../api/config";
 

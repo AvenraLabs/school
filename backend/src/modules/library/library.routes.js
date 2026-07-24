@@ -20,6 +20,7 @@ import {
   addBook,
   editBook,
   archiveBook,
+  unarchiveBook,
   issueBook,
   returnBook,
   cancelIssue,
@@ -52,6 +53,7 @@ router.get("/books", listBooks);
 router.post("/books", validate(addBookSchema), addBook);
 router.patch("/books/:id", validate(editBookSchema), editBook);
 router.patch("/books/:id/archive", archiveBook);
+router.patch("/books/:id/unarchive", unarchiveBook);
 
 /* Issues */
 router.post("/issues", validate(issueBookSchema), issueBook);

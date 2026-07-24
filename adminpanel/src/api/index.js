@@ -950,6 +950,10 @@ export const libraryAPI = {
     const response = await axiosInstance.patch(`/library/books/${id}/archive`);
     return response.data;
   },
+  unarchiveBook: async (id) => {
+    const response = await axiosInstance.patch(`/library/books/${id}/unarchive`);
+    return response.data;
+  },
 
   /* Issues */
   issueBook: async (data) => {
