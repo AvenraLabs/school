@@ -35,7 +35,7 @@ jobs:
             npm install
             npm run build
 
-            cd ../pwa-kiddo
+            cd ../pwa
             npm install
             npm run build
 
