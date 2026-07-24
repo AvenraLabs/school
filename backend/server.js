@@ -11,6 +11,8 @@ import db from "./src/config/db.js";
 import errorHandler from "./src/shared/errorHandler.js";
 import "./src/models/initModels.js";
 import uploadRoutes from "./src/modules/upload/upload.routes.js";
+import { startLibraryCron } from "./src/modules/library/library.cron.js";
+import { startFeeCron } from "./src/modules/fees/fee.cron.js";
 
 // socket
 import { createServer } from "http";
@@ -149,7 +151,6 @@ import academicYearRoutes from "./src/modules/academic-years/academic-year.route
 import analyticsRoutes from "./src/modules/analytics/analytics.routes.js";
 import feeRoutes from "./src/modules/fees/fee.routes.js";
 import libraryRoutes from "./src/modules/library/library.routes.js";
-import { startLibraryCron } from "./src/modules/library/library.cron.js";
 
 
 
@@ -249,6 +250,7 @@ try {
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server + Socket running on port ${PORT}`);
     startLibraryCron();
+    startFeeCron();
   });
 
 } catch (err) {

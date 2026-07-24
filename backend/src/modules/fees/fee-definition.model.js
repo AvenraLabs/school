@@ -1,8 +1,8 @@
 import { DataTypes } from "sequelize";
 import db from "../../config/db.js";
 
-const ClassFeePlan = db.define(
-  "class_fee_plan",
+const FeeDefinition = db.define(
+  "fee_definition",
   {
     id: {
       type: DataTypes.BIGINT,
@@ -21,18 +21,31 @@ const ClassFeePlan = db.define(
     },
     class_id: {
       type: DataTypes.BIGINT,
-      allowNull: false,
+      allowNull: true,
       references: { model: "classes", key: "id" },
     },
-    fee_category_id: {
-      type: DataTypes.BIGINT,
+    title: {
+      type: DataTypes.STRING(150),
       allowNull: false,
-      references: { model: "fee_categories", key: "id" },
     },
-    amount: {
+    due_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
+    total_amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0,
+    },
+    breakdown: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: [],
+    },
+    fee_type: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: "class", // 'class' or 'individual'
     },
     is_active: {
       type: DataTypes.BOOLEAN,
@@ -41,13 +54,13 @@ const ClassFeePlan = db.define(
     },
   },
   {
-    tableName: "class_fee_plans",
+    tableName: "fee_definitions",
     underscored: true,
     timestamps: true,
     indexes: [
-      { fields: ["class_id"] },
+      { fields: ["school_id", "class_id"] },
     ],
   }
 );
 
-export default ClassFeePlan;
+export default FeeDefinition;

@@ -12,6 +12,7 @@ const createNotification = async ({
   target_role,
   class_id = null,
   section_id = null,
+  target_user_id = null,
 }) => {
   return Notification.create({
     school_id,
@@ -22,6 +23,7 @@ const createNotification = async ({
     target_role,
     class_id,
     section_id,
+    target_user_id,
   });
 };
 
@@ -57,6 +59,7 @@ export const triggerReportCardNotification = async ({
   exam_name,
   class_id,
   section_id,
+  target_user_id,
 }) => {
   return createNotification({
     school_id,
@@ -67,6 +70,7 @@ export const triggerReportCardNotification = async ({
     target_role: "student", // students only
     class_id,
     section_id,
+    target_user_id: target_user_id || null,
   });
 };
 
@@ -76,6 +80,7 @@ export const triggerReportCardNotification = async ({
 export const triggerFeePaymentReceivedNotification = async ({
   school_id,
   admin_user_id,
+  target_user_id,
   amount,
   balance,
   class_id,
@@ -90,6 +95,7 @@ export const triggerFeePaymentReceivedNotification = async ({
     target_role: "student",
     class_id,
     section_id,
+    target_user_id: target_user_id || null,
   });
 };
 
@@ -98,6 +104,7 @@ export const triggerFeePaymentReceivedNotification = async ({
 ================================ */
 export const triggerFeeDueReminderNotification = async ({
   school_id,
+  target_user_id,
   term_name,
   amount,
   due_date,
@@ -115,5 +122,6 @@ export const triggerFeeDueReminderNotification = async ({
     target_role: "student",
     class_id,
     section_id,
+    target_user_id: target_user_id || null,
   });
 };

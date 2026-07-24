@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { getDiary } from "./diary.api";
 import { useAuth } from "../../auth/AuthProvider";
 
-export function useDiary() {
+export function useDiary(filterParams = {}) {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
@@ -12,11 +12,13 @@ export function useDiary() {
   const [offset, setOffset] = useState(0);
   const limit = 10; // Fetch 10 items per page for mobile responsiveness
 
+  const paramKey = JSON.stringify(filterParams);
+
   // Initial load
   useEffect(() => {
     if (!user) return;
     fetchInitialDiary();
-  }, [user]);
+  }, [user, paramKey]);
 
   async function fetchInitialDiary() {
     try {
@@ -24,7 +26,7 @@ export function useDiary() {
       setError(null);
       setOffset(0);
 
-      const res = await getDiary({ limit, offset: 0 });
+      const res = await getDiary({ limit, offset: 0, ...filterParams });
       const data = res?.data || res;
       
       const nextItems = Array.isArray(data?.items) ? data.items :
@@ -47,7 +49,7 @@ export function useDiary() {
       const nextOffset = offset + limit;
       setOffset(nextOffset);
 
-      const res = await getDiary({ limit, offset: nextOffset });
+      const res = await getDiary({ limit, offset: nextOffset, ...filterParams });
       const data = res?.data || res;
       
       const nextItems = Array.isArray(data?.items) ? data.items :
@@ -61,7 +63,7 @@ export function useDiary() {
     } finally {
       setLoadingMore(false);
     }
-  }, [items, total, offset, loadingMore]);
+  }, [items, total, offset, loadingMore, paramKey]);
 
   return {
     items,

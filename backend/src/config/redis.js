@@ -44,31 +44,58 @@ try {
   console.warn("[Redis] Client initialization error. Operating without Redis.");
 }
 
+// ── In-Memory Cache Fallback (when Redis is disabled or unreachable) ──
+const memoryCache = new Map();
+
+function cleanMemoryCache() {
+  const now = Date.now();
+  for (const [key, item] of memoryCache.entries()) {
+    if (item.expiresAt && item.expiresAt < now) {
+      memoryCache.delete(key);
+    }
+  }
+}
+setInterval(cleanMemoryCache, 60000).unref();
+
 export async function getCache(key) {
-  if (!redisClient || !isRedisConnected) return null;
-  try {
-    const data = await redisClient.get(key);
-    return data ? JSON.parse(data) : null;
-  } catch (err) {
+  if (redisClient && isRedisConnected) {
+    try {
+      const data = await redisClient.get(key);
+      return data ? JSON.parse(data) : null;
+    } catch (err) {
+      // Fallback to memory cache if Redis get fails
+    }
+  }
+  const cached = memoryCache.get(key);
+  if (!cached) return null;
+  if (cached.expiresAt && cached.expiresAt < Date.now()) {
+    memoryCache.delete(key);
     return null;
   }
+  return cached.value;
 }
 
 export async function setCache(key, value, ttlSeconds = 300) {
-  if (!redisClient || !isRedisConnected) return;
-  try {
-    await redisClient.set(key, JSON.stringify(value), "EX", ttlSeconds);
-  } catch (err) {
-    // Ignore cache write errors
+  const expiresAt = Date.now() + ttlSeconds * 1000;
+  memoryCache.set(key, { value, expiresAt });
+
+  if (redisClient && isRedisConnected) {
+    try {
+      await redisClient.set(key, JSON.stringify(value), "EX", ttlSeconds);
+    } catch (err) {
+      // Ignore cache write errors
+    }
   }
 }
 
 export async function deleteCache(key) {
-  if (!redisClient || !isRedisConnected) return;
-  try {
-    await redisClient.del(key);
-  } catch (err) {
-    // Ignore cache delete errors
+  memoryCache.delete(key);
+  if (redisClient && isRedisConnected) {
+    try {
+      await redisClient.del(key);
+    } catch (err) {
+      // Ignore cache delete errors
+    }
   }
 }
 

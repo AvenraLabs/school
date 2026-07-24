@@ -275,11 +275,16 @@ export const studentsAPI = {
   },
 
   list: async (limit = 10, offset = 0, classId, sectionId, status, approvalStatus) => {
-    const params = { limit, offset };
-    if (classId) params.class_id = classId;
-    if (sectionId) params.section_id = sectionId;
-    if (status) params.status = status;
-    if (approvalStatus) params.approval_status = approvalStatus;
+    let params = {};
+    if (typeof limit === "object" && limit !== null) {
+      params = { ...limit };
+    } else {
+      params = { limit, offset };
+      if (classId) params.class_id = classId;
+      if (sectionId) params.section_id = sectionId;
+      if (status) params.status = status;
+      if (approvalStatus) params.approval_status = approvalStatus;
+    }
     const response = await axiosInstance.get('/students', { params });
     return response.data;
   },
@@ -842,6 +847,7 @@ export const uploadAPI = {
 };
 
 export const feeAPI = {
+  /* Fee Categories */
   getCategories: async () => {
     const response = await axiosInstance.get('/fees/categories');
     return response.data;
@@ -859,34 +865,31 @@ export const feeAPI = {
     return response.data;
   },
 
-  getClassPlans: async (classId) => {
-    const response = await axiosInstance.get(`/fees/plans/${classId}`);
+  /* Fee Definitions */
+  getDefinitions: async (params = {}) => {
+    const response = await axiosInstance.get('/fees/definitions', { params });
     return response.data;
   },
-  upsertClassPlans: async (classId, payload) => {
-    const response = await axiosInstance.post(`/fees/plans/${classId}`, payload);
+  createDefinition: async (payload) => {
+    const response = await axiosInstance.post('/fees/definitions', payload);
     return response.data;
   },
-  getAllClassPlansSummary: async () => {
-    const response = await axiosInstance.get('/fees/plans/summary');
+  deleteDefinition: async (id) => {
+    const response = await axiosInstance.delete(`/fees/definitions/${id}`);
     return response.data;
   },
 
+  /* Student Fees & Payments */
+  getStudentFees: async (studentId) => {
+    const response = await axiosInstance.get(`/fees/student/${studentId}`);
+    return response.data;
+  },
   getStudentLedger: async (studentId) => {
-    const response = await axiosInstance.get(`/fees/ledgers/${studentId}`);
+    const response = await axiosInstance.get(`/fees/student/${studentId}`);
     return response.data;
   },
-  adjustLedger: async (ledgerId, payload) => {
-    const response = await axiosInstance.patch(`/fees/ledgers/${ledgerId}/adjust`, payload);
-    return response.data;
-  },
-
   recordPayment: async (payload) => {
     const response = await axiosInstance.post('/fees/payments', payload);
-    return response.data;
-  },
-  getSchoolPaymentHistory: async (params = {}) => {
-    const response = await axiosInstance.get('/fees/payments', { params });
     return response.data;
   },
   voidPayment: async (paymentId, void_reason) => {
@@ -898,6 +901,17 @@ export const feeAPI = {
     return response.data;
   },
 
+  /* Concessions */
+  applyConcession: async (payload) => {
+    const response = await axiosInstance.post('/fees/concessions', payload);
+    return response.data;
+  },
+
+  /* Reports & Summaries */
+  getDailyReport: async (params = {}) => {
+    const response = await axiosInstance.get('/fees/daily-report', { params });
+    return response.data;
+  },
   getCollectionSummary: async () => {
     const response = await axiosInstance.get('/fees/summary');
     return response.data;

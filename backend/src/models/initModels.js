@@ -85,10 +85,8 @@ import StudentEnrollment from "../modules/students/student-enrollment.model.js";
 
 /* ===================== FEES ===================== */
 import FeeCategory from "../modules/fees/fee-category.model.js";
-import ClassFeePlan from "../modules/fees/class-fee-plan.model.js";
-import ClassFeeSchedule from "../modules/fees/class-fee-schedule.model.js";
-import StudentFeeLedger from "../modules/fees/student-fee-ledger.model.js";
-import StudentTermLedger from "../modules/fees/student-term-ledger.model.js";
+import FeeDefinition from "../modules/fees/fee-definition.model.js";
+import StudentFee from "../modules/fees/student-fee.model.js";
 import FeePayment from "../modules/fees/fee-payment.model.js";
 
 /* ===================== LIBRARY ===================== */
@@ -378,43 +376,31 @@ const initAssociations = () => {
   School.hasMany(FeeCategory, { foreignKey: "school_id", onDelete: "CASCADE" });
   FeeCategory.belongsTo(School, { foreignKey: "school_id" });
 
-  School.hasMany(ClassFeePlan, { foreignKey: "school_id", onDelete: "CASCADE" });
-  ClassFeePlan.belongsTo(School, { foreignKey: "school_id" });
+  School.hasMany(FeeDefinition, { foreignKey: "school_id", onDelete: "CASCADE" });
+  FeeDefinition.belongsTo(School, { foreignKey: "school_id" });
 
-  ClassFeePlan.belongsTo(Class, { foreignKey: "class_id", onDelete: "CASCADE" });
-  Class.hasMany(ClassFeePlan, { foreignKey: "class_id" });
+  FeeDefinition.belongsTo(Class, { foreignKey: "class_id", onDelete: "CASCADE" });
+  Class.hasMany(FeeDefinition, { foreignKey: "class_id" });
 
-  ClassFeePlan.belongsTo(AcademicYear, { foreignKey: "academic_year_id", onDelete: "CASCADE" });
-  AcademicYear.hasMany(ClassFeePlan, { foreignKey: "academic_year_id" });
+  FeeDefinition.belongsTo(AcademicYear, { foreignKey: "academic_year_id", onDelete: "CASCADE" });
+  AcademicYear.hasMany(FeeDefinition, { foreignKey: "academic_year_id" });
 
-  ClassFeePlan.belongsTo(FeeCategory, { foreignKey: "fee_category_id", onDelete: "CASCADE" });
-  FeeCategory.hasMany(ClassFeePlan, { foreignKey: "fee_category_id" });
+  Student.hasMany(StudentFee, { foreignKey: "student_id", onDelete: "CASCADE" });
+  StudentFee.belongsTo(Student, { foreignKey: "student_id" });
 
-  Student.hasMany(StudentFeeLedger, { foreignKey: "student_id", onDelete: "CASCADE" });
-  StudentFeeLedger.belongsTo(Student, { foreignKey: "student_id" });
+  StudentFee.belongsTo(FeeDefinition, { foreignKey: "fee_definition_id", onDelete: "CASCADE" });
+  FeeDefinition.hasMany(StudentFee, { foreignKey: "fee_definition_id" });
 
-  StudentFeeLedger.belongsTo(AcademicYear, { foreignKey: "academic_year_id" });
-  AcademicYear.hasMany(StudentFeeLedger, { foreignKey: "academic_year_id" });
+  StudentFee.belongsTo(AcademicYear, { foreignKey: "academic_year_id" });
+  AcademicYear.hasMany(StudentFee, { foreignKey: "academic_year_id" });
 
   Student.hasMany(FeePayment, { foreignKey: "student_id", onDelete: "CASCADE" });
   FeePayment.belongsTo(Student, { foreignKey: "student_id" });
 
-  StudentFeeLedger.hasMany(FeePayment, { foreignKey: "ledger_id", onDelete: "CASCADE" });
-  FeePayment.belongsTo(StudentFeeLedger, { foreignKey: "ledger_id" });
+  StudentFee.hasMany(FeePayment, { foreignKey: "student_fee_id", onDelete: "CASCADE" });
+  FeePayment.belongsTo(StudentFee, { foreignKey: "student_fee_id" });
 
   FeePayment.belongsTo(User, { as: "VoidedBy", foreignKey: "voided_by" });
-
-  Class.hasMany(ClassFeeSchedule, { foreignKey: "class_id", onDelete: "CASCADE" });
-  ClassFeeSchedule.belongsTo(Class, { foreignKey: "class_id" });
-
-  Student.hasMany(StudentTermLedger, { foreignKey: "student_id", onDelete: "CASCADE" });
-  StudentTermLedger.belongsTo(Student, { foreignKey: "student_id" });
-
-  StudentFeeLedger.hasMany(StudentTermLedger, { foreignKey: "student_id" });
-  StudentTermLedger.belongsTo(ClassFeeSchedule, { foreignKey: "schedule_id" });
-
-  StudentTermLedger.hasMany(FeePayment, { foreignKey: "term_ledger_id" });
-  FeePayment.belongsTo(StudentTermLedger, { foreignKey: "term_ledger_id" });
 
   /* ==================== LIBRARY ==================== */
   School.hasMany(Book, { foreignKey: "school_id", onDelete: "CASCADE" });
@@ -463,5 +449,11 @@ const initAssociations = () => {
 };
 
 initAssociations();
+
+// Ensure notifications table has target_user_id column
+db.query(`
+  ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_user_id BIGINT;
+  CREATE INDEX IF NOT EXISTS idx_notifications_target_user ON notifications(target_user_id);
+`).catch((err) => console.error("[InitModels] Notification schema patch error:", err.message));
 
 export default db;

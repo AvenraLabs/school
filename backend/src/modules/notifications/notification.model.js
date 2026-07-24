@@ -51,6 +51,11 @@ const Notification = db.define(
       allowNull: true,
     },
 
+    target_user_id: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+    },
+
     image_url: {
       type: DataTypes.TEXT,
       allowNull: true,

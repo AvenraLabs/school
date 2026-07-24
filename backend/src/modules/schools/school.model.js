@@ -123,6 +123,12 @@ const School = db.define(
       type: DataTypes.DECIMAL(10, 2),
       defaultValue: 0.00,
     },
+
+    /* ── Fee Settings ── */
+    fee_receipt_counter: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "schools",

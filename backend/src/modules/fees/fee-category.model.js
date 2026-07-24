@@ -28,6 +28,11 @@ const FeeCategory = db.define(
       allowNull: false,
       defaultValue: false,
     },
+    is_optional: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   {
     tableName: "fee_categories",

@@ -65,6 +65,8 @@ export default function NotificationItem({ item, onAcknowledge }) {
       navigate(`/${isTeacher ? "teacher" : "student"}/report-cards${isTeacher ? "/entry" : ""}`);
     } else if (titleLower.includes("quiz") || messageLower.includes("quiz")) {
       navigate(`/${isTeacher ? "teacher" : "student"}/quiz`);
+    } else if (titleLower.includes("fee") || messageLower.includes("fee")) {
+      navigate(`/${isTeacher ? "teacher" : "student"}/fees`);
     } else {
       // General announcement -> Open dialog
       setModalOpen(true);

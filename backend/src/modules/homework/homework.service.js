@@ -65,17 +65,11 @@ export const createHomeworkService = async ({
     created_by: user.id,
   });
 
-  // 5️⃣ Notify
-  await triggerHomeworkNotification({
-    school_id,
-    teacher_user_id: user.id,
-    class_id,
-    section_id,
-    subject_name: assignment.subject?.name,
-  });
+  // Automated notification for homework creation removed per user directive
 
   return homework;
 };
+
 export const listHomeworkService = async ({
   user,
   school_id,
@@ -83,6 +77,7 @@ export const listHomeworkService = async ({
   section_id,
   date,
   created_date,
+  due_upcoming,
   query,
 }) => {
   const { limit, offset } = getPagination(query);
@@ -91,9 +86,17 @@ export const listHomeworkService = async ({
   const where = { school_id, academic_year_id: academicYearId };
   if (date) where.homework_date = date;
   if (created_date) {
-    const start = new Date(`${created_date}T00:00:00`);
-    const end = new Date(`${created_date}T23:59:59.999`);
-    where.created_at = { [Op.between]: [start, end] };
+    const parts = created_date.split("-").map(Number);
+    if (parts.length === 3) {
+      const start = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+      const end = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
+      where.created_at = { [Op.between]: [start, end] };
+    }
+  }
+  if (due_upcoming === "true" || due_upcoming === true) {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    where.homework_date = { [Op.gte]: todayStr };
   }
 
   if (user?.role === "student") {

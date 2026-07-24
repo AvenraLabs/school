@@ -119,10 +119,10 @@ export const createStudentService = async ({
       { transaction: t }
     );
 
-    // Auto-generate fee ledger for new student
+    // Auto-assign active class fees for mid-year admissions
     try {
-      const { generateStudentLedgerService } = await import("../fees/fee.service.js");
-      await generateStudentLedgerService(school_id, student.id, {}, t);
+      const { autoAssignStudentFeesService } = await import("../fees/fee.service.js");
+      await autoAssignStudentFeesService(school_id, student.id, class_id, t);
     } catch {
       // quiet if academic year not yet configured
     }

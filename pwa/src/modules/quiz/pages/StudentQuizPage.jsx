@@ -129,7 +129,7 @@ export default function StudentQuizPage() {
               Quiz Submitted!
             </Typography>
             <Typography variant="subtitle1" sx={{ color: "text.secondary", mt: 0.5 }}>
-              Score: {resultData.score} / {resultData.totalMarks} ({resultData.percentage}%)
+              Score: {Number(resultData.score)} / {Number(resultData.totalMarks)} ({Math.round(resultData.percentage)}%)
             </Typography>
 
             <Divider sx={{ my: 3 }} />
@@ -401,7 +401,7 @@ export default function StudentQuizPage() {
                   Total Points
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 900, color: "#15803d" }}>
-                  {completedSubmissions.reduce((sum, s) => sum + (s.score || 0), 0)} Pts
+                  {Number(completedSubmissions.reduce((sum, s) => sum + Number(s.score || 0), 0))} Pts
                 </Typography>
               </Box>
               <Chip
@@ -420,8 +420,9 @@ export default function StudentQuizPage() {
             </Alert>
           ) : (
             completedSubmissions.map((sub) => {
-              const totalM = sub.total_marks || sub.teacher_quiz?.total_marks || 10;
-              const pct = ((sub.score / (totalM || 1)) * 100).toFixed(0);
+              const scoreNum = Number(sub.score || 0);
+              const totalM = Number(sub.total_marks || sub.teacher_quiz?.total_marks || 10);
+              const pct = Math.round((scoreNum / (totalM || 1)) * 100);
               return (
                 <Card key={sub.id} sx={{ borderRadius: "16px", border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
                   <CardContent sx={{ p: 2 }}>
@@ -435,7 +436,7 @@ export default function StudentQuizPage() {
                         </Typography>
                       </Box>
                       <Chip
-                        label={`${sub.score}/${totalM} Pts (${pct}%)`}
+                        label={`${scoreNum}/${totalM} Pts (${pct}%)`}
                         color="success"
                         size="small"
                         sx={{ fontWeight: 900 }}

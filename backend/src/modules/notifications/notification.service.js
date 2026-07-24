@@ -14,6 +14,7 @@ export const createNotificationService = async ({
   target_role,
   class_id,
   section_id,
+  target_user_id,
   image_url,
   is_poster,
   start_date,
@@ -38,6 +39,7 @@ export const createNotificationService = async ({
     target_role,
     class_id,
     section_id,
+    target_user_id: target_user_id || null,
     image_url,
     is_poster,
     start_date,
@@ -69,6 +71,11 @@ export const listNotificationsForUserService = async ({
         ? { [Op.or]: [audienceFilter, { sender_user_id: user_id }] }
         : audienceFilter;
 
+    // Target user filter (null means broadcast/class-wide, non-null means single target user)
+    const targetUserFilter = {
+      [Op.or]: [{ target_user_id: null }, { target_user_id: user_id }],
+    };
+
     // Class/section scope
     const scopeConditions = [{ class_id: null }];
     if (class_ids.length) scopeConditions.push({ class_id: { [Op.in]: class_ids } });
@@ -76,6 +83,7 @@ export const listNotificationsForUserService = async ({
 
     where[Op.and] = [
       audienceOrCreator,
+      targetUserFilter,
       { [Op.or]: scopeConditions },
     ];
   }

@@ -83,26 +83,14 @@ function formatGroupDate(dateKey) {
   };
 }
 
-// ── Filter chip tabs (no Overdue) ────────────────────────────────────────────
-const FILTERS = ["All", "Today", "This Week"];
+// ── Filter chip tabs ────────────────────────────────────────────
+const FILTERS = ["Today", "Upcoming Due", "All Time"];
 
 function isToday(dateStr) {
   if (!dateStr) return false;
   const d = new Date(dateStr);
   const t = new Date();
   return d.toDateString() === t.toDateString();
-}
-
-function isThisWeek(dateStr) {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay());
-  startOfWeek.setHours(0, 0, 0, 0);
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 7);
-  return d >= startOfWeek && d < endOfWeek;
 }
 
 // ── Skeleton card ─────────────────────────────────────────────────────────
@@ -131,7 +119,7 @@ function SkeletonCard() {
   );
 }
 
-// ── Homework card (no overdue styling) ──────────────────────────────────────
+// ── Homework card ──────────────────────────────────────────────────────────
 function HomeworkCard({ item }) {
   const { user } = useAuth();
   const isStudent = user?.role === "student";
@@ -139,6 +127,7 @@ function HomeworkCard({ item }) {
   const subjectName =
     item.Subject?.name || item.subject?.name || item.subject || "Subject";
   const dueDate = item.homework_date || item.due_date || "";
+  const createdAt = item.created_at || item.createdAt || "";
   const className =
     item.Class?.class_name || item.class?.class_name || item.class?.name || "";
   const sectionName = item.Section?.name || item.section?.name || "";
@@ -244,19 +233,20 @@ function HomeworkCard({ item }) {
           </Typography>
         )}
 
-        {/* Footer: teacher */}
-        {teacherName && (
-          <Typography
-            sx={{
-              fontSize: "11px",
-              color: "#94a3b8",
-              mt: 1,
-              fontWeight: 500,
-            }}
-          >
-            👤 {teacherName}
-          </Typography>
-        )}
+        {/* Footer: teacher + assigned date */}
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1.5 }}>
+          {teacherName ? (
+            <Typography sx={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500 }}>
+              👤 {teacherName}
+            </Typography>
+          ) : <Box />}
+
+          {createdAt && (
+            <Typography sx={{ fontSize: "10px", color: "#94a3b8", fontWeight: 500 }}>
+              Assigned: {new Date(createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+            </Typography>
+          )}
+        </Stack>
       </Box>
     </Box>
   );
@@ -265,10 +255,26 @@ function HomeworkCard({ item }) {
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function DiaryPage() {
   const { user } = useAuth();
-  const { items, loading, error, refresh, loadMore, hasMore, loadingMore } = useDiary();
-  const [showCreate, setShowCreate] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("All");
+  const [activeFilter, setActiveFilter] = useState("Today");
   const sentinelRef = useRef(null);
+
+  const todayStr = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  }, []);
+
+  const filterParams = useMemo(() => {
+    if (activeFilter === "Today") {
+      return { created_date: todayStr };
+    }
+    if (activeFilter === "Upcoming Due") {
+      return { due_upcoming: true };
+    }
+    return {}; // All Time
+  }, [activeFilter, todayStr]);
+
+  const { items, total, loading, error, refresh, loadMore, hasMore, loadingMore } = useDiary(filterParams);
+  const [showCreate, setShowCreate] = useState(false);
 
   const canCreate = user?.role === "teacher" || user?.role === "school_admin";
 
@@ -285,19 +291,10 @@ export default function DiaryPage() {
     return () => observer.disconnect();
   }, [hasMore, loadingMore, loadMore]);
 
-  // Filter items by assigned/due date
-  const filtered = useMemo(() => {
-    if (activeFilter === "All") return items;
-    const dateField = (item) => item.homework_date || item.due_date || item.created_at || item.createdAt;
-    if (activeFilter === "Today")     return items.filter((i) => isToday(dateField(i)));
-    if (activeFilter === "This Week") return items.filter((i) => isThisWeek(dateField(i)));
-    return items;
-  }, [items, activeFilter]);
-
   // Group by assigned date
   const groupedEntries = useMemo(() => {
     return Object.entries(
-      filtered.reduce((acc, item) => {
+      items.reduce((acc, item) => {
         const raw =
           item.created_at || item.createdAt || item.homework_date || "unknown";
         const dateKey =
@@ -307,7 +304,7 @@ export default function DiaryPage() {
         return acc;
       }, {})
     ).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [filtered]);
+  }, [items]);
 
   return (
     <Container maxWidth="sm" sx={{ pt: 3, pb: 12 }}>
@@ -323,7 +320,7 @@ export default function DiaryPage() {
           </Typography>
           {!loading && (
             <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 500 }}>
-              {items.length} {items.length === 1 ? "entry" : "entries"}
+              Showing {items.length} of {total} {total === 1 ? "entry" : "entries"}
             </Typography>
           )}
         </Box>
@@ -350,7 +347,8 @@ export default function DiaryPage() {
               flexShrink: 0,
               fontWeight: 700,
               fontSize: "12px",
-              height: "30px",
+              height: "32px",
+              px: 0.5,
               borderRadius: "10px",
               cursor: "pointer",
               transition: "all 0.18s",
@@ -402,7 +400,7 @@ export default function DiaryPage() {
       )}
 
       {/* ── Empty state ── */}
-      {!loading && !error && filtered.length === 0 && (
+      {!loading && !error && items.length === 0 && (
         <Box
           sx={{
             textAlign: "center",
@@ -421,13 +419,17 @@ export default function DiaryPage() {
             fontWeight={800}
             sx={{ fontSize: "17px", color: "primary.dark", fontFamily: "'Outfit', sans-serif" }}
           >
-            {activeFilter === "Today" ? "Nothing due today" : "All caught up!"}
+            {activeFilter === "Today"
+              ? "No homework created today"
+              : activeFilter === "Upcoming Due"
+              ? "No upcoming homework due"
+              : "No homework found"}
           </Typography>
-          {activeFilter === "All" && (
-            <Typography variant="body2" sx={{ color: "primary.main", mt: 0.5, opacity: 0.7 }}>
-              No homework has been assigned yet.
-            </Typography>
-          )}
+          <Typography variant="body2" sx={{ color: "primary.main", mt: 0.5, opacity: 0.7 }}>
+            {activeFilter === "Today"
+              ? "Homework assigned by teachers today will appear here."
+              : "Check back later or view All Time history."}
+          </Typography>
         </Box>
       )}
 
@@ -503,10 +505,42 @@ export default function DiaryPage() {
       {/* ── IntersectionObserver sentinel ── */}
       {!loading && <Box ref={sentinelRef} sx={{ height: 4, mt: 1 }} />}
 
-      {/* ── Load more spinner ── */}
-      {loadingMore && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
-          <CircularProgress size={22} color="primary" />
+      {/* ── Explicit Load More UI Button ── */}
+      {hasMore && !loading && (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 3, mb: 2 }}>
+          <Box
+            component="button"
+            onClick={loadMore}
+            disabled={loadingMore}
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 1,
+              px: 3,
+              py: 1.2,
+              borderRadius: "12px",
+              border: "1.5px solid",
+              borderColor: "primary.main",
+              bgcolor: "transparent",
+              color: "primary.main",
+              fontWeight: 700,
+              fontSize: "13px",
+              cursor: loadingMore ? "not-allowed" : "pointer",
+              transition: "all 0.2s",
+              "&:hover": {
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+              },
+            }}
+          >
+            {loadingMore ? (
+              <>
+                <CircularProgress size={16} color="primary" />
+                Loading more...
+              </>
+            ) : (
+              `Load More (${items.length} of ${total})`
+            )}
+          </Box>
         </Box>
       )}
 
@@ -523,7 +557,7 @@ export default function DiaryPage() {
             pb: 1,
           }}
         >
-          You've seen all homework ✓
+          You've seen all homework ({total} total) ✓
         </Typography>
       )}
 

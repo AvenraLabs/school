@@ -7,10 +7,18 @@ export default function errorHandler(err, req, res, next) {
     statusCode = 400;
     const field = err?.errors?.[0]?.path;
     message = field ? `${field} already in use` : "Unique constraint violation";
+  } else if (
+    err?.name === "TimeoutError" ||
+    err?.name === "SequelizeConnectionAcquireTimeoutError" ||
+    err?.parent?.name === "TimeoutError" ||
+    err?.original?.name === "TimeoutError"
+  ) {
+    statusCode = 503;
+    message = "Database is currently busy. Please try again in a moment.";
   }
 
   // log unexpected errors
-  if (!err.isOperational) {
+  if (!err.isOperational && statusCode !== 503) {
     console.error("UNEXPECTED ERROR", err);
   }
 

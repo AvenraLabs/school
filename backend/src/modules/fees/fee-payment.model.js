@@ -19,15 +19,10 @@ const FeePayment = db.define(
       allowNull: false,
       references: { model: "students", key: "id" },
     },
-    ledger_id: {
-      type: DataTypes.BIGINT,
-      allowNull: false,
-      references: { model: "student_fee_ledgers", key: "id" },
-    },
-    term_ledger_id: {
+    student_fee_id: {
       type: DataTypes.BIGINT,
       allowNull: true,
-      references: { model: "student_term_ledgers", key: "id" },
+      references: { model: "student_fees", key: "id" },
     },
     amount: {
       type: DataTypes.DECIMAL(12, 2),
@@ -39,7 +34,7 @@ const FeePayment = db.define(
       defaultValue: 0,
     },
     mode: {
-      type: DataTypes.ENUM("cash", "upi", "bank_transfer", "cheque", "dd", "online"),
+      type: DataTypes.STRING(30),
       allowNull: false,
       defaultValue: "cash",
     },
@@ -89,7 +84,7 @@ const FeePayment = db.define(
     timestamps: true,
     indexes: [
       { fields: ["student_id"] },
-      { fields: ["ledger_id"] },
+      { fields: ["student_fee_id"] },
     ],
   }
 );

@@ -4,17 +4,18 @@ import {
   listFeeCategoriesService,
   updateFeeCategoryService,
   deleteFeeCategoryService,
-  upsertClassFeePlansAndSchedulesService,
-  getClassFeePlansAndSchedulesService,
-  listAllClassFeePlansSummaryService,
-  generateStudentLedgerService,
-  bulkGenerateLedgersForClassService,
-  getStudentLedgerService,
-  updateLedgerAdjustmentsService,
+  createFeeDefinitionService,
+  listFeeDefinitionsService,
+  deleteFeeDefinitionService,
+  applyConcessionService,
+  getStudentFeesService,
   recordPaymentService,
   voidPaymentService,
-  getFeeCollectionSummaryService,
+  getDailyCollectionReportService,
   getDefaultersListService,
+  getFeeCollectionSummaryService,
+  getMyFeeLedgerService,
+  sendPaymentWhatsAppReceiptService,
 } from "./fee.service.js";
 
 /* Categories */
@@ -38,50 +39,49 @@ export const deleteFeeCategory = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-/* Class Fee Plans & Term Schedules */
-export const upsertClassFeePlans = asyncHandler(async (req, res) => {
-  const result = await upsertClassFeePlansAndSchedulesService(req.user.school_id, req.params.classId, req.body);
+/* Fee Definitions */
+export const createFeeDefinition = asyncHandler(async (req, res) => {
+  const result = await createFeeDefinitionService(req.user.school_id, req.body);
+  res.status(201).json(result);
+});
+
+export const listFeeDefinitions = asyncHandler(async (req, res) => {
+  const definitions = await listFeeDefinitionsService(req.user.school_id, req.query);
+  res.json(definitions);
+});
+
+export const deleteFeeDefinition = asyncHandler(async (req, res) => {
+  const result = await deleteFeeDefinitionService(req.params.id, req.user.school_id);
   res.json(result);
 });
 
-export const getClassFeePlans = asyncHandler(async (req, res) => {
-  const result = await getClassFeePlansAndSchedulesService(req.user.school_id, req.params.classId);
+/* Concessions */
+export const applyConcession = asyncHandler(async (req, res) => {
+  const result = await applyConcessionService(req.user.school_id, req.body);
   res.json(result);
 });
 
-export const listAllClassFeePlansSummary = asyncHandler(async (req, res) => {
-  const summary = await listAllClassFeePlansSummaryService(req.user.school_id);
-  res.json(summary);
-});
-
-/* Student Fee Ledgers */
-export const generateStudentLedger = asyncHandler(async (req, res) => {
-  const ledger = await generateStudentLedgerService(req.user.school_id, req.body.student_id, req.body);
-  res.status(201).json(ledger);
-});
-
-export const bulkGenerateLedgers = asyncHandler(async (req, res) => {
-  const result = await bulkGenerateLedgersForClassService(req.user.school_id, req.params.classId);
-  res.json(result);
-});
-
-export const getStudentLedger = asyncHandler(async (req, res) => {
-  const data = await getStudentLedgerService(req.user.school_id, req.params.studentId);
+/* Student Fees & Payments */
+export const getStudentFees = asyncHandler(async (req, res) => {
+  const data = await getStudentFeesService(req.user.school_id, req.params.studentId);
   res.json(data);
 });
 
-export const updateLedgerAdjustments = asyncHandler(async (req, res) => {
-  const ledger = await updateLedgerAdjustmentsService(req.params.ledgerId, req.user.school_id, req.body);
+export const getMyFeeLedger = asyncHandler(async (req, res) => {
+  const ledger = await getMyFeeLedgerService(req.user.school_id, req.user.id, req.user.role);
   res.json(ledger);
 });
 
-/* Payments */
 export const recordPayment = asyncHandler(async (req, res) => {
   const result = await recordPaymentService(req.user.school_id, req.body);
   res.status(201).json(result);
 });
 
 export const voidPayment = asyncHandler(async (req, res) => {
+  // Only school_admin (and super_admin) may void payments — explicit guard
+  if (req.user.role !== "school_admin" && req.user.role !== "super_admin") {
+    return res.status(403).json({ message: "Only school admin can void payments." });
+  }
   const result = await voidPaymentService(
     req.params.paymentId,
     req.user.school_id,
@@ -91,7 +91,17 @@ export const voidPayment = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
-/* Reports & Summaries */
+export const sendPaymentWhatsAppReceipt = asyncHandler(async (req, res) => {
+  const result = await sendPaymentWhatsAppReceiptService(req.params.id, req.user.school_id);
+  res.json(result);
+});
+
+/* Reports & Daily Reconciliation */
+export const getDailyCollectionReport = asyncHandler(async (req, res) => {
+  const report = await getDailyCollectionReportService(req.user.school_id, req.query);
+  res.json(report);
+});
+
 export const getFeeCollectionSummary = asyncHandler(async (req, res) => {
   const summary = await getFeeCollectionSummaryService(req.user.school_id);
   res.json(summary);
@@ -100,22 +110,4 @@ export const getFeeCollectionSummary = asyncHandler(async (req, res) => {
 export const getDefaultersList = asyncHandler(async (req, res) => {
   const defaulters = await getDefaultersListService(req.user.school_id, req.query);
   res.json(defaulters);
-});
-
-export const listSchoolPaymentHistory = asyncHandler(async (req, res) => {
-  const { listSchoolPaymentHistoryService } = await import("./fee.service.js");
-  const payments = await listSchoolPaymentHistoryService(req.user.school_id, req.query);
-  res.json(payments);
-});
-
-export const getMyFeeLedger = asyncHandler(async (req, res) => {
-  const { getMyFeeLedgerService } = await import("./fee.service.js");
-  const ledger = await getMyFeeLedgerService(req.user.school_id, req.user.id, req.user.role);
-  res.json(ledger);
-});
-
-export const sendPaymentWhatsAppReceipt = asyncHandler(async (req, res) => {
-  const { sendPaymentWhatsAppReceiptService } = await import("./fee.service.js");
-  const result = await sendPaymentWhatsAppReceiptService(req.params.id, req.user.school_id);
-  res.json(result);
 });

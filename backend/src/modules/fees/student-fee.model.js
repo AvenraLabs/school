@@ -1,8 +1,8 @@
 import { DataTypes } from "sequelize";
 import db from "../../config/db.js";
 
-const StudentFeeLedger = db.define(
-  "student_fee_ledger",
+const StudentFee = db.define(
+  "student_fee",
   {
     id: {
       type: DataTypes.BIGINT,
@@ -24,55 +24,51 @@ const StudentFeeLedger = db.define(
       allowNull: false,
       references: { model: "students", key: "id" },
     },
-    total: {
+    fee_definition_id: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+      references: { model: "fee_definitions", key: "id" },
+    },
+    total_amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0,
     },
-    paid: {
+    concession_amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
       defaultValue: 0,
     },
-    balance: {
-      type: DataTypes.DECIMAL(12, 2),
-      allowNull: false,
-      defaultValue: 0,
-    },
-    scholarship_percent: {
-      type: DataTypes.DECIMAL(5, 2),
-      allowNull: false,
-      defaultValue: 0,
-    },
-    discount_amount: {
-      type: DataTypes.DECIMAL(12, 2),
-      allowNull: false,
-      defaultValue: 0,
-    },
-    fee_mode: {
-      type: DataTypes.STRING(10),
-      allowNull: false,
-      defaultValue: "full",
-    },
-    custom_total: {
-      type: DataTypes.DECIMAL(12, 2),
+    concession_reason: {
+      type: DataTypes.STRING(255),
       allowNull: true,
     },
-    status: {
-      type: DataTypes.STRING(10),
+    paid_amount: {
+      type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
-      defaultValue: "active",
+      defaultValue: 0,
+    },
+    balance_amount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
+    status: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: "pending", // 'pending', 'partial', 'paid', 'waived'
     },
   },
   {
-    tableName: "student_fee_ledgers",
+    tableName: "student_fees",
     underscored: true,
     timestamps: true,
     indexes: [
       { fields: ["student_id"] },
-      { fields: ["school_id", "academic_year_id"] },
+      { fields: ["fee_definition_id"] },
+      { fields: ["status"] },
     ],
   }
 );
 
-export default StudentFeeLedger;
+export default StudentFee;

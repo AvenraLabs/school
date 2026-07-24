@@ -19,7 +19,6 @@ import {
   ReceiptLong,
   Download,
   ErrorOutline,
-  CheckCircle,
 } from "@mui/icons-material";
 import { getMyFeeLedgerApi } from "./fees.api";
 import { formatDate } from "../../utils/date";
@@ -30,7 +29,7 @@ export default function FeesPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
-  const loadLedger = async () => {
+  const loadFees = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -44,7 +43,7 @@ export default function FeesPage() {
   };
 
   useEffect(() => {
-    loadLedger();
+    loadFees();
   }, []);
 
   const handleDownload = (item) => {
@@ -67,7 +66,6 @@ export default function FeesPage() {
           <div style="font-size: 26px; font-weight: 900; color: #15803d; margin-top: 4px;">₹${Number(item.amount).toLocaleString('en-IN')}</div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px;"><span style="color: #64748b; font-weight: 600;">Remaining Balance:</span><span style="font-weight: 800; color: #e11d48;">₹${Number(data?.ledger?.balance || 0).toLocaleString('en-IN')}</span></div>
         <div style="text-align: center; font-size: 10px; color: #94a3b8; margin-top: 20px; font-weight: 600;">Computer generated payment document.</div>
       </div>
     `;
@@ -104,11 +102,11 @@ export default function FeesPage() {
     );
   }
 
-  const ledger = data?.ledger || { total: 0, paid: 0, balance: 0 };
-  const terms = data?.terms || [];
+  const summary = data?.summary || { total_fee: 0, total_paid: 0, total_balance: 0 };
+  const fees = data?.fees || [];
   const payments = data?.payments || [];
-  const isFullyPaid = Number(ledger.balance) <= 0;
-  const paidPct = ledger.total > 0 ? Math.min(100, Math.round((ledger.paid / ledger.total) * 100)) : 0;
+  const isFullyPaid = Number(summary.total_balance) <= 0;
+  const paidPct = summary.total_fee > 0 ? Math.min(100, Math.round((summary.total_paid / summary.total_fee) * 100)) : 0;
 
   const cardSx = {
     borderRadius: "24px",
@@ -121,21 +119,21 @@ export default function FeesPage() {
   return (
     <Container maxWidth="sm" sx={{ py: 3, pb: 10 }}>
       <Stack spacing={2.5}>
-        {/* Top Summary Card (Sleek Modern White & Indigo Ring Layout) */}
+        {/* Top Summary Card */}
         <Card sx={{ ...cardSx, border: "1px solid #e2e8f0" }}>
           <CardContent sx={{ p: 2.5 }}>
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
               <Box>
                 <Typography variant="caption" sx={{ fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  Academic Year {data?.academic_year || "2026–27"}
+                  School Fees & Fines
                 </Typography>
                 <Typography variant="h5" sx={{ fontWeight: 900, color: "#0f172a" }}>
-                  Fees
+                  My Fees
                 </Typography>
               </Box>
 
               <Chip
-                label={isFullyPaid ? "✅ All Fees Paid" : `Pending: ₹${ledger.balance.toLocaleString("en-IN")}`}
+                label={isFullyPaid ? "✅ All Fees Paid" : `Pending: ₹${summary.total_balance.toLocaleString("en-IN")}`}
                 sx={{
                   fontWeight: 900,
                   fontSize: 12,
@@ -188,7 +186,7 @@ export default function FeesPage() {
                   Total Fee
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 900, color: "#0f172a", mt: 0.3 }}>
-                  ₹{ledger.total.toLocaleString("en-IN")}
+                  ₹{summary.total_fee.toLocaleString("en-IN")}
                 </Typography>
               </Box>
 
@@ -199,7 +197,7 @@ export default function FeesPage() {
                   Paid
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 900, color: "#16a34a", mt: 0.3 }}>
-                  ₹{ledger.paid.toLocaleString("en-IN")}
+                  ₹{summary.total_paid.toLocaleString("en-IN")}
                 </Typography>
               </Box>
 
@@ -210,34 +208,33 @@ export default function FeesPage() {
                   Balance
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 900, color: isFullyPaid ? "#16a34a" : "#e11d48", mt: 0.3 }}>
-                  ₹{ledger.balance.toLocaleString("en-IN")}
+                  ₹{summary.total_balance.toLocaleString("en-IN")}
                 </Typography>
               </Box>
             </Box>
           </CardContent>
         </Card>
 
-        {/* Schedule Card */}
+        {/* Assigned Fees List */}
         <Card sx={cardSx}>
           <CardContent sx={{ p: 2.5 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#1e293b", mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
-              <AccessTime sx={{ fontSize: 20, color: "#4f46e5" }} /> Schedule
+              <AccessTime sx={{ fontSize: 20, color: "#4f46e5" }} /> Assigned Fees & Fines
             </Typography>
 
             <Stack spacing={1.5}>
-              {terms.map((t) => {
-                const isPaid = t.status === "paid";
-                const isWaived = t.status === "waived";
+              {fees.map((f) => {
+                const isPaid = f.status === "paid";
 
                 return (
                   <Box
-                    key={t.id}
+                    key={f.id}
                     sx={{
                       p: 2,
                       borderRadius: "20px",
                       border: "1px solid",
-                      borderColor: isPaid ? "#bbf7d0" : isWaived ? "#e2e8f0" : "#fed7aa",
-                      bgcolor: isPaid ? "#f0fdf4" : isWaived ? "#f8fafc" : "#fff7ed",
+                      borderColor: isPaid ? "#bbf7d0" : "#fed7aa",
+                      bgcolor: isPaid ? "#f0fdf4" : "#fff7ed",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
@@ -246,26 +243,33 @@ export default function FeesPage() {
                     <Box>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                         <Typography variant="body1" sx={{ fontWeight: 800, color: "#0f172a" }}>
-                          {t.term_name}
+                          {f.title}
                         </Typography>
                         {isPaid ? (
                           <Chip label="Paid ✓" size="small" sx={{ height: 22, fontSize: 11, fontWeight: 800, bgcolor: "#dcfce7", color: "#15803d" }} />
-                        ) : isWaived ? (
-                          <Chip label="Waived" size="small" sx={{ height: 22, fontSize: 11, fontWeight: 800, bgcolor: "#e2e8f0", color: "#475569" }} />
                         ) : (
                           <Chip label="Pending" size="small" sx={{ height: 22, fontSize: 11, fontWeight: 800, bgcolor: "#ffedd5", color: "#c2410c" }} />
                         )}
                       </Box>
 
-                      {t.due_date && (
+                      {f.due_date && (
                         <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5, fontWeight: 600 }}>
-                          <CalendarMonth sx={{ fontSize: 14 }} /> Due: {formatDate(t.due_date)}
+                          <CalendarMonth sx={{ fontSize: 14 }} /> Due: {formatDate(f.due_date)}
                         </Typography>
+                      )}
+
+                      {/* Breakdown tags */}
+                      {Array.isArray(f.breakdown) && f.breakdown.length > 0 && (
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 1 }}>
+                          {f.breakdown.map((b, idx) => (
+                            <Chip key={idx} label={`${b.name}: ₹${b.amount}`} size="small" variant="outlined" sx={{ height: 20, fontSize: 10, fontWeight: 700 }} />
+                          ))}
+                        </Box>
                       )}
                     </Box>
 
-                    <Typography variant="body1" sx={{ fontWeight: 900, color: isPaid ? "#16a34a" : isWaived ? "#94a3b8" : "#ea580c" }}>
-                      {isPaid ? "₹0" : isWaived ? "Waived" : `₹${t.balance.toLocaleString("en-IN")}`}
+                    <Typography variant="body1" sx={{ fontWeight: 900, color: isPaid ? "#16a34a" : "#ea580c" }}>
+                      {isPaid ? "₹0" : `₹${f.balance_amount.toLocaleString("en-IN")}`}
                     </Typography>
                   </Box>
                 );
