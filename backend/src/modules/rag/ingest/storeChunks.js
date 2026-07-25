@@ -28,6 +28,15 @@ export async function getOrGetCollection() {
   }
 }
 
+export async function resetChromaCollection() {
+  try {
+    await chroma.deleteCollection({ name: COLLECTION_NAME });
+    console.log(`[storeChunks] Deleted ChromaDB collection '${COLLECTION_NAME}' successfully.`);
+  } catch (err) {
+    console.log(`[storeChunks] ChromaDB collection deletion status: ${err.message}`);
+  }
+}
+
 /**
  * Constructs deterministic chunk ID: {cleanBoard}_{cleanGrade}_{cleanSubject}_{cleanBook}_{chapterNumber}_{chunkOrder}
  */

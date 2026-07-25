@@ -33,7 +33,7 @@ export async function generateTeacherAiContent({
   }
 
   const school = await School.findByPk(user.school_id);
-  const finalBoard = (board || school?.board || "CBSE").toUpperCase();
+  const finalBoard = (school?.board || board || "CBSE").toUpperCase();
 
   // Extract numerical grade standard (e.g., Class 10 -> 10)
   const gradeStr = String(grade || "6");

@@ -83,7 +83,7 @@ function RenderQuestionPaperView({ data }) {
         </Typography>
         <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1.5, px: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 700, color: "#475569" }}>
-            {data.board || "CBSE"} | {data.grade || "Grade 10"} | {data.subject || "Subject"}
+            {data.board || data.meta?.board || "Board"} | {data.grade || "Grade 10"} | {data.subject || "Subject"}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 700, color: "#475569" }}>
             Time: {data.duration_mins || 60} Mins | Max Marks: {data.total_marks || 50}
@@ -163,6 +163,7 @@ function RenderLessonPlanView({ data }) {
           {data.title || "Lesson Plan"}
         </Typography>
         <Box sx={{ display: "flex", justifyContent: "center", gap: 1.5, mt: 1, flexWrap: "wrap" }}>
+          <Chip label={data.board || data.meta?.board || "Board"} size="small" sx={{ fontWeight: 700, bgcolor: "#e0e7ff", color: "#3730a3" }} />
           <Chip label={data.grade || "Grade 10"} size="small" sx={{ fontWeight: 700, bgcolor: "#fce7f3", color: "#be185d" }} />
           <Chip label={data.subject || "Subject"} size="small" sx={{ fontWeight: 700, bgcolor: "#f3e8ff", color: "#6b21a8" }} />
           <Chip label={`Duration: ${data.teaching_duration || "45 mins"}`} size="small" sx={{ fontWeight: 700 }} />
@@ -273,6 +274,7 @@ function RenderLessonSummaryView({ data }) {
           {data.title || "Lesson Summary"}
         </Typography>
         <Box sx={{ display: "flex", justifyContent: "center", gap: 1.5, mt: 1, flexWrap: "wrap" }}>
+          <Chip label={data.board || data.meta?.board || "Board"} size="small" sx={{ fontWeight: 700, bgcolor: "#e0e7ff", color: "#3730a3" }} />
           <Chip label={data.grade || "Grade 10"} size="small" sx={{ fontWeight: 700, bgcolor: "#fef3c7", color: "#b45309" }} />
           <Chip label={data.subject || "Subject"} size="small" sx={{ fontWeight: 700, bgcolor: "#e0f2fe", color: "#0369a1" }} />
           <Chip label={`Length: ${data.summary_length || "Medium"}`} size="small" sx={{ fontWeight: 700 }} />
@@ -355,7 +357,7 @@ function RenderTeacherQuizView({ data }) {
           {data.title || "Quiz Homework"}
         </Typography>
         <Typography variant="caption" sx={{ fontWeight: 700, color: "#047857", display: "block", mt: 0.5 }}>
-          {data.instructions || "Complete all questions carefully."}
+          {data.board || data.meta?.board || "Board"} • {data.instructions || "Complete all questions carefully."}
         </Typography>
       </Box>
 
