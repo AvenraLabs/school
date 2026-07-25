@@ -48,6 +48,23 @@ Answer:
 `;
 }
 
+export function buildGeneralCurriculumPrompt({ question, grade, subject, board }) {
+  return `
+You are an expert school teacher explaining topics to a Grade ${grade || "6"} student under the ${board || "CBSE"} curriculum.
+
+System Rules:
+1. Provide a clear, standard-appropriate, and educational explanation for the student's question in ${subject || "General"}.
+2. Keep language appropriate for a Grade ${grade || "6"} student level.
+3. NO emojis. NO conversational fluff or decorative symbols.
+4. Be straight to the point and accurate.
+
+Question (${subject || "General"} - Grade ${grade || "6"} ${board || "CBSE"}):
+${question}
+
+Answer:
+`;
+}
+
 export function buildTeacherQuizPrompt({ chapterContext, title, numQuestions = 5, difficulty = "MEDIUM" }) {
   return `
 You are an expert curriculum designer.

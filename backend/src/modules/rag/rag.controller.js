@@ -80,15 +80,25 @@ export const runTeacherAiContent = asyncHandler(async (req, res) => {
  * Returns distinct subjects ingested for the given board + grade.
  */
 export const getCurriculumSubjects = asyncHandler(async (req, res) => {
-  const { board, grade } = req.query;
-  if (!board || !grade) {
-    throw new AppError("board and grade are required", 400);
+  let { board, grade } = req.query;
+  if (!grade) {
+    throw new AppError("grade is required", 400);
   }
+
+  if (req.user?.school_id) {
+    const School = (await import("../schools/school.model.js")).default;
+    const school = await School.findByPk(req.user.school_id);
+    if (school?.board) {
+      board = school.board;
+    }
+  }
+
+  const targetBoard = String(board || "CBSE").toUpperCase().trim();
 
   const rows = await TextbookChapter.findAll({
     attributes: ["subject"],
     where: {
-      board: String(board).toUpperCase().trim(),
+      board: targetBoard,
       grade: parseInt(String(grade).replace(/\D/g, ""), 10),
     },
     group: ["subject"],
@@ -97,7 +107,7 @@ export const getCurriculumSubjects = asyncHandler(async (req, res) => {
   });
 
   const subjects = rows.map((r) => r.subject);
-  res.json({ subjects });
+  res.json({ subjects, board: targetBoard });
 });
 
 /**
@@ -105,15 +115,25 @@ export const getCurriculumSubjects = asyncHandler(async (req, res) => {
  * Returns all chapters for board + grade + subject, sorted by chapter_number.
  */
 export const getCurriculumChapters = asyncHandler(async (req, res) => {
-  const { board, grade, subject } = req.query;
-  if (!board || !grade || !subject) {
-    throw new AppError("board, grade and subject are required", 400);
+  let { board, grade, subject } = req.query;
+  if (!grade || !subject) {
+    throw new AppError("grade and subject are required", 400);
   }
+
+  if (req.user?.school_id) {
+    const School = (await import("../schools/school.model.js")).default;
+    const school = await School.findByPk(req.user.school_id);
+    if (school?.board) {
+      board = school.board;
+    }
+  }
+
+  const targetBoard = String(board || "CBSE").toUpperCase().trim();
 
   const rows = await TextbookChapter.findAll({
     attributes: ["chapter_number", "chapter_title"],
     where: {
-      board: String(board).toUpperCase().trim(),
+      board: targetBoard,
       grade: parseInt(String(grade).replace(/\D/g, ""), 10),
       subject: String(subject).trim(),
     },
@@ -127,7 +147,7 @@ export const getCurriculumChapters = asyncHandler(async (req, res) => {
     label: `Chapter ${r.chapter_number}: ${r.chapter_title}`,
   }));
 
-  res.json({ chapters });
+  res.json({ chapters, board: targetBoard });
 });
 
 /**
@@ -135,15 +155,22 @@ export const getCurriculumChapters = asyncHandler(async (req, res) => {
  * Returns distinct grades that have at least one ingested book for the board.
  */
 export const getCurriculumGrades = asyncHandler(async (req, res) => {
-  const { board } = req.query;
-  if (!board) {
-    throw new AppError("board is required", 400);
+  let { board } = req.query;
+
+  if (req.user?.school_id) {
+    const School = (await import("../schools/school.model.js")).default;
+    const school = await School.findByPk(req.user.school_id);
+    if (school?.board) {
+      board = school.board;
+    }
   }
+
+  const targetBoard = String(board || "CBSE").toUpperCase().trim();
 
   const rows = await TextbookChapter.findAll({
     attributes: ["grade"],
     where: {
-      board: String(board).toUpperCase().trim(),
+      board: targetBoard,
     },
     group: ["grade"],
     order: [["grade", "ASC"]],
@@ -151,6 +178,6 @@ export const getCurriculumGrades = asyncHandler(async (req, res) => {
   });
 
   const grades = rows.map((r) => r.grade);
-  res.json({ grades });
+  res.json({ grades, board: targetBoard });
 });
 

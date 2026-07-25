@@ -760,8 +760,19 @@ export default function TeacherAIToolsPage() {
       const targetClassId = targetObj?.classId || null;
       const targetSectionId = targetObj?.sectionId || null;
 
-      // Auto-capitalize first letter of each word in topic/title
-      const formattedTitle = title.trim().replace(/\b\w/g, (char) => char.toUpperCase());
+      // Auto-derive topic/title from selected chapters when standard subject is used
+      let docTopic = title.trim();
+      if (!isOther) {
+        if (selectedChapters.length > 0) {
+          const selectedLabels = curriculumChapters
+            .filter((c) => selectedChapters.includes(c.number))
+            .map((c) => c.title || `Chapter ${c.number}`);
+          docTopic = selectedLabels.join(", ");
+        } else {
+          docTopic = `${resolvedSubject} Overview`;
+        }
+      }
+      const formattedTitle = (docTopic || resolvedSubject).replace(/\b\w/g, (char) => char.toUpperCase());
 
       // AI Video Feature Handling
       if (selectedToolKey === "ai_video") {
@@ -1468,58 +1479,63 @@ export default function TeacherAIToolsPage() {
                 </FormControl>
 
                 {/* Subject Dropdown */}
-                <Box sx={{ display: "flex", gap: 1.5 }}>
-                  <FormControl size="small" sx={{ flex: 1 }}>
-                    <InputLabel sx={{ fontWeight: 700 }}>Subject</InputLabel>
-                    <Select
-                      value={subject}
-                      label="Subject"
-                      onChange={(e) => {
-                        setSubject(e.target.value);
-                        setCustomSubject("");
-                      }}
-                      disabled={loadingSubjects}
-                      sx={{ borderRadius: "12px" }}
-                    >
-                      {loadingSubjects ? (
-                        <MenuItem disabled>
-                          <CircularProgress size={16} sx={{ mr: 1 }} /> Loading subjects...
-                        </MenuItem>
-                      ) : (
-                        curriculumSubjects.map((sub) => (
-                          <MenuItem key={sub} value={sub}>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                              {sub}
-                              <Chip
-                                label="Ingested"
-                                size="small"
-                                sx={{ height: 16, fontSize: 10, bgcolor: "#dcfce7", color: "#15803d" }}
-                              />
-                            </Box>
-                          </MenuItem>
-                        ))
-                      )}
-                      <MenuItem value="other">
-                        Other
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
-
-                {/* Custom Subject Name input if "other" is selected */}
-                {isOther && (
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Subject Name"
-                    value={customSubject}
+                <FormControl size="small" fullWidth>
+                  <InputLabel sx={{ fontWeight: 700 }}>Subject</InputLabel>
+                  <Select
+                    value={subject}
+                    label="Subject"
                     onChange={(e) => {
-                      const val = e.target.value;
-                      setCustomSubject(val.replace(/\b\w/g, (char) => char.toUpperCase()));
+                      setSubject(e.target.value);
+                      setCustomSubject("");
                     }}
-                    placeholder="Subject Name"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
-                  />
+                    disabled={loadingSubjects}
+                    sx={{ borderRadius: "12px" }}
+                  >
+                    {loadingSubjects ? (
+                      <MenuItem disabled>
+                        <CircularProgress size={16} sx={{ mr: 1 }} /> Loading subjects...
+                      </MenuItem>
+                    ) : (
+                      curriculumSubjects.map((sub) => (
+                        <MenuItem key={sub} value={sub}>
+                          {sub}
+                        </MenuItem>
+                      ))
+                    )}
+                    <MenuItem value="other">
+                      Other
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+
+                {/* Custom Subject Name & Topic input if "other" is selected */}
+                {isOther && (
+                  <Stack spacing={1.5}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Subject Name"
+                      value={customSubject}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomSubject(val.replace(/\b\w/g, (char) => char.toUpperCase()));
+                      }}
+                      placeholder="e.g. Environmental Studies"
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Topic Name"
+                      value={title}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTitle(val.replace(/\b\w/g, (char) => char.toUpperCase()));
+                      }}
+                      placeholder="e.g. Save Water & Plants"
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
+                    />
+                  </Stack>
                 )}
 
                 {/* Multi-Select Chapters Dropdown */}
@@ -1562,20 +1578,6 @@ export default function TeacherAIToolsPage() {
                     </Select>
                   </FormControl>
                 )}
-
-                {/* Common Topic Field */}
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Topic"
-                  value={title}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setTitle(val.replace(/\b\w/g, (char) => char.toUpperCase()));
-                  }}
-                  placeholder="Topic"
-                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
-                />
 
                 {/* ─── Question Paper Fields ─── */}
                 {selectedToolKey === "question_paper" && (

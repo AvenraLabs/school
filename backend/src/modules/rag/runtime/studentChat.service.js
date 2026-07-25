@@ -9,7 +9,7 @@ import { deductTokens } from "../../tokens/token.service.js";
 
 import { detectSubject } from "./detectSubject.js";
 import { searchStudentChunks } from "./searchStudentChunks.js";
-import { buildStudentRagPrompt, buildLanguageDirectPrompt } from "./buildPrompt.js";
+import { buildStudentRagPrompt, buildLanguageDirectPrompt, buildGeneralCurriculumPrompt } from "./buildPrompt.js";
 import { generateAnswer } from "./generateAnswer.js";
 
 /**
@@ -85,15 +85,20 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
   let tokensUsed = 0;
   let sourceType = "rag";
 
-  if (isLanguage) {
-    // Language Bypass Route -> Direct Gemini 2.5 Flash Lite API
-    sourceType = "direct_language";
-    const prompt = buildLanguageDirectPrompt({ question, grade, subject });
+  const isCbsePrimary = String(board).toUpperCase() === "CBSE" && parseInt(String(grade), 10) < 6;
+
+  if (isLanguage || isCbsePrimary) {
+    // Language or CBSE Grades 1-5 Direct Gemini Route
+    sourceType = isLanguage ? "direct_language" : "direct_primary_curriculum";
+    const prompt = isLanguage
+      ? buildLanguageDirectPrompt({ question, grade, subject })
+      : buildGeneralCurriculumPrompt({ question, grade, subject, board });
+
     const res = await generateAnswer(prompt);
     answer = res.text;
     tokensUsed = res.tokensUsed;
   } else {
-    // Core Subject Textbook RAG Route
+    // Core Subject Textbook RAG Route (Grades 6-12 Core)
     const { chunks, metadatas } = await searchStudentChunks({
       question,
       board,
@@ -103,8 +108,12 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
     });
 
     if (!chunks || chunks.length === 0) {
-      answer = "The textbook does not contain enough information.";
-      sourceType = "rag_no_chunks";
+      // Fallback to Direct Gemini if textbook chunks not found
+      sourceType = "direct_curriculum_fallback";
+      const prompt = buildGeneralCurriculumPrompt({ question, grade, subject, board });
+      const res = await generateAnswer(prompt);
+      answer = res.text;
+      tokensUsed = res.tokensUsed;
     } else {
       const contextText = chunks.join("\n\n");
       const prompt = buildStudentRagPrompt({
