@@ -4,6 +4,3 @@ project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/
 
 include ':capacitor-geolocation'
 project(':capacitor-geolocation').projectDir = new File('../node_modules/@capacitor/geolocation/android')
-
-include ':transistorsoft-capacitor-background-geolocation'
-project(':transistorsoft-capacitor-background-geolocation').projectDir = new File('../node_modules/@transistorsoft/capacitor-background-geolocation/android')
