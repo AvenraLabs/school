@@ -61,47 +61,23 @@ ${sampleText}
     ];
   }
 
-  // Case 2: Multi-chapter PDF - Regex check first
+  // Case 2: Multi-chapter PDF - Always use Gemini for consistent title and chapter detection
   const chapterBoundaries = [];
-  const chapterRegex = /^(chapter|unit|lesson)\s+(\d+|[ivxlcdm]+)[\s:]*(.*)$/im;
 
-  for (const page of pages) {
-    const lines = (page.text || "").split("\n");
-    for (const line of lines.slice(0, 5)) {
-      const match = line.trim().match(chapterRegex);
-      if (match) {
-        const numStr = match[2];
-        const num = parseInt(numStr, 10) || chapterBoundaries.length + 1;
-        const title = match[3].trim() || `Chapter ${num}`;
-        
-        if (!chapterBoundaries.some((b) => b.startPage === page.pageNumber)) {
-          chapterBoundaries.push({
-            chapterNumber: num,
-            chapterTitle: title,
-            startPage: page.pageNumber,
-          });
-        }
-        break;
-      }
-    }
-  }
+  const tableOfContentsSample = pages
+    .slice(0, 15)
+    .map((p) => `[Page ${p.pageNumber}]\n${p.text.slice(0, 400)}`)
+    .join("\n\n")
+    .slice(0, 6000);
 
-  // If regex failed, call Gemini Flash Lite ONCE for PDF outline
-  if (chapterBoundaries.length === 0) {
-    const tableOfContentsSample = pages
-      .slice(0, 10)
-      .map((p) => `[Page ${p.pageNumber}]\n${p.text.slice(0, 300)}`)
-      .join("\n\n")
-      .slice(0, 4000);
-
-    const prompt = `
-Find all chapter headings and their start page numbers from this textbook sample text.
-Return ONLY valid JSON array:
+  const prompt = `
+Analyze this textbook sample text and extract all chapter/unit titles, chapter numbers, and their starting page numbers.
+Return ONLY a valid JSON array:
 [
   {
     "chapterNumber": 1,
-    "chapterTitle": "Title",
-    "startPage": 5
+    "chapterTitle": "Chapter Title Here",
+    "startPage": 1
   }
 ]
 
@@ -109,27 +85,26 @@ Sample Text:
 ${tableOfContentsSample}
 `;
 
-    try {
-      const response = await ai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: prompt,
-      });
+  try {
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: prompt,
+    });
 
-      const raw = response.text || "";
-      const cleanedJson = raw.replace(/```json/g, "").replace(/```/g, "").trim();
-      const parsed = JSON.parse(cleanedJson);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        parsed.forEach((item) => {
-          chapterBoundaries.push({
-            chapterNumber: item.chapterNumber || chapterBoundaries.length + 1,
-            chapterTitle: item.chapterTitle || `Chapter ${item.chapterNumber}`,
-            startPage: item.startPage || 1,
-          });
+    const raw = response.text || "";
+    const cleanedJson = raw.replace(/```json/g, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(cleanedJson);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      parsed.forEach((item, index) => {
+        chapterBoundaries.push({
+          chapterNumber: parseInt(item.chapterNumber, 10) || (index + 1),
+          chapterTitle: String(item.chapterTitle || `Chapter ${item.chapterNumber || index + 1}`),
+          startPage: parseInt(item.startPage, 10) || 1,
         });
-      }
-    } catch (e) {
-      console.warn(`[detectChapters] Gemini multi-chapter detection fallback for ${filename}:`, e.message);
+      });
     }
+  } catch (e) {
+    console.warn(`[detectChapters] Gemini multi-chapter detection warning for ${filename}:`, e.message);
   }
 
   if (chapterBoundaries.length === 0) {

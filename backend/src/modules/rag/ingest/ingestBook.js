@@ -3,7 +3,7 @@ import { cleanText } from "./cleanText.js";
 import { detectChapters } from "./detectChapters.js";
 import { chunkText } from "./chunkText.js";
 import { embedChunks } from "./embedChunks.js";
-import { storeChunks } from "./storeChunks.js";
+import { storeChunks, filterExistingChunks } from "./storeChunks.js";
 import { upsertTextbookChapter } from "./upsertTextbookChapter.js";
 
 /**
@@ -50,11 +50,28 @@ export async function ingestBook({ board, grade, subject, pdfPath, filename }) {
     const chunks = chunkText({ virtualChapter: vChap });
     if (chunks.length === 0) continue;
 
-    // Step 6: Embed chunks using gemini-embedding-001 (batched)
-    const textsToEmbed = chunks.map((c) => c.text);
+    // Step 5b: Check existing chunk IDs in ChromaDB to save Gemini embedding API calls
+    const { chunksToEmbed, existingCount } = await filterExistingChunks({
+      board,
+      grade,
+      subject,
+      chapterNumber: vChap.chapterNumber,
+      chunks,
+    });
+
+    if (chunksToEmbed.length === 0) {
+      console.log(
+        `[RAG Ingest] All ${existingCount} chunks for Chapter ${vChap.chapterNumber} (${vChap.chapterTitle}) already exist in ChromaDB. Skipping embedding.`
+      );
+      totalChunksStored += existingCount;
+      continue;
+    }
+
+    // Step 6: Embed ONLY new/missing chunks using gemini-embedding-001
+    const textsToEmbed = chunksToEmbed.map((c) => c.text);
     const embeddings = await embedChunks(textsToEmbed);
 
-    // Step 7: Store in ChromaDB (deterministic IDs)
+    // Step 7: Store new chunks in ChromaDB (deterministic IDs)
     const storedCount = await storeChunks({
       board,
       grade,
@@ -62,11 +79,11 @@ export async function ingestBook({ board, grade, subject, pdfPath, filename }) {
       chapterNumber: vChap.chapterNumber,
       chapterTitle: vChap.chapterTitle,
       bookName: filename,
-      chunks,
+      chunks: chunksToEmbed,
       embeddings,
     });
 
-    totalChunksStored += storedCount;
+    totalChunksStored += storedCount + existingCount;
   }
 
   console.log(`[RAG Ingest] Successfully ingested ${totalChunksStored} chunks for ${filename}`);

@@ -37,5 +37,4 @@ lerna-debug.log*
 *.sln
 *.sw?
 
-# Package lock files (matching project preference)
-package-lock.json
+

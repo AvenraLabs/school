@@ -2,19 +2,19 @@ import { getAiClient, getEmbeddingModel } from "../shared/aiClient.js";
 
 /**
  * Batches embedding requests to Gemini API using gemini-embedding-001.
+ * Limits concurrency (max 5 at a time) and includes retries to prevent Gemini rate-limit failures.
  */
-export async function embedChunks(texts, batchSize = 20) {
+export async function embedChunks(texts, concurrency = 5) {
   if (!Array.isArray(texts) || texts.length === 0) return [];
 
   const ai = getAiClient();
   const EMBEDDING_MODEL = getEmbeddingModel();
   const allEmbeddings = [];
 
-  for (let i = 0; i < texts.length; i += batchSize) {
-    const batch = texts.slice(i, i + batchSize);
-
-    try {
-      const batchPromises = batch.map(async (text) => {
+  // Helper to call embedContent with retries on 429 rate limit errors
+  async function embedWithRetry(text, retries = 3, delayMs = 1000) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
         const res = await ai.models.embedContent({
           model: EMBEDDING_MODEL,
           contents: text,
@@ -26,24 +26,35 @@ export async function embedChunks(texts, batchSize = 20) {
           res.values ||
           []
         );
-      });
-
-      const batchResults = await Promise.all(batchPromises);
-      allEmbeddings.push(...batchResults);
-    } catch (e) {
-      console.error(`[embedChunks] Error embedding batch starting at index ${i}:`, e.message);
-      for (const text of batch) {
-        try {
-          const single = await ai.models.embedContent({
-            model: EMBEDDING_MODEL,
-            contents: text,
-          });
-          allEmbeddings.push(single.embedding?.values || []);
-        } catch (err) {
-          console.error(`[embedChunks] Single fallback failed:`, err.message);
-          allEmbeddings.push([]);
+      } catch (err) {
+        const isRateLimit = err.status === 429 || /resource exhausted|rate limit/i.test(err.message);
+        if (isRateLimit && attempt < retries) {
+          const wait = delayMs * Math.pow(2, attempt);
+          console.warn(`[embedChunks] Gemini rate limit hit. Retrying chunk in ${wait}ms (attempt ${attempt + 1}/${retries})...`);
+          await new Promise((r) => setTimeout(r, wait));
+        } else if (attempt === retries) {
+          console.error(`[embedChunks] Failed to embed chunk after ${retries} retries:`, err.message);
+          return [];
+        } else {
+          console.error(`[embedChunks] Embedding error:`, err.message);
+          return [];
         }
       }
+    }
+    return [];
+  }
+
+  // Process in small batches of `concurrency` (5 at a time)
+  for (let i = 0; i < texts.length; i += concurrency) {
+    const chunkBatch = texts.slice(i, i + concurrency);
+    const results = await Promise.all(
+      chunkBatch.map((text) => embedWithRetry(text))
+    );
+    allEmbeddings.push(...results);
+
+    // Subtle 100ms pause between batches to avoid spamming the API
+    if (i + concurrency < texts.length) {
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 

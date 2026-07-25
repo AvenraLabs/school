@@ -29,6 +29,60 @@ export async function getOrGetCollection() {
 }
 
 /**
+ * Constructs deterministic chunk ID: {cleanBoard}_{cleanGrade}_{cleanSubject}_{chapterNumber}_{chunkOrder}
+ */
+export function buildChunkId({ board, grade, subject, chapterNumber, chunkOrder }) {
+  const cleanBoard = String(board).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+  const cleanGrade = String(grade).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+  const cleanSubject = String(subject).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+  return `${cleanBoard}_${cleanGrade}_${cleanSubject}_${chapterNumber}_${chunkOrder}`;
+}
+
+/**
+ * Checks ChromaDB for existing chunk IDs and returns only new/unstored chunks.
+ * Saves Gemini embedding API costs when re-running ingestion.
+ */
+export async function filterExistingChunks({ board, grade, subject, chapterNumber, chunks }) {
+  if (!chunks || chunks.length === 0) return { chunksToEmbed: [], existingCount: 0 };
+
+  try {
+    const collection = await getOrGetCollection();
+
+    const candidateIds = chunks.map((c) =>
+      buildChunkId({ board, grade, subject, chapterNumber, chunkOrder: c.chunkOrder })
+    );
+
+    const existingResult = await collection.get({ ids: candidateIds });
+    const existingSet = new Set(existingResult?.ids || []);
+
+    const chunksToEmbed = [];
+    let existingCount = 0;
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const chunkId = candidateIds[i];
+
+      if (existingSet.has(chunkId)) {
+        existingCount++;
+      } else {
+        chunksToEmbed.push(chunk);
+      }
+    }
+
+    if (existingCount > 0) {
+      console.log(
+        `[storeChunks] Skipping embedding for ${existingCount}/${chunks.length} already existing chunks (${board}/${grade}/${subject} Chapter ${chapterNumber}).`
+      );
+    }
+
+    return { chunksToEmbed, existingCount };
+  } catch (e) {
+    console.warn(`[storeChunks] Error querying existing IDs in ChromaDB, proceeding to embed all: ${e.message}`);
+    return { chunksToEmbed: chunks, existingCount: 0 };
+  }
+}
+
+/**
  * Stores chunks in ChromaDB with deterministic IDs.
  * ID schema: {board}_{grade}_{subject}_{chapter}_{chunkOrder}
  */
@@ -46,10 +100,6 @@ export async function storeChunks({
 
   const collection = await getOrGetCollection();
 
-  const cleanBoard = String(board).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
-  const cleanGrade = String(grade).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
-  const cleanSubject = String(subject).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
-
   const ids = [];
   const documents = [];
   const validEmbeddings = [];
@@ -61,8 +111,13 @@ export async function storeChunks({
 
     if (!emb || emb.length === 0) continue;
 
-    // Deterministic ID: cbse_6_science_4_3
-    const id = `${cleanBoard}_${cleanGrade}_${cleanSubject}_${chapterNumber}_${chunk.chunkOrder}`;
+    const id = buildChunkId({
+      board,
+      grade,
+      subject,
+      chapterNumber,
+      chunkOrder: chunk.chunkOrder,
+    });
 
     ids.push(id);
     documents.push(chunk.text);

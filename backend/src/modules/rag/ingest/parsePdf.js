@@ -16,7 +16,7 @@ const SCRIPT_PATH = path.join(__dirname, "parse_pdf.py");
 export function parsePdf(pdfPath) {
   return new Promise((resolve, reject) => {
     execFile(
-      "python",
+      "python3",
       [SCRIPT_PATH, pdfPath],
       { maxBuffer: 50 * 1024 * 1024, encoding: "utf-8" },
       (error, stdout, stderr) => {
