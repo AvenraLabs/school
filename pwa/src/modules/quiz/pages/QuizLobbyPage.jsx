@@ -22,17 +22,20 @@ import {
     ErrorOutline,
 } from "@mui/icons-material";
 import { useQuizSession } from "../hooks/useQuizSession";
+import { getAssetUrl } from "../../../utils/asset";
+import { useAuth } from "../../../auth/AuthProvider";
 
 export default function QuizLobbyPage() {
+    const { user } = useAuth();
     const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const theme = useTheme();
-    const { status, players, isHost, startQuiz, forceEnd, cancelled, error } = useQuizSession(id);
+    const { status, players, isHost, roomCode: sessionRoomCode, topic: sessionTopic, startQuiz, forceEnd, cancelled, error } = useQuizSession(id);
 
-    // roomCode to display — passed via router state on room creation
-    const roomCode = location.state?.roomCode || id;
-    const topic = location.state?.topic || null;
+    // roomCode to display — prefer socket session roomCode, fallback to router state or route param
+    const roomCode = sessionRoomCode || location.state?.roomCode || id;
+    const topic = sessionTopic || location.state?.topic || null;
 
     // Navigate to play page when game starts
     useEffect(() => {
@@ -207,50 +210,94 @@ export default function QuizLobbyPage() {
                             </Typography>
                         </Box>
                     ) : (
-                        <Stack spacing={1}>
-                            {players.map((p, idx) => (
-                                <Box
-                                    key={p.userId || idx}
-                                    sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 1.5,
-                                        p: "10px 14px",
-                                        borderRadius: "12px",
-                                        bgcolor: "action.hover",
-                                    }}
-                                >
-                                    <Avatar
+                        <Stack spacing={1.5}>
+                            {players.map((p, idx) => {
+                                const isCurrentUser = String(p.userId) === String(user?.id);
+                                const initial = p.name?.[0]?.toUpperCase() || "?";
+                                return (
+                                    <Box
+                                        key={p.userId || idx}
                                         sx={{
-                                            width: 36,
-                                            height: 36,
-                                            bgcolor: "primary.main",
-                                            fontSize: 14,
-                                            fontWeight: 700,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 1.5,
+                                            p: "10px 14px",
+                                            borderRadius: "14px",
+                                            bgcolor: isCurrentUser ? alpha(theme.palette.primary.main, 0.08) : "action.hover",
+                                            border: isCurrentUser
+                                                ? `1px solid ${alpha(theme.palette.primary.main, 0.25)}`
+                                                : "1px solid rgba(0,0,0,0.04)",
                                         }}
                                     >
-                                        {p.name?.[0]?.toUpperCase() || "?"}
-                                    </Avatar>
-                                    <Typography
-                                        fontWeight={700}
-                                        sx={{ flex: 1, fontSize: 14 }}
-                                    >
-                                        {p.name || "Player"}
-                                    </Typography>
-                                    {p.isHost && (
-                                        <Chip
-                                            label="Host"
-                                            size="small"
-                                            color="secondary"
+                                        <Avatar
+                                            src={getAssetUrl(p.avatar_url)}
+                                            alt={p.name}
                                             sx={{
-                                                fontWeight: 700,
-                                                height: 20,
-                                                fontSize: 10,
+                                                width: 42,
+                                                height: 42,
+                                                bgcolor: p.isHost ? "secondary.main" : "primary.main",
+                                                fontSize: 15,
+                                                fontWeight: 800,
+                                                border: "2px solid",
+                                                borderColor: p.isHost ? "secondary.main" : "primary.light",
+                                                boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
                                             }}
-                                        />
-                                    )}
-                                </Box>
-                            ))}
+                                        >
+                                            {initial}
+                                        </Avatar>
+                                        <Box sx={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+                                                <Typography
+                                                    fontWeight={700}
+                                                    noWrap
+                                                    sx={{ fontSize: 14, color: "text.primary" }}
+                                                >
+                                                    {p.name || "Player"}
+                                                </Typography>
+                                                {isCurrentUser && (
+                                                    <Chip
+                                                        label="You"
+                                                        size="small"
+                                                        sx={{
+                                                            height: 18,
+                                                            fontSize: "0.65rem",
+                                                            fontWeight: 800,
+                                                            bgcolor: alpha(theme.palette.primary.main, 0.15),
+                                                            color: "primary.main",
+                                                        }}
+                                                    />
+                                                )}
+                                            </Box>
+                                        </Box>
+                                        {p.isHost ? (
+                                            <Chip
+                                                label="Host"
+                                                size="small"
+                                                color="secondary"
+                                                sx={{
+                                                    fontWeight: 800,
+                                                    height: 22,
+                                                    fontSize: 11,
+                                                    px: 0.5,
+                                                }}
+                                            />
+                                        ) : (
+                                            <Chip
+                                                label="Player"
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{
+                                                    fontWeight: 700,
+                                                    height: 22,
+                                                    fontSize: 11,
+                                                    borderColor: "rgba(0,0,0,0.15)",
+                                                    color: "text.secondary",
+                                                }}
+                                            />
+                                        )}
+                                    </Box>
+                                );
+                            })}
                         </Stack>
                     )}
                 </Box>

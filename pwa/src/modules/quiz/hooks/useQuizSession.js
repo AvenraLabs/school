@@ -7,6 +7,8 @@ export function useQuizSession(sessionId) {
     const [status, setStatus] = useState("WAITING");
     const [player, setPlayer] = useState(null);
     const [isHost, setIsHost] = useState(false);
+    const [roomCode, setRoomCode] = useState(null);
+    const [topic, setTopic] = useState(null);
     const [time, setTime] = useState(null);
     const [players, setPlayers] = useState([]);
     const [error, setError] = useState(null);
@@ -22,6 +24,8 @@ export function useQuizSession(sessionId) {
         // ── Joined confirmation ───────────────────────────────────────────────
         socket.on("quiz:joined", (data) => {
             setPlayer(data);
+            if (data.roomCode) setRoomCode(data.roomCode);
+            if (data.topic) setTopic(data.topic);
             setError(null);
             if (data.isHost) setIsHost(true);
         });
@@ -116,6 +120,8 @@ export function useQuizSession(sessionId) {
         player,
         time,
         isHost,
+        roomCode,
+        topic,
         players,
         error,
         cancelled,

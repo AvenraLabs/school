@@ -10,6 +10,7 @@ import User from "../modules/users/user.model.js";
 import db from "../config/db.js";
 
 const sessionState = new Map();
+const lobbyDisconnectTimers = new Map();
 
 function sanitizeQuestion(question) {
   return {
@@ -161,7 +162,8 @@ export function initGameSocket(io) {
         return;
       }
 
-      // ── Student / Player join ──────────────────────────────────────────────
+      const isHostUser = String(session.host_user_id) === String(socket.user.id);
+
       let player = await GameSessionPlayer.findOne({
         where: { session_id: sessionId, user_id: socket.user.id },
       });
@@ -171,7 +173,7 @@ export function initGameSocket(io) {
           player = await GameSessionPlayer.create({
             session_id: sessionId,
             user_id: socket.user.id,
-            is_host: session.host_user_id === socket.user.id,
+            is_host: isHostUser,
             status: "JOINED",
           });
         } catch (createErr) {
@@ -190,6 +192,11 @@ export function initGameSocket(io) {
         }
       }
 
+      // Ensure is_host boolean is synced accurately
+      if (player && Boolean(player.is_host) !== isHostUser) {
+        await player.update({ is_host: isHostUser });
+      }
+
       // Prevent multi-join from different tab/device
       if (
         player.socket_id &&
@@ -202,19 +209,27 @@ export function initGameSocket(io) {
         return;
       }
 
+      // If a lobby disconnect grace period timer exists for this session, clear it on reconnect
+      if (lobbyDisconnectTimers.has(sessionId)) {
+        clearTimeout(lobbyDisconnectTimers.get(sessionId));
+        lobbyDisconnectTimers.delete(sessionId);
+      }
+
       await player.update({
         socket_id: socket.id,
-        status: player.status === "DISCONNECTED" ? "PLAYING" : player.status,
+        status: "JOINED",
       });
 
       socket.join(`quiz:${sessionId}`);
 
-      // Send joined confirmation
+      // Send joined confirmation with room details
       socket.emit("quiz:joined", {
         sessionId,
+        roomCode: session.room_code,
+        topic: session.settings?.topic || null,
         playerId: player.id,
         status: player.status,
-        isHost: player.is_host || false,
+        isHost: Boolean(player.is_host || isHostUser),
       });
 
       // Fetch current full player list (snapshot for this joiner)
@@ -223,7 +238,7 @@ export function initGameSocket(io) {
           session_id: sessionId,
           status: { [Op.ne]: "DISCONNECTED" },
         },
-        include: [{ model: User, attributes: ["id", "name"] }],
+        include: [{ model: User, attributes: ["id", "name", "avatar_url"] }],
         attributes: ["id", "is_host", "user_id"],
       });
 
@@ -231,18 +246,20 @@ export function initGameSocket(io) {
         players: allActivePlayers.map((p) => ({
           userId: p.user_id,
           name: p.User?.name || "Player",
-          isHost: p.is_host,
+          avatar_url: p.User?.avatar_url || null,
+          isHost: Boolean(p.is_host),
         })),
       });
 
       // Broadcast new joiner to everyone else in room
       const joiningUser = await User.findByPk(socket.user.id, {
-        attributes: ["id", "name"],
+        attributes: ["id", "name", "avatar_url"],
       });
       socket.to(`quiz:${sessionId}`).emit("quiz:player_joined", {
         userId: socket.user.id,
         name: joiningUser?.name || "Player",
-        isHost: player.is_host || false,
+        avatar_url: joiningUser?.avatar_url || null,
+        isHost: Boolean(player.is_host || isHostUser),
       });
 
       // If session already in progress, send current question to late-joiner
@@ -508,9 +525,19 @@ export function initGameSocket(io) {
             userId: player.user_id,
           });
 
-          // If host disconnects while in LOBBY, cancel the session
+          // If host disconnects while in LOBBY, start a 10s grace period timer to allow page refreshes
           if (player.is_host && session.status === "LOBBY") {
-            await cancelSession(player.session_id);
+            const sid = player.session_id;
+            if (!lobbyDisconnectTimers.has(sid)) {
+              const timer = setTimeout(async () => {
+                lobbyDisconnectTimers.delete(sid);
+                const currentSession = await GameSession.findByPk(sid);
+                if (currentSession && currentSession.status === "LOBBY") {
+                  await cancelSession(sid);
+                }
+              }, 10000);
+              lobbyDisconnectTimers.set(sid, timer);
+            }
             continue;
           }
 

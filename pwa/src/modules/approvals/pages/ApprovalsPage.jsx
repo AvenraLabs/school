@@ -21,7 +21,7 @@ import {
     Alert,
     Snackbar,
 } from "@mui/material";
-import { Check, Close, ArrowForward, HelpOutline } from "@mui/icons-material";
+import { Check, Close, ArrowForward, HelpOutline, ZoomIn } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import {
     getTeacherPendingApprovals,
@@ -154,13 +154,63 @@ export default function ApprovalsPage() {
         }
     };
 
-    const getFieldDisplay = (field, val) => {
+    // Image Inspection Dialog state
+    const [imagePreview, setImagePreview] = useState({ open: false, title: "", currentUrl: null, newUrl: null, reqId: null });
+
+    const getFieldDisplay = (field, val, onInspect) => {
         if (val === null || val === undefined || val === "") return "—";
-        if (field === "avatar_url") {
+        const isImage = field === "avatar_url" || field === "avatar" || field === "photo" || field === "profile_picture";
+        if (isImage) {
+            const assetUrl = getAssetUrl(val);
+            if (!assetUrl) return "—";
             return (
-                <Avatar src={val} sx={{ width: 40, height: 40, border: "1px solid rgba(0,0,0,0.08)" }}>
-                    Photo
-                </Avatar>
+                <Box
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (onInspect) onInspect();
+                    }}
+                    sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 1.5,
+                        cursor: onInspect ? "pointer" : "default",
+                        p: 0.5,
+                        borderRadius: 2,
+                        transition: "all 0.2s",
+                        "&:hover": onInspect ? { bgcolor: "action.hover" } : {},
+                    }}
+                >
+                    <Avatar
+                        src={assetUrl}
+                        alt="Profile photo"
+                        sx={{
+                            width: 56,
+                            height: 56,
+                            border: "2px solid",
+                            borderColor: "primary.main",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                        }}
+                    >
+                        Photo
+                    </Avatar>
+                    {onInspect && (
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<ZoomIn sx={{ fontSize: 16 }} />}
+                            sx={{
+                                fontSize: "0.72rem",
+                                py: 0.3,
+                                px: 1.2,
+                                borderRadius: "8px",
+                                textTransform: "none",
+                                fontWeight: 700,
+                            }}
+                        >
+                            Inspect Photo
+                        </Button>
+                    )}
+                </Box>
             );
         }
         return String(val);
@@ -355,6 +405,16 @@ export default function ApprovalsPage() {
                                                 const currentVal = req.user[field] !== undefined ? req.user[field] : (student ? student[field] : undefined);
                                                 const label = fieldLabels[field] || field;
 
+                                                const handleInspect = () => {
+                                                    setImagePreview({
+                                                        open: true,
+                                                        title: `Profile Photo Update - ${name}`,
+                                                        currentUrl: getAssetUrl(currentVal),
+                                                        newUrl: getAssetUrl(newVal),
+                                                        reqId: req.id,
+                                                    });
+                                                };
+
                                                 return (
                                                     <Box
                                                         key={field}
@@ -372,7 +432,7 @@ export default function ApprovalsPage() {
                                                             <Grid item xs={5}>
                                                                 <Typography variant="caption" color="text.secondary" display="block">Current Value</Typography>
                                                                 <Box sx={{ mt: 0.5, fontSize: "0.8rem", color: "text.secondary" }}>
-                                                                    {getFieldDisplay(field, currentVal)}
+                                                                    {getFieldDisplay(field, currentVal, handleInspect)}
                                                                 </Box>
                                                             </Grid>
                                                             <Grid item xs={2} sx={{ display: "flex", justifyContent: "center" }}>
@@ -381,7 +441,7 @@ export default function ApprovalsPage() {
                                                             <Grid item xs={5}>
                                                                 <Typography variant="caption" color="primary" display="block" fontWeight="bold">New Value</Typography>
                                                                 <Box sx={{ mt: 0.5, fontSize: "0.8rem", fontWeight: "bold", color: "primary.main" }}>
-                                                                    {getFieldDisplay(field, newVal)}
+                                                                    {getFieldDisplay(field, newVal, handleInspect)}
                                                                 </Box>
                                                             </Grid>
                                                         </Grid>
@@ -498,6 +558,129 @@ export default function ApprovalsPage() {
                     >
                         {actionLoading ? "Rejecting..." : "Reject"}
                     </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Photo Inspection Dialog */}
+            <Dialog
+                open={imagePreview.open}
+                onClose={() => setImagePreview(prev => ({ ...prev, open: false }))}
+                PaperProps={{
+                    sx: { borderRadius: "24px", p: 1, maxWidth: 540, width: "100%" },
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>
+                    {imagePreview.title || "Inspect Profile Picture"}
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+                        Please review the student's proposed profile picture to confirm it is appropriate and complies with school policies.
+                    </Typography>
+                    <Grid container spacing={2}>
+                        {imagePreview.currentUrl ? (
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="caption" fontWeight="bold" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                                    Current Active Photo
+                                </Typography>
+                                <Box
+                                    component="img"
+                                    src={imagePreview.currentUrl}
+                                    alt="Current Profile"
+                                    sx={{
+                                        width: "100%",
+                                        height: 200,
+                                        objectFit: "cover",
+                                        borderRadius: "14px",
+                                        border: "1px solid rgba(0,0,0,0.1)",
+                                        bgcolor: "action.hover",
+                                    }}
+                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                            </Grid>
+                        ) : (
+                            <Grid item xs={12} sm={6}>
+                                <Typography variant="caption" fontWeight="bold" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                                    Current Active Photo
+                                </Typography>
+                                <Box
+                                    sx={{
+                                        width: "100%",
+                                        height: 200,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        borderRadius: "14px",
+                                        border: "1px dashed rgba(0,0,0,0.15)",
+                                        bgcolor: "action.hover",
+                                        color: "text.secondary",
+                                    }}
+                                >
+                                    <Typography variant="body2" color="text.secondary">No current photo</Typography>
+                                </Box>
+                            </Grid>
+                        )}
+                        <Grid item xs={12} sm={6}>
+                            <Typography variant="caption" fontWeight="bold" color="primary.main" display="block" sx={{ mb: 1 }}>
+                                Proposed New Photo
+                            </Typography>
+                            <Box
+                                component="img"
+                                src={imagePreview.newUrl}
+                                alt="New Proposed Profile"
+                                sx={{
+                                    width: "100%",
+                                    height: 200,
+                                    objectFit: "cover",
+                                    borderRadius: "14px",
+                                    border: "2px solid",
+                                    borderColor: "primary.main",
+                                    boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+                                    bgcolor: "action.hover",
+                                }}
+                            />
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2.5, gap: 1.5 }}>
+                    <Button
+                        variant="outlined"
+                        onClick={() => setImagePreview(prev => ({ ...prev, open: false }))}
+                        sx={{ borderRadius: "10px", textTransform: "none", fontWeight: 700 }}
+                    >
+                        Close
+                    </Button>
+                    {imagePreview.reqId && (
+                        <>
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                disabled={actionLoading}
+                                startIcon={<Close />}
+                                onClick={() => {
+                                    const id = imagePreview.reqId;
+                                    setImagePreview(prev => ({ ...prev, open: false }));
+                                    handleAction("profile_update", id, "reject");
+                                }}
+                                sx={{ borderRadius: "10px", fontWeight: 800, textTransform: "none" }}
+                            >
+                                Reject
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="success"
+                                disabled={actionLoading}
+                                startIcon={<Check />}
+                                onClick={() => {
+                                    const id = imagePreview.reqId;
+                                    setImagePreview(prev => ({ ...prev, open: false }));
+                                    handleAction("profile_update", id, "approve");
+                                }}
+                                sx={{ borderRadius: "10px", fontWeight: 800, textTransform: "none", bgcolor: "success.main", "&:hover": { bgcolor: "success.dark" } }}
+                            >
+                                Approve Photo
+                            </Button>
+                        </>
+                    )}
                 </DialogActions>
             </Dialog>
 
