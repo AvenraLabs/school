@@ -18,6 +18,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '21'
+          cache: 'gradle'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -25,14 +26,14 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 'latest'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: pwa/package-lock.json
 
       - name: Install PWA Dependencies & Build Web Assets
         run: |
           cd pwa
-          npm install --no-audit
+          npm ci
           npm run build
 
       - name: Add Capacitor Android Platform (if missing)
@@ -45,10 +46,11 @@ jobs:
         run: |
           cd pwa/android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --build-cache --parallel
 
       - name: Upload Android APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: SchoolIQ-Driver-APK
           path: pwa/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
