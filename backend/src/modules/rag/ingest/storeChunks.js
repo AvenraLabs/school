@@ -29,9 +29,19 @@ export async function getOrGetCollection() {
 }
 
 /**
- * Constructs deterministic chunk ID: {cleanBoard}_{cleanGrade}_{cleanSubject}_{chapterNumber}_{chunkOrder}
+ * Constructs deterministic chunk ID: {cleanBoard}_{cleanGrade}_{cleanSubject}_{cleanBook}_{chapterNumber}_{chunkOrder}
  */
-export function buildChunkId({ board, grade, subject, chapterNumber, chunkOrder }) {
+export function buildChunkId({ board, grade, subject, bookName, chapterNumber, chunkOrder }) {
+  if (bookName) {
+    const cleanBookPath = String(bookName)
+      .replace(/\.pdf$/i, "")
+      .replace(/[\\/]/g, "_")
+      .replace(/[^a-z0-9_]/gi, "")
+      .toLowerCase();
+
+    return `${cleanBookPath}_${chapterNumber}_${chunkOrder}`;
+  }
+
   const cleanBoard = String(board).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
   const cleanGrade = String(grade).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
   const cleanSubject = String(subject).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
@@ -42,14 +52,14 @@ export function buildChunkId({ board, grade, subject, chapterNumber, chunkOrder 
  * Checks ChromaDB for existing chunk IDs and returns only new/unstored chunks.
  * Saves Gemini embedding API costs when re-running ingestion.
  */
-export async function filterExistingChunks({ board, grade, subject, chapterNumber, chunks }) {
+export async function filterExistingChunks({ board, grade, subject, bookName, chapterNumber, chunks }) {
   if (!chunks || chunks.length === 0) return { chunksToEmbed: [], existingCount: 0 };
 
   try {
     const collection = await getOrGetCollection();
 
     const candidateIds = chunks.map((c) =>
-      buildChunkId({ board, grade, subject, chapterNumber, chunkOrder: c.chunkOrder })
+      buildChunkId({ board, grade, subject, bookName, chapterNumber, chunkOrder: c.chunkOrder })
     );
 
     const existingResult = await collection.get({ ids: candidateIds });
@@ -115,6 +125,7 @@ export async function storeChunks({
       board,
       grade,
       subject,
+      bookName,
       chapterNumber,
       chunkOrder: chunk.chunkOrder,
     });

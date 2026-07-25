@@ -21,8 +21,8 @@ export function scanBooks(booksDir) {
         walk(fullPath);
       } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".pdf")) {
         // Resolve relative path from booksDir to extract board/grade/subject
-        const relPath = path.relative(booksDir, fullPath);
-        const parts = relPath.split(path.sep);
+        const relPath = path.relative(booksDir, fullPath).replace(/\\/g, "/");
+        const parts = relPath.split("/");
 
         // Expected structure:
         // Case A: {board}/{grade}/{subject}/{filename.pdf}
@@ -48,6 +48,7 @@ export function scanBooks(booksDir) {
             subject,
             pdfPath: fullPath,
             filename,
+            relPath,
           });
         }
       }

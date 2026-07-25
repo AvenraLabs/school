@@ -11,8 +11,9 @@ import { upsertTextbookChapter } from "./upsertTextbookChapter.js";
  * Writes chapter metadata → PostgreSQL (textbook_chapters)
  * Writes chunk text + embeddings → ChromaDB (textbook_chunks)
  */
-export async function ingestBook({ board, grade, subject, pdfPath, filename }) {
-  console.log(`[RAG Ingest] Processing: ${board} / Grade ${grade} / ${subject} (${filename})...`);
+export async function ingestBook({ board, grade, subject, pdfPath, filename, relPath }) {
+  const bookIdentifier = relPath || filename;
+  console.log(`[RAG Ingest] Processing: ${board} / Grade ${grade} / ${subject} (${bookIdentifier})...`);
 
   // Step 1: Parse PDF text page by page using PyMuPDF
   const rawPages = await parsePdf(pdfPath);
@@ -43,7 +44,7 @@ export async function ingestBook({ board, grade, subject, pdfPath, filename }) {
       subject,
       chapterNumber: vChap.chapterNumber,
       chapterTitle: vChap.chapterTitle,
-      bookName: filename,
+      bookName: bookIdentifier,
     });
 
     // Step 5: Chunk text (chunk_size=700, chunk_overlap=100)
@@ -55,6 +56,7 @@ export async function ingestBook({ board, grade, subject, pdfPath, filename }) {
       board,
       grade,
       subject,
+      bookName: bookIdentifier,
       chapterNumber: vChap.chapterNumber,
       chunks,
     });
@@ -78,7 +80,7 @@ export async function ingestBook({ board, grade, subject, pdfPath, filename }) {
       subject,
       chapterNumber: vChap.chapterNumber,
       chapterTitle: vChap.chapterTitle,
-      bookName: filename,
+      bookName: bookIdentifier,
       chunks: chunksToEmbed,
       embeddings,
     });

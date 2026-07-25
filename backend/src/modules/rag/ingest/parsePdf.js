@@ -10,8 +10,7 @@ const SCRIPT_PATH = path.join(__dirname, "parse_pdf.py");
  * Parses PDF file using PyMuPDF (fitz) via python child process.
  * Extracts page text and page number.
  * Returns array of pages: [{ pageNumber: 1, text: "..." }]
- *
- * // TODO: OCR support if needed in future for scanned image PDFs
+ * Includes automatic OCR fallback for scanned image PDFs using Tesseract.
  */
 export function parsePdf(pdfPath) {
   return new Promise((resolve, reject) => {
