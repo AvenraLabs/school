@@ -1,18 +1,5 @@
 import { getAiClient, getEmbeddingModel } from "../shared/aiClient.js";
 
-/**
- * Batches embedding requests to Gemini API using gemini-embedding-001.
- * 
- * Best Practices Implemented:
- * 1. Native SDK Batching: Passes an array of texts to contents: batchTexts.
- *    Verified: @google/genai returns res.embeddings array with matching length in 1 API call.
- * 2. Strict Length Verification: Throws an error if returned embedding count !== input batch length.
- * 3. Abort On Failure with Batch Context: Throws detailed error including batch numbers (e.g. Batch 12/143).
- * 4. Resilient Retry Parsing, Exponential Backoff & Jitter:
- *    - Parses retryDelay from JSON/error strings.
- *    - Adds random jitter (0-1000ms) to prevent thundering herd when workers retry.
- *    - Pauses 1000ms between batches to respect free-tier RPM (100 req/min).
- */
 export async function embedChunks(texts, batchSize = 30) {
   if (!Array.isArray(texts) || texts.length === 0) return [];
 

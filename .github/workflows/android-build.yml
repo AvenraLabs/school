@@ -1,9 +1,12 @@
 name: Build Android APK
 
 on:
-  push:
-    branches: [ main, master ]
+  # Trigger manually via GitHub Actions tab ("Run workflow" button)
   workflow_dispatch:
+  # Or automatically when you push a release tag (e.g. git tag v1.0.0 && git push origin v1.0.0)
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   build-apk:

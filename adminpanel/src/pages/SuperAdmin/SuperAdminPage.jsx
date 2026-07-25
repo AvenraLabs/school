@@ -277,6 +277,7 @@ export function SuperAdminPage() {
     try {
       await schoolAPI.update(showEditSchool.id, {
         school_name: form.name,
+        board: form.board,
         address: form.address,
         city: form.city,
         state: form.state,
@@ -441,6 +442,7 @@ export function SuperAdminPage() {
                     const sch = schools[0];
                     setForm({
                       name: sch.school_name,
+                      board: sch.board || 'CBSE',
                       address: sch.address || '',
                       city: sch.city || '',
                       state: sch.state || '',
@@ -484,6 +486,10 @@ export function SuperAdminPage() {
                           <span className="text-base font-bold text-slate-800">{schools[0].school_name}</span>
                         </div>
                         <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150">
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Educational Board</span>
+                          <span className="text-base font-bold text-indigo-600">{schools[0].board || 'CBSE'}</span>
+                        </div>
+                        <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-100/80 hover:bg-slate-50 transition-colors duration-150 sm:col-span-2">
                           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Email Address</span>
                           <span className="text-base font-bold text-slate-800">{schools[0].email || '—'}</span>
                         </div>
@@ -795,6 +801,14 @@ export function SuperAdminPage() {
             <div>
               <label className="label">School Name *</label>
               <input className="input-field" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="e.g. Delhi Public School" />
+            </div>
+            <div>
+              <label className="label">Educational Board *</label>
+              <select className="select-field" value={form.board || 'CBSE'} onChange={e => setForm({...form, board: e.target.value})}>
+                <option value="CBSE">CBSE (Central Board of Secondary Education)</option>
+                <option value="STATEBOARD">STATEBOARD (State Board)</option>
+                <option value="ICSE">ICSE</option>
+              </select>
             </div>
             <div>
               <label className="label">Email Address</label>

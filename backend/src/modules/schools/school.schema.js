@@ -14,6 +14,7 @@ export const resetSchoolAdminPasswordSchema = z.object({
 
 export const updateSchoolSchema = z.object({
   school_name: z.string().min(1).optional(),
+  board: z.enum(["CBSE", "STATEBOARD", "ICSE"]).or(z.string()).optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),

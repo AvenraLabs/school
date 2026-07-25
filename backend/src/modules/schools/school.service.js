@@ -244,10 +244,14 @@ export const updateSchoolService = async (school_id, payload) => {
 /* =========================
    SCHOOL ADMIN: UPDATE SETTINGS
    ========================= */
-export const updateSchoolSettingsService = async (school_id, { risk_attendance_cutoff, risk_academic_cutoff, risk_grade_drop_margin }) => {
+export const updateSchoolSettingsService = async (school_id, { board, risk_attendance_cutoff, risk_academic_cutoff, risk_grade_drop_margin }) => {
   const school = await School.findByPk(school_id);
   if (!school) {
     throw new AppError("School not found", 404);
+  }
+
+  if (board) {
+    school.board = String(board).trim().toUpperCase();
   }
 
   if (risk_attendance_cutoff !== undefined) {
