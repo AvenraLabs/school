@@ -9,7 +9,7 @@ export function getAiClient() {
   if (!aiClientInstance) {
     const isVertex = process.env.USE_VERTEX_AI !== "false";
     const project = process.env.GCP_PROJECT || process.env.VERTEX_PROJECT || "project-d2ca0237-4057-4b38-b48";
-    const location = process.env.GCP_LOCATION || process.env.VERTEX_LOCATION || "asia-south1";
+    const location = process.env.GCP_LOCATION || process.env.VERTEX_LOCATION || "us-central1";
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (isVertex && project) {
@@ -27,7 +27,7 @@ export function getAiClient() {
       aiClientInstance = new GoogleGenAI({
         vertexai: true,
         project: "project-d2ca0237-4057-4b38-b48",
-        location: "asia-south1",
+        location: "us-central1",
       });
     }
   }
