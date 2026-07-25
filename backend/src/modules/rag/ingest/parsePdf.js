@@ -13,9 +13,10 @@ const SCRIPT_PATH = path.join(__dirname, "parse_pdf.py");
  * Includes automatic OCR fallback for scanned image PDFs using Tesseract.
  */
 export function parsePdf(pdfPath) {
+  const pythonCmd = process.env.PYTHON_CMD || (process.platform === "win32" ? "python" : "python3");
   return new Promise((resolve, reject) => {
     execFile(
-      "python3",
+      pythonCmd,
       [SCRIPT_PATH, pdfPath],
       { maxBuffer: 50 * 1024 * 1024, encoding: "utf-8" },
       (error, stdout, stderr) => {
