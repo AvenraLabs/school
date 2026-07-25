@@ -38,6 +38,7 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import BottomNav from "../components/BottomNav";
+import SiblingSelector from "../components/SiblingSelector";
 import api from "../api/axios";
 
 /* =========================================================
@@ -424,6 +425,7 @@ function DriverDashboard() {
               {vehicle ? `${vehicle.vehicle_name} (${vehicle.vehicle_number})` : "No Bus Assigned"}
             </Typography>
           </Box>
+          <SiblingSelector />
           {activeTrip && (
             <Chip
               label="Live"

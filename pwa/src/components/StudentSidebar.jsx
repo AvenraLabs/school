@@ -23,6 +23,7 @@ import {
   LocalLibrary,
   OndemandVideo,
   Person,
+  Chat,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
@@ -54,8 +55,9 @@ export default function StudentSidebar({ open, onClose }) {
   ];
 
   const schoolLifeItems = [
-    { label: "Lost & Found", icon: <Search />,        path: "/student/lost-found" },
     { label: "My Bus",       icon: <DirectionsBus />, path: "/student/transport" },
+    { label: "Group Chat",   icon: <Chat />,          path: "/student/group-chat" },
+    { label: "Lost & Found", icon: <Search />,        path: "/student/lost-found" },
   ];
 
   const handleNavigate = (path) => {
@@ -130,7 +132,7 @@ export default function StudentSidebar({ open, onClose }) {
           <ListItem key={item.label} disablePadding>
             <ListItemButton
               onClick={() => handleNavigate(item.path)}
-              sx={{ borderRadius: "10px", mx: 0.5, my: 0.2 }}
+              sx={{ borderRadius: "10px", mx: 1, my: 0.4, py: 0.8 }}
             >
               <ListItemIcon sx={{ minWidth: 38, color: "primary.main" }}>
                 {item.icon}
@@ -151,7 +153,7 @@ export default function StudentSidebar({ open, onClose }) {
           <ListItem key={item.label} disablePadding>
             <ListItemButton
               onClick={() => handleNavigate(item.path)}
-              sx={{ borderRadius: "10px", mx: 0.5, my: 0.2 }}
+              sx={{ borderRadius: "10px", mx: 1, my: 0.4, py: 0.8 }}
             >
               <ListItemIcon sx={{ minWidth: 38, color: "primary.main" }}>
                 {item.icon}

@@ -9,6 +9,7 @@ import {
   AutoAwesome,
   Menu as MenuIcon,
   Person,
+  DirectionsBus,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
@@ -37,11 +38,11 @@ export default function BottomNav() {
 
   const navItems = {
     student: [
-      { label: "Home",    icon: <Home />,      path: `${base}/dashboard` },
-      { label: "Quiz",    icon: <Quiz />,      path: `${base}/quiz` },
-      { label: "AI Chat", icon: <SmartToy />,  path: `${base}/ai-chat` },
-      { label: "Chat",    icon: <Chat />,      path: `${base}/group-chat` },
-      { label: "Menu",    icon: <MenuIcon />,  path: "toggle-sidebar", isSidebarToggle: true },
+      { label: "Home",    icon: <Home />,          path: `${base}/dashboard` },
+      { label: "Quiz",    icon: <Quiz />,          path: `${base}/quiz` },
+      { label: "AI Chat", icon: <SmartToy />,      path: `${base}/ai-chat` },
+      { label: "My Bus",  icon: <DirectionsBus />, path: `${base}/transport` },
+      { label: "Menu",    icon: <MenuIcon />,      path: "toggle-sidebar", isSidebarToggle: true },
     ],
     teacher: [
       { label: "Home",       icon: <Home />,        path: `${base}/dashboard` },

@@ -32,7 +32,12 @@ export default function SiblingSelector() {
     try {
       switchAccount(userId);
       const targetUser = accounts.find((a) => String(a.user.id) === String(userId))?.user;
-      const basePath = targetUser?.role === "teacher" ? "/teacher" : "/student";
+      const basePath =
+        targetUser?.role === "teacher"
+          ? "/teacher"
+          : targetUser?.role === "driver"
+            ? "/driver"
+            : "/student";
       navigate(`${basePath}/dashboard`, { replace: true });
       window.location.reload(); // Hard refresh to re-hydrate profile
     } catch (e) {
@@ -96,7 +101,15 @@ export default function SiblingSelector() {
             </ListItemAvatar>
             <ListItemText
               primary={acc.user.name || acc.user.username || "User"}
-              secondary={acc.user.role === "student" ? "Student" : "Teacher"}
+              secondary={
+                acc.user.role === "student"
+                  ? "Student"
+                  : acc.user.role === "teacher"
+                    ? "Teacher"
+                    : acc.user.role === "driver"
+                      ? "Driver"
+                      : "User"
+              }
               primaryTypographyProps={{ variant: "body2", fontWeight: 600 }}
               secondaryTypographyProps={{ variant: "caption" }}
             />

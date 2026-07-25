@@ -125,7 +125,7 @@ export default function TeacherSidebar({ open, onClose }) {
           <ListItem key={item.label} disablePadding>
             <ListItemButton
               onClick={() => handleNavigate(item.path)}
-              sx={{ borderRadius: "10px", mx: 0.5, my: 0.2 }}
+              sx={{ borderRadius: "10px", mx: 1, my: 0.4, py: 0.8 }}
             >
               <ListItemIcon sx={{ minWidth: 38, color: "primary.main" }}>
                 {item.icon}
@@ -146,7 +146,7 @@ export default function TeacherSidebar({ open, onClose }) {
           <ListItem key={item.label} disablePadding>
             <ListItemButton
               onClick={() => handleNavigate(item.path)}
-              sx={{ borderRadius: "10px", mx: 0.5, my: 0.2 }}
+              sx={{ borderRadius: "10px", mx: 1, my: 0.4, py: 0.8 }}
             >
               <ListItemIcon sx={{ minWidth: 38, color: "primary.main" }}>
                 {item.icon}
