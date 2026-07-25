@@ -1,6 +1,6 @@
 import sys
 import json
-import fitz  # PyMuPDF
+import pymupdf as fitz  # PyMuPDF
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
