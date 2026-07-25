@@ -1,0 +1,6 @@
+{
+  "appId": "com.schooliq.driver",
+  "appName": "SchoolIQ Driver",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

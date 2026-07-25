@@ -27,7 +27,8 @@ import {
   ChangeCircle,
   Warning,
   CheckCircle,
-  Info
+  Info,
+  MyLocation
 } from "@mui/icons-material";
 import api from "../../api/axios";
 import { connectTransportSocket } from "./transport.socket";
@@ -55,6 +56,13 @@ export default function StudentTransportPage() {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
+
+  // Enhanced Leaflet Map State for World-Class UX
+  const routePointsRef = useRef([]);
+  const busMarkerRef = useRef(null);
+  const routePolylineRef = useRef(null);
+  const startMarkerRef = useRef(null);
+  const userInteractedRef = useRef(false);
 
   const studentId = user?.student_id;
 
@@ -235,80 +243,158 @@ export default function StudentTransportPage() {
           content: `<b>${transportInfo.vehicle?.vehicle_name || "Bus"}</b><br/>Driver: ${transportInfo.vehicle?.driver?.user?.name || "Driver"}`,
         });
         infoWindow.open(mapRef.current, marker);
-        marker.addListener("click", () => {
-          infoWindow.open(mapRef.current, marker);
-        });
-      } else {
-        mapRef.current.setCenter({ lat, lng });
-        if (markerRef.current) {
-          markerRef.current.setPosition({ lat, lng });
-        }
       }
     } else {
       const L = window.L;
-      if (!L) return;
+      if (!L || !mapContainerRef.current) return;
 
-      const busIcon = L.divIcon({
-        html: `
+    const lat = Number(gpsLocation.latitude);
+    const lng = Number(gpsLocation.longitude);
+    const heading = Number(gpsLocation.heading || 0);
+
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    const newPt = [lat, lng];
+
+    // Maintain route history
+    if (
+      routePointsRef.current.length === 0 ||
+      routePointsRef.current[routePointsRef.current.length - 1][0] !== lat ||
+      routePointsRef.current[routePointsRef.current.length - 1][1] !== lng
+    ) {
+      routePointsRef.current.push(newPt);
+    }
+
+    const startPt = routePointsRef.current[0] || newPt;
+
+    // Bus DivIcon with heading rotation & pulse ring
+    const busIcon = L.divIcon({
+      html: `
+        <div style="
+          position: relative;
+          width: 42px;
+          height: 42px;
+          background: #1976d2;
+          border: 3px solid #ffffff;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 14px rgba(25,118,210,0.4);
+          transform: rotate(${heading}deg);
+          transition: transform 0.4s ease;
+        ">
           <div style="
-            position: relative;
-            width: 36px;
-            height: 36px;
-            background: #1976d2;
-            border: 2px solid #ffffff;
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            width: 44px;
+            height: 44px;
+            border: 2px solid #1976d2;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-          ">
-            <div style="
-              position: absolute;
-              top: -2px;
-              left: -2px;
-              width: 36px;
-              height: 36px;
-              border: 2px solid #1976d2;
-              border-radius: 50%;
-              animation: marker-pulse 1.8s infinite ease-out;
-              pointer-events: none;
-            "></div>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="#ffffff">
-              <path d="M4 16c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h10v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-3.5c0-3.5-3.58-4.5-8-4.5s-8 1-8 4.5V16zm1.5-4c-.83 0-1.5-.67-1.5-1.5S4.67 9 5.5 9 7 9.67 7 10.5 6.33 12 5.5 12zm13 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM18 4H6V2h12v2z"/>
-            </svg>
-          </div>
-        `,
-        className: 'custom-bus-marker',
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-        popupAnchor: [0, -18]
+            animation: marker-pulse 1.8s infinite ease-out;
+            pointer-events: none;
+          "></div>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="#ffffff">
+            <path d="M4 16c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h10v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-3.5c0-3.5-3.58-4.5-8-4.5s-8 1-8 4.5V16zm1.5-4c-.83 0-1.5-.67-1.5-1.5S4.67 9 5.5 9 7 9.67 7 10.5 6.33 12 5.5 12zm13 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM18 4H6V2h12v2z"/>
+          </svg>
+        </div>
+      `,
+      className: "custom-bus-marker",
+      iconSize: [42, 42],
+      iconAnchor: [21, 21]
+    });
+
+    const startIcon = L.divIcon({
+      html: `
+        <div style="
+          width: 26px;
+          height: 26px;
+          background: #10b981;
+          border: 2px solid #ffffff;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: 800;
+          font-size: 11px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        ">A</div>
+      `,
+      className: "start-point-marker",
+      iconSize: [26, 26],
+      iconAnchor: [13, 13]
+    });
+
+    // Check saved viewport memory
+    const savedZoom = localStorage.getItem("parent_map_zoom")
+      ? Number(localStorage.getItem("parent_map_zoom"))
+      : 15;
+
+    if (!mapRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        zoomControl: false,
+        attributionControl: false
+      }).setView(newPt, savedZoom);
+
+      mapRef.current = map;
+
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        maxZoom: 20
+      }).addTo(map);
+
+      // Listen to user map move/zoom to save viewport state to localStorage
+      map.on("zoomend", () => {
+        localStorage.setItem("parent_map_zoom", map.getZoom());
       });
 
-      if (!mapRef.current) {
-        const map = L.map(mapContainerRef.current).setView([lat, lng], 15);
-        mapRef.current = map;
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-          subdomains: 'abcd',
-          maxZoom: 20
-        }).addTo(map);
-        
-        L.marker([lat, lng], { icon: busIcon })
-          .addTo(map)
-          .bindPopup(`<b>${transportInfo.vehicle?.vehicle_name || "Bus"}</b><br/>Driver: ${transportInfo.vehicle?.driver?.user?.name || "Driver"}`)
-          .openPopup();
-      } else {
-        mapRef.current.setView([lat, lng]);
-        mapRef.current.eachLayer((layer) => {
-          if (layer instanceof L.Marker) mapRef.current.removeLayer(layer);
-        });
-        L.marker([lat, lng], { icon: busIcon })
-          .addTo(mapRef.current)
-          .bindPopup(`<b>${transportInfo.vehicle?.vehicle_name || "Bus"}</b><br/>Driver: ${transportInfo.vehicle?.driver?.user?.name || "Driver"}`)
-          .openPopup();
+      map.on("dragstart", () => {
+        userInteractedRef.current = true;
+      });
+
+      // Start point marker
+      startMarkerRef.current = L.marker(startPt, { icon: startIcon }).addTo(map).bindPopup("Trip Started Here");
+
+      // Bus marker
+      busMarkerRef.current = L.marker(newPt, { icon: busIcon })
+        .addTo(map)
+        .bindPopup(`<b>${transportInfo?.vehicle?.vehicle_name || "Bus"}</b><br/>Driver: ${transportInfo?.vehicle?.driver?.user?.name || "Driver"}`);
+
+      // Polyline route trail
+      routePolylineRef.current = L.polyline(routePointsRef.current, {
+        color: "#1976d2",
+        weight: 5,
+        opacity: 0.85,
+        lineCap: "round"
+      }).addTo(map);
+    } else {
+      // Update markers and polyline
+      if (busMarkerRef.current) {
+        busMarkerRef.current.setLatLng(newPt);
+        busMarkerRef.current.setIcon(busIcon);
+      }
+
+      if (routePolylineRef.current) {
+        routePolylineRef.current.setLatLngs(routePointsRef.current);
+      }
+
+      // Smoothly follow bus only if parent has not dragged away
+      if (!userInteractedRef.current) {
+        mapRef.current.panTo(newPt, { animate: true, duration: 0.8 });
       }
     }
+  }
   }, [mapsLoaded, gpsLocation, transportInfo, googleMapsEnabled]);
+
+  const handleRecenterBus = () => {
+    if (mapRef.current && gpsLocation) {
+      userInteractedRef.current = false;
+      const lat = Number(gpsLocation.latitude);
+      const lng = Number(gpsLocation.longitude);
+      mapRef.current.flyTo([lat, lng], 16, { duration: 1.2 });
+    }
+  };
 
   const fetchTransportInfo = async () => {
     if (!studentId) {
@@ -317,8 +403,9 @@ export default function StudentTransportPage() {
       try {
         const res = await api.get("/student/transport/me");
         if (res.data?.success && res.data.data) {
+          const hasApiKey = Boolean(import.meta.env.VITE_GOOGLE_MAPS_KEY);
           setTransportInfo(res.data.data);
-          setGoogleMapsEnabled(res.data.data.google_maps_enabled || false);
+          setGoogleMapsEnabled(hasApiKey && (res.data.data.google_maps_enabled || false));
         }
       } catch (e) {
         console.error(e);
@@ -339,9 +426,10 @@ export default function StudentTransportPage() {
       // Use the richer live response if available, else fallback to /me
       if (liveRes?.data?.success && liveRes.data.data) {
         const { transport, active_trip, google_maps_enabled } = liveRes.data.data;
+        const hasApiKey = Boolean(import.meta.env.VITE_GOOGLE_MAPS_KEY);
         setTransportInfo(transport);
         setActiveTrip(active_trip);
-        setGoogleMapsEnabled(google_maps_enabled || false);
+        setGoogleMapsEnabled(hasApiKey && (google_maps_enabled || false));
 
         // If there is an active trip, fetch its GPS location in the background
         if (active_trip) {
@@ -354,8 +442,9 @@ export default function StudentTransportPage() {
             .catch(() => {/* ignore — location is optional */});
         }
       } else if (transportRes?.data?.success && transportRes.data.data) {
+        const hasApiKey = Boolean(import.meta.env.VITE_GOOGLE_MAPS_KEY);
         setTransportInfo(transportRes.data.data);
-        setGoogleMapsEnabled(transportRes.data.data.google_maps_enabled || false);
+        setGoogleMapsEnabled(hasApiKey && (transportRes.data.data.google_maps_enabled || false));
       }
     } catch (e) {
       console.error(e);
@@ -527,10 +616,36 @@ export default function StudentTransportPage() {
                   </Typography>
                 </Box>
               ) : (
-                <div
-                  ref={mapContainerRef}
-                  style={{ height: "260px", width: "100%", borderRadius: "12px", border: "1px solid #e2e8f0", marginTop: "16px" }}
-                ></div>
+                <Box sx={{ position: "relative", mt: 2 }}>
+                  <div
+                    ref={mapContainerRef}
+                    style={{ height: "280px", width: "100%", borderRadius: "14px", border: "1px solid #e2e8f0" }}
+                  ></div>
+
+                  {/* Floating Target Bus Re-center Button */}
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<MyLocation sx={{ fontSize: 16 }} />}
+                    onClick={handleRecenterBus}
+                    sx={{
+                      position: "absolute",
+                      bottom: 12,
+                      right: 12,
+                      zIndex: 1000,
+                      borderRadius: "20px",
+                      bgcolor: "#ffffff",
+                      color: "#1976d2",
+                      fontWeight: 800,
+                      fontSize: "12px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                      textTransform: "none",
+                      "&:hover": { bgcolor: "#f8fafc" }
+                    }}
+                  >
+                    Target Bus
+                  </Button>
+                </Box>
               )}
             </Card>
           ) : (

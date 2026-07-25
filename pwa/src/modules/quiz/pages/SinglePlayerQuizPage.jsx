@@ -13,7 +13,8 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Chip
 } from "@mui/material";
 import { EmojiEvents, School, ArrowBack } from "@mui/icons-material";
 import { generateQuiz, startSingleQuiz, submitSingleQuiz } from "../api/quiz.api";

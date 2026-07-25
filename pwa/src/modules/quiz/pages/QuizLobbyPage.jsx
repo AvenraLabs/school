@@ -213,7 +213,13 @@ export default function QuizLobbyPage() {
                         <Stack spacing={1.5}>
                             {players.map((p, idx) => {
                                 const isCurrentUser = String(p.userId) === String(user?.id);
-                                const initial = p.name?.[0]?.toUpperCase() || "?";
+                                const displayName = isCurrentUser
+                                    ? (user?.name || user?.username || (p.name && p.name !== "Player" ? p.name : null) || "Player")
+                                    : (p.name || "Player");
+                                const avatarSrc = isCurrentUser
+                                    ? (user?.avatar_url || p.avatar_url)
+                                    : p.avatar_url;
+                                const initial = displayName?.[0]?.toUpperCase() || "?";
                                 return (
                                     <Box
                                         key={p.userId || idx}
@@ -230,8 +236,8 @@ export default function QuizLobbyPage() {
                                         }}
                                     >
                                         <Avatar
-                                            src={getAssetUrl(p.avatar_url)}
-                                            alt={p.name}
+                                            src={getAssetUrl(avatarSrc)}
+                                            alt={displayName}
                                             sx={{
                                                 width: 42,
                                                 height: 42,
@@ -252,7 +258,7 @@ export default function QuizLobbyPage() {
                                                     noWrap
                                                     sx={{ fontSize: 14, color: "text.primary" }}
                                                 >
-                                                    {p.name || "Player"}
+                                                    {displayName}
                                                 </Typography>
                                                 {isCurrentUser && (
                                                     <Chip

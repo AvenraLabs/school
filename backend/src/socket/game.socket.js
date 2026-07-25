@@ -238,26 +238,29 @@ export function initGameSocket(io) {
           session_id: sessionId,
           status: { [Op.ne]: "DISCONNECTED" },
         },
-        include: [{ model: User, attributes: ["id", "name", "avatar_url"] }],
+        include: [{ model: User, attributes: ["id", "name", "username", "avatar_url"] }],
         attributes: ["id", "is_host", "user_id"],
       });
 
       socket.emit("quiz:players_list", {
-        players: allActivePlayers.map((p) => ({
-          userId: p.user_id,
-          name: p.User?.name || "Player",
-          avatar_url: p.User?.avatar_url || null,
-          isHost: Boolean(p.is_host),
-        })),
+        players: allActivePlayers.map((p) => {
+          const u = p.user || p.User;
+          return {
+            userId: p.user_id,
+            name: u?.name || u?.username || "Player",
+            avatar_url: u?.avatar_url || null,
+            isHost: Boolean(p.is_host),
+          };
+        }),
       });
 
       // Broadcast new joiner to everyone else in room
       const joiningUser = await User.findByPk(socket.user.id, {
-        attributes: ["id", "name", "avatar_url"],
+        attributes: ["id", "name", "username", "avatar_url"],
       });
       socket.to(`quiz:${sessionId}`).emit("quiz:player_joined", {
         userId: socket.user.id,
-        name: joiningUser?.name || "Player",
+        name: joiningUser?.name || joiningUser?.username || "Player",
         avatar_url: joiningUser?.avatar_url || null,
         isHost: Boolean(player.is_host || isHostUser),
       });

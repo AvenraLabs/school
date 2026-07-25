@@ -220,8 +220,12 @@ export default function QuizResultPage() {
           <Stack spacing={1.5}>
             {uniqueLeaderboard.map((player, idx) => {
               const u = player.user || player.User;
-              const isMe = u?.id === user?.id;
+              const isMe = String(u?.id || player.user_id) === String(user?.id);
               const isTop3 = idx < 3;
+              const displayName = isMe
+                ? (user?.name || user?.username || u?.name || u?.username || "Player")
+                : (u?.name || u?.username || "Player");
+              const avatarSrc = isMe ? (user?.avatar_url || u?.avatar_url) : u?.avatar_url;
 
               return (
                 <Box
@@ -253,7 +257,7 @@ export default function QuizResultPage() {
                   </Typography>
 
                   <Avatar
-                    src={getAssetUrl(u?.avatar_url) || ""}
+                    src={getAssetUrl(avatarSrc) || ""}
                     sx={{
                       width: 36,
                       height: 36,
@@ -265,7 +269,7 @@ export default function QuizResultPage() {
                       flexShrink: 0,
                     }}
                   >
-                    {u?.name?.[0]?.toUpperCase() || "?"}
+                    {displayName?.[0]?.toUpperCase() || "?"}
                   </Avatar>
 
                   <Typography
@@ -280,7 +284,7 @@ export default function QuizResultPage() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {u?.name || "Player"}
+                    {displayName}
                     {isMe && (
                       <Typography
                         component="span"

@@ -8,6 +8,7 @@ import {
   Book,
   AutoAwesome,
   Menu as MenuIcon,
+  Person,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
@@ -50,8 +51,8 @@ export default function BottomNav() {
       { label: "Menu",       icon: <MenuIcon />,    path: "toggle-sidebar", isSidebarToggle: true },
     ],
     driver: [
-      { label: "Home", icon: <Home />,     path: `${base}/dashboard` },
-      { label: "Menu", icon: <MenuIcon />, path: "toggle-sidebar", isSidebarToggle: true },
+      { label: "Home",    icon: <Home />,   path: `${base}/dashboard` },
+      { label: "Profile", icon: <Person />, path: `${base}/profile` },
     ],
   };
 
