@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SchoolIQ</string>
+    <string name="title_activity_main">SchoolIQ</string>
+    <string name="package_name">com.schooliq.app</string>
+    <string name="custom_url_scheme">com.schooliq.app</string>
+</resources>

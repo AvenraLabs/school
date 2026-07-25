@@ -39,6 +39,7 @@ import {
 import { useAuth } from "../auth/AuthProvider";
 import BottomNav from "../components/BottomNav";
 import SiblingSelector from "../components/SiblingSelector";
+import { Geolocation } from "@capacitor/geolocation";
 import api from "../api/axios";
 
 /* =========================================================
@@ -190,41 +191,32 @@ function DriverDashboard() {
       setLastSyncSeconds((s) => (s !== null ? s + 1 : null));
     }, 1000);
 
-    // Check if Capacitor native background geolocation is available
-    if (window.Capacitor && window.Capacitor.isPluginAvailable("BackgroundGeolocation")) {
+    // Check if Capacitor native Geolocation plugin is available
+    if (window.Capacitor && window.Capacitor.isPluginAvailable("Geolocation")) {
       try {
-        const BG = window.Capacitor.Plugins.BackgroundGeolocation;
         setIsNativeBackground(true);
-
-        BG.addWatcher(
-          {
-            backgroundMessage: "Sharing live bus location.",
-            backgroundTitle: "SchoolIQ Bus Tracking",
-            requestPermissions: true,
-            stale: false,
-            distanceFilter: 10
-          },
-          (location, error) => {
+        const watchId = await Geolocation.watchPosition(
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 },
+          (position, error) => {
             if (error) {
-              console.error("Background GPS Error", error);
+              console.error("Capacitor GPS Error", error);
               return;
             }
-            if (location) {
+            if (position?.coords) {
               handleNewLocation(
                 tripId,
-                location.latitude,
-                location.longitude,
-                location.speed ? location.speed * 3.6 : 0,
-                location.bearing || 0
+                position.coords.latitude,
+                position.coords.longitude,
+                position.coords.speed ? position.coords.speed * 3.6 : 0,
+                position.coords.heading || 0
               );
             }
           }
-        ).then((watcherId) => {
-          watchIdRef.current = watcherId;
-        });
+        );
+        watchIdRef.current = watchId;
         return;
       } catch (err) {
-        console.warn("Capacitor BG plugin fallback to HTML5", err);
+        console.warn("Capacitor Geolocation fallback", err);
       }
     }
 
@@ -273,16 +265,14 @@ function DriverDashboard() {
 
   const stopGpsWatch = async () => {
     if (watchIdRef.current) {
-      if (isNativeBackground && window.Capacitor?.Plugins?.BackgroundGeolocation) {
-        try {
-          await window.Capacitor.Plugins.BackgroundGeolocation.removeWatcher({
-            id: watchIdRef.current
-          });
-        } catch (e) {
-          console.error(e);
+      try {
+        if (isNativeBackground && window.Capacitor?.isPluginAvailable?.("Geolocation")) {
+          await Geolocation.clearWatch({ id: watchIdRef.current });
+        } else if (navigator.geolocation) {
+          navigator.geolocation.clearWatch(watchIdRef.current);
         }
-      } else if (navigator.geolocation) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
+      } catch (e) {
+        console.error(e);
       }
       watchIdRef.current = null;
     }

@@ -37,6 +37,9 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       "http://localhost:5173",
       "http://localhost:5174",
       "http://localhost:5175",
+      "http://localhost",
+      "https://localhost",
+      "capacitor://localhost",
       "https://app.avenra.org",
       "https://admin.avenra.org",
     ];
@@ -47,7 +50,12 @@ const io = new Server(httpServer, {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes("*")) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1) {
+      if (
+        allowedOrigins.indexOf(origin) !== -1 ||
+        origin.startsWith("http://localhost") ||
+        origin.startsWith("https://localhost") ||
+        origin.startsWith("capacitor://")
+      ) {
         return callback(null, true);
       } else {
         return callback(new Error("Not allowed by CORS"));
@@ -69,7 +77,12 @@ app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes("*")) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (
+      allowedOrigins.indexOf(origin) !== -1 ||
+      origin.startsWith("http://localhost") ||
+      origin.startsWith("https://localhost") ||
+      origin.startsWith("capacitor://")
+    ) {
       return callback(null, true);
     } else {
       return callback(new Error("Not allowed by CORS"));
