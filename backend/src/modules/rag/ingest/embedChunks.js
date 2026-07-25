@@ -2,60 +2,119 @@ import { getAiClient, getEmbeddingModel } from "../shared/aiClient.js";
 
 /**
  * Batches embedding requests to Gemini API using gemini-embedding-001.
- * Limits concurrency (max 5 at a time) and includes retries to prevent Gemini rate-limit failures.
+ * 
+ * Best Practices Implemented:
+ * 1. Native SDK Batching: Passes an array of texts to contents: batchTexts.
+ *    Verified: @google/genai returns res.embeddings array with matching length in 1 API call.
+ * 2. Strict Length Verification: Throws an error if returned embedding count !== input batch length.
+ * 3. Abort On Failure with Batch Context: Throws detailed error including batch numbers (e.g. Batch 12/143).
+ * 4. Resilient Retry Parsing, Exponential Backoff & Jitter:
+ *    - Parses retryDelay from JSON/error strings.
+ *    - Adds random jitter (0-1000ms) to prevent thundering herd when workers retry.
+ *    - Pauses 1000ms between batches to respect free-tier RPM (100 req/min).
  */
-export async function embedChunks(texts, concurrency = 5) {
+export async function embedChunks(texts, batchSize = 30) {
   if (!Array.isArray(texts) || texts.length === 0) return [];
 
   const ai = getAiClient();
   const EMBEDDING_MODEL = getEmbeddingModel();
   const allEmbeddings = [];
+  const totalBatches = Math.ceil(texts.length / batchSize);
 
-  // Helper to call embedContent with retries on 429 rate limit errors
-  async function embedWithRetry(text, retries = 3, delayMs = 1000) {
+  // Helper to embed a batch of texts in a single API call with retry/backoff & jitter
+  async function embedBatchWithRetry(batchTexts, batchLabel, retries = 3) {
+    let lastError = null;
+
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const res = await ai.models.embedContent({
           model: EMBEDDING_MODEL,
-          contents: text,
+          contents: batchTexts,
         });
 
-        return (
-          res.embedding?.values ||
-          res.embeddings?.[0]?.values ||
-          res.values ||
-          []
-        );
+        // Extract array of embeddings matching the input batch order
+        let results = [];
+        if (res.embeddings && Array.isArray(res.embeddings)) {
+          results = res.embeddings.map((e) => e.values || []);
+        } else if (res.embedding?.values) {
+          results = [res.embedding.values];
+        } else if (res.values) {
+          results = [res.values];
+        }
+
+        // Verify count matches batch input count exactly
+        if (results.length !== batchTexts.length) {
+          throw new Error(
+            `Embedding count mismatch in Batch ${batchLabel}: expected ${batchTexts.length} embeddings but received ${results.length}`
+          );
+        }
+
+        return results;
       } catch (err) {
-        const isRateLimit = err.status === 429 || /resource exhausted|rate limit/i.test(err.message);
+        lastError = err;
+        const errMsg = err.message || JSON.stringify(err);
+        const isRateLimit =
+          err.status === 429 ||
+          /resource exhausted|rate limit|quota exceeded/i.test(errMsg);
+
         if (isRateLimit && attempt < retries) {
-          const wait = delayMs * Math.pow(2, attempt);
-          console.warn(`[embedChunks] Gemini rate limit hit. Retrying chunk in ${wait}ms (attempt ${attempt + 1}/${retries})...`);
-          await new Promise((r) => setTimeout(r, wait));
-        } else if (attempt === retries) {
-          console.error(`[embedChunks] Failed to embed chunk after ${retries} retries:`, err.message);
-          return [];
-        } else {
-          console.error(`[embedChunks] Embedding error:`, err.message);
-          return [];
+          // Parse explicit retry delay if returned by Gemini (e.g. "retry in 14s" or "retryDelay":"14s")
+          let waitMs = 15000 * Math.pow(2, attempt); // Default exponential backoff: 15s, 30s, 60s
+          const match =
+            errMsg.match(/retry in (\d+)\s*s/i) ||
+            errMsg.match(/retryDelay"?\s*:\s*"?(\d+)s/i) ||
+            errMsg.match(/retry after (\d+)\s*s/i);
+
+          if (match && match[1]) {
+            waitMs = (parseInt(match[1], 10) + 1) * 1000;
+          }
+
+          // Add random jitter (0 - 1000ms) to prevent simultaneous worker wake-ups
+          const jitter = Math.floor(Math.random() * 1000);
+          const totalWaitMs = waitMs + jitter;
+
+          console.warn(
+            `[embedChunks] Gemini 429 Rate limit hit on Batch ${batchLabel}. Waiting ${Math.round(
+              totalWaitMs / 1000
+            )}s before retry (Attempt ${attempt + 1}/${retries})...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, totalWaitMs));
+        } else if (!isRateLimit) {
+          // Fail fast on non-rate-limit errors
+          throw new Error(`[embedChunks] Non-retryable embedding error in Batch ${batchLabel}: ${err.message}`);
         }
       }
     }
-    return [];
+
+    // If retries exhausted, throw error to abort ingestion safely
+    throw new Error(
+      `[embedChunks] Failed to embed Batch ${batchLabel} (${batchTexts.length} chunks) after ${retries} retries: ${lastError?.message}`
+    );
   }
 
-  // Process in small batches of `concurrency` (5 at a time)
-  for (let i = 0; i < texts.length; i += concurrency) {
-    const chunkBatch = texts.slice(i, i + concurrency);
-    const results = await Promise.all(
-      chunkBatch.map((text) => embedWithRetry(text))
-    );
-    allEmbeddings.push(...results);
+  // Process texts in batches of batchSize (30 chunks per request)
+  for (let i = 0; i < texts.length; i += batchSize) {
+    const batchIndex = Math.floor(i / batchSize) + 1;
+    const batchLabel = `${batchIndex}/${totalBatches}`;
+    const batchTexts = texts.slice(i, i + batchSize);
 
-    // Subtle 100ms pause between batches to avoid spamming the API
-    if (i + concurrency < texts.length) {
-      await new Promise((r) => setTimeout(r, 100));
+    console.log(
+      `[embedChunks] Embedding Batch ${batchLabel} (${batchTexts.length} chunks in 1 API call)...`
+    );
+
+    const batchResults = await embedBatchWithRetry(batchTexts, batchLabel);
+    allEmbeddings.push(...batchResults);
+
+    // 1000ms pause between batch API requests for safe rate limit headroom
+    if (i + batchSize < texts.length) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
+  }
+
+  if (allEmbeddings.length !== texts.length) {
+    throw new Error(
+      `[embedChunks] Final embeddings count mismatch: expected ${texts.length}, got ${allEmbeddings.length}`
+    );
   }
 
   return allEmbeddings;
