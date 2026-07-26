@@ -159,13 +159,14 @@ export async function generateTeacherAiService({
   // Skip RAG for: language subjects, explicit skipRag flag, or subject 'other'
   const bypassRag = isLang || skipRag || finalSubject.toLowerCase() === "other";
 
-  if (!bypassRag && chapList.length > 0) {
+  if (!bypassRag && (chapList.length > 0 || topic)) {
     try {
       const ragRes = await getTeacherChapter({
         board: finalBoard,
         grade: finalGrade,
         subject: finalSubject,
         chapters: chapList,
+        topic,
       });
       textbookContext = ragRes.fullChapterText || "";
       chunksCount = ragRes.chunksCount || 0;

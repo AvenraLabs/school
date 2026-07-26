@@ -10,8 +10,7 @@ export async function detectChapters({ filename, pages, subject }) {
   const GEMINI_MODEL = getGeminiModel();
 
   const isSingleChapterFile =
-    /^(chap|chapter)[-_\s]*\d+/i.test(filename) ||
-    /^\d+[-_\s]/i.test(filename);
+    /^(chap|chapter|ch)[-_\s]*\d+/i.test(filename);
 
   // Case 1: Single Chapter PDF (e.g. Chap-4.pdf)
   if (isSingleChapterFile) {
@@ -66,13 +65,15 @@ ${sampleText}
 
   const tableOfContentsSample = pages
     .slice(0, 15)
-    .map((p) => `[Page ${p.pageNumber}]\n${p.text.slice(0, 400)}`)
+    .map((p) => `[Page ${p.pageNumber}]\n${p.text}`)
     .join("\n\n")
-    .slice(0, 6000);
+    .slice(0, 30000);
 
   const prompt = `
-Analyze this textbook sample text and extract all chapter/unit titles, chapter numbers, and their starting page numbers.
-Return ONLY a valid JSON array:
+Analyze this textbook sample text (Table of Contents) and extract EVERY chapter/unit title, chapter number, and starting page number.
+The JSON array MUST contain EVERY chapter/unit shown in the Table of Contents. Do not omit, skip, or truncate any chapter.
+
+Return ONLY a valid JSON array matching this exact format:
 [
   {
     "chapterNumber": 1,

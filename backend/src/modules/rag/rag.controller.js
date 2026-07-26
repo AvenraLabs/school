@@ -141,11 +141,29 @@ export const getCurriculumChapters = asyncHandler(async (req, res) => {
     raw: true,
   });
 
-  const chapters = rows.map((r) => ({
-    number: r.chapter_number,
-    title: r.chapter_title,
-    label: `Chapter ${r.chapter_number}: ${r.chapter_title}`,
-  }));
+  const seenKeys = new Set();
+  const chapters = [];
+
+  for (const r of rows) {
+    const rawTitle = String(r.chapter_title || "").trim();
+    const cleanTitle = rawTitle
+      .replace(/^(chapter|unit|chap|ch)\s*\d+[:\s\-\.]*/i, "")
+      .trim() || rawTitle || `Chapter ${r.chapter_number}`;
+
+    const dedupKey = `${r.chapter_number}_${cleanTitle.toLowerCase()}`;
+    const titleKey = cleanTitle.toLowerCase();
+
+    // Deduplicate by chapter number AND title
+    if (!seenKeys.has(dedupKey) && !seenKeys.has(titleKey)) {
+      seenKeys.add(dedupKey);
+      seenKeys.add(titleKey);
+      chapters.push({
+        number: r.chapter_number,
+        title: cleanTitle,
+        label: cleanTitle,
+      });
+    }
+  }
 
   res.json({ chapters, board: targetBoard });
 });

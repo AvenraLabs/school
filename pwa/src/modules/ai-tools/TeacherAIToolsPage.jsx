@@ -535,6 +535,7 @@ export default function TeacherAIToolsPage() {
   const [subject, setSubject] = useState("");
   const [customSubject, setCustomSubject] = useState("");
   const [selectedChapters, setSelectedChapters] = useState([]);
+  const [customTopic, setCustomTopic] = useState("");
   const [title, setTitle] = useState("");
   const [examName, setExamName] = useState("");
   const [totalMarks, setTotalMarks] = useState("50");
@@ -652,7 +653,9 @@ export default function TeacherAIToolsPage() {
     return list;
   }, [assignments]);
 
-  const isOther = subject === "other";
+  const gradeNum = parseInt(String(grade).replace(/\D/g, ""), 10);
+  const isCbsePrimary = schoolBoard.toUpperCase() === "CBSE" && !isNaN(gradeNum) && gradeNum >= 1 && gradeNum <= 5;
+  const isOther = isCbsePrimary || subject === "other";
   const rawSubject = isOther ? (customSubject.trim() || "General") : subject;
   const resolvedSubject = (rawSubject || "General").replace(/\b\w/g, (char) => char.toUpperCase());
 
@@ -688,7 +691,19 @@ export default function TeacherAIToolsPage() {
     setSelectedChapters([]);
     try {
       const chaps = await getCurriculumChapters(schoolBoard, grade, subject);
-      setCurriculumChapters(chaps);
+      const seen = new Set();
+      const uniqueChaps = (chaps || []).filter((c) => {
+        const titleKey = String(c.title || c.label || "")
+          .replace(/^(chapter|unit|chap|ch)\s*\d+[:\s\-\.]*/i, "")
+          .trim()
+          .toLowerCase();
+        const key = `${c.number}_${titleKey}`;
+        if (seen.has(key) || (titleKey && seen.has(titleKey))) return false;
+        seen.add(key);
+        if (titleKey) seen.add(titleKey);
+        return true;
+      });
+      setCurriculumChapters(uniqueChaps);
     } catch (err) {
       console.warn("[TeacherAI] Could not load curriculum chapters:", err.message);
     } finally {
@@ -762,10 +777,12 @@ export default function TeacherAIToolsPage() {
       const targetClassId = targetObj?.classId || null;
       const targetSectionId = targetObj?.sectionId || null;
 
-      // Auto-derive topic/title from selected chapters when standard subject is used
+      // Auto-derive topic/title from selected chapters or custom topic input
       let docTopic = title.trim();
       if (!isOther) {
-        if (selectedChapters.length > 0) {
+        if (selectedChapters.includes("other") && customTopic.trim()) {
+          docTopic = customTopic.trim();
+        } else if (selectedChapters.length > 0) {
           const selectedLabels = curriculumChapters
             .filter((c) => selectedChapters.includes(c.number))
             .map((c) => c.title || `Chapter ${c.number}`);
@@ -820,7 +837,7 @@ export default function TeacherAIToolsPage() {
         board: schoolBoard,
         grade: `Class ${grade}`,
         subject: resolvedSubject,
-        topic: formattedTitle,
+        topic: customTopic.trim() || formattedTitle,
         chapters: chaptersList,
         skipRag: isOther,
         title: formattedTitle,
@@ -1480,35 +1497,37 @@ export default function TeacherAIToolsPage() {
                   </Select>
                 </FormControl>
 
-                {/* Subject Dropdown */}
-                <FormControl size="small" fullWidth>
-                  <InputLabel sx={{ fontWeight: 700 }}>Subject</InputLabel>
-                  <Select
-                    value={subject}
-                    label="Subject"
-                    onChange={(e) => {
-                      setSubject(e.target.value);
-                      setCustomSubject("");
-                    }}
-                    disabled={loadingSubjects}
-                    sx={{ borderRadius: "12px" }}
-                  >
-                    {loadingSubjects ? (
-                      <MenuItem disabled>
-                        <CircularProgress size={16} sx={{ mr: 1 }} /> Loading subjects...
-                      </MenuItem>
-                    ) : (
-                      curriculumSubjects.map((sub) => (
-                        <MenuItem key={sub} value={sub}>
-                          {sub}
+                {/* Subject Dropdown (Hidden for CBSE Primary Classes 1 to 5) */}
+                {!isCbsePrimary && (
+                  <FormControl size="small" fullWidth>
+                    <InputLabel sx={{ fontWeight: 700 }}>Subject</InputLabel>
+                    <Select
+                      value={subject}
+                      label="Subject"
+                      onChange={(e) => {
+                        setSubject(e.target.value);
+                        setCustomSubject("");
+                      }}
+                      disabled={loadingSubjects}
+                      sx={{ borderRadius: "12px" }}
+                    >
+                      {loadingSubjects ? (
+                        <MenuItem disabled>
+                          <CircularProgress size={16} sx={{ mr: 1 }} /> Loading subjects...
                         </MenuItem>
-                      ))
-                    )}
-                    <MenuItem value="other">
-                      Other
-                    </MenuItem>
-                  </Select>
-                </FormControl>
+                      ) : (
+                        curriculumSubjects.map((sub) => (
+                          <MenuItem key={sub} value={sub}>
+                            {sub}
+                          </MenuItem>
+                        ))
+                      )}
+                      <MenuItem value="other">
+                        Other
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
 
                 {/* Custom Subject Name & Topic input if "other" is selected */}
                 {isOther && (
@@ -1551,11 +1570,30 @@ export default function TeacherAIToolsPage() {
                         const val = e.target.value;
                         setSelectedChapters(typeof val === "string" ? val.split(",") : val);
                       }}
-                      input={<OutlinedInput label="Chapter(s)" sx={{ borderRadius: "12px" }} />}
+                      input={<OutlinedInput label="Chapter(s)" sx={{ borderRadius: "12px", fontSize: "0.875rem" }} />}
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            maxHeight: 320,
+                            maxWidth: "calc(100vw - 32px)",
+                          },
+                        },
+                      }}
                       renderValue={(selected) =>
                         selected.length === 0
                           ? "All Chapters"
-                          : selected.map((chapNum) => `Ch ${chapNum}`).join(", ")
+                          : selected
+                              .map((chapNum) => {
+                                if (chapNum === "other") return customTopic ? `Other: ${customTopic}` : "Other (Custom Topic)";
+                                const c = curriculumChapters.find(
+                                  (item) => item.number === chapNum || String(item.number) === String(chapNum)
+                                );
+                                const title = c ? c.title || c.label : "";
+                                return title
+                                  ? title.replace(/^(chapter|unit|chap|ch)\s*\d+[:\s\-\.]*/i, "").trim()
+                                  : `Chapter ${chapNum}`;
+                              })
+                              .join(", ")
                       }
                       disabled={loadingChapters || !subject}
                     >
@@ -1563,22 +1601,95 @@ export default function TeacherAIToolsPage() {
                         <MenuItem disabled>
                           <CircularProgress size={16} sx={{ mr: 1 }} /> Loading chapters...
                         </MenuItem>
-                      ) : curriculumChapters.length === 0 ? (
-                        <MenuItem disabled>
-                          <Typography variant="caption">
-                            {subject ? "No chapters found for this subject" : "Select a subject first"}
-                          </Typography>
-                        </MenuItem>
                       ) : (
-                        curriculumChapters.map((chap) => (
-                          <MenuItem key={chap.number} value={chap.number}>
-                            <Checkbox checked={selectedChapters.includes(chap.number)} size="small" />
-                            <ListItemText primary={chap.label} />
-                          </MenuItem>
-                        ))
+                        [
+                          ...curriculumChapters.map((chap) => {
+                            const displayTitle = String(chap.title || chap.label || "")
+                              .replace(/^(chapter|unit|chap|ch)\s*\d+[:\s\-\.]*/i, "")
+                              .trim();
+                            return (
+                              <MenuItem
+                                key={chap.number}
+                                value={chap.number}
+                                sx={{
+                                  py: 1,
+                                  px: 1.5,
+                                  minHeight: "auto",
+                                  display: "flex",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <Checkbox
+                                  checked={selectedChapters.includes(chap.number)}
+                                  size="small"
+                                  sx={{ p: 0, mr: 1.25 }}
+                                />
+                                <ListItemText
+                                  primary={displayTitle}
+                                  sx={{ my: 0 }}
+                                  primaryTypographyProps={{
+                                    variant: "body2",
+                                    sx: {
+                                      fontSize: "0.85rem",
+                                      lineHeight: 1.35,
+                                      whiteSpace: "normal",
+                                      wordBreak: "break-word",
+                                      fontWeight: selectedChapters.includes(chap.number) ? 600 : 400,
+                                    },
+                                  }}
+                                />
+                              </MenuItem>
+                            );
+                          }),
+                          <MenuItem
+                            key="other"
+                            value="other"
+                            sx={{
+                              py: 1,
+                              px: 1.5,
+                              minHeight: "auto",
+                              display: "flex",
+                              alignItems: "center",
+                              borderTop: curriculumChapters.length > 0 ? "1px solid #e2e8f0" : "none",
+                              mt: 0.5,
+                            }}
+                          >
+                            <Checkbox
+                              checked={selectedChapters.includes("other")}
+                              size="small"
+                              sx={{ p: 0, mr: 1.25 }}
+                            />
+                            <ListItemText
+                              primary="Other (Custom Topic)"
+                              sx={{ my: 0 }}
+                              primaryTypographyProps={{
+                                variant: "body2",
+                                sx: {
+                                  fontSize: "0.85rem",
+                                  fontWeight: selectedChapters.includes("other") ? 600 : 500,
+                                  color: "primary.main",
+                                },
+                              }}
+                            />
+                          </MenuItem>,
+                        ]
                       )}
                     </Select>
                   </FormControl>
+                )}
+
+                {/* Custom Topic Input when 'Other' is selected */}
+                {!isOther && selectedChapters.includes("other") && (
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Custom Topic / Focus Area"
+                    value={customTopic}
+                    onChange={(e) => setCustomTopic(e.target.value)}
+                    placeholder="e.g. Photosynthesis, World War I"
+                    helperText="Vector AI will search the textbook for chunks matching this topic."
+                    sx={{ mt: 0.5, "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
+                  />
                 )}
 
                 {/* ─── Question Paper Fields ─── */}

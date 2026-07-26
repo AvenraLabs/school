@@ -1,14 +1,59 @@
 import { getOrGetCollection } from "../ingest/storeChunks.js";
+import { embedChunks } from "../ingest/embedChunks.js";
 
 /**
- * Direct metadata lookup for Teacher AI.
- * Fetches all chunks for board, grade, subject, chapter(s) directly from ChromaDB.
- * Sorts by chunkOrder and merges into full chapter text context.
+ * Metadata lookup & Vector Search for Teacher AI.
+ * Supports exact chapter retrieval OR semantic vector similarity search for custom topics.
  */
-export async function getTeacherChapter({ board, grade, subject, chapter, chapters }) {
+export async function getTeacherChapter({ board, grade, subject, chapter, chapters, topic }) {
   const collection = await getOrGetCollection();
 
-  // Normalize chapters into array of numbers if provided
+  const isOther = (Array.isArray(chapters) && chapters.includes("other")) || chapter === "other";
+  const searchTopic = (topic || "").trim();
+
+  // Vector similarity search path for custom topic ("other" or custom topic provided)
+  if ((isOther || chapters?.length === 0) && searchTopic) {
+    try {
+      console.log(`[getTeacherChapter] Performing vector search for topic: "${searchTopic}" (${board} Grade ${grade} ${subject})`);
+      const [queryVector] = await embedChunks([searchTopic]);
+
+      const vectorWhereConditions = [];
+      if (board) vectorWhereConditions.push({ board: { $eq: String(board).toUpperCase() } });
+      if (grade) {
+        const gradeNum = String(grade).replace(/\D/g, "");
+        if (gradeNum) vectorWhereConditions.push({ grade: { $eq: gradeNum } });
+      }
+      if (subject) vectorWhereConditions.push({ subject: { $eq: String(subject) } });
+
+      const vectorWhere = vectorWhereConditions.length === 1
+        ? vectorWhereConditions[0]
+        : vectorWhereConditions.length > 1
+        ? { $and: vectorWhereConditions }
+        : undefined;
+
+      const searchResults = await collection.query({
+        queryEmbeddings: [queryVector],
+        nResults: 20,
+        where: vectorWhere,
+      });
+
+      const docs = (searchResults.documents || []).flat();
+      const metas = (searchResults.metadatas || []).flat();
+
+      if (docs.length > 0) {
+        console.log(`[getTeacherChapter] Vector search found ${docs.length} relevant chunks for topic: "${searchTopic}"`);
+        return {
+          fullChapterText: docs.join("\n\n"),
+          chunksCount: docs.length,
+          chapterTitle: searchTopic,
+        };
+      }
+    } catch (e) {
+      console.warn(`[getTeacherChapter] Vector search warning: ${e.message}, falling back to metadata lookup`);
+    }
+  }
+
+  // Standard metadata lookup by chapter number
   let chapterNumbers = [];
   if (Array.isArray(chapters) && chapters.length > 0) {
     chapterNumbers = chapters.map((c) => parseInt(c, 10)).filter((c) => !isNaN(c));
