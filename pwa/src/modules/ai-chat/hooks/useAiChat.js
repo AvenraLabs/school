@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   sendChatMessage,
   fetchChatSessions,
@@ -12,6 +12,12 @@ export function useAiChat() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const activeSessionIdRef = useRef(activeSessionId);
+  const isSendingRef = useRef(false);
+
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
 
   // Fetch all chat sessions for the student
   const loadSessions = useCallback(async () => {
@@ -33,6 +39,7 @@ export function useAiChat() {
 
   // Load messages for the selected session
   const selectSession = useCallback(async (sessionId) => {
+    activeSessionIdRef.current = sessionId;
     if (!sessionId) {
       setActiveSessionId(null);
       setMessages([]);
@@ -59,6 +66,9 @@ export function useAiChat() {
 
   // Send message in current active session or auto-create a new one
   async function sendMessage(text) {
+    if (!text || !text.trim() || isSendingRef.current) return;
+    
+    isSendingRef.current = true;
     const userMsg = {
       role: "user",
       text,
@@ -69,9 +79,10 @@ export function useAiChat() {
     setLoading(true);
 
     try {
+      const currentSessionId = activeSessionIdRef.current;
       const res = await sendChatMessage({
         question: text,
-        sessionId: activeSessionId,
+        sessionId: currentSessionId,
       });
 
       const { sessionId, answer, sources } = res.data;
@@ -85,8 +96,11 @@ export function useAiChat() {
 
       setMessages((prev) => [...prev, aiMsg]);
 
-      if (!activeSessionId && sessionId) {
-        setActiveSessionId(sessionId);
+      if (sessionId) {
+        activeSessionIdRef.current = sessionId;
+        if (activeSessionId !== sessionId) {
+          setActiveSessionId(sessionId);
+        }
         await loadSessions();
       }
 
@@ -95,11 +109,13 @@ export function useAiChat() {
       console.error("Error sending AI chat message:", e);
     } finally {
       setLoading(false);
+      isSendingRef.current = false;
     }
   }
 
   // Create new conversation
   const startNewChat = () => {
+    activeSessionIdRef.current = null;
     setActiveSessionId(null);
     setMessages([]);
   };

@@ -126,6 +126,7 @@ export async function generateTeacherAiService({
   instructions = "",
   skipRag = false, // When true, bypass RAG and go direct to Gemini
   topic = "", // Teacher specified topic / focus area
+  questionCounts = {},
 }) {
   if (user.role !== "teacher" && user.role !== "school_admin" && user.role !== "super_admin") {
     throw new AppError("Only teachers or administrators can generate AI content", 403);
@@ -180,17 +181,42 @@ export async function generateTeacherAiService({
 
   // 1. AI Question Paper Generator
   if (feature === "question_paper") {
+    const mcq = Math.min(Math.max(Number(questionCounts?.mcq) || 0, 0), 20);
+    const fillBlanks = Math.min(Math.max(Number(questionCounts?.fillBlanks) || 0, 0), 20);
+    const trueFalse = Math.min(Math.max(Number(questionCounts?.trueFalse) || 0, 0), 20);
+    const shortAnswer = Math.min(Math.max(Number(questionCounts?.shortAnswer) || 0, 0), 20);
+    const longAnswer = Math.min(Math.max(Number(questionCounts?.longAnswer) || 0, 0), 20);
+
+    const calculatedTotalMarks = (mcq * 1) + (fillBlanks * 1) + (trueFalse * 1) + (shortAnswer * 3) + (longAnswer * 5);
+    const paperMarks = calculatedTotalMarks > 0 ? calculatedTotalMarks : safeTotalMarks;
+    const paperDuration = Math.max(15, Math.ceil(paperMarks * 1.2));
+
+    const sectionSpecs = [];
+    if (mcq > 0) sectionSpecs.push(`- Section A: EXACTLY ${mcq} Multiple Choice Questions (1 Mark each) with 4 options`);
+    if (fillBlanks > 0) sectionSpecs.push(`- Section B: EXACTLY ${fillBlanks} Fill in the Blanks / One Word Questions (1 Mark each)`);
+    if (trueFalse > 0) sectionSpecs.push(`- Section C: EXACTLY ${trueFalse} True/False Questions (1 Mark each)`);
+    if (shortAnswer > 0) sectionSpecs.push(`- Section D: EXACTLY ${shortAnswer} Short Answer Questions (3 Marks each)`);
+    if (longAnswer > 0) sectionSpecs.push(`- Section E: EXACTLY ${longAnswer} Long Answer Questions (5 Marks each)`);
+
+    if (sectionSpecs.length === 0) {
+      sectionSpecs.push(`- Section A: EXACTLY 5 Multiple Choice Questions (1 Mark each)`, `- Section B: EXACTLY 3 Short Answer Questions (3 Marks each)`, `- Section C: EXACTLY 2 Long Answer Questions (5 Marks each)`);
+    }
+
     const paperPrompt = `
 You are an expert examination master preparing an official Question Paper for Grade ${finalGrade} ${finalSubject} (${finalBoard} Board).
 
 Exam Title: ${title || examName || `${finalSubject} Examination`}
 Topic / Focus Area: ${topic || chapList.join(", ") || "Full Curriculum"}
 Selected Chapters: ${chapList.join(", ") || "Full Curriculum"}
-Total Marks: ${totalMarks}
-Duration: ${duration} Mins
+Total Marks: ${paperMarks}
+Duration: ${paperDuration} Mins
 Difficulty: ${difficulty}
-Target Question Types: ${(questionTypes.length > 0 ? questionTypes : ["MCQ", "Short Answer", "Long Answer"]).join(", ")}
-Target Total Questions: ${numQuestions}
+
+EXACT SECTION & QUESTION BREAKDOWN:
+${sectionSpecs.join("\n")}
+
+CRITICAL INSTRUCTION FOR MARKS:
+The sum of marks for all generated questions across all sections MUST EQUAL EXACTLY ${paperMarks}.
 
 System Rules:
 1. Return ONLY valid JSON matching this exact structure:
@@ -200,8 +226,8 @@ System Rules:
   "board": "${finalBoard}",
   "grade": "Grade ${finalGrade}",
   "subject": "${finalSubject}",
-  "total_marks": ${totalMarks},
-  "duration_mins": ${duration},
+  "total_marks": ${paperMarks},
+  "duration_mins": ${paperDuration},
   "instructions": [
     "Read all questions carefully before answering.",
     "All sections are compulsory.",
@@ -222,28 +248,15 @@ System Rules:
           "explanation": "Brief explanation"
         }
       ]
-    },
-    {
-      "section_name": "Section B: Short Answer Questions",
-      "marks_per_question": 3,
-      "questions": [
-        {
-          "q_no": 5,
-          "type": "Short Answer",
-          "question_text": "Explain concept...",
-          "marks": 3,
-          "answer": "Expected point-wise answer key.",
-          "explanation": "Marking scheme"
-        }
-      ]
     }
   ],
   "answer_key": [
-    { "q_no": 1, "answer": "Option A", "explanation": "Why Option A is correct" }
+    { "q_no": 1, "answer": "Option A", "explanation": "Why Option A is correct choice" }
   ]
 }
 2. Language & depth strictly tailored to Grade ${finalGrade} ${finalBoard} standard.
-3. NO emojis. NO markdown text outside the JSON object.
+3. Provide a clear answer key and explanation for EVERY question.
+4. NO emojis. NO markdown text outside the JSON object.
 ${instructions ? `Teacher Directive: ${instructions}` : ""}
 
 ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}

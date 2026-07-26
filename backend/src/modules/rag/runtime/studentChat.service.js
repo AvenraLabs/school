@@ -55,20 +55,34 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
     });
   }
 
+  // If no sessionId passed, reuse recent active session updated in the last 2 hours to prevent duplicate session creation
+  if (!session) {
+    const { Op } = await import("sequelize");
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    session = await StudentChatSession.findOne({
+      where: {
+        student_id: userId,
+        is_active: true,
+        updated_at: { [Op.gte]: twoHoursAgo },
+      },
+      order: [["updated_at", "DESC"]],
+    });
+  }
+
   if (!session) {
     const titleSnippet = question.trim().slice(0, 30) + (question.length > 30 ? "..." : "");
     session = await StudentChatSession.create({
       student_id: userId,
-      school_id: school.id,
+      school_id: school ? school.id : user.school_id,
       title: titleSnippet,
     });
   }
 
-  // Step 1: Subject Detection & Intent Classification
-  const { subject, isLanguage } = await detectSubject({ question, board, grade });
+  // Step 1: Subject Detection & Intent Classification (Greetings, Language, Core Academic)
+  const { subject, isLanguage, isGreeting } = await detectSubject({ question, board, grade });
 
   // Update session subject if not set
-  if (!session.subject) {
+  if (!session.subject && subject) {
     session.subject = subject;
     await session.save();
   }
@@ -85,20 +99,20 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
   let tokensUsed = 0;
   let sourceType = "rag";
 
-  const isCbsePrimary = String(board).toUpperCase() === "CBSE" && parseInt(String(grade), 10) < 6;
-
-  if (isLanguage || isCbsePrimary) {
-    // Language or CBSE Grades 1-5 Direct Gemini Route
-    sourceType = isLanguage ? "direct_language" : "direct_primary_curriculum";
-    const prompt = isLanguage
-      ? buildLanguageDirectPrompt({ question, grade, subject })
-      : buildGeneralCurriculumPrompt({ question, grade, subject, board });
-
+  if (isGreeting) {
+    // Direct Greeting Response - no RAG search or disclaimers
+    sourceType = "greeting";
+    answer = `Hello! I am your AI Study Assistant for Grade ${grade}. How can I help you with your studies today?`;
+    tokensUsed = 0;
+  } else if (isLanguage) {
+    // Language direct explanation route
+    sourceType = "direct_language";
+    const prompt = buildLanguageDirectPrompt({ question, grade, subject });
     const res = await generateAnswer(prompt);
     answer = res.text;
     tokensUsed = res.tokensUsed;
   } else {
-    // Core Subject Textbook RAG Route (Grades 6-12 Core)
+    // Core Subject RAG Route: Always search RAG chunks matching student's class and board
     const { chunks, metadatas } = await searchStudentChunks({
       question,
       board,
@@ -107,14 +121,8 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
       limit: 5,
     });
 
-    if (!chunks || chunks.length === 0) {
-      // Fallback to Direct Gemini if textbook chunks not found
-      sourceType = "direct_curriculum_fallback";
-      const prompt = buildGeneralCurriculumPrompt({ question, grade, subject, board });
-      const res = await generateAnswer(prompt);
-      answer = res.text;
-      tokensUsed = res.tokensUsed;
-    } else {
+    if (chunks && chunks.length > 0) {
+      sourceType = "rag";
       const contextText = chunks.join("\n\n");
       const prompt = buildStudentRagPrompt({
         question,
@@ -131,10 +139,17 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
       sources = Array.from(
         new Set(
           metadatas.map(
-            (m) => `${m.chapterTitle || "Chapter " + m.chapter} (Pages ${m.pageStart}-${m.pageEnd})`
+            (m) => `${m.chapterTitle || "Chapter " + m.chapter} (Pages ${m.pageStart || 1}-${m.pageEnd || 1})`
           )
         )
       );
+    } else {
+      // Fallback directly to Gemini if vector matching finds no textbook chunks
+      sourceType = "direct_curriculum_fallback";
+      const prompt = buildGeneralCurriculumPrompt({ question, grade, subject, board });
+      const res = await generateAnswer(prompt);
+      answer = res.text;
+      tokensUsed = res.tokensUsed;
     }
   }
 
@@ -147,6 +162,20 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
     tokens_used: tokensUsed,
   });
 
+  const ALLOWED_AI_TYPES = [
+    "rag",
+    "chat",
+    "quiz",
+    "homework",
+    "summary",
+    "question_paper",
+    "lesson_summary",
+    "greeting",
+    "direct_language",
+    "direct_curriculum_fallback",
+  ];
+  const safeAiType = ALLOWED_AI_TYPES.includes(sourceType) ? sourceType : "rag";
+
   // Log usage & deduct tokens
   const log = await AiChatLog.create({
     user_id: userId,
@@ -154,7 +183,7 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
     ai_response: answer,
     tokens_used: tokensUsed,
     model_used: process.env.GEMINI_MODEL || "gemini-2.5-flash-lite",
-    ai_type: sourceType,
+    ai_type: safeAiType,
     class_level: grade,
   });
 
@@ -179,10 +208,27 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
 }
 
 export async function getStudentChatSessions(userId) {
-  return await StudentChatSession.findAll({
+  const sessions = await StudentChatSession.findAll({
     where: { student_id: userId, is_active: true },
     order: [["updated_at", "DESC"]],
   });
+
+  if (!sessions || sessions.length === 0) return [];
+
+  const sessionIds = sessions.map((s) => s.id);
+  const { Sequelize } = await import("sequelize");
+  const messageCounts = await StudentChatMessage.findAll({
+    attributes: ["session_id", [Sequelize.fn("COUNT", Sequelize.col("id")), "msg_count"]],
+    where: { session_id: sessionIds },
+    group: ["session_id"],
+    raw: true,
+  });
+
+  const countMap = new Map(
+    messageCounts.map((m) => [String(m.session_id), parseInt(m.msg_count || 0, 10)])
+  );
+
+  return sessions.filter((s) => (countMap.get(String(s.id)) || 0) > 0);
 }
 
 export async function getStudentChatMessages(sessionId, userId) {

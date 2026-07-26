@@ -544,6 +544,27 @@ export default function TeacherAIToolsPage() {
   const [difficulty, setDifficulty] = useState("MEDIUM");
   const [questionTypes, setQuestionTypes] = useState(["MCQ", "Short Answer", "Long Answer"]);
 
+  // Question Paper specific distribution state
+  const [mcqCount, setMcqCount] = useState(5);
+  const [fillBlanksCount, setFillBlanksCount] = useState(0);
+  const [trueFalseCount, setTrueFalseCount] = useState(0);
+  const [shortAnswerCount, setShortAnswerCount] = useState(3);
+  const [longAnswerCount, setLongAnswerCount] = useState(2);
+
+  const safeMcq = Math.max(0, parseInt(mcqCount, 10) || 0);
+  const safeFillBlanks = Math.max(0, parseInt(fillBlanksCount, 10) || 0);
+  const safeTrueFalse = Math.max(0, parseInt(trueFalseCount, 10) || 0);
+  const safeShort = Math.max(0, parseInt(shortAnswerCount, 10) || 0);
+  const safeLong = Math.max(0, parseInt(longAnswerCount, 10) || 0);
+
+  const isQuestionCountExceeded =
+    safeMcq > 20 || safeFillBlanks > 20 || safeTrueFalse > 20 || safeShort > 20 || safeLong > 20;
+
+  const totalCalculatedQuestions = safeMcq + safeFillBlanks + safeTrueFalse + safeShort + safeLong;
+  const totalCalculatedMarks =
+    safeMcq * 1 + safeFillBlanks * 1 + safeTrueFalse * 1 + safeShort * 3 + safeLong * 5;
+  const suggestedDurationMins = Math.max(15, Math.ceil(totalCalculatedMarks * 1.2));
+
   // Lesson Plan State
   const [teachingDuration, setTeachingDuration] = useState("45 mins");
   const [teachingStyle, setTeachingStyle] = useState("Interactive");
@@ -709,6 +730,75 @@ export default function TeacherAIToolsPage() {
   const isOther = isCbsePrimary || subject === "other";
   const rawSubject = isOther ? (customSubject.trim() || "General") : subject;
   const resolvedSubject = (rawSubject || "General").replace(/\b\w/g, (char) => char.toUpperCase());
+
+  // Strict Form Validation: Prevent click on Generate button until required inputs are selected/typed
+  const isFormValid = useMemo(() => {
+    if (!selectedToolKey || ["saved_drafts", "quiz_history", "generated_videos"].includes(selectedToolKey)) {
+      return false;
+    }
+
+    if (selectedToolKey === "ai_video") {
+      const hasSubject = Boolean(videoSubject || (schoolSubjects && schoolSubjects[0]) || "Science");
+      const hasTopic = Boolean(title && title.trim());
+      return Boolean((videoGrade || assignedGrades[0]?.value || "6") && hasSubject && hasTopic);
+    }
+
+    // Text tools (question_paper, lesson_plan, lesson_summary, teacher_quiz)
+    if (!grade) return false;
+
+    // Check subject selection
+    if (!isCbsePrimary) {
+      if (!subject) return false;
+      if (subject === "other" && (!customSubject || !customSubject.trim())) {
+        return false;
+      }
+    } else {
+      if (!customSubject || !customSubject.trim()) {
+        return false;
+      }
+    }
+
+    // Check chapter / topic selection
+    if (isOther) {
+      if (!title || !title.trim()) return false;
+    } else {
+      if (!selectedChapters || selectedChapters.length === 0) return false;
+      if (selectedChapters.includes("other") && (!customTopic || !customTopic.trim())) {
+        return false;
+      }
+    }
+
+    // Tool-specific validations
+    if (selectedToolKey === "question_paper") {
+      if (isQuestionCountExceeded) return false;
+      if (totalCalculatedQuestions <= 0) return false;
+    }
+
+    if (selectedToolKey === "teacher_quiz") {
+      if (!selectedTargetKey) return false;
+      if (!numQuestions || Number(numQuestions) <= 0) return false;
+    }
+
+    return true;
+  }, [
+    selectedToolKey,
+    grade,
+    subject,
+    customSubject,
+    isCbsePrimary,
+    isOther,
+    selectedChapters,
+    customTopic,
+    title,
+    isQuestionCountExceeded,
+    totalCalculatedQuestions,
+    selectedTargetKey,
+    numQuestions,
+    videoGrade,
+    videoSubject,
+    schoolSubjects,
+    assignedGrades,
+  ]);
 
   // Load subjects when board or grade changes
   const fetchSubjects = useCallback(async () => {
@@ -881,10 +971,23 @@ export default function TeacherAIToolsPage() {
         return;
       }
 
+      if (selectedToolKey === "question_paper") {
+        if (isQuestionCountExceeded) {
+          setErrorMsg("Cannot exceed 20 questions per question type.");
+          setLoading(false);
+          return;
+        }
+        if (totalCalculatedQuestions === 0) {
+          setErrorMsg("Please select at least 1 question to generate.");
+          setLoading(false);
+          return;
+        }
+      }
+
       // Anti-spam input caps
-      const safeNumQ = Math.min(Math.max(Number(numQuestions) || 5, 1), 50);
-      const safeMarks = Math.min(Math.max(Number(totalMarks) || 10, 1), 500);
-      const safeDur = Math.min(Math.max(Number(duration) || 15, 1), 300);
+      const safeNumQ = selectedToolKey === "question_paper" ? totalCalculatedQuestions : Math.min(Math.max(Number(numQuestions) || 5, 1), 50);
+      const safeMarks = selectedToolKey === "question_paper" ? totalCalculatedMarks : Math.min(Math.max(Number(totalMarks) || 10, 1), 500);
+      const safeDur = selectedToolKey === "question_paper" ? suggestedDurationMins : Math.min(Math.max(Number(duration) || 15, 1), 300);
 
       const res = await generateTeacherAiApi({
         feature: selectedToolKey,
@@ -899,6 +1002,13 @@ export default function TeacherAIToolsPage() {
         totalMarks: safeMarks,
         duration: safeDur,
         numQuestions: safeNumQ,
+        questionCounts: {
+          mcq: safeMcq,
+          fillBlanks: safeFillBlanks,
+          trueFalse: safeTrueFalse,
+          shortAnswer: safeShort,
+          longAnswer: safeLong,
+        },
         difficulty,
         questionTypes,
         teachingDuration,
@@ -1747,44 +1857,117 @@ export default function TeacherAIToolsPage() {
 
                 {/* ─── Question Paper Fields ─── */}
                 {selectedToolKey === "question_paper" && (
-                  <Stack spacing={1.5}>
-                    <Box sx={{ display: "flex", gap: 1.5 }}>
+                  <Stack spacing={2}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#1e1b4b" }}>
+                      Question Breakdown & Distribution
+                    </Typography>
+
+                    {/* Red Validation Error if any field > 20 */}
+                    {isQuestionCountExceeded && (
+                      <Alert severity="error" sx={{ borderRadius: "12px", fontWeight: 700, py: 0.5 }}>
+                        Cannot exceed 20 questions per question type.
+                      </Alert>
+                    )}
+
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                      <Box sx={{ display: "flex", gap: 1.5 }}>
+                        <TextField
+                          size="small"
+                          type="number"
+                          label="MCQ (1 Mark each)"
+                          value={mcqCount}
+                          onChange={(e) => setMcqCount(e.target.value)}
+                          error={safeMcq > 20}
+                          helperText={safeMcq > 20 ? "Max 20 questions" : ""}
+                          inputProps={{ min: 0, max: 20 }}
+                          sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
+                        />
+                        <TextField
+                          size="small"
+                          type="number"
+                          label="Fill Blanks / 1 Word (1 Mark)"
+                          value={fillBlanksCount}
+                          onChange={(e) => setFillBlanksCount(e.target.value)}
+                          error={safeFillBlanks > 20}
+                          helperText={safeFillBlanks > 20 ? "Max 20 questions" : ""}
+                          inputProps={{ min: 0, max: 20 }}
+                          sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
+                        />
+                      </Box>
+
+                      <Box sx={{ display: "flex", gap: 1.5 }}>
+                        <TextField
+                          size="small"
+                          type="number"
+                          label="True / False (1 Mark each)"
+                          value={trueFalseCount}
+                          onChange={(e) => setTrueFalseCount(e.target.value)}
+                          error={safeTrueFalse > 20}
+                          helperText={safeTrueFalse > 20 ? "Max 20 questions" : ""}
+                          inputProps={{ min: 0, max: 20 }}
+                          sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
+                        />
+                        <TextField
+                          size="small"
+                          type="number"
+                          label="Short Answer (3 Marks each)"
+                          value={shortAnswerCount}
+                          onChange={(e) => setShortAnswerCount(e.target.value)}
+                          error={safeShort > 20}
+                          helperText={safeShort > 20 ? "Max 20 questions" : ""}
+                          inputProps={{ min: 0, max: 20 }}
+                          sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
+                        />
+                      </Box>
+
                       <TextField
                         size="small"
-                        label="Marks"
-                        value={totalMarks}
-                        onChange={(e) => setTotalMarks(e.target.value)}
-                        sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
-                      />
-                      <TextField
-                        size="small"
-                        label="Duration (Min)"
-                        value={duration}
-                        onChange={(e) => setDuration(e.target.value)}
-                        sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
+                        type="number"
+                        label="Long Answer (5 Marks each)"
+                        value={longAnswerCount}
+                        onChange={(e) => setLongAnswerCount(e.target.value)}
+                        error={safeLong > 20}
+                        helperText={safeLong > 20 ? "Max 20 questions" : ""}
+                        inputProps={{ min: 0, max: 20 }}
+                        sx={{ fullWidth: true, "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
                       />
                     </Box>
 
-                    <Box>
-                      <Typography variant="caption" sx={{ fontWeight: 800, color: "#475569", display: "block", mb: 1 }}>
-                        Question Types
-                      </Typography>
-                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                        {["MCQ", "One Word", "Fill in Blanks", "True/False", "Short Answer", "Long Answer"].map((type) => (
-                          <FormControlLabel
-                            key={type}
-                            control={
-                              <Checkbox
-                                size="small"
-                                checked={questionTypes.includes(type)}
-                                onChange={() => handleQTypeChange(type)}
-                                sx={{ p: 0.5 }}
-                              />
-                            }
-                            label={<Typography variant="caption" sx={{ fontWeight: 700 }}>{type}</Typography>}
-                            sx={{ m: 0, minWidth: "calc(50% - 4px)", flexShrink: 0 }}
-                          />
-                        ))}
+                    {/* Real-time Calculation Summary Badge */}
+                    <Box
+                      sx={{
+                        bgcolor: "#eef2ff",
+                        p: 1.5,
+                        borderRadius: "14px",
+                        border: "1px solid #c7d2fe",
+                        display: "flex",
+                        justifyContent: "space-around",
+                        textAlign: "center",
+                      }}
+                    >
+                      <Box>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: "#4338ca", display: "block" }}>
+                          Total Questions
+                        </Typography>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#312e81" }}>
+                          {totalCalculatedQuestions}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: "#4338ca", display: "block" }}>
+                          Calculated Marks
+                        </Typography>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#312e81" }}>
+                          {totalCalculatedMarks} Marks
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: "#4338ca", display: "block" }}>
+                          Suggested Time
+                        </Typography>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "#312e81" }}>
+                          {suggestedDurationMins} Mins
+                        </Typography>
                       </Box>
                     </Box>
                   </Stack>
@@ -1951,7 +2134,7 @@ export default function TeacherAIToolsPage() {
                   fullWidth
                   variant="contained"
                   onClick={handleGenerate}
-                  disabled={loading}
+                  disabled={loading || !isFormValid}
                   startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <AutoAwesome />}
                   sx={{
                     borderRadius: "14px",
@@ -1959,12 +2142,22 @@ export default function TeacherAIToolsPage() {
                     fontWeight: 800,
                     fontSize: "0.95rem",
                     textTransform: "none",
-                    background: selectedTool.gradient,
-                    boxShadow: `0 4px 16px ${selectedTool.color}40`,
+                    background: isFormValid ? selectedTool.gradient : "#cbd5e1",
+                    boxShadow: isFormValid ? `0 4px 16px ${selectedTool.color}40` : "none",
+                    "&.Mui-disabled": {
+                      bgcolor: "#e2e8f0",
+                      color: "#94a3b8",
+                    },
                   }}
                 >
                   {loading ? "Generating..." : "Generate"}
                 </Button>
+
+                {!isFormValid && !loading && (
+                  <Typography variant="caption" sx={{ color: "#94a3b8", display: "block", textAlign: "center", mt: 1, fontWeight: 600 }}>
+                    Please complete all required fields (Subject, Chapter/Topic, Target Class) to enable Generate.
+                  </Typography>
+                )}
               </Box>
             </CardContent>
           </Card>

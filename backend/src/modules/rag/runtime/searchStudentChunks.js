@@ -23,16 +23,49 @@ export async function searchStudentChunks({ question, board, grade, subject, lim
     return { chunks: [], metadatas: [] };
   }
 
+  const cleanGrade = grade ? String(grade).replace(/\D/g, "") || String(grade) : "";
+  const cleanBoard = board ? String(board).toUpperCase().trim() : "";
+  const cleanSubject = subject ? String(subject).trim() : "";
+
+  // Build grade variants (e.g., "6", "class6", "class 6", "Class 6")
+  const gradeVariants = Array.from(
+    new Set([
+      cleanGrade,
+      `class${cleanGrade}`,
+      `class ${cleanGrade}`,
+      `Class ${cleanGrade}`,
+      `grade${cleanGrade}`,
+      `grade ${cleanGrade}`,
+    ])
+  ).filter(Boolean);
+
+  // Build ChromaDB where conditions
   const whereConditions = [];
 
-  if (board) {
-    whereConditions.push({ board: { $eq: String(board).toUpperCase() } });
+  if (cleanBoard) {
+    if (cleanBoard.includes("STATE")) {
+      whereConditions.push({
+        $or: [
+          { board: { $eq: "STATE" } },
+          { board: { $eq: "STATEBOARD" } },
+          { board: { $eq: "STATE BOARD" } },
+        ],
+      });
+    } else {
+      whereConditions.push({ board: { $eq: cleanBoard } });
+    }
   }
-  if (grade) {
-    whereConditions.push({ grade: { $eq: String(grade) } });
+
+  if (gradeVariants.length === 1) {
+    whereConditions.push({ grade: { $eq: gradeVariants[0] } });
+  } else if (gradeVariants.length > 1) {
+    whereConditions.push({
+      $or: gradeVariants.map((g) => ({ grade: { $eq: g } })),
+    });
   }
-  if (subject) {
-    whereConditions.push({ subject: { $eq: String(subject) } });
+
+  if (cleanSubject) {
+    whereConditions.push({ subject: { $eq: cleanSubject } });
   }
 
   let where = undefined;
@@ -49,14 +82,31 @@ export async function searchStudentChunks({ question, board, grade, subject, lim
       where,
     });
 
-    const chunks = (results.documents || []).flat();
-    const metadatas = (results.metadatas || []).flat();
+    let chunks = (results.documents || []).flat();
+    let metadatas = (results.metadatas || []).flat();
+
+    // If exact filter yielded 0 results, retry with relaxed grade-only filter
+    if ((!chunks || chunks.length === 0) && gradeVariants.length > 0) {
+      const relaxedWhere =
+        gradeVariants.length === 1
+          ? { grade: { $eq: gradeVariants[0] } }
+          : { $or: gradeVariants.map((g) => ({ grade: { $eq: g } })) };
+
+      const fallbackResults = await collection.query({
+        queryEmbeddings: [queryVector],
+        nResults: limit,
+        where: relaxedWhere,
+      });
+
+      chunks = (fallbackResults.documents || []).flat();
+      metadatas = (fallbackResults.metadatas || []).flat();
+    }
 
     return { chunks, metadatas };
   } catch (e) {
     console.error("[searchStudentChunks] ChromaDB query error:", e.message);
     try {
-      const fallbackWhere = grade ? { grade: { $eq: String(grade) } } : undefined;
+      const fallbackWhere = cleanGrade ? { grade: { $eq: cleanGrade } } : undefined;
       const results = await collection.query({
         queryEmbeddings: [queryVector],
         nResults: limit,

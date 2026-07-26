@@ -32,12 +32,25 @@ const ALIAS_MAP = {
   "eco": "Economics",
 };
 
+export function isGreeting(text) {
+  if (!text || typeof text !== "string") return false;
+  const clean = text.trim().toLowerCase().replace(/[^\w\s]/g, "");
+  const greetingPattern = /^(hi|hello|hey|good\s*(morning|afternoon|evening)|namaste|greetings|howdy|who\s*are\s*you|what\s*can\s*you\s*do|help|start)$/i;
+  if (greetingPattern.test(clean)) return true;
+  if (clean.length <= 12 && /^(hi|hello|hey|namaste)\b/i.test(clean)) return true;
+  return false;
+}
+
 export async function detectSubject({ question, board, grade }) {
   if (!question || typeof question !== "string") {
-    return { subject: "General", isLanguage: false };
+    return { subject: "General", isLanguage: false, isGreeting: false };
   }
 
   const qTrim = question.trim();
+
+  if (isGreeting(qTrim)) {
+    return { subject: "General", isLanguage: false, isGreeting: true };
+  }
 
   // Stage 1: Fast Script Range & Keyword Detection
   if (/[\u0B80-\u0BFF]/.test(qTrim)) {

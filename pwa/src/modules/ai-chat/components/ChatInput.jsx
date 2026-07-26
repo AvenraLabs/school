@@ -61,13 +61,15 @@ export default function ChatInput({ onSend, disabled, placeholder = "Ask anythin
   };
 
   const handleSend = () => {
+    if (disabled) return;
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
     }
-    if (message.trim() && !disabled) {
-      onSend(message.trim());
+    const textToSend = message.trim();
+    if (textToSend) {
       setMessage("");
+      onSend(textToSend);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
