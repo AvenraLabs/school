@@ -5,6 +5,14 @@ import Teacher from "../teachers/teacher.model.js";
 import Student from "../students/student.model.js";
 import Class from "../classes/classes.model.js";
 import { Op } from "sequelize";
+import AiChatLog from "../ai-chat-logs/ai-chat-log.model.js";
+import {
+  deductTokens,
+  ensureTokenAccount,
+  assertHasTokenBalance,
+  assertHasVideoSecondsBalance,
+  deductVideoSeconds,
+} from "../tokens/token.service.js";
 
 /**
  * POST /api/ai/videos
@@ -16,6 +24,15 @@ export async function createVideoGeneration(req, res, next) {
 
     if (!topic || !topic.trim()) {
       throw new AppError("Topic is required to generate an educational video", 400);
+    }
+
+    const cleanDuration = String(duration) === "10" ? "10" : "5";
+    const durationSec = parseInt(cleanDuration, 10);
+
+    // Check AI Gemini Token Balance & Kling AI Video Seconds quota BEFORE creating job
+    if (req.user?.id) {
+      await assertHasTokenBalance(req.user.id);
+      await assertHasVideoSecondsBalance(req.user.id, durationSec);
     }
 
     // Determine Teacher ID
@@ -52,7 +69,6 @@ export async function createVideoGeneration(req, res, next) {
       }
     }
 
-    const cleanDuration = String(duration) === "10" ? "10" : "5";
     const cleanLanguage = language || "English";
 
     // Create DB Record
@@ -68,6 +84,34 @@ export async function createVideoGeneration(req, res, next) {
       duration: cleanDuration,
       status: "pending",
     });
+
+    // Deduct Gemini Tokens & Kling Video Seconds
+    if (req.user?.id) {
+      const tokensUsed = 250;
+      const log = await AiChatLog.create({
+        user_id: req.user.id,
+        user_query: topic.trim(),
+        ai_response: `AI Video Generation queued (${cleanDuration}s) for topic: ${topic.trim()}`,
+        tokens_used: tokensUsed,
+        model_used: process.env.GEMINI_MODEL || "gemini-2.5-flash-lite",
+        ai_type: "summary",
+        class_level: String(targetClassId || ""),
+      });
+
+      await deductTokens({
+        userId: req.user.id,
+        amount: tokensUsed,
+        reason: "ai_video_scene_generation",
+        refId: videoGen.id,
+      });
+
+      await deductVideoSeconds({
+        userId: req.user.id,
+        durationSec,
+        reason: "kling_ai_video_generation",
+        refId: videoGen.id,
+      });
+    }
 
     // Enqueue background processing
     enqueueVideoGeneration(videoGen.id);

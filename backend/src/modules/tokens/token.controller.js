@@ -18,49 +18,56 @@ export const setTokenPolicies = asyncHandler(async (req, res) => {
   const {
     student_annual,
     teacher_annual,
+    teacher_video_seconds,
+    student_video_seconds,
     role,
     annual_tokens,
+    annual_video_seconds,
     mode = "replace",
     school_id = null,
   } = req.body;
 
-  if (student_annual !== undefined) {
+  if (student_annual !== undefined || student_video_seconds !== undefined) {
     await setRoleAnnualTokens({
       role: "student",
-      annual_tokens: Number(student_annual),
+      ...(student_annual !== undefined ? { annual_tokens: Number(student_annual) } : {}),
+      ...(student_video_seconds !== undefined ? { annual_video_seconds: Number(student_video_seconds) } : {}),
       mode,
       school_id,
       updated_by: req.user.id,
     });
-  } else if (role === "student" && annual_tokens !== undefined) {
+  } else if (role === "student" && (annual_tokens !== undefined || annual_video_seconds !== undefined)) {
     await setRoleAnnualTokens({
       role: "student",
-      annual_tokens: Number(annual_tokens),
+      ...(annual_tokens !== undefined ? { annual_tokens: Number(annual_tokens) } : {}),
+      ...(annual_video_seconds !== undefined ? { annual_video_seconds: Number(annual_video_seconds) } : {}),
       mode,
       school_id,
       updated_by: req.user.id,
     });
   }
 
-  if (teacher_annual !== undefined) {
+  if (teacher_annual !== undefined || teacher_video_seconds !== undefined) {
     await setRoleAnnualTokens({
       role: "teacher",
-      annual_tokens: Number(teacher_annual),
+      ...(teacher_annual !== undefined ? { annual_tokens: Number(teacher_annual) } : {}),
+      ...(teacher_video_seconds !== undefined ? { annual_video_seconds: Number(teacher_video_seconds) } : {}),
       mode,
       school_id,
       updated_by: req.user.id,
     });
-  } else if (role === "teacher" && annual_tokens !== undefined) {
+  } else if (role === "teacher" && (annual_tokens !== undefined || annual_video_seconds !== undefined)) {
     await setRoleAnnualTokens({
       role: "teacher",
-      annual_tokens: Number(annual_tokens),
+      ...(annual_tokens !== undefined ? { annual_tokens: Number(annual_tokens) } : {}),
+      ...(annual_video_seconds !== undefined ? { annual_video_seconds: Number(annual_video_seconds) } : {}),
       mode,
       school_id,
       updated_by: req.user.id,
     });
   }
 
-  res.json({ success: true, message: "Token policy updated" });
+  res.json({ success: true, message: "Token and Video policy updated successfully" });
 });
 
 export const listTokenAccounts = asyncHandler(async (req, res) => {

@@ -126,12 +126,13 @@ export const getTeacherDashboardService = async ({
   /* 5) Pending report cards */
   const pendingReportCards = 0;
 
-  // 6) AI Tokens (lifetime used + current balance)
+  // 6) AI Tokens & AI Video Seconds (lifetime used + current balance)
   await ensureTokenAccount(user_id);
   const tokenAccount = await TokenAccount.findOne({
     where: { user_id },
-    attributes: ["balance"],
+    attributes: ["balance", "video_seconds_balance"],
   });
+
   const usedTotal = await AiChatLog.sum("tokens_used", {
     where: { user_id },
   });
@@ -139,11 +140,25 @@ export const getTeacherDashboardService = async ({
   const remaining = tokenAccount?.balance ?? 0;
   const total = used + remaining;
 
+  // Video Seconds Calculation
+  const videoRemaining = tokenAccount?.video_seconds_balance ?? 2000;
+  let videoUsed = 0;
+  if (teacher_id) {
+    const VideoGeneration = (await import("../ai-video/video-generation.model.js")).default;
+    const videos = await VideoGeneration.findAll({
+      where: { teacher_id },
+      attributes: ["duration"],
+    });
+    videoUsed = videos.reduce((sum, v) => sum + (parseInt(v.duration, 10) || 5), 0);
+  }
+  const videoTotal = videoUsed + videoRemaining;
+
   return {
     classes,
     timetable,
     homework_summary: homeworkSummary,
     pending_report_cards: pendingReportCards,
     ai_tokens: { total, used, remaining },
+    ai_video_seconds: { total: videoTotal, used: videoUsed, remaining: videoRemaining },
   };
 };

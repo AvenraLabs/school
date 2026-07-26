@@ -14,16 +14,20 @@ export async function ensureTokenAccount(userId) {
   let policy = await TokenPolicy.findOne({ where: { role: user.role } });
   if (!policy) {
     const defaultTokens = user.role === "student" ? 3000000 : (user.role === "teacher" ? 10000000 : 0);
+    const defaultVideoSeconds = user.role === "teacher" ? 2000 : 0;
     policy = await TokenPolicy.create({
       role: user.role,
       annual_tokens: defaultTokens,
+      annual_video_seconds: defaultVideoSeconds,
     });
   }
   const initialBalance = policy.annual_tokens ?? 0;
+  const initialVideoSeconds = policy.annual_video_seconds ?? (user.role === "teacher" ? 2000 : 0);
 
   account = await TokenAccount.create({
     user_id: userId,
     balance: initialBalance,
+    video_seconds_balance: initialVideoSeconds,
     expires_at: null,
   });
 
@@ -40,31 +44,61 @@ export async function ensureTokenAccount(userId) {
   return account;
 }
 
-export async function deductTokens({ userId, amount, reason, refId }) {
+export async function assertHasTokenBalance(userId) {
   const user = await User.findByPk(userId);
   if (!user) {
     throw new AppError("User not found", 404);
   }
 
-  // 🔹 Only students & teachers use AI
+  // Admin roles bypass token limits
   if (!["student", "teacher"].includes(user.role)) {
-    throw new AppError("AI access not allowed for this role", 403);
+    return;
   }
 
-  // 🔒 Check school subscription EARLY
-  // 🔹 Skip token work if no tokens used
+  const account = await ensureTokenAccount(userId);
+  if (!account || account.balance <= 0) {
+    throw new AppError(
+      "You have used all your AI tokens for this academic year (0 tokens remaining). Please contact your school administrator to add tokens.",
+      402
+    );
+  }
+}
+
+export async function assertHasVideoSecondsBalance(userId, durationSec = 5) {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  // Admin roles bypass video token limits
+  if (!["student", "teacher"].includes(user.role)) {
+    return;
+  }
+
+  const account = await ensureTokenAccount(userId);
+  if (!account || (account.video_seconds_balance ?? 2000) <= 0) {
+    throw new AppError(
+      "You have used all your annual AI video creation quota (0 video seconds remaining). Please contact your school administrator to add video seconds.",
+      402
+    );
+  }
+}
+
+export async function deductTokens({ userId, amount, reason, refId }) {
+  const user = await User.findByPk(userId);
+  if (!user || !["student", "teacher"].includes(user.role)) {
+    return;
+  }
+
   if (amount <= 0) {
     return;
   }
 
   const account = await ensureTokenAccount(userId);
-
-  if (!account || account.balance < amount) {
-    throw new AppError("Insufficient AI tokens", 402);
-  }
+  if (!account) return;
 
   const before = account.balance;
-  account.balance -= amount;
+  account.balance = Math.max(0, account.balance - amount);
   await account.save();
   const after = account.balance;
 
@@ -77,9 +111,36 @@ export async function deductTokens({ userId, amount, reason, refId }) {
   });
 }
 
+export async function deductVideoSeconds({ userId, durationSec = 5, reason, refId }) {
+  const user = await User.findByPk(userId);
+  if (!user || !["student", "teacher"].includes(user.role)) {
+    return;
+  }
+
+  const sec = Number(durationSec) || 5;
+  if (sec <= 0) return;
+
+  const account = await ensureTokenAccount(userId);
+  if (!account) return;
+
+  const before = account.video_seconds_balance ?? 2000;
+  account.video_seconds_balance = Math.max(0, before - sec);
+  await account.save();
+  const after = account.video_seconds_balance;
+
+  await TokenTransaction.create({
+    user_id: userId,
+    type: "usage",
+    change: -sec,
+    balance_before: before,
+    balance_after: after,
+  });
+}
+
 export async function setRoleAnnualTokens({
   role,
   annual_tokens,
+  annual_video_seconds,
   mode = "replace",
   school_id = null,
   updated_by = null,
@@ -88,15 +149,31 @@ export async function setRoleAnnualTokens({
     throw new AppError("Invalid role", 400);
   }
 
-  if (Number.isNaN(Number(annual_tokens)) || annual_tokens < 0) {
-    throw new AppError("Invalid annual_tokens", 400);
+  const updateData = {};
+  if (annual_tokens !== undefined) {
+    if (Number.isNaN(Number(annual_tokens)) || annual_tokens < 0) {
+      throw new AppError("Invalid annual_tokens", 400);
+    }
+    updateData.annual_tokens = Number(annual_tokens);
+  }
+  if (annual_video_seconds !== undefined) {
+    if (Number.isNaN(Number(annual_video_seconds)) || annual_video_seconds < 0) {
+      throw new AppError("Invalid annual_video_seconds", 400);
+    }
+    updateData.annual_video_seconds = Number(annual_video_seconds);
   }
 
-  await TokenPolicy.upsert({
-    role,
-    annual_tokens,
-    updated_by,
-  });
+  let policy = await TokenPolicy.findOne({ where: { role } });
+  if (policy) {
+    await policy.update({ ...updateData, updated_by });
+  } else {
+    policy = await TokenPolicy.create({
+      role,
+      annual_tokens: updateData.annual_tokens ?? (role === "student" ? 3000000 : 10000000),
+      annual_video_seconds: updateData.annual_video_seconds ?? (role === "teacher" ? 2000 : 0),
+      updated_by,
+    });
+  }
 
   const users = await User.findAll({
     where: {
@@ -110,21 +187,42 @@ export async function setRoleAnnualTokens({
     const account = await ensureTokenAccount(u.id);
     if (!account) continue;
 
-    const before = account.balance;
-    const after =
-      mode === "add" ? before + Number(annual_tokens) : Number(annual_tokens);
+    if (updateData.annual_tokens !== undefined) {
+      const before = account.balance;
+      const after =
+        mode === "add" ? before + updateData.annual_tokens : updateData.annual_tokens;
 
-    if (after !== before) {
-      account.balance = after;
-      await account.save();
+      if (after !== before) {
+        account.balance = after;
+        await account.save();
 
-      await TokenTransaction.create({
-        user_id: u.id,
-        type: "admin_adjustment",
-        change: after - before,
-        balance_before: before,
-        balance_after: after,
-      });
+        await TokenTransaction.create({
+          user_id: u.id,
+          type: "admin_adjustment",
+          change: after - before,
+          balance_before: before,
+          balance_after: after,
+        });
+      }
+    }
+
+    if (updateData.annual_video_seconds !== undefined) {
+      const beforeVid = account.video_seconds_balance ?? 2000;
+      const afterVid =
+        mode === "add" ? beforeVid + updateData.annual_video_seconds : updateData.annual_video_seconds;
+
+      if (afterVid !== beforeVid) {
+        account.video_seconds_balance = afterVid;
+        await account.save();
+
+        await TokenTransaction.create({
+          user_id: u.id,
+          type: "admin_adjustment",
+          change: afterVid - beforeVid,
+          balance_before: beforeVid,
+          balance_after: afterVid,
+        });
+      }
     }
   }
 }

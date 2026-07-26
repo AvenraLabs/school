@@ -24,6 +24,12 @@ const TokenAccount = db.define(
       defaultValue: 0,
     },
 
+    video_seconds_balance: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 2000,
+    },
+
     expires_at: {
       type: DataTypes.DATE,
       allowNull: true,

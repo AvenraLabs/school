@@ -173,6 +173,11 @@ export default function DashboardPage() {
     const aiUsed = aiTokens.used ?? 0;
     const aiTotal = aiTokens.total ?? 0;
 
+    const aiVideoSec = data?.ai_video_seconds || { remaining: 2000, used: 0, total: 2000 };
+    const videoRemaining = aiVideoSec.remaining ?? 2000;
+    const videoUsed = aiVideoSec.used ?? 0;
+    const videoTotal = aiVideoSec.total ?? 2000;
+
     const homeworkSummary = data?.homework_summary || [];
     const pendingHomeworkCount = homeworkSummary.reduce((sum, hw) => sum + (hw.pending || 0), 0);
     const pendingReportCardsCount = data?.pending_report_cards ?? 0;
@@ -208,11 +213,11 @@ export default function DashboardPage() {
           </Stack>
 
           {/* Stats Grid inside header */}
-          <Grid container spacing={1.5}>
-            <Grid item xs={6}>
+          <Grid container spacing={1.2}>
+            <Grid item xs={4}>
               <Paper
                 sx={{
-                  p: { xs: 1.5, sm: 2 },
+                  p: { xs: 1.2, sm: 2 },
                   bgcolor: 'rgba(255,255,255,0.12)',
                   backdropFilter: 'blur(12px)',
                   color: 'white',
@@ -225,25 +230,25 @@ export default function DashboardPage() {
                 }}
               >
                 <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: { xs: '0.6rem', sm: '0.68rem' }, fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: { xs: '0.55rem', sm: '0.68rem' }, fontWeight: 700, letterSpacing: '0.3px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
                     AI Tokens
                   </Typography>
-                  <Typography sx={{ fontSize: { xs: '1.15rem', sm: '1.5rem' }, fontWeight: 950, lineHeight: 1.2 }}>
+                  <Typography sx={{ fontSize: { xs: '1rem', sm: '1.4rem' }, fontWeight: 950, lineHeight: 1.2 }}>
                     {aiRemaining}
                   </Typography>
                 </Box>
                 <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.58rem', sm: '0.68rem' } }}>
+                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.52rem', sm: '0.65rem' } }}>
                     Used: {aiUsed} / {aiTotal}
                   </Typography>
                 </Box>
               </Paper>
             </Grid>
 
-            <Grid item xs={6}>
+            <Grid item xs={4}>
               <Paper
                 sx={{
-                  p: { xs: 1.5, sm: 2 },
+                  p: { xs: 1.2, sm: 2 },
                   bgcolor: 'rgba(255,255,255,0.12)',
                   backdropFilter: 'blur(12px)',
                   color: 'white',
@@ -256,16 +261,47 @@ export default function DashboardPage() {
                 }}
               >
                 <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: { xs: '0.6rem', sm: '0.68rem' }, fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
-                    Grading Tasks
+                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: { xs: '0.55rem', sm: '0.68rem' }, fontWeight: 700, letterSpacing: '0.3px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
+                    AI Video Sec
                   </Typography>
-                  <Typography sx={{ fontSize: { xs: '1.15rem', sm: '1.5rem' }, fontWeight: 950, lineHeight: 1.2 }}>
+                  <Typography sx={{ fontSize: { xs: '1rem', sm: '1.4rem' }, fontWeight: 950, lineHeight: 1.2 }}>
+                    {videoRemaining}s
+                  </Typography>
+                </Box>
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.52rem', sm: '0.65rem' } }}>
+                    Used: {videoUsed}s / {videoTotal}s
+                  </Typography>
+                </Box>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={4}>
+              <Paper
+                sx={{
+                  p: { xs: 1.2, sm: 2 },
+                  bgcolor: 'rgba(255,255,255,0.12)',
+                  backdropFilter: 'blur(12px)',
+                  color: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <Box>
+                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: { xs: '0.55rem', sm: '0.68rem' }, fontWeight: 700, letterSpacing: '0.3px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
+                    Grading
+                  </Typography>
+                  <Typography sx={{ fontSize: { xs: '1rem', sm: '1.4rem' }, fontWeight: 950, lineHeight: 1.2 }}>
                     {totalPendingTasks} Pending
                   </Typography>
                 </Box>
                 <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.58rem', sm: '0.68rem' } }}>
-                    HW: {pendingHomeworkCount} • Exams: {pendingReportCardsCount}
+                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.52rem', sm: '0.65rem' } }}>
+                    HW: {pendingHomeworkCount} • Exam: {pendingReportCardsCount}
                   </Typography>
                 </Box>
               </Paper>

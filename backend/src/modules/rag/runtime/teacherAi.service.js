@@ -6,6 +6,8 @@ import Class from "../../classes/classes.model.js";
 import TeacherQuiz from "../../quiz/teacher-quiz.model.js";
 import TeacherQuizQuestion from "../../quiz/teacher-quiz-question.model.js";
 import AppError from "../../../shared/appError.js";
+import AiChatLog from "../../ai-chat-logs/ai-chat-log.model.js";
+import { deductTokens, ensureTokenAccount, assertHasTokenBalance } from "../../tokens/token.service.js";
 
 /**
  * Generates teacher AI tools:
@@ -63,6 +65,10 @@ export async function generateTeacherAiContent({
 
   const ai = getAiClient();
   const GEMINI_MODEL = getGeminiModel();
+
+  if (user?.id) {
+    await assertHasTokenBalance(user.id);
+  }
 
   // Handle Student Quiz Tool (Saves to DB)
   if (tool === "student_quiz") {
@@ -250,6 +256,28 @@ ${customInstructions ? `Additional Teacher Directive: ${customInstructions}` : "
 
   const generatedText =
     result.text || result?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") || "";
+
+  if (user?.id) {
+    const usage = result.usageMetadata || {};
+    const tokensUsed = usage.totalTokenCount || Math.max(150, Math.ceil(((systemPrompt?.length || 0) + generatedText.length) / 4));
+
+    const log = await AiChatLog.create({
+      user_id: user.id,
+      user_query: String(title || chapter || tool).slice(0, 250),
+      ai_response: generatedText.slice(0, 500),
+      tokens_used: tokensUsed,
+      model_used: GEMINI_MODEL,
+      ai_type: tool === "question_paper" ? "question_paper" : tool === "student_quiz" ? "quiz" : "lesson_summary",
+      class_level: String(finalGrade || ""),
+    });
+
+    await deductTokens({
+      userId: user.id,
+      amount: tokensUsed,
+      reason: `teacher_ai_${tool}`,
+      refId: log.id,
+    });
+  }
 
   return {
     tool,

@@ -2,6 +2,31 @@ import { Box, Paper, Typography, Avatar, useTheme, Stack, IconButton } from "@mu
 import { SmartToy, Person, VolumeUp, VolumeOff } from "@mui/icons-material";
 import { useSpeechSynthesis } from "../../../speech/useSpeechSynthesis";
 
+function formatChatMessage(rawText) {
+    if (!rawText) return "";
+    
+    // Clean raw markdown header hashes and dividers if present
+    const cleaned = String(rawText)
+        .replace(/^#{1,6}\s*(.+)$/gm, "$1")
+        .replace(/^[\*\-_]{3,}$/gm, "");
+
+    const parts = cleaned.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, idx) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+            return (
+                <Box
+                    component="span"
+                    key={idx}
+                    sx={{ fontWeight: 700 }}
+                >
+                    {part.slice(2, -2)}
+                </Box>
+            );
+        }
+        return part;
+    });
+}
+
 export default function MessageBubble({ message, userAvatar }) {
     const theme = useTheme();
     const isAi = message.role === "ai" || message.role === "assistant";
@@ -59,6 +84,7 @@ export default function MessageBubble({ message, userAvatar }) {
                 <Stack direction="row" spacing={1.5} alignItems="flex-start" justifyContent="space-between">
                     <Typography
                         variant="body1"
+                        component="div"
                         sx={{
                             whiteSpace: "pre-wrap",
                             wordBreak: "break-word",
@@ -66,7 +92,7 @@ export default function MessageBubble({ message, userAvatar }) {
                             flex: 1,
                         }}
                     >
-                        {message.text || message.content}
+                        {formatChatMessage(message.text || message.content)}
                     </Typography>
                     {isAi && (
                         <IconButton

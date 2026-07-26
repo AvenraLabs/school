@@ -4,6 +4,8 @@ import Quiz from "./quiz.model.js";
 import QuizQuestion from "./quiz-question.model.js";
 import AppError from "../../shared/appError.js";
 import { retrieveRagContext } from "../rag/rag.service.js";
+import AiChatLog from "../ai-chat-logs/ai-chat-log.model.js";
+import { deductTokens, ensureTokenAccount, assertHasTokenBalance } from "../tokens/token.service.js";
 
 function extractJson(text) {
   const cleaned = text.replace(/```json|```/g, "").trim();
@@ -26,6 +28,11 @@ export async function generateQuizFromAi({
   const safeNumQuestions = Math.min(Math.max(numQuestions || 5, 1), 20);
   const safeDifficulty = difficulty || "MEDIUM";
   const safeClassLevel = classLevel || 5;
+
+  // Check token balance BEFORE calling Gemini API
+  if (user?.id) {
+    await assertHasTokenBalance(user.id);
+  }
 
   let contextText = "";
   try {
@@ -71,6 +78,10 @@ export async function generateQuizFromAi({
     throw new AppError("AI returned invalid quiz format", 500);
   }
 
+  const tokensUsed =
+    result.usageMetadata?.totalTokenCount ||
+    Math.max(150, Math.ceil((prompt.length + text.length) / 4));
+
   const quiz = await Quiz.create({
     title: parsed.title || topic,
     topic,
@@ -78,6 +89,25 @@ export async function generateQuizFromAi({
     num_questions: parsed.questions.length,
     owner_user_id: user.id,
   });
+
+  if (user?.id) {
+    const log = await AiChatLog.create({
+      user_id: user.id,
+      user_query: topic,
+      ai_response: text.slice(0, 500),
+      tokens_used: tokensUsed,
+      model_used: GEMINI_MODEL,
+      ai_type: "quiz",
+      class_level: String(safeClassLevel),
+    });
+
+    await deductTokens({
+      userId: user.id,
+      amount: tokensUsed,
+      reason: "teacher_quiz_generation",
+      refId: quiz.id,
+    });
+  }
 
   const questionRows = parsed.questions.map((q, i) => ({
     quiz_id: quiz.id,

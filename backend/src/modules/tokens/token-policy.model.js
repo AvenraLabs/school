@@ -21,6 +21,12 @@ const TokenPolicy = db.define(
       defaultValue: 0,
     },
 
+    annual_video_seconds: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 2000,
+    },
+
     updated_by: {
       type: DataTypes.BIGINT,
       allowNull: true,

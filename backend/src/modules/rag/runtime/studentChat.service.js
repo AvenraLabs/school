@@ -5,7 +5,7 @@ import School from "../../schools/school.model.js";
 import Student from "../../students/student.model.js";
 import Class from "../../classes/classes.model.js";
 import AiChatLog from "../../ai-chat-logs/ai-chat-log.model.js";
-import { deductTokens } from "../../tokens/token.service.js";
+import { deductTokens, assertHasTokenBalance } from "../../tokens/token.service.js";
 
 import { detectSubject } from "./detectSubject.js";
 import { searchStudentChunks } from "./searchStudentChunks.js";
@@ -29,6 +29,9 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
   if (!question || !question.trim()) {
     throw new Error("Question is required");
   }
+
+  // Pre-check token balance BEFORE calling Gemini API (0 API calls wasted if 0 tokens remaining)
+  await assertHasTokenBalance(userId);
 
   const user = await User.findByPk(userId);
   if (!user) throw new Error("User not found");

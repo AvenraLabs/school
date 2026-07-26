@@ -1,7 +1,23 @@
 import { getAiClient, getGeminiModel } from "../shared/aiClient.js";
 
+function sanitizeAiOutput(rawText) {
+  if (!rawText) return "";
+  let clean = rawText;
+
+  // Remove intro greetings like "Hi there! I'd be happy to..." or "Hello! ..."
+  clean = clean.replace(/^(Hi there!|Hello!|Hey there!|Sure!|I'd be happy to[^\n]*|Welcome!)[^\n]*\n+/gi, "").trim();
+
+  // Convert markdown heading hashes like "### What is LCM?" into bold titles "**What is LCM?**"
+  clean = clean.replace(/^#{1,6}\s*(.+)$/gm, "**$1**");
+
+  // Remove raw horizontal dividers like "***" or "---"
+  clean = clean.replace(/^[\*\-_]{3,}$/gm, "");
+
+  return clean.trim();
+}
+
 /**
- * Invokes Gemini 2.5 Flash Lite model to generate answer.
+ * Invokes Gemini model to generate answer.
  */
 export async function generateAnswer(prompt) {
   const ai = getAiClient();
@@ -15,13 +31,15 @@ export async function generateAnswer(prompt) {
 
     const usage = result.usageMetadata || {};
     const tokensUsed = usage.totalTokenCount || 0;
-    const text =
+    const rawText =
       result.text ||
       result?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ||
       "";
 
+    const text = sanitizeAiOutput(rawText);
+
     return {
-      text: text.trim(),
+      text,
       tokensUsed,
       modelUsed: GEMINI_MODEL,
     };
