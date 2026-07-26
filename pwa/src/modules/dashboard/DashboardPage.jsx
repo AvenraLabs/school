@@ -173,10 +173,10 @@ export default function DashboardPage() {
     const aiUsed = aiTokens.used ?? 0;
     const aiTotal = aiTokens.total ?? 0;
 
-    const aiVideoSec = data?.ai_video_seconds || { remaining: 2000, used: 0, total: 2000 };
-    const videoRemaining = aiVideoSec.remaining ?? 2000;
+    const aiVideoSec = data?.ai_video_seconds || { remaining: 0, used: 0, total: 0 };
+    const videoRemaining = aiVideoSec.remaining ?? 0;
     const videoUsed = aiVideoSec.used ?? 0;
-    const videoTotal = aiVideoSec.total ?? 2000;
+    const videoTotal = aiVideoSec.total ?? 0;
 
     const homeworkSummary = data?.homework_summary || [];
     const pendingHomeworkCount = homeworkSummary.reduce((sum, hw) => sum + (hw.pending || 0), 0);

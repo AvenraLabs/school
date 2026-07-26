@@ -141,7 +141,7 @@ export const getTeacherDashboardService = async ({
   const total = used + remaining;
 
   // Video Seconds Calculation
-  const videoRemaining = tokenAccount?.video_seconds_balance ?? 2000;
+  const videoRemaining = tokenAccount?.video_seconds_balance ?? 0;
   let videoUsed = 0;
   if (teacher_id) {
     const VideoGeneration = (await import("../ai-video/video-generation.model.js")).default;

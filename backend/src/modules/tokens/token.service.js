@@ -14,7 +14,7 @@ export async function ensureTokenAccount(userId) {
   let policy = await TokenPolicy.findOne({ where: { role: user.role } });
   if (!policy) {
     const defaultTokens = user.role === "student" ? 3000000 : (user.role === "teacher" ? 10000000 : 0);
-    const defaultVideoSeconds = user.role === "teacher" ? 2000 : 0;
+    const defaultVideoSeconds = 0;
     policy = await TokenPolicy.create({
       role: user.role,
       annual_tokens: defaultTokens,
@@ -22,7 +22,7 @@ export async function ensureTokenAccount(userId) {
     });
   }
   const initialBalance = policy.annual_tokens ?? 0;
-  const initialVideoSeconds = policy.annual_video_seconds ?? (user.role === "teacher" ? 2000 : 0);
+  const initialVideoSeconds = policy.annual_video_seconds ?? 0;
 
   account = await TokenAccount.create({
     user_id: userId,
@@ -70,13 +70,18 @@ export async function assertHasVideoSecondsBalance(userId, durationSec = 5) {
     throw new AppError("User not found", 404);
   }
 
+  // Students do not have AI video generation access
+  if (user.role === "student") {
+    throw new AppError("AI video generation is only available for teachers.", 403);
+  }
+
   // Admin roles bypass video token limits
-  if (!["student", "teacher"].includes(user.role)) {
+  if (!["teacher"].includes(user.role)) {
     return;
   }
 
   const account = await ensureTokenAccount(userId);
-  if (!account || (account.video_seconds_balance ?? (user.role === "teacher" ? 2000 : 0)) <= 0) {
+  if (!account || (account.video_seconds_balance ?? 0) <= 0) {
     throw new AppError(
       "You have used all your annual AI video creation quota (0 video seconds remaining). Please contact your school administrator to add video seconds.",
       402
@@ -123,7 +128,7 @@ export async function deductVideoSeconds({ userId, durationSec = 5, reason, refI
   const account = await ensureTokenAccount(userId);
   if (!account) return;
 
-  const before = account.video_seconds_balance ?? (user.role === "teacher" ? 2000 : 0);
+  const before = account.video_seconds_balance ?? 0;
   account.video_seconds_balance = Math.max(0, before - sec);
   await account.save();
   const after = account.video_seconds_balance;
@@ -187,7 +192,7 @@ export async function setRoleAnnualTokens({
     policy = await TokenPolicy.create({
       role,
       annual_tokens: updateData.annual_tokens ?? (role === "student" ? 3000000 : 10000000),
-      annual_video_seconds: updateData.annual_video_seconds ?? (role === "teacher" ? 2000 : 0),
+      annual_video_seconds: updateData.annual_video_seconds ?? 0,
       updated_by,
     });
   }
@@ -224,7 +229,7 @@ export async function setRoleAnnualTokens({
     }
 
     if (updateData.annual_video_seconds !== undefined) {
-      const beforeVid = account.video_seconds_balance ?? (role === "teacher" ? 2000 : 0);
+      const beforeVid = account.video_seconds_balance ?? 0;
       const afterVid =
         mode === "add" ? beforeVid + updateData.annual_video_seconds : updateData.annual_video_seconds;
 

@@ -58,7 +58,6 @@ function CombinedTokenEditor({ policies, onSaved }) {
   const [mode, setMode] = useState('replace'); // 'replace' | 'add'
   const [studentVal, setStudentVal] = useState(studentPol?.annual_tokens ?? 0);
   const [teacherVal, setTeacherVal] = useState(teacherPol?.annual_tokens ?? 0);
-  const [studentVideoVal, setStudentVideoVal] = useState(studentPol?.annual_video_seconds ?? 0);
   const [teacherVideoVal, setTeacherVideoVal] = useState(teacherPol?.annual_video_seconds ?? 2000);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
@@ -66,12 +65,10 @@ function CombinedTokenEditor({ policies, onSaved }) {
   useEffect(() => {
     if (mode === 'replace') {
       setStudentVal(studentPol?.annual_tokens ?? 0);
-      setStudentVideoVal(studentPol?.annual_video_seconds ?? 0);
       setTeacherVal(teacherPol?.annual_tokens ?? 0);
       setTeacherVideoVal(teacherPol?.annual_video_seconds ?? 2000);
     } else {
       setStudentVal(0);
-      setStudentVideoVal(0);
       setTeacherVal(0);
       setTeacherVideoVal(0);
     }
@@ -83,14 +80,14 @@ function CombinedTokenEditor({ policies, onSaved }) {
       await tokenPoliciesAPI.updateBoth({
         studentAnnual: Number(studentVal),
         teacherAnnual: Number(teacherVal),
-        studentVideoSeconds: Number(studentVideoVal),
+        studentVideoSeconds: 0,
         teacherVideoSeconds: Number(teacherVideoVal),
         mode,
       });
       toast.success(
         mode === 'add'
           ? 'Quotas added to users successfully!'
-          : 'Token & Video limits replaced successfully!'
+          : 'Token & Video limits updated successfully!'
       );
       onSaved();
     } catch (e) {
@@ -124,7 +121,7 @@ function CombinedTokenEditor({ policies, onSaved }) {
         </div>
         <div>
           <p style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>Annual Token & Video Quotas</p>
-          <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Adjust AI text tokens & video generation seconds for all users in the school</p>
+          <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Adjust AI text tokens for students & AI text + video generation seconds for teachers</p>
         </div>
       </div>
 
@@ -167,7 +164,7 @@ function CombinedTokenEditor({ policies, onSaved }) {
           </span>
         ) : (
           <span>
-            <strong>Add / Top-Up Mode:</strong> The entered values will be <u>added on top</u> of every user's current remaining balance (e.g. typing 500 adds 500s video to every user).
+            <strong>Add / Top-Up Mode:</strong> The entered values will be <u>added on top</u> of every user's current remaining balance (e.g. typing 500 adds 500s video to every teacher).
           </span>
         )}
       </div>
@@ -207,34 +204,9 @@ function CombinedTokenEditor({ policies, onSaved }) {
             />
           </div>
 
-          {/* AI Video Seconds */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Video style={{ width: '14px', height: '14px', color: '#0284c7' }} />
-              <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
-                {mode === 'replace' ? 'AI Video Limit (Seconds)' : 'Add Video Seconds (+ Amount)'}
-              </label>
-            </div>
-            <div style={{ background: '#f0f9ff', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-              <span style={{ fontSize: '11px', color: '#0369a1', fontWeight: 500 }}>Current video limit</span>
-              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '15px', color: '#0369a1' }}>
-                {(studentPol?.annual_video_seconds ?? 0).toLocaleString()}s
-              </span>
-            </div>
-            <input
-              type="number"
-              min="0"
-              value={studentVideoVal}
-              onChange={e => setStudentVideoVal(e.target.value)}
-              onFocus={e => e.target.select()}
-              placeholder={mode === 'replace' ? 'Student video seconds limit' : 'Video seconds to add (e.g. 500)'}
-              style={{
-                padding: '10px 14px', borderRadius: '8px',
-                border: '1px solid #cbd5e1', background: '#fff',
-                fontSize: '14px', fontFamily: 'monospace', fontWeight: 600,
-                color: '#0f172a', outline: 'none', width: '100%',
-              }}
-            />
+          <div style={{ paddingTop: '8px', borderTop: '1px dashed #cbd5e1', fontSize: '11px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Video style={{ width: '13px', height: '13px', color: '#94a3b8' }} />
+            <span>AI Video generation is exclusive to teachers</span>
           </div>
         </div>
 
