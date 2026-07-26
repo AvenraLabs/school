@@ -608,12 +608,26 @@ export const tokenPoliciesAPI = {
   },
 
   // Sets both student + teacher policies in one call
-  updateBoth: async (studentAnnual, teacherAnnual, mode = 'replace') => {
-    const response = await axiosInstance.post('/tokens/policies', {
-      student_annual: studentAnnual,
-      teacher_annual: teacherAnnual,
-      mode,
-    });
+  updateBoth: async (studentAnnual, teacherAnnual, mode = 'replace', teacherVideoSeconds, studentVideoSeconds) => {
+    let payload = {};
+    if (typeof studentAnnual === 'object' && studentAnnual !== null) {
+      payload = {
+        student_annual: studentAnnual.studentAnnual,
+        teacher_annual: studentAnnual.teacherAnnual,
+        student_video_seconds: studentAnnual.studentVideoSeconds,
+        teacher_video_seconds: studentAnnual.teacherVideoSeconds,
+        mode: studentAnnual.mode || 'replace',
+      };
+    } else {
+      payload = {
+        student_annual: studentAnnual,
+        teacher_annual: teacherAnnual,
+        teacher_video_seconds: teacherVideoSeconds,
+        student_video_seconds: studentVideoSeconds,
+        mode,
+      };
+    }
+    const response = await axiosInstance.post('/tokens/policies', payload);
     return response.data;
   },
 

@@ -76,7 +76,7 @@ export async function assertHasVideoSecondsBalance(userId, durationSec = 5) {
   }
 
   const account = await ensureTokenAccount(userId);
-  if (!account || (account.video_seconds_balance ?? 2000) <= 0) {
+  if (!account || (account.video_seconds_balance ?? (user.role === "teacher" ? 2000 : 0)) <= 0) {
     throw new AppError(
       "You have used all your annual AI video creation quota (0 video seconds remaining). Please contact your school administrator to add video seconds.",
       402
@@ -123,7 +123,7 @@ export async function deductVideoSeconds({ userId, durationSec = 5, reason, refI
   const account = await ensureTokenAccount(userId);
   if (!account) return;
 
-  const before = account.video_seconds_balance ?? 2000;
+  const before = account.video_seconds_balance ?? (user.role === "teacher" ? 2000 : 0);
   account.video_seconds_balance = Math.max(0, before - sec);
   await account.save();
   const after = account.video_seconds_balance;
@@ -165,7 +165,24 @@ export async function setRoleAnnualTokens({
 
   let policy = await TokenPolicy.findOne({ where: { role } });
   if (policy) {
-    await policy.update({ ...updateData, updated_by });
+    const newTokens =
+      updateData.annual_tokens !== undefined
+        ? mode === "add"
+          ? (policy.annual_tokens ?? 0) + updateData.annual_tokens
+          : updateData.annual_tokens
+        : policy.annual_tokens;
+    const newVideo =
+      updateData.annual_video_seconds !== undefined
+        ? mode === "add"
+          ? (policy.annual_video_seconds ?? 0) + updateData.annual_video_seconds
+          : updateData.annual_video_seconds
+        : policy.annual_video_seconds;
+
+    await policy.update({
+      annual_tokens: newTokens,
+      annual_video_seconds: newVideo,
+      updated_by,
+    });
   } else {
     policy = await TokenPolicy.create({
       role,
@@ -207,7 +224,7 @@ export async function setRoleAnnualTokens({
     }
 
     if (updateData.annual_video_seconds !== undefined) {
-      const beforeVid = account.video_seconds_balance ?? 2000;
+      const beforeVid = account.video_seconds_balance ?? (role === "teacher" ? 2000 : 0);
       const afterVid =
         mode === "add" ? beforeVid + updateData.annual_video_seconds : updateData.annual_video_seconds;
 

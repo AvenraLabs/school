@@ -21,7 +21,7 @@ import {
   Plus, RotateCcw, Copy, ChevronDown, ChevronUp,
   GraduationCap, UserCog, Users, ChevronLeft, ChevronRight,
   Cpu, RefreshCw, Check, Edit3, Database, Layers,
-  MessageSquare, Trash2
+  MessageSquare, Trash2, Video
 } from 'lucide-react';
 
 /* ════════════════════════════════════════════════════════════════════
@@ -48,32 +48,50 @@ function TableWrap({ children }) {
   );
 }
 
-
 /* ════════════════════════════════════════════════════════════════════
-   COMBINED TOKEN EDITOR — edits and saves both limits together
+   COMBINED TOKEN & VIDEO EDITOR — edits and saves both limits together
 ════════════════════════════════════════════════════════════════════ */
 function CombinedTokenEditor({ policies, onSaved }) {
   const studentPol = policies.find(p => p.role === 'student');
   const teacherPol = policies.find(p => p.role === 'teacher');
 
+  const [mode, setMode] = useState('replace'); // 'replace' | 'add'
   const [studentVal, setStudentVal] = useState(studentPol?.annual_tokens ?? 0);
   const [teacherVal, setTeacherVal] = useState(teacherPol?.annual_tokens ?? 0);
+  const [studentVideoVal, setStudentVideoVal] = useState(studentPol?.annual_video_seconds ?? 0);
+  const [teacherVideoVal, setTeacherVideoVal] = useState(teacherPol?.annual_video_seconds ?? 2000);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
-    setStudentVal(studentPol?.annual_tokens ?? 0);
-  }, [studentPol?.annual_tokens]);
-
-  useEffect(() => {
-    setTeacherVal(teacherPol?.annual_tokens ?? 0);
-  }, [teacherPol?.annual_tokens]);
+    if (mode === 'replace') {
+      setStudentVal(studentPol?.annual_tokens ?? 0);
+      setStudentVideoVal(studentPol?.annual_video_seconds ?? 0);
+      setTeacherVal(teacherPol?.annual_tokens ?? 0);
+      setTeacherVideoVal(teacherPol?.annual_video_seconds ?? 2000);
+    } else {
+      setStudentVal(0);
+      setStudentVideoVal(0);
+      setTeacherVal(0);
+      setTeacherVideoVal(0);
+    }
+  }, [mode, studentPol, teacherPol]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await tokenPoliciesAPI.updateBoth(Number(studentVal), Number(teacherVal), 'replace');
-      toast.success('Token limits updated successfully');
+      await tokenPoliciesAPI.updateBoth({
+        studentAnnual: Number(studentVal),
+        teacherAnnual: Number(teacherVal),
+        studentVideoSeconds: Number(studentVideoVal),
+        teacherVideoSeconds: Number(teacherVideoVal),
+        mode,
+      });
+      toast.success(
+        mode === 'add'
+          ? 'Quotas added to users successfully!'
+          : 'Token & Video limits replaced successfully!'
+      );
       onSaved();
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to save');
@@ -88,13 +106,14 @@ function CombinedTokenEditor({ policies, onSaved }) {
       border: '1px solid #e2e8f0',
       borderRadius: '16px',
       padding: '32px',
-      maxWidth: '800px',
+      maxWidth: '850px',
       margin: '0 auto',
       display: 'flex',
       flexDirection: 'column',
       gap: '24px',
       width: '100%',
     }}>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px' }}>
         <div style={{
           width: '48px', height: '48px', borderRadius: '14px', flexShrink: 0,
@@ -104,78 +123,194 @@ function CombinedTokenEditor({ policies, onSaved }) {
           <Coins style={{ width: '22px', height: '22px', color: '#fff' }} />
         </div>
         <div>
-          <p style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>Annual Token Limits</p>
-          <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Adjust AI token budgets for all users in the school</p>
+          <p style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>Annual Token & Video Quotas</p>
+          <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Adjust AI text tokens & video generation seconds for all users in the school</p>
         </div>
+      </div>
+
+      {/* Mode Switcher */}
+      <div className="bg-slate-100/90 p-1.5 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => setMode('replace')}
+          className={`w-full sm:flex-1 py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            mode === 'replace'
+              ? 'bg-white text-indigo-600 shadow-sm border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          Replace / Set Exact Values
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('add')}
+          className={`w-full sm:flex-1 py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            mode === 'add'
+              ? 'bg-white text-emerald-600 shadow-sm border border-slate-200'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Plus className="w-3.5 h-3.5 text-emerald-600" />
+          Add / Top-Up to Existing Balances
+        </button>
+      </div>
+
+      <div className={`text-xs p-3 rounded-xl border leading-relaxed ${
+        mode === 'replace'
+          ? 'bg-indigo-50/60 border-indigo-100 text-indigo-900'
+          : 'bg-emerald-50/60 border-emerald-100 text-emerald-900'
+      }`}>
+        {mode === 'replace' ? (
+          <span>
+            <strong>Replace Mode:</strong> All users will have their limit and current balance set to these exact values.
+          </span>
+        ) : (
+          <span>
+            <strong>Add / Top-Up Mode:</strong> The entered values will be <u>added on top</u> of every user's current remaining balance (e.g. typing 500 adds 500s video to every user).
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
         {/* Student Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#f8fafc', padding: '20px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <GraduationCap style={{ width: '18px', height: '18px', color: '#0284c7' }} />
-            <span style={{ fontWeight: 700, fontSize: '15px', color: '#334155' }}>Students</span>
-          </div>
-          
-          <div style={{ background: '#f0f9ff', borderRadius: '10px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', color: '#0369a1', fontWeight: 500 }}>Current limit</span>
-            <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', color: '#0369a1' }}>
-              {(studentPol?.annual_tokens ?? 0).toLocaleString()}
-            </span>
+            <GraduationCap style={{ width: '20px', height: '20px', color: '#0284c7' }} />
+            <span style={{ fontWeight: 700, fontSize: '16px', color: '#0f172a' }}>Students</span>
           </div>
 
-          <input
-            type="number"
-            min="0"
-            value={studentVal}
-            onChange={e => setStudentVal(e.target.value)}
-            onFocus={e => e.target.select()}
-            placeholder="Student tokens limit"
-            style={{
-              padding: '12px 16px', borderRadius: '10px',
-              border: '1px solid #e2e8f0', background: '#f8fafc',
-              fontSize: '15px', fontFamily: 'monospace', fontWeight: 600,
-              color: '#0f172a', outline: 'none', width: '100%',
-            }}
-          />
+          {/* AI Tokens */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+              {mode === 'replace' ? 'Annual AI Tokens' : 'Add AI Tokens (+ Amount)'}
+            </label>
+            <div style={{ background: '#f0f9ff', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+              <span style={{ fontSize: '11px', color: '#0369a1', fontWeight: 500 }}>Current token limit</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '15px', color: '#0369a1' }}>
+                {(studentPol?.annual_tokens ?? 0).toLocaleString()}
+              </span>
+            </div>
+            <input
+              type="number"
+              min="0"
+              value={studentVal}
+              onChange={e => setStudentVal(e.target.value)}
+              onFocus={e => e.target.select()}
+              placeholder={mode === 'replace' ? 'Student AI tokens limit' : 'Tokens to add (e.g. 5000)'}
+              style={{
+                padding: '10px 14px', borderRadius: '8px',
+                border: '1px solid #cbd5e1', background: '#fff',
+                fontSize: '14px', fontFamily: 'monospace', fontWeight: 600,
+                color: '#0f172a', outline: 'none', width: '100%',
+              }}
+            />
+          </div>
+
+          {/* AI Video Seconds */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Video style={{ width: '14px', height: '14px', color: '#0284c7' }} />
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                {mode === 'replace' ? 'AI Video Limit (Seconds)' : 'Add Video Seconds (+ Amount)'}
+              </label>
+            </div>
+            <div style={{ background: '#f0f9ff', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+              <span style={{ fontSize: '11px', color: '#0369a1', fontWeight: 500 }}>Current video limit</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '15px', color: '#0369a1' }}>
+                {(studentPol?.annual_video_seconds ?? 0).toLocaleString()}s
+              </span>
+            </div>
+            <input
+              type="number"
+              min="0"
+              value={studentVideoVal}
+              onChange={e => setStudentVideoVal(e.target.value)}
+              onFocus={e => e.target.select()}
+              placeholder={mode === 'replace' ? 'Student video seconds limit' : 'Video seconds to add (e.g. 500)'}
+              style={{
+                padding: '10px 14px', borderRadius: '8px',
+                border: '1px solid #cbd5e1', background: '#fff',
+                fontSize: '14px', fontFamily: 'monospace', fontWeight: 600,
+                color: '#0f172a', outline: 'none', width: '100%',
+              }}
+            />
+          </div>
         </div>
 
         {/* Teacher Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#f8fafc', padding: '20px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <UserCog style={{ width: '18px', height: '18px', color: '#7c3aed' }} />
-            <span style={{ fontWeight: 700, fontSize: '15px', color: '#334155' }}>Teachers</span>
+            <UserCog style={{ width: '20px', height: '20px', color: '#7c3aed' }} />
+            <span style={{ fontWeight: 700, fontSize: '16px', color: '#0f172a' }}>Teachers</span>
           </div>
 
-          <div style={{ background: '#f5f3ff', borderRadius: '10px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', color: '#6d28d9', fontWeight: 500 }}>Current limit</span>
-            <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '16px', color: '#6d28d9' }}>
-              {(teacherPol?.annual_tokens ?? 0).toLocaleString()}
-            </span>
+          {/* AI Tokens */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+              {mode === 'replace' ? 'Annual AI Tokens' : 'Add AI Tokens (+ Amount)'}
+            </label>
+            <div style={{ background: '#f5f3ff', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+              <span style={{ fontSize: '11px', color: '#6d28d9', fontWeight: 500 }}>Current token limit</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '15px', color: '#6d28d9' }}>
+                {(teacherPol?.annual_tokens ?? 0).toLocaleString()}
+              </span>
+            </div>
+            <input
+              type="number"
+              min="0"
+              value={teacherVal}
+              onChange={e => setTeacherVal(e.target.value)}
+              onFocus={e => e.target.select()}
+              placeholder={mode === 'replace' ? 'Teacher AI tokens limit' : 'Tokens to add (e.g. 10000)'}
+              style={{
+                padding: '10px 14px', borderRadius: '8px',
+                border: '1px solid #cbd5e1', background: '#fff',
+                fontSize: '14px', fontFamily: 'monospace', fontWeight: 600,
+                color: '#0f172a', outline: 'none', width: '100%',
+              }}
+            />
           </div>
 
-          <input
-            type="number"
-            min="0"
-            value={teacherVal}
-            onChange={e => setTeacherVal(e.target.value)}
-            onFocus={e => e.target.select()}
-            placeholder="Teacher tokens limit"
-            style={{
-              padding: '12px 16px', borderRadius: '10px',
-              border: '1px solid #e2e8f0', background: '#f8fafc',
-              fontSize: '15px', fontFamily: 'monospace', fontWeight: 600,
-              color: '#0f172a', outline: 'none', width: '100%',
-            }}
-          />
+          {/* AI Video Seconds */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Video style={{ width: '14px', height: '14px', color: '#7c3aed' }} />
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                {mode === 'replace' ? 'AI Video Limit (Seconds)' : 'Add Video Seconds (+ Amount)'}
+              </label>
+            </div>
+            <div style={{ background: '#f5f3ff', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+              <span style={{ fontSize: '11px', color: '#6d28d9', fontWeight: 500 }}>Current video limit</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '15px', color: '#6d28d9' }}>
+                {(teacherPol?.annual_video_seconds ?? 2000).toLocaleString()}s
+              </span>
+            </div>
+            <input
+              type="number"
+              min="0"
+              value={teacherVideoVal}
+              onChange={e => setTeacherVideoVal(e.target.value)}
+              onFocus={e => e.target.select()}
+              placeholder={mode === 'replace' ? 'Teacher video seconds limit' : 'Video seconds to add (e.g. 500)'}
+              style={{
+                padding: '10px 14px', borderRadius: '8px',
+                border: '1px solid #cbd5e1', background: '#fff',
+                fontSize: '14px', fontFamily: 'monospace', fontWeight: 600,
+                color: '#0f172a', outline: 'none', width: '100%',
+              }}
+            />
+          </div>
         </div>
       </div>
 
       <button
         onClick={handleSave} disabled={saving}
         style={{
-          marginTop: '8px', padding: '12px 24px', borderRadius: '10px', border: 'none',
-          background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+          marginTop: '4px', padding: '12px 24px', borderRadius: '10px', border: 'none',
+          background: mode === 'add'
+            ? 'linear-gradient(135deg, #10b981, #059669)'
+            : 'linear-gradient(135deg, #6366f1, #4f46e5)',
           color: '#fff', fontSize: '15px', fontWeight: 600,
           cursor: saving ? 'not-allowed' : 'pointer',
           opacity: saving ? 0.75 : 1,
@@ -186,8 +321,8 @@ function CombinedTokenEditor({ policies, onSaved }) {
       >
         {saving
           ? <RefreshCw style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
-          : <Check style={{ width: '16px', height: '16px' }} />}
-        {saving ? 'Saving Limits…' : 'Save Limits'}
+          : mode === 'add' ? <Plus style={{ width: '16px', height: '16px' }} /> : <Check style={{ width: '16px', height: '16px' }} />}
+        {saving ? 'Processing…' : mode === 'add' ? 'Top-Up & Add Quotas to Users' : 'Replace & Set Exact Limits'}
       </button>
     </div>
   );
@@ -366,60 +501,62 @@ export function SuperAdminPage() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%', flex: 1, background: '#f8fafc' }}>
 
       {/* ── Top bar ── */}
-      <header style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #1e1b4b 100%)', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Sparkles style={{ width: '18px', height: '18px', color: '#fff' }} />
+      <header className="bg-gradient-to-r from-[#0f0c29] via-[#1e1b4b] to-[#0f0c29] border-b border-white/10 flex-shrink-0 sticky top-0 z-40">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 min-h-[60px] flex items-center justify-between gap-3 py-2">
+          {/* Brand */}
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0 shadow-md">
+              <Sparkles className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" />
             </div>
             <div>
-              <p style={{ fontSize: '15px', fontWeight: 700, color: '#fff', lineHeight: 1 }}>Avenra Campus</p>
-              <p style={{ fontSize: '11px', color: 'rgba(165,180,252,0.55)', marginTop: '3px', fontWeight: 500 }}>Super Admin</p>
+              <p className="text-sm sm:text-base font-bold text-white leading-none">Avenra Campus</p>
+              <p className="text-[10px] sm:text-[11px] text-indigo-200/60 font-medium mt-0.5">Super Admin</p>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+
+          {/* User profile & actions */}
+          <div className="flex items-center gap-2 sm:gap-3.5 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm">
                 {initial}
               </div>
-              <p style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{displayName}</p>
+              <p className="text-xs sm:text-sm font-semibold text-white hidden md:block">{displayName}</p>
             </div>
             <button
               onClick={() => { logout(); navigate('/login'); }}
-              style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 14px', borderRadius: '10px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)', color: 'rgb(252,165,165)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.22)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; }}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-xs sm:text-sm font-medium hover:bg-red-500/20 transition-all flex-shrink-0"
+              title="Sign out"
             >
-              <LogOut style={{ width: '15px', height: '15px' }} />
-              Sign out
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign out</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* ── Main tab bar ── */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', display: 'flex', gap: '2px' }}>
+      {/* ── Main tab bar (Horizontally scrollable on mobile) ── */}
+      <div className="bg-white border-b border-slate-200 flex-shrink-0 sticky top-[60px] z-30 shadow-xs">
+        <div className="max-w-[1400px] mx-auto px-3 sm:px-6 flex gap-1 sm:gap-2 overflow-x-auto no-scrollbar scrollbar-none">
           {MAIN_TABS.map(({ key, label, icon: Icon }) => (
-            <button key={key} onClick={() => setActiveTab(key)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '14px 22px', fontSize: '14px', fontWeight: 600,
-                border: 'none', borderBottom: activeTab === key ? '2px solid #6366f1' : '2px solid transparent',
-                background: 'transparent', cursor: 'pointer',
-                color: activeTab === key ? '#6366f1' : '#64748b',
-                transition: 'all 0.15s',
-              }}>
-              <Icon style={{ width: '16px', height: '16px' }} />
-              {label}
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-2 px-3.5 sm:px-5 py-3 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap flex-shrink-0 ${
+                activeTab === key
+                  ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              <span>{label}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* ── Content ── */}
-      <main style={{ flex: 1, overflowY: 'auto' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '36px 24px' }}>
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-5 sm:py-8">
 
           {/* ═══════════ SCHOOL SETTINGS TAB (SINGLE SCHOOL) ═══════════ */}
           {activeTab === 'school' && (
