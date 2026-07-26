@@ -14,7 +14,7 @@ export function useTeacherAssignments() {
     try {
       setLoading(true);
       const res = await getMyTeacherAssignments();
-      const data = res?.data?.data ?? res?.data ?? [];
+      const data = res?.data?.data ?? res?.data?.items ?? res?.data ?? [];
       setAssignments(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);

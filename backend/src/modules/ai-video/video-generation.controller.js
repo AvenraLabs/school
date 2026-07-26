@@ -3,6 +3,8 @@ import { enqueueVideoGeneration } from "./services/video-queue.service.js";
 import AppError from "../../shared/appError.js";
 import Teacher from "../teachers/teacher.model.js";
 import Student from "../students/student.model.js";
+import Class from "../classes/classes.model.js";
+import { Op } from "sequelize";
 
 /**
  * POST /api/ai/videos
@@ -28,6 +30,28 @@ export async function createVideoGeneration(req, res, next) {
       }
     }
 
+    // Resolve target Class record ID for Class level sharing across all sections (e.g. Class 6)
+    let targetClassId = null;
+    if (classId) {
+      const parsed = parseInt(classId, 10);
+      const foundClass = await Class.findOne({
+        where: {
+          school_id: schoolId,
+          [Op.or]: [
+            { id: isNaN(parsed) ? -1 : parsed },
+            { class_name: String(classId) },
+            { class_name: `Class ${classId}` },
+            { class_name: `Grade ${classId}` },
+          ],
+        },
+      });
+      if (foundClass) {
+        targetClassId = foundClass.id;
+      } else if (!isNaN(parsed)) {
+        targetClassId = parsed;
+      }
+    }
+
     const cleanDuration = String(duration) === "10" ? "10" : "5";
     const cleanLanguage = language || "English";
 
@@ -35,7 +59,7 @@ export async function createVideoGeneration(req, res, next) {
     const videoGen = await VideoGeneration.create({
       school_id: schoolId,
       teacher_id: teacherId,
-      class_id: classId || null,
+      class_id: targetClassId,
       section_id: sectionId || null,
       subject_id: subjectId || null,
       subject_name: subjectName || "Science",
