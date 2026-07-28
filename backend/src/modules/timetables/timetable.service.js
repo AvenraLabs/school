@@ -2,6 +2,7 @@ import db from "../../config/db.js";
 import { Op } from "sequelize";
 
 import Timetable from "./timetable.model.js";
+import TimetableSubstitution from "./timetable-substitution.model.js";
 import Section from "../sections/section.model.js";
 import Class from "../classes/classes.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
@@ -10,6 +11,8 @@ import User from "../users/user.model.js";
 import Teacher from "../teachers/teacher.model.js";
 import AppError from "../../shared/appError.js";
 import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
+
+const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
 /* =====================================================
    CREATE / UPDATE SECTION TIMETABLE
