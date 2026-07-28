@@ -640,7 +640,7 @@ export const tokenPoliciesAPI = {
   },
 
   // Sets both student + teacher policies in one call
-  updateBoth: async (studentAnnual, teacherAnnual, mode = 'replace', teacherVideoSeconds, studentVideoSeconds) => {
+  updateBoth: async (studentAnnual, teacherAnnual, mode = 'replace', teacherVideoSeconds, studentVideoSeconds, whatsappAnnualLimit, schoolId) => {
     let payload = {};
     if (typeof studentAnnual === 'object' && studentAnnual !== null) {
       payload = {
@@ -648,6 +648,8 @@ export const tokenPoliciesAPI = {
         teacher_annual: studentAnnual.teacherAnnual,
         student_video_seconds: studentAnnual.studentVideoSeconds,
         teacher_video_seconds: studentAnnual.teacherVideoSeconds,
+        whatsapp_annual_limit: studentAnnual.whatsappAnnualLimit,
+        school_id: studentAnnual.schoolId,
         mode: studentAnnual.mode || 'replace',
       };
     } else {
@@ -656,10 +658,34 @@ export const tokenPoliciesAPI = {
         teacher_annual: teacherAnnual,
         teacher_video_seconds: teacherVideoSeconds,
         student_video_seconds: studentVideoSeconds,
+        whatsapp_annual_limit: whatsappAnnualLimit,
+        school_id: schoolId,
         mode,
       };
     }
     const response = await axiosInstance.post('/tokens/policies', payload);
+    return response.data;
+  },
+
+  getBillingSummary: async (schoolId = null) => {
+    const response = await axiosInstance.get('/tokens/billing-summary', {
+      params: schoolId ? { school_id: schoolId } : {},
+    });
+    return response.data;
+  },
+
+  getApiLogs: async (type = 'all', schoolId = null) => {
+    const response = await axiosInstance.get('/tokens/api-logs', {
+      params: { type, school_id: schoolId },
+    });
+    return response.data;
+  },
+
+  updateWhatsAppQuota: async (schoolId, annualLimit, mode = 'replace') => {
+    const response = await axiosInstance.post(`/tokens/schools/${schoolId}/whatsapp-quota`, {
+      annual_limit: annualLimit,
+      mode,
+    });
     return response.data;
   },
 

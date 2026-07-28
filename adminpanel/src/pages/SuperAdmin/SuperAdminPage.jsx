@@ -21,7 +21,8 @@ import {
   Plus, RotateCcw, Copy, ChevronDown, ChevronUp,
   GraduationCap, UserCog, Users, ChevronLeft, ChevronRight,
   Cpu, RefreshCw, Check, Edit3, Database, Layers,
-  MessageSquare, Trash2, Video
+  MessageSquare, Trash2, Video, DollarSign, FileText,
+  Activity, ShieldAlert, CheckCircle, XCircle, AlertTriangle
 } from 'lucide-react';
 
 /* ════════════════════════════════════════════════════════════════════
@@ -302,10 +303,273 @@ function CombinedTokenEditor({ policies, onSaved }) {
 
 
 /* ════════════════════════════════════════════════════════════════════
+   BILLING & API USAGE LOGS TAB
+════════════════════════════════════════════════════════════════════ */
+function BillingLogsTab() {
+  const [summary, setSummary] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logType, setLogType] = useState('all');
+  const toast = useToast();
+
+  const loadBillingData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await tokenPoliciesAPI.getBillingSummary();
+      setSummary(res?.items || []);
+    } catch (e) {
+      toast.error('Failed to load billing summary');
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  const loadApiLogs = useCallback(async (type) => {
+    setLogsLoading(true);
+    try {
+      const res = await tokenPoliciesAPI.getApiLogs(type);
+      setLogs(res?.items || []);
+    } catch (e) {
+      toast.error('Failed to load API audit logs');
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    loadBillingData();
+  }, [loadBillingData]);
+
+  useEffect(() => {
+    loadApiLogs(logType);
+  }, [logType, loadApiLogs]);
+
+  const totalBillCost = summary.reduce((acc, s) => acc + (s.total_estimated_cost_inr || 0), 0);
+  const totalAiCost = summary.reduce((acc, s) => acc + (s.ai?.estimated_cost_inr || 0), 0);
+  const totalVidCost = summary.reduce((acc, s) => acc + (s.video?.estimated_cost_inr || 0), 0);
+  const totalWaCost = summary.reduce((acc, s) => acc + (s.whatsapp?.estimated_cost_inr || 0), 0);
+  const totalMapsCost = summary.reduce((acc, s) => acc + (s.google_maps?.estimated_cost_inr || 0), 0);
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Billing &amp; API Usage Logs</h1>
+          <p className="text-sm text-slate-500 mt-1">Precise unit cost tracking across AI Tokens, Video Generations, WhatsApp, and Google Maps</p>
+        </div>
+        <button onClick={() => { loadBillingData(); loadApiLogs(logType); }} className="btn-secondary flex items-center gap-2">
+          <RefreshCw className="w-4 h-4" /> Refresh Logs
+        </button>
+      </div>
+
+      {/* Top Cost Breakdown Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="card p-5 bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl shadow-sm border border-slate-800">
+          <p className="text-xs text-indigo-200/80 font-semibold uppercase tracking-wider">Total Est. Bill</p>
+          <p className="text-2xl font-black text-white mt-1">₹{totalBillCost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+          <span className="inline-block mt-2 px-2 py-0.5 rounded text-[11px] bg-indigo-500/20 text-indigo-200 font-medium">All Billable Services</span>
+        </div>
+
+        <div className="card p-5 bg-white border border-slate-200/80 rounded-2xl shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">AI Chat Tokens</span>
+            <Cpu className="w-4 h-4 text-indigo-500" />
+          </div>
+          <p className="text-xl font-bold text-slate-900">₹{totalAiCost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs text-slate-500 mt-1">Rate: ₹0.05 / 1,000 Tokens</p>
+        </div>
+
+        <div className="card p-5 bg-white border border-slate-200/80 rounded-2xl shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">AI Video Gen</span>
+            <Video className="w-4 h-4 text-violet-500" />
+          </div>
+          <p className="text-xl font-bold text-slate-900">₹{totalVidCost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs text-slate-500 mt-1">Rate: ₹2.00 / Video Min</p>
+        </div>
+
+        <div className="card p-5 bg-white border border-slate-200/80 rounded-2xl shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">WhatsApp API</span>
+            <MessageSquare className="w-4 h-4 text-emerald-500" />
+          </div>
+          <p className="text-xl font-bold text-slate-900">₹{totalWaCost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs text-slate-500 mt-1">Rate: ₹0.75 / Message</p>
+        </div>
+
+        <div className="card p-5 bg-white border border-slate-200/80 rounded-2xl shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Google Maps API</span>
+            <Activity className="w-4 h-4 text-sky-500" />
+          </div>
+          <p className="text-xl font-bold text-slate-900">₹{totalMapsCost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs text-slate-500 mt-1">Rate: ₹400 / 1k Requests</p>
+        </div>
+      </div>
+
+      {/* School Quota & Billing Breakdown Table */}
+      <div className="card bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">School Usage &amp; Quota Billing Summary</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Annual quotas, message limits, and calculated billing per school</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="p-12 text-center text-slate-400">Loading billing metrics…</div>
+        ) : summary.length === 0 ? (
+          <div className="p-12 text-center text-slate-400">No school usage records found.</div>
+        ) : (
+          <TableWrap>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>School Name</th>
+                  <th>AI Tokens Used</th>
+                  <th>Video Secs Used</th>
+                  <th>WhatsApp Sent / Annual Limit</th>
+                  <th>Maps API Requests</th>
+                  <th>Est. Total Bill</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.map((s) => (
+                  <tr key={s.school_id}>
+                    <td className="font-bold text-slate-900">{s.school_name}</td>
+                    <td>
+                      <span className="font-mono font-semibold text-indigo-700">{s.ai?.tokens_used?.toLocaleString() || 0}</span>
+                      <span className="block text-[11px] text-slate-400">₹{s.ai?.estimated_cost_inr || 0}</span>
+                    </td>
+                    <td>
+                      <span className="font-mono font-semibold text-violet-700">{s.video?.seconds_used?.toLocaleString() || 0}s</span>
+                      <span className="block text-[11px] text-slate-400">₹{s.video?.estimated_cost_inr || 0}</span>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-emerald-700">{s.whatsapp?.sent_count?.toLocaleString() || 0}</span>
+                        <span className="text-xs text-slate-400">/ {s.whatsapp?.annual_limit?.toLocaleString() || 10000}</span>
+                        <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${s.whatsapp?.percentage_used >= 90 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {s.whatsapp?.percentage_used}%
+                        </span>
+                      </div>
+                      <span className="block text-[11px] text-slate-400">₹{s.whatsapp?.estimated_cost_inr || 0}</span>
+                    </td>
+                    <td>
+                      <span className="font-mono font-semibold text-sky-700">{s.google_maps?.api_calls_count?.toLocaleString() || 0}</span>
+                      <span className="block text-[11px] text-slate-400">₹{s.google_maps?.estimated_cost_inr || 0}</span>
+                    </td>
+                    <td className="font-black text-slate-900 text-base">
+                      ₹{s.total_estimated_cost_inr?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableWrap>
+        )}
+      </div>
+
+      {/* Live API Audit Log Feed */}
+      <div className="card bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm">
+        <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Live API Audit Log Feed</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Real-time log entries for billing verification and debugging</p>
+          </div>
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+            {[
+              { key: 'all', label: 'All Logs' },
+              { key: 'whatsapp', label: 'WhatsApp' },
+              { key: 'ai', label: 'AI Tokens' },
+              { key: 'video', label: 'AI Video' },
+            ].map(t => (
+              <button
+                key={t.key}
+                onClick={() => setLogType(t.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  logType === t.key ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {logsLoading ? (
+          <div className="p-8 text-center text-slate-400">Loading audit log entries…</div>
+        ) : logs.length === 0 ? (
+          <div className="p-8 text-center text-slate-400">No log entries recorded for this filter.</div>
+        ) : (
+          <TableWrap>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>API Category</th>
+                  <th>School</th>
+                  <th>Recipient / Details</th>
+                  <th>Status</th>
+                  <th>Error / Info</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((l) => (
+                  <tr key={l.id}>
+                    <td className="text-xs text-slate-500 font-mono">
+                      {new Date(l.created_at).toLocaleString('en-IN', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit',
+                      })}
+                    </td>
+                    <td>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${
+                        l.category === 'WhatsApp API'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : l.category === 'AI Chat Tokens'
+                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                          : 'bg-violet-50 text-violet-700 border-violet-200'
+                      }`}>
+                        {l.category}
+                      </span>
+                    </td>
+                    <td className="font-semibold text-slate-800">{l.school_name}</td>
+                    <td className="font-mono text-xs text-slate-600">{l.recipient}</td>
+                    <td>
+                      <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-md ${
+                        l.status === 'success'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : l.status === 'limit_exceeded'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-rose-100 text-rose-800'
+                      }`}>
+                        {l.status?.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="text-xs text-slate-500 max-w-xs truncate" title={l.error || l.details}>
+                      {l.error ? <span className="text-rose-600 font-medium">{l.error}</span> : l.details}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableWrap>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+/* ════════════════════════════════════════════════════════════════════
    MAIN PAGE
 ════════════════════════════════════════════════════════════════════ */
 const MAIN_TABS = [
   { key: 'school',       label: 'School Settings',    icon: School },
+  { key: 'billing',      label: 'Billing & API Logs', icon: DollarSign },
   { key: 'analytics',    label: 'AI Analytics',       icon: BarChart3 },
   { key: 'tokens',       label: 'Tokens',             icon: Coins },
   { key: 'classes',      label: 'Classes & Sections', icon: Layers },
@@ -861,6 +1125,11 @@ export function SuperAdminPage() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* ═══════════ BILLING & API LOGS TAB ═══════════ */}
+          {activeTab === 'billing' && (
+            <BillingLogsTab />
           )}
 
           {/* ═══════════ TOKENS TAB ═══════════ */}

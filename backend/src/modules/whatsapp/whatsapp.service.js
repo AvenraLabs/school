@@ -7,6 +7,7 @@ import Section from "../sections/section.model.js";
 import Vehicle from "../transport/vehicle.model.js";
 import StudentTransport from "../transport/student-transport.model.js";
 import Teacher from "../teachers/teacher.model.js";
+import School from "../schools/school.model.js";
 
 /**
  * Validates a phone number.
@@ -28,7 +29,7 @@ const formatPhoneForWhatsApp = (phone) => {
 
 /**
  * 1. Reusable text message sending method using Meta WhatsApp Cloud API.
- * Never throws an exception; logs errors and saves success/failed/skipped states to DB.
+ * Never throws an exception; logs errors and saves success/failed/skipped/limit_exceeded states to DB.
  */
 export const sendTextMessage = async (phone, message, schoolId = null) => {
   // Check empty/invalid
@@ -52,6 +53,29 @@ export const sendTextMessage = async (phone, message, schoolId = null) => {
       school_id: schoolId,
     });
     return { success: false, status: "skipped", error: "Invalid phone number format" };
+  }
+
+  // Quota enforcement per school
+  if (schoolId) {
+    const school = await School.findByPk(schoolId, {
+      attributes: ["id", "whatsapp_annual_limit", "whatsapp_sent_count"],
+    });
+    if (school) {
+      const limit = school.whatsapp_annual_limit ?? 10000;
+      const sent = school.whatsapp_sent_count ?? 0;
+      if (sent >= limit) {
+        const errorMsg = `WhatsApp annual limit exceeded (${sent}/${limit})`;
+        console.warn(`[WhatsApp] Quota exceeded for school #${schoolId}: ${errorMsg}`);
+        await WhatsappLog.create({
+          status: "limit_exceeded",
+          phone,
+          message,
+          error: errorMsg,
+          school_id: schoolId,
+        });
+        return { success: false, status: "limit_exceeded", error: errorMsg };
+      }
+    }
   }
 
   const cleanedPhone = formatPhoneForWhatsApp(phone);
@@ -98,6 +122,12 @@ export const sendTextMessage = async (phone, message, schoolId = null) => {
       response: JSON.stringify(response.data),
       school_id: schoolId,
     });
+
+    if (schoolId) {
+      School.increment("whatsapp_sent_count", { where: { id: schoolId } }).catch((err) =>
+        console.error(`[WhatsApp] Failed to increment sent count for school #${schoolId}:`, err.message)
+      );
+    }
 
     return { success: true, status: "success", data: response.data };
   } catch (error) {

@@ -458,10 +458,12 @@ const initAssociations = () => {
 
 initAssociations();
 
-// Ensure notifications table has target_user_id column
+// Ensure notifications table has target_user_id column & schools table has whatsapp quota columns
 db.query(`
   ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_user_id BIGINT;
   CREATE INDEX IF NOT EXISTS idx_notifications_target_user ON notifications(target_user_id);
-`).catch((err) => console.error("[InitModels] Notification schema patch error:", err.message));
+  ALTER TABLE schools ADD COLUMN IF NOT EXISTS whatsapp_annual_limit INTEGER DEFAULT 10000;
+  ALTER TABLE schools ADD COLUMN IF NOT EXISTS whatsapp_sent_count INTEGER DEFAULT 0;
+`).catch((err) => console.error("[InitModels] Notification/School schema patch error:", err.message));
 
 export default db;

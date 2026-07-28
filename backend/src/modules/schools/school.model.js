@@ -73,6 +73,16 @@ const School = db.define(
       defaultValue: false,
     },
 
+    whatsapp_annual_limit: {
+      type: DataTypes.INTEGER,
+      defaultValue: 10000,
+    },
+
+    whatsapp_sent_count: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+
     google_maps_enabled: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

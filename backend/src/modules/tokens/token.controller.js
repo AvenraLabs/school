@@ -6,6 +6,9 @@ import User from "../users/user.model.js";
 import {
   setRoleAnnualTokens,
   adjustUserTokens,
+  getBillingSummaryService,
+  getApiLogsFeedService,
+  setSchoolWhatsAppQuota,
 } from "./token.service.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 
@@ -20,6 +23,7 @@ export const setTokenPolicies = asyncHandler(async (req, res) => {
     teacher_annual,
     teacher_video_seconds,
     student_video_seconds,
+    whatsapp_annual_limit,
     role,
     annual_tokens,
     annual_video_seconds,
@@ -67,7 +71,15 @@ export const setTokenPolicies = asyncHandler(async (req, res) => {
     });
   }
 
-  res.json({ success: true, message: "Token and Video policy updated successfully" });
+  if (whatsapp_annual_limit !== undefined && school_id) {
+    await setSchoolWhatsAppQuota({
+      school_id: Number(school_id),
+      annual_limit: Number(whatsapp_annual_limit),
+      mode,
+    });
+  }
+
+  res.json({ success: true, message: "Token, Video, and WhatsApp policies updated successfully" });
 });
 
 export const listTokenAccounts = asyncHandler(async (req, res) => {
@@ -132,4 +144,29 @@ export const adjustUserTokenBalance = asyncHandler(async (req, res) => {
 
   const account = await adjustUserTokens({ user_id, amount, mode });
   res.json({ success: true, data: account });
+});
+
+export const getBillingSummary = asyncHandler(async (req, res) => {
+  const school_id = req.query.school_id ? Number(req.query.school_id) : null;
+  const result = await getBillingSummaryService({ school_id });
+  res.json({ success: true, items: result });
+});
+
+export const getApiLogsFeed = asyncHandler(async (req, res) => {
+  const { school_id, type, limit = 50, offset = 0 } = req.query;
+  const logs = await getApiLogsFeedService({
+    school_id: school_id ? Number(school_id) : null,
+    type: type || "all",
+    limit: Number(limit),
+    offset: Number(offset),
+  });
+  res.json({ success: true, items: logs });
+});
+
+export const updateSchoolWhatsAppQuota = asyncHandler(async (req, res) => {
+  const { annual_limit, mode = "replace" } = req.body;
+  const school_id = Number(req.params.schoolId);
+
+  const school = await setSchoolWhatsAppQuota({ school_id, annual_limit, mode });
+  res.json({ success: true, data: school });
 });
