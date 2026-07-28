@@ -463,9 +463,15 @@ export const getStudentTransportService = async ({ school_id, student_id }) => {
     where: { vehicle_id: transport.vehicle_id, status: "active" },
   });
 
+  const lastTrip = await Trip.findOne({
+    where: { vehicle_id: transport.vehicle_id },
+    order: [["started_at", "DESC"]],
+  });
+
   return {
     transport,
     active_trip: activeTrip,
+    last_trip: lastTrip,
   };
 };
 
@@ -502,7 +508,7 @@ export const getStudentTransportDetailsService = async ({ school_id, student_use
   const student = await Student.findOne({ where: { user_id: student_user_id, school_id } });
   if (!student) throw new AppError("Student profile not found", 404);
 
-  return StudentTransport.findOne({
+  const transport = await StudentTransport.findOne({
     where: { student_id: student.id, school_id },
     include: [
       {
@@ -516,6 +522,23 @@ export const getStudentTransportDetailsService = async ({ school_id, student_use
       },
     ],
   });
+
+  if (!transport) return null;
+
+  const activeTrip = await Trip.findOne({
+    where: { vehicle_id: transport.vehicle_id, status: "active" },
+  });
+
+  const lastTrip = await Trip.findOne({
+    where: { vehicle_id: transport.vehicle_id },
+    order: [["started_at", "DESC"]],
+  });
+
+  return {
+    ...transport.toJSON(),
+    active_trip: activeTrip,
+    last_trip: lastTrip,
+  };
 };
 
 export const getTeacherClassTransportService = async ({ school_id, teacher_user_id, query }) => {

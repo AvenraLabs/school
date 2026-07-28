@@ -141,7 +141,7 @@ export const saveTimetableService = async ({
 
 /* =====================================================
    STUDENT VIEW: SECTION TIMETABLE
-   (Mon–Sat, periods with subject & time)
+   (Mon–Sat, periods with subject & time + today's substitutions)
 ===================================================== */
 export const getSectionTimetableService = async ({
   school_id,
@@ -149,6 +149,9 @@ export const getSectionTimetableService = async ({
   section_id,
 }) => {
   const academicYearId = await getCurrentAcademicYearId(school_id);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayWeekday = DAY_NAMES[new Date().getDay()];
+
   const rows = await Timetable.findAll({
     where: { school_id, class_id, section_id, academic_year_id: academicYearId },
     include: [
@@ -175,6 +178,23 @@ export const getSectionTimetableService = async ({
     ],
   });
 
+  // Fetch today's substitutions for this class & section
+  const todaySubstitutions = await TimetableSubstitution.findAll({
+    where: { school_id, class_id, section_id, date: todayStr },
+    include: [
+      {
+        model: Teacher,
+        as: "SubstituteTeacher",
+        include: [{ model: User, attributes: ["name"] }],
+      },
+    ],
+  });
+
+  const subMap = {};
+  todaySubstitutions.forEach((sub) => {
+    subMap[sub.timetable_id] = sub;
+  });
+
   /**
    * Group by day_of_week (Monday → Saturday)
    */
@@ -184,6 +204,23 @@ export const getSectionTimetableService = async ({
     const day = row.day_of_week;
     if (!grouped[day]) grouped[day] = [];
 
+    const isToday = day === todayWeekday;
+    const subRecord = isToday ? subMap[row.id] : null;
+
+    let teacherObj = row.teacher_assignment?.teacher?.user
+      ? { id: row.teacher_assignment.teacher.id, name: row.teacher_assignment.teacher.user.name }
+      : null;
+
+    let isSubstituted = false;
+
+    if (subRecord && subRecord.SubstituteTeacher?.user?.name) {
+      teacherObj = {
+        id: subRecord.substitute_teacher_id,
+        name: subRecord.SubstituteTeacher.user.name,
+      };
+      isSubstituted = true;
+    }
+
     grouped[day].push({
       id: row.id,
       start_time: row.start_time,
@@ -191,12 +228,11 @@ export const getSectionTimetableService = async ({
       is_break: row.is_break,
       title: row.is_break ? row.title : null,
       teacher_assignment_id: row.teacher_assignment?.id ?? null,
-      teacher_id: row.teacher_assignment?.teacher_id ?? null,
+      teacher_id: teacherObj?.id ?? null,
       subject_id: row.teacher_assignment?.subject_id ?? null,
       subject: row.is_break ? null : row.teacher_assignment?.subject,
-      teacher: row.teacher_assignment?.teacher?.user
-        ? { id: row.teacher_assignment.teacher.id, name: row.teacher_assignment.teacher.user.name }
-        : null,
+      teacher: teacherObj,
+      is_substituted: isSubstituted,
     });
   }
 
@@ -205,13 +241,16 @@ export const getSectionTimetableService = async ({
 
 /* =====================================================
    TEACHER VIEW: OWN TIMETABLE
-   (Which class, section, subject, time)
+   (Which class, section, subject, time + today's coverages)
 ===================================================== */
 export const getTeacherTimetableService = async ({
   school_id,
   teacher_id,
 }) => {
   const academicYearId = await getCurrentAcademicYearId(school_id);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayWeekday = DAY_NAMES[new Date().getDay()];
+
   const rows = await Timetable.findAll({
     where: { academic_year_id: academicYearId },
     include: [
@@ -245,6 +284,45 @@ export const getTeacherTimetableService = async ({
     ],
   });
 
+  // 1. Fetch today's substitutions where this teacher is absent/substituted out
+  const absentSubstitutions = await TimetableSubstitution.findAll({
+    where: { school_id, date: todayStr, original_teacher_id: teacher_id },
+    include: [
+      {
+        model: Teacher,
+        as: "SubstituteTeacher",
+        include: [{ model: User, attributes: ["name"] }],
+      },
+    ],
+  });
+  const absentSubMap = {};
+  absentSubstitutions.forEach((s) => {
+    absentSubMap[s.timetable_id] = s;
+  });
+
+  // 2. Fetch today's substitutions where this teacher is assigned as a SUBSTITUTE COVERAGE
+  const coveringSubstitutions = await TimetableSubstitution.findAll({
+    where: { school_id, date: todayStr, substitute_teacher_id: teacher_id },
+    include: [
+      {
+        model: Timetable,
+        include: [
+          { model: Class, attributes: ["id", "class_name"] },
+          { model: Section, attributes: ["id", "name"] },
+          {
+            model: TeacherAssignment,
+            include: [{ model: Subject, attributes: ["id", "name"] }],
+          },
+        ],
+      },
+      {
+        model: Teacher,
+        as: "OriginalTeacher",
+        include: [{ model: User, attributes: ["name"] }],
+      },
+    ],
+  });
+
   /**
    * Group by day_of_week
    */
@@ -253,6 +331,9 @@ export const getTeacherTimetableService = async ({
   for (const row of rows) {
     const day = row.day_of_week;
     if (!grouped[day]) grouped[day] = [];
+
+    const isToday = day === todayWeekday;
+    const absentSub = isToday ? absentSubMap[row.id] : null;
 
     grouped[day].push({
       id: row.id,
@@ -265,7 +346,41 @@ export const getTeacherTimetableService = async ({
       teacher_assignment_id: row.teacher_assignment?.id ?? null,
       subject_id: row.teacher_assignment?.subject_id ?? null,
       subject: row.teacher_assignment?.subject,
+      is_substituted: !!absentSub,
+      substitute_teacher_name: absentSub?.SubstituteTeacher?.user?.name || null,
     });
+  }
+
+  // Inject today's substitution coverages into today's schedule
+  if (coveringSubstitutions.length > 0) {
+    if (!grouped[todayWeekday]) grouped[todayWeekday] = [];
+
+    coveringSubstitutions.forEach((sub) => {
+      const t = sub.timetable;
+      if (!t) return;
+
+      // Avoid duplicate if already present
+      const exists = grouped[todayWeekday].some((p) => p.id === t.id && p.is_covering);
+      if (!exists) {
+        grouped[todayWeekday].push({
+          id: t.id,
+          start_time: t.start_time,
+          end_time: t.end_time,
+          class: t.class,
+          section: t.section,
+          class_id: t.class_id,
+          section_id: t.section_id,
+          teacher_assignment_id: t.teacher_assignment_id,
+          subject_id: t.teacher_assignment?.subject_id || null,
+          subject: t.teacher_assignment?.subject || { name: "Substitution" },
+          is_covering: true,
+          original_teacher_name: sub.OriginalTeacher?.user?.name || "Teacher",
+        });
+      }
+    });
+
+    // Re-sort today's entries by start_time
+    grouped[todayWeekday].sort((a, b) => a.start_time.localeCompare(b.start_time));
   }
 
   return grouped;

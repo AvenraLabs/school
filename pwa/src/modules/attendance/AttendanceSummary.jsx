@@ -51,20 +51,26 @@ export default function AttendanceSummary({ summary }) {
         </Box>
       </Stack>
 
-      <Grid container spacing={2} sx={{ mt: 2 }}>
-        <Grid item xs={4}>
+      <Grid container spacing={1} sx={{ mt: 2 }}>
+        <Grid item xs={3}>
           <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 2, p: 1, textAlign: 'center' }}>
             <Typography variant="h6" fontWeight="bold">{summary.present}</Typography>
             <Typography variant="caption">Present</Typography>
           </Box>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={3}>
           <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 2, p: 1, textAlign: 'center' }}>
             <Typography variant="h6" fontWeight="bold">{summary.absent}</Typography>
             <Typography variant="caption">Absent</Typography>
           </Box>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={3}>
+          <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 2, p: 1, textAlign: 'center' }}>
+            <Typography variant="h6" fontWeight="bold">{summary.leave || 0}</Typography>
+            <Typography variant="caption">Leave</Typography>
+          </Box>
+        </Grid>
+        <Grid item xs={3}>
           <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 2, p: 1, textAlign: 'center' }}>
             <Typography variant="h6" fontWeight="bold">{summary.on_duty}</Typography>
             <Typography variant="caption">On Duty</Typography>

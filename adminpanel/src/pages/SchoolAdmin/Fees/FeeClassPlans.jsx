@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { feeAPI, classesAPI } from '../../../api';
 import { useToast } from '../../../context/ToastContext';
+import { formatDate } from '../../../utils/date';
 import { Plus, Trash2, CalendarDays, IndianRupee, BookOpen, X, AlertCircle } from 'lucide-react';
 
 export function FeeClassPlans() {
@@ -148,7 +149,7 @@ export function FeeClassPlans() {
                         <p className="text-sm font-bold text-slate-900 truncate">{def.title}</p>
                         <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                           <CalendarDays className="w-3 h-3" />
-                          {def.due_date ? `Due ${def.due_date}` : 'No due date'}
+                          {def.due_date ? `Due ${formatDate(def.due_date)}` : 'No due date'}
                         </p>
                       </div>
                     </div>

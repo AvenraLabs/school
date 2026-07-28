@@ -213,15 +213,17 @@ export default function TeacherAttendancePage() {
     const total = students.length;
     let present = 0;
     let absent = 0;
+    let leave = 0;
     let onDuty = 0;
 
     students.forEach((s) => {
       if (s.status === "absent") absent += 1;
+      else if (s.status === "leave") leave += 1;
       else if (s.status === "on_duty") onDuty += 1;
       else present += 1;
     });
 
-    return { total, present, absent, onDuty };
+    return { total, present, absent, leave, onDuty };
   }, [students]);
 
   // 6️⃣ Filtered Student List
@@ -331,84 +333,99 @@ export default function TeacherAttendancePage() {
 
         {/* Stats Summary Panel */}
         {students.length > 0 && (
-          <Grid container spacing={1}>
-            <Grid item xs={3}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 1.2,
-                  borderRadius: 3,
-                  bgcolor: "background.paper",
-                  border: "1px solid rgba(0,0,0,0.06)",
-                  textAlign: "center",
-                }}
-              >
-                <Typography variant="body1" fontWeight="800" sx={{ color: "#1e293b" }}>
-                  {stats.total}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>
-                  Total
-                </Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={3}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 1.2,
-                  borderRadius: 3,
-                  bgcolor: "background.paper",
-                  border: "1px solid rgba(0,0,0,0.06)",
-                  textAlign: "center",
-                }}
-              >
-                <Typography variant="body1" fontWeight="800" sx={{ color: "#10b981" }}>
-                  {stats.present}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>
-                  Present
-                </Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={3}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 1.2,
-                  borderRadius: 3,
-                  bgcolor: "background.paper",
-                  border: "1px solid rgba(0,0,0,0.06)",
-                  textAlign: "center",
-                }}
-              >
-                <Typography variant="body1" fontWeight="800" sx={{ color: "#ef4444" }}>
-                  {stats.absent}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>
-                  Absent
-                </Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={3}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 1.2,
-                  borderRadius: 3,
-                  bgcolor: "background.paper",
-                  border: "1px solid rgba(0,0,0,0.06)",
-                  textAlign: "center",
-                }}
-              >
-                <Typography variant="body1" fontWeight="800" sx={{ color: "#3b82f6" }}>
-                  {stats.onDuty}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>
-                  On Duty
-                </Typography>
-              </Paper>
-            </Grid>
-          </Grid>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+              gap: 0.75,
+            }}
+          >
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1,
+                borderRadius: 2.5,
+                bgcolor: "background.paper",
+                border: "1px solid rgba(0,0,0,0.06)",
+                textAlign: "center",
+              }}
+            >
+              <Typography variant="body2" fontWeight="800" sx={{ color: "#1e293b" }}>
+                {stats.total}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.68rem" }}>
+                Total
+              </Typography>
+            </Paper>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1,
+                borderRadius: 2.5,
+                bgcolor: "background.paper",
+                border: "1px solid rgba(0,0,0,0.06)",
+                textAlign: "center",
+              }}
+            >
+              <Typography variant="body2" fontWeight="800" sx={{ color: "#10b981" }}>
+                {stats.present}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.68rem" }}>
+                Present
+              </Typography>
+            </Paper>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1,
+                borderRadius: 2.5,
+                bgcolor: "background.paper",
+                border: "1px solid rgba(0,0,0,0.06)",
+                textAlign: "center",
+              }}
+            >
+              <Typography variant="body2" fontWeight="800" sx={{ color: "#ef4444" }}>
+                {stats.absent}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.68rem" }}>
+                Absent
+              </Typography>
+            </Paper>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1,
+                borderRadius: 2.5,
+                bgcolor: "background.paper",
+                border: "1px solid rgba(0,0,0,0.06)",
+                textAlign: "center",
+              }}
+            >
+              <Typography variant="body2" fontWeight="800" sx={{ color: "#d97706" }}>
+                {stats.leave}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.68rem" }}>
+                Leave
+              </Typography>
+            </Paper>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1,
+                borderRadius: 2.5,
+                bgcolor: "background.paper",
+                border: "1px solid rgba(0,0,0,0.06)",
+                textAlign: "center",
+              }}
+            >
+              <Typography variant="body2" fontWeight="800" sx={{ color: "#3b82f6" }}>
+                {stats.onDuty}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.68rem" }}>
+                On Duty
+              </Typography>
+            </Paper>
+          </Box>
         )}
 
         {/* Audit / Update Log Info */}
@@ -487,7 +504,7 @@ export default function TeacherAttendancePage() {
                           variant="outlined"
                           onClick={() => handleToggleStatus(s.id, "present")}
                           sx={{
-                            minWidth: 40,
+                            minWidth: 34,
                             height: 32,
                             p: 0,
                             borderRadius: "16px",
@@ -509,7 +526,7 @@ export default function TeacherAttendancePage() {
                           variant="outlined"
                           onClick={() => handleToggleStatus(s.id, "absent")}
                           sx={{
-                            minWidth: 40,
+                            minWidth: 34,
                             height: 32,
                             p: 0,
                             borderRadius: "16px",
@@ -529,9 +546,31 @@ export default function TeacherAttendancePage() {
                         </Button>
                         <Button
                           variant="outlined"
+                          onClick={() => handleToggleStatus(s.id, "leave")}
+                          sx={{
+                            minWidth: 34,
+                            height: 32,
+                            p: 0,
+                            borderRadius: "16px",
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            textTransform: "none",
+                            bgcolor: s.status === "leave" ? "#fff8e1" : "transparent",
+                            borderColor: s.status === "leave" ? "#ffe082" : "rgba(0,0,0,0.08)",
+                            color: s.status === "leave" ? "#b78103" : "text.secondary",
+                            "&:hover": {
+                              bgcolor: s.status === "leave" ? "#ffecb3" : "rgba(0,0,0,0.04)",
+                              borderColor: s.status === "leave" ? "#ffd54f" : "rgba(0,0,0,0.12)",
+                            },
+                          }}
+                        >
+                          L
+                        </Button>
+                        <Button
+                          variant="outlined"
                           onClick={() => handleToggleStatus(s.id, "on_duty")}
                           sx={{
-                            minWidth: 40,
+                            minWidth: 34,
                             height: 32,
                             p: 0,
                             borderRadius: "16px",

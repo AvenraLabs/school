@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { feeAPI } from '../../../api';
 import { useToast } from '../../../context/ToastContext';
+import { formatDate, formatDateTime } from '../../../utils/date';
 import {
   CalendarDays, Banknote, Smartphone, Building2,
   IndianRupee, Search, ChevronLeft, ChevronRight, Filter, X
@@ -262,10 +263,7 @@ export function FeeReports() {
                     <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="pl-5 font-bold text-slate-900">#{p.receipt_no}</td>
                       <td className="text-slate-500 font-medium">
-                        {p.paid_at ? new Date(p.paid_at).toLocaleString('en-IN', {
-                          day: '2-digit', month: 'short', year: 'numeric',
-                          hour: '2-digit', minute: '2-digit'
-                        }) : '—'}
+                        {p.paid_at ? formatDateTime(p.paid_at) : '—'}
                       </td>
                       <td className="font-bold text-slate-800">{p.student_name}</td>
                       <td className="font-semibold text-slate-600">{p.class_name ? `Class ${p.class_name}` : '—'}</td>

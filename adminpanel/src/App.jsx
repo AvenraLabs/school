@@ -20,6 +20,7 @@ import { LoginRoster } from './pages/SchoolAdmin/LoginRoster';
 import { Approvals } from './pages/SchoolAdmin/Approvals';
 import { TeacherAssignments } from './pages/SchoolAdmin/TeacherAssignments';
 import { Timetables } from './pages/SchoolAdmin/Timetables';
+import { SubstituteTeachers } from './pages/SchoolAdmin/SubstituteTeachers';
 import { Notifications } from './pages/SchoolAdmin/Notifications';
 import { ExamsManager } from './pages/SchoolAdmin/ExamsManager';
 import { AuditLogs } from './pages/SchoolAdmin/AuditLogs';
@@ -82,6 +83,7 @@ function App() {
               <Route path="/admin/approvals" element={<Approvals />} />
               <Route path="/admin/assignments" element={<TeacherAssignments />} />
               <Route path="/admin/timetables" element={<Timetables />} />
+              <Route path="/admin/timetables/substitutions" element={<SubstituteTeachers />} />
               <Route path="/admin/transport" element={<TransportManager />} />
               <Route path="/admin/notifications" element={<Notifications />} />
               <Route path="/admin/exams" element={<ExamsManager />} />

@@ -28,7 +28,9 @@ import {
   Warning,
   CheckCircle,
   Info,
-  MyLocation
+  MyLocation,
+  AccessTime,
+  CheckCircleOutline
 } from "@mui/icons-material";
 import api from "../../api/axios";
 import { connectTransportSocket } from "./transport.socket";
@@ -41,7 +43,40 @@ export default function StudentTransportPage() {
   const [loading, setLoading] = useState(true);
   const [transportInfo, setTransportInfo] = useState(null);
   const [activeTrip, setActiveTrip] = useState(null);
+  const [lastTrip, setLastTrip] = useState(null);
   const [gpsLocation, setGpsLocation] = useState(null);
+
+  const formatTime = (dateStr) => {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
+  const formatTripDate = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    const today = new Date();
+    if (d.toDateString() === today.toDateString()) {
+      return "Today";
+    }
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    }
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  };
+
+  const calcDuration = (startStr, endStr) => {
+    if (!startStr || !endStr) return null;
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const diffMins = Math.round((end - start) / 60000);
+    if (diffMins < 1) return "< 1 min";
+    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? "s" : ""}`;
+    const hrs = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    return `${hrs} hr${hrs > 1 ? "s" : ""} ${mins > 0 ? `${mins} min` : ""}`;
+  };
 
   // Bus change request
   const [vehiclesList, setVehiclesList] = useState([]);
@@ -99,6 +134,7 @@ export default function StudentTransportPage() {
       setActiveTrip(null);
       setGpsLocation(null);
       if (data.trip_id) socket.emit("trip:leave", { tripId: data.trip_id });
+      fetchTransportInfo();
     });
 
     socket.on("trip:location", (data) => {
@@ -404,7 +440,10 @@ export default function StudentTransportPage() {
         const res = await api.get("/student/transport/me");
         if (res.data?.success && res.data.data) {
           const hasApiKey = Boolean(import.meta.env.VITE_GOOGLE_MAPS_KEY);
-          setTransportInfo(res.data.data);
+          const { active_trip, last_trip, ...tInfo } = res.data.data;
+          setTransportInfo(tInfo);
+          setActiveTrip(active_trip || null);
+          setLastTrip(last_trip || null);
           setGoogleMapsEnabled(hasApiKey && (res.data.data.google_maps_enabled || false));
         }
       } catch (e) {
@@ -425,10 +464,11 @@ export default function StudentTransportPage() {
 
       // Use the richer live response if available, else fallback to /me
       if (liveRes?.data?.success && liveRes.data.data) {
-        const { transport, active_trip, google_maps_enabled } = liveRes.data.data;
+        const { transport, active_trip, last_trip, google_maps_enabled } = liveRes.data.data;
         const hasApiKey = Boolean(import.meta.env.VITE_GOOGLE_MAPS_KEY);
         setTransportInfo(transport);
-        setActiveTrip(active_trip);
+        setActiveTrip(active_trip || null);
+        setLastTrip(last_trip || null);
         setGoogleMapsEnabled(hasApiKey && (google_maps_enabled || false));
 
         // If there is an active trip, fetch its GPS location in the background
@@ -443,7 +483,10 @@ export default function StudentTransportPage() {
         }
       } else if (transportRes?.data?.success && transportRes.data.data) {
         const hasApiKey = Boolean(import.meta.env.VITE_GOOGLE_MAPS_KEY);
-        setTransportInfo(transportRes.data.data);
+        const { active_trip, last_trip, ...tInfo } = transportRes.data.data;
+        setTransportInfo(tInfo);
+        setActiveTrip(active_trip || null);
+        setLastTrip(last_trip || null);
         setGoogleMapsEnabled(hasApiKey && (transportRes.data.data.google_maps_enabled || false));
       }
     } catch (e) {
@@ -650,12 +693,92 @@ export default function StudentTransportPage() {
             </Card>
           ) : (
             <Card sx={{ p: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-              <Typography variant="subtitle2" fontWeight="bold" color="textSecondary">
-                🔴 Trip Completed / Inactive
-              </Typography>
-              <Typography variant="caption" color="textSecondary" sx={{ display: "block", mb: 2 }}>
-                Bus is currently parked.
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      bgcolor: "text.disabled"
+                    }}
+                  />
+                  <Typography variant="subtitle2" fontWeight="bold" color="text.secondary">
+                    Bus is Currently Parked
+                  </Typography>
+                </Box>
+                {lastTrip && (
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      px: 1.2,
+                      py: 0.4,
+                      borderRadius: 1.5,
+                      bgcolor: alpha(theme.palette.primary.main, 0.08),
+                      color: "primary.main",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      textTransform: "uppercase"
+                    }}
+                  >
+                    {lastTrip.trip_type ? `${lastTrip.trip_type} Trip` : "Last Trip"}
+                  </Paper>
+                )}
+              </Box>
+
+              {lastTrip ? (
+                <Box sx={{ bgcolor: alpha(theme.palette.grey[500], 0.06), p: 2, borderRadius: 2.5, mb: 2.5 }}>
+                  <Typography
+                    variant="caption"
+                    color="textSecondary"
+                    fontWeight="bold"
+                    sx={{ textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1.5 }}
+                  >
+                    Last Trip Timings ({formatTripDate(lastTrip.started_at)})
+                  </Typography>
+                  <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, alignItems: "center" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <AccessTime sx={{ color: "primary.main", fontSize: 20 }} />
+                      <Box>
+                        <Typography variant="caption" color="textSecondary" sx={{ display: "block", lineHeight: 1 }}>
+                          Started At
+                        </Typography>
+                        <Typography variant="body2" fontWeight="bold" color="textPrimary">
+                          {formatTime(lastTrip.started_at)}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <CheckCircleOutline sx={{ color: "success.main", fontSize: 20 }} />
+                      <Box>
+                        <Typography variant="caption" color="textSecondary" sx={{ display: "block", lineHeight: 1 }}>
+                          Ended At
+                        </Typography>
+                        <Typography variant="body2" fontWeight="bold" color="textPrimary">
+                          {lastTrip.ended_at ? formatTime(lastTrip.ended_at) : (lastTrip.status === "active" ? "In Progress" : "Completed")}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {lastTrip.started_at && lastTrip.ended_at && (
+                    <Box sx={{ mt: 1.5, pt: 1.5, borderTop: `1px solid ${alpha(theme.palette.divider, 0.6)}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Typography variant="caption" color="textSecondary">
+                        Total Trip Duration:
+                      </Typography>
+                      <Typography variant="caption" fontWeight="bold" color="primary">
+                        {calcDuration(lastTrip.started_at, lastTrip.ended_at)}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                  No recent trips recorded for this bus.
+                </Typography>
+              )}
+
               <Button
                 variant="outlined"
                 color="primary"

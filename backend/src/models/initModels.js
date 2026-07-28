@@ -17,6 +17,7 @@ import TeacherAssignment from "../modules/teacher-assignments/teacher-assignment
 import Class from "../modules/classes/classes.model.js";
 import Subject from "../modules/subjects/subject.model.js";
 import Timetable from "../modules/timetables/timetable.model.js";
+import TimetableSubstitution from "../modules/timetables/timetable-substitution.model.js";
 import Section from "../modules/sections/section.model.js";
 
 //homework
@@ -214,6 +215,13 @@ const initAssociations = () => {
   Timetable.belongsTo(Class, { foreignKey: "class_id" });
   Timetable.belongsTo(Section, { foreignKey: "section_id" });
   Timetable.belongsTo(TeacherAssignment, { foreignKey: "teacher_assignment_id" });
+  Timetable.hasMany(TimetableSubstitution, { foreignKey: "timetable_id" });
+
+  TimetableSubstitution.belongsTo(Timetable, { foreignKey: "timetable_id" });
+  TimetableSubstitution.belongsTo(Class, { foreignKey: "class_id" });
+  TimetableSubstitution.belongsTo(Section, { foreignKey: "section_id" });
+  TimetableSubstitution.belongsTo(Teacher, { as: "OriginalTeacher", foreignKey: "original_teacher_id" });
+  TimetableSubstitution.belongsTo(Teacher, { as: "SubstituteTeacher", foreignKey: "substitute_teacher_id" });
 
 
   /* ==================== CHAPTER / TOPIC (REMOVED - UNUSED) ==================== */

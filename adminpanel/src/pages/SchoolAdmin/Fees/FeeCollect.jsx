@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { feeAPI, studentsAPI, classesAPI, sectionsAPI } from '../../../api';
 import { useToast } from '../../../context/ToastContext';
 import { useAuth } from '../../../hooks/useAuth';
+import { formatDate, formatDateTime } from '../../../utils/date';
 import {
   Search, IndianRupee, CheckCircle2, ChevronRight, Printer,
   MessageCircle, X, Calendar, Ban, Tag, User, ArrowLeft,
@@ -209,7 +210,7 @@ export function FeeCollect() {
       <div class="sub">Official Fee Receipt</div>
       <hr class="divider"/>
       <div class="row"><span class="lbl">Receipt No</span><span class="val">${receipt?.receipt_no || '—'}</span></div>
-      <div class="row"><span class="lbl">Date</span><span class="val">${new Date(receipt?.paid_at).toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' })}</span></div>
+      <div class="row"><span class="lbl">Date</span><span class="val">${formatDateTime(receipt?.paid_at)}</span></div>
       <div class="row"><span class="lbl">Student</span><span class="val">${receipt?.student?.name || '—'}</span></div>
       <div class="row"><span class="lbl">Class</span><span class="val">Class ${receipt?.student?.class_name || ''} ${receipt?.student?.section_name ? '— ' + receipt.student.section_name : ''}</span></div>
       <div class="row"><span class="lbl">Fee Item</span><span class="val">${receipt?.fee_title || '—'}</span></div>
@@ -394,7 +395,7 @@ export function FeeCollect() {
                             <div className="flex items-center gap-3 mt-0.5">
                               <span className="text-[11px] text-slate-400 flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
-                                {fee.due_date || 'No due date'}
+                                {fee.due_date ? formatDate(fee.due_date) : 'No due date'}
                               </span>
                               {fee.concession_amount > 0 && (
                                 <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-md">
@@ -456,7 +457,7 @@ export function FeeCollect() {
                               </p>
                               <div className="flex items-center gap-2 flex-wrap mt-0.5">
                                 <span className="text-[10px] text-slate-400">
-                                  {new Date(p.paid_at).toLocaleDateString('en-IN')}
+                                  {formatDate(p.paid_at)}
                                   {p.is_void && ` · VOIDED — ${p.void_reason}`}
                                 </span>
                                 {concAmt > 0 && (

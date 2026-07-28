@@ -391,6 +391,38 @@ export const timetableAPI = {
   },
 };
 
+// Timetable Substitution API
+export const substitutionAPI = {
+  getTeacherPeriods: async (teacherId, date) => {
+    const response = await axiosInstance.get('/timetables/substitutions/teacher-periods', {
+      params: { teacher_id: teacherId, date },
+    });
+    return response.data;
+  },
+
+  getAvailableSubstitutes: async (timetableId, date) => {
+    const response = await axiosInstance.get('/timetables/substitutions/available-substitutes', {
+      params: { timetable_id: timetableId, date },
+    });
+    return response.data;
+  },
+
+  saveSubstitutions: async (date, substitutions) => {
+    const response = await axiosInstance.post('/timetables/substitutions', {
+      date,
+      substitutions,
+    });
+    return response.data;
+  },
+
+  getTodaySubstitutions: async (date) => {
+    const response = await axiosInstance.get('/timetables/substitutions/today', {
+      params: { date },
+    });
+    return response.data;
+  },
+};
+
 // Teacher Assignments API
 export const teacherAssignmentsAPI = {
   create: async (teacherId, classId, sectionId, subjectId, isClassTeacher) => {

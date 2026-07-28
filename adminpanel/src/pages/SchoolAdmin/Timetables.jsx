@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { timetableAPI, classesAPI, teacherAssignmentsAPI, subjectsAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
-import { Calendar, Plus, Trash2, Save, ChevronLeft } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck } from 'lucide-react';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -152,6 +153,7 @@ const st = {
 };
 
 export function Timetables() {
+  const navigate = useNavigate();
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
@@ -301,6 +303,13 @@ export function Timetables() {
           <h1 style={st.pageTitle}>Timetables</h1>
           <p style={st.pageSubtitle}>Create and manage section timetables</p>
         </div>
+        <button
+          style={st.btnPrimary}
+          onClick={() => navigate('/admin/timetables/substitutions')}
+        >
+          <UserCheck style={{ width: '16px', height: '16px' }} />
+          Substitute Teachers
+        </button>
       </div>
 
       {/* Class + Section selectors */}
