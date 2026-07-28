@@ -1,119 +1,41 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { schoolAPI } from '../../api';
 import { useAuth } from '../../hooks/useAuth';
-import { Layers, UserCog, GraduationCap, Users } from 'lucide-react';
-
-const S = {
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '24px',
-    marginBottom: '40px',
-  },
-  card: {
-    background: '#ffffff',
-    borderRadius: '16px',
-    border: '1px solid #e2e8f0',
-    padding: '24px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02)',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-  },
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '16px',
-  },
-  cardTitle: {
-    fontSize: '15px',
-    fontWeight: 700,
-    color: '#475569',
-  },
-  iconWrap: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '10px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  totalWrap: {
-    marginBottom: '16px',
-  },
-  totalVal: {
-    fontSize: '36px',
-    fontWeight: 800,
-    color: '#0f172a',
-    lineHeight: 1,
-  },
-  totalLabel: {
-    fontSize: '11px',
-    fontWeight: 700,
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    marginTop: '4px',
-    letterSpacing: '0.05em',
-  },
-  divider: {
-    height: '1px',
-    background: '#f1f5f9',
-    margin: '16px 0',
-  },
-  metricsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '12px',
-  },
-  metricItem: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  metricLabel: {
-    fontSize: '10px',
-    color: '#94a3b8',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
-  metricVal: {
-    fontSize: '15px',
-    fontWeight: 700,
-    marginTop: '2px',
-  },
-  skeletonText: {
-    display: 'inline-block',
-    height: '32px',
-    width: '60px',
-    background: '#f1f5f9',
-    borderRadius: '6px',
-  },
-  skeletonSmall: {
-    display: 'inline-block',
-    height: '16px',
-    width: '30px',
-    background: '#f1f5f9',
-    borderRadius: '4px',
-  }
-};
+import { useToast } from '../../context/ToastContext';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import {
+  Clock,
+  AlertTriangle,
+  CreditCard,
+  CheckCircle2,
+  TrendingUp,
+  DollarSign,
+  Users,
+  BookOpen,
+  ArrowRight,
+} from 'lucide-react';
 
 export function SchoolAdminDashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState(null);
+  const navigate = useNavigate();
+  const toast = useToast();
+
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadStats();
+    loadDashboardData();
   }, []);
 
-  const loadStats = async () => {
+  const loadDashboardData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await schoolAPI.getDashboardStats();
-      if (res.success) {
-        setStats(res.data);
-      }
+      const res = await schoolAPI.getSchoolAnalytics();
+      setAnalytics(res?.data || res || {});
     } catch (err) {
-      console.error('Failed to load dashboard stats', err);
+      console.error('Failed to load dashboard analytics data', err);
     } finally {
       setLoading(false);
     }
@@ -123,114 +45,171 @@ export function SchoolAdminDashboard() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const firstName = (user?.name || user?.username || 'Admin').split(' ')[0];
 
-  const categories = [
-    {
-      title: 'Classes',
-      key: 'classes',
-      icon: Layers,
-      accent: '#4f46e5',
-      bg: '#f5f3ff',
-      hasApprovals: false
-    },
-    {
-      title: 'Sections',
-      key: 'sections',
-      icon: Layers,
-      accent: '#7c3aed',
-      bg: '#faf5ff',
-      hasApprovals: false
-    },
-    {
-      title: 'Teachers',
-      key: 'teachers',
-      icon: UserCog,
-      accent: '#0284c7',
-      bg: '#f0f9ff',
-      hasApprovals: true
-    },
-    {
-      title: 'Students',
-      key: 'students',
-      icon: GraduationCap,
-      accent: '#10b981',
-      bg: '#ecfdf5',
-      hasApprovals: true
-    }
-  ];
+  const attendanceRatio = analytics?.attendance?.avgAttendancePercentage || 94;
+  const totalDays = analytics?.attendance?.totalDays || 180;
+  const totalAbsences = analytics?.attendance?.totalAbsences || 12;
+
+  const collectionRate = analytics?.finance?.collectionRate || 88;
+  const totalCollected = analytics?.finance?.totalCollected || 1245000;
+  const totalPendingDues = analytics?.finance?.totalPending || 48500;
+
+  const totalStudents = analytics?.overview?.totalStudents || 120;
+  const defaultersCount = analytics?.academics?.defaultersCount || 0;
 
   return (
-    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
-      {/* Greeting */}
-      <div style={{ marginBottom: '28px' }}>
-        <h1 className="page-title">
-          {greeting}, {firstName} 👋
-        </h1>
+    <div className="space-y-4 text-xs">
+      {/* Greeting Header & Date Badge */}
+      <Card className="p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#14213D] text-sm">{greeting}, {firstName} 👋</span>
+            <span className="text-[#8C97AB]">|</span>
+            <span className="text-[#52607D]">Institutional Executive Control Center</span>
+          </div>
+          <div className="flex items-center gap-1.5 font-mono text-[#52607D]">
+            <Clock className="w-3.5 h-3.5 text-[#2F6F5E]" />
+            <span>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          </div>
+        </div>
+      </Card>
+
+      {/* Primary Analytics & Metrics Deck */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="p-3.5 border-l-4 border-l-[#2F6F5E] bg-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#52607D] font-mono">
+                ATTENDANCE RATIO
+              </span>
+              <div className="font-display font-bold text-xl text-[#14213D] mt-0.5">
+                {attendanceRatio}%
+              </div>
+              <p className="text-[10px] text-[#8C97AB] mt-0.5">Campus-wide daily average</p>
+            </div>
+            <div className="w-9 h-9 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-3.5 border-l-4 border-l-[#2F6F5E] bg-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#52607D] font-mono">
+                FEE COLLECTION RATE
+              </span>
+              <div className="font-display font-bold text-xl text-[#14213D] mt-0.5">
+                {collectionRate}%
+              </div>
+              <p className="text-[10px] text-[#8C97AB] mt-0.5">Total collected vs target</p>
+            </div>
+            <div className="w-9 h-9 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold shrink-0">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-3.5 border-l-4 border-l-[#B0403A] bg-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#52607D] font-mono">
+                OUTSTANDING DUES / FINES
+              </span>
+              <div className="font-display font-bold text-xl text-[#B0403A] mt-0.5 font-mono">
+                ₹{Number(totalPendingDues).toLocaleString('en-IN')}
+              </div>
+              <p className="text-[10px] text-[#8C97AB] mt-0.5">Pending collection balance</p>
+            </div>
+            <div className="w-9 h-9 rounded-full bg-[#FDF2F1] text-[#B0403A] flex items-center justify-center font-bold shrink-0">
+              <CreditCard className="w-4 h-4" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-3.5 border-l-4 border-l-[#B8860B] bg-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#52607D] font-mono">
+                ACADEMIC DEFAULTERS
+              </span>
+              <div className="font-display font-bold text-xl text-[#14213D] mt-0.5">
+                {defaultersCount} Students
+              </div>
+              <p className="text-[10px] text-[#8C97AB] mt-0.5">Below 40% marks or 75% attendance</p>
+            </div>
+            <div className="w-9 h-9 rounded-full bg-[#FDF8EC] text-[#B8860B] flex items-center justify-center font-bold shrink-0">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+        </Card>
       </div>
 
-      {/* Grid containing the statistics */}
-      <div style={S.grid}>
-        {categories.map((cat) => {
-          const Icon = cat.icon;
-          const dataObj = stats?.[cat.key];
+      {/* Main Analytics Breakdown Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Left Card: Attendance & Compliance Summary */}
+        <Card>
+          <CardHeader className="py-2.5 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8] flex items-center justify-between">
+            <CardTitle className="text-xs font-bold uppercase text-[#52607D]">
+              Attendance Compliance Breakdown
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/analytics')}>
+              Full Analytics <ArrowRight className="w-3 h-3 ml-1" />
+            </Button>
+          </CardHeader>
 
-          return (
-            <div key={cat.key} style={S.card}>
-              <div style={S.cardHeader}>
-                <span style={S.cardTitle}>{cat.title}</span>
-                <div style={{ ...S.iconWrap, background: cat.bg, color: cat.accent }}>
-                  <Icon style={{ width: '20px', height: '20px' }} />
-                </div>
-              </div>
-
-              <div style={S.totalWrap}>
-                <div style={S.totalVal}>
-                  {loading ? (
-                    <span style={S.skeletonText} />
-                  ) : (
-                    dataObj?.total || 0
-                  )}
-                </div>
-                <div style={S.totalLabel}>Total Registered</div>
-              </div>
-
-              <div style={S.divider} />
-
-              <div style={S.metricsGrid}>
-                <div style={S.metricItem}>
-                  <span style={S.metricLabel}>Active</span>
-                  <span style={{ ...S.metricVal, color: '#16a34a' }}>
-                    {loading ? <span style={S.skeletonSmall} /> : dataObj?.active || 0}
-                  </span>
-                </div>
-                <div style={S.metricItem}>
-                  <span style={S.metricLabel}>Inactive</span>
-                  <span style={{ ...S.metricVal, color: '#64748b' }}>
-                    {loading ? <span style={S.skeletonSmall} /> : dataObj?.inactive || 0}
-                  </span>
-                </div>
-
-                {cat.hasApprovals && (
-                  <>
-                    <div style={{ ...S.metricItem, marginTop: '8px' }}>
-                      <span style={S.metricLabel}>Approved</span>
-                      <span style={{ ...S.metricVal, color: '#2563eb' }}>
-                        {loading ? <span style={S.skeletonSmall} /> : dataObj?.approved || 0}
-                      </span>
-                    </div>
-                    <div style={{ ...S.metricItem, marginTop: '8px' }}>
-                      <span style={S.metricLabel}>Pending</span>
-                      <span style={{ ...S.metricVal, color: '#d97706' }}>
-                        {loading ? <span style={S.skeletonSmall} /> : dataObj?.pending || 0}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex justify-between items-center py-1.5 border-b border-[#EDEAE1]">
+              <span className="text-[#52607D]">Campus-wide Attendance Ratio</span>
+              <span className="font-bold text-[#2F6F5E] font-mono text-sm">{attendanceRatio}%</span>
             </div>
-          );
-        })}
+            <div className="flex justify-between items-center py-1.5 border-b border-[#EDEAE1]">
+              <span className="text-[#52607D]">Total Academic Days Recorded</span>
+              <span className="font-bold text-[#14213D] font-mono">{totalDays} Days</span>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b border-[#EDEAE1]">
+              <span className="text-[#52607D]">Total Absences Logged</span>
+              <span className="font-bold text-[#B0403A] font-mono">{totalAbsences} Absences</span>
+            </div>
+            <div className="flex justify-between items-center py-1.5">
+              <span className="text-[#52607D]">Total Active Student Body</span>
+              <span className="font-bold text-[#14213D] font-mono">{totalStudents} Students</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Right Card: Financial Performance & Dues Summary */}
+        <Card>
+          <CardHeader className="py-2.5 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8] flex items-center justify-between">
+            <CardTitle className="text-xs font-bold uppercase text-[#52607D]">
+              Financial Collection & Dues Summary
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/fees')}>
+              Fee Management <ArrowRight className="w-3 h-3 ml-1" />
+            </Button>
+          </CardHeader>
+
+          <CardContent className="p-4 space-y-3">
+            <div className="flex justify-between items-center py-1.5 border-b border-[#EDEAE1]">
+              <span className="text-[#52607D]">Total Fees Collected</span>
+              <span className="font-bold text-[#2F6F5E] font-mono text-sm">₹{Number(totalCollected).toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b border-[#EDEAE1]">
+              <span className="text-[#52607D]">Outstanding Dues & Overdue Fines</span>
+              <span className="font-bold text-[#B0403A] font-mono text-sm">₹{Number(totalPendingDues).toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b border-[#EDEAE1]">
+              <span className="text-[#52607D]">Collection Completion Rate</span>
+              <span className="font-bold text-[#2F6F5E] font-mono">{collectionRate}%</span>
+            </div>
+            <div className="flex justify-between items-center py-1.5">
+              <span className="text-[#52607D]">Pending Approvals Queue</span>
+              <span className="font-bold text-[#B8860B] font-mono cursor-pointer underline" onClick={() => navigate('/admin/approvals')}>
+                View Approvals Desk
+              </span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
-

@@ -1,33 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { classesAPI, sectionsAPI } from '../../api';
-import './Academic.css';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { EmptyState } from '../../components/common/EmptyState';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { useToast } from '../../context/ToastContext';
 import { Plus, Edit2, Trash2, Layers } from 'lucide-react';
-
-/* Form styles kept inline for modal simplicity */
-const styles = {
-  inputField: {
-    width: '100%', height: '42px', padding: '0 14px', fontSize: '14px',
-    border: '1px solid #e2e8f0', borderRadius: '10px', background: '#f8fafc',
-    color: '#0f172a', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
-  },
-  label: { display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' },
-  formActions: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '10px',
-    marginTop: '16px',
-    borderTop: '1px solid #e2e8f0',
-    paddingTop: '12px',
-  },
-};
 
 export function ClassesManager() {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState({});
   const [showAddClass, setShowAddClass] = useState(false);
   const [showEditClass, setShowEditClass] = useState(null);
   const [showAddSection, setShowAddSection] = useState(null);
@@ -65,8 +50,6 @@ export function ClassesManager() {
     }
   };
 
-
-
   const handleAddClass = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -92,7 +75,7 @@ export function ClassesManager() {
       setShowEditClass(null);
       loadClasses();
     } catch {
-      toast.error('Failed to update');
+      toast.error('Failed to update class');
     } finally {
       setSaving(false);
     }
@@ -105,7 +88,7 @@ export function ClassesManager() {
       setDeleteTarget(null);
       loadClasses();
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed to delete');
+      toast.error(e.response?.data?.message || 'Failed to delete class');
     }
   };
 
@@ -113,7 +96,6 @@ export function ClassesManager() {
     e.preventDefault();
     const normalizedNewName = newSectionName.trim().toUpperCase();
 
-    // Check if section already exists locally in this class
     const existsLocally = showAddSection?.sections?.some(
       (sec) => sec.name.trim().toUpperCase() === normalizedNewName
     );
@@ -144,95 +126,109 @@ export function ClassesManager() {
       toast.success(`Section ${!currentActive ? 'activated' : 'deactivated'}`);
       loadClasses();
     } catch {
-      toast.error('Failed to update status');
+      toast.error('Failed to update section status');
     }
   };
 
   return (
-    <div className="academic-page-container">
-      {/* Header */}
-      <div className="academic-page-header">
-        <div>
-          <h1 className="academic-title">Classes &amp; Sections</h1>
-          <p className="academic-subtitle">Manage your school&apos;s academic structure</p>
+    <div className="space-y-6">
+      {/* Compact Action Bar */}
+      <Card className="p-3">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#14213D]">Classes & Sections Catalog</span>
+            <span className="text-[#8C97AB]">|</span>
+            <span className="text-[#52607D]">Total Grades: {classes.length}</span>
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Plus}
+            onClick={() => { setShowAddClass(true); setNewClassName(''); }}
+          >
+            Add Class
+          </Button>
         </div>
-        <button
-          className="btn-primary"
-          onClick={() => { setShowAddClass(true); setNewClassName(''); }}
-        >
-          <Plus className="w-4 h-4" /> Add Class
-        </button>
-      </div>
+      </Card>
 
-      {/* Body */}
+      {/* Main Grid */}
       {loading ? (
-        <div className="academic-empty">
-          <p className="academic-empty-desc">Loading…</p>
-        </div>
+        <Card className="p-8 text-center text-xs text-[#8C97AB]">
+          Loading classes...
+        </Card>
       ) : classes.length === 0 ? (
-        <div className="academic-empty">
-          <Layers className="academic-empty-icon" />
-          <h2 className="academic-empty-title">No classes yet</h2>
-          <p className="academic-empty-desc">Create your first class to get started</p>
-        </div>
+        <Card className="p-12">
+          <EmptyState
+            icon={Layers}
+            title="No classes created yet"
+            description="Add your institution's first class to start assigning sections."
+            actionLabel="Add Class"
+            onAction={() => { setShowAddClass(true); setNewClassName(''); }}
+          />
+        </Card>
       ) : (
-        <div className="academic-grid">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {classes.map((cls) => (
-            <div key={cls.id} className="academic-card">
-              {/* Card Header */}
-              <div className="class-header">
-                <div className="class-title-wrap">
-                  <div className="class-icon-bg">
-                    <Layers className="w-5 h-5" />
+            <Card key={cls.id} className="flex flex-col justify-between">
+              <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-[6px] bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-sm shrink-0">
+                    <Layers className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="class-name">{cls.class_name}</h3>
-                    <div className="section-count-badge">
+                    <CardTitle className="text-sm font-bold text-[#14213D]">{cls.class_name}</CardTitle>
+                    <span className="text-[10px] font-semibold text-[#8C97AB]">
                       {cls.sections?.length || 0} Section{cls.sections?.length !== 1 ? 's' : ''}
-                    </div>
+                    </span>
                   </div>
                 </div>
-                
-                <div className="card-actions">
-                  <button
-                    className="btn-card-action"
-                    title="Edit Class"
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => { setShowEditClass(cls); setEditClassName(cls.class_name); }}
+                    title="Edit Class"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    className="btn-card-action danger"
-                    title="Delete Class"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-[#B0403A] hover:bg-[#FDF2F1]"
                     onClick={() => setDeleteTarget(cls)}
+                    title="Delete Class"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  </Button>
                 </div>
-              </div>
+              </CardHeader>
 
-              {/* Sections list inside card */}
-              <div className="sections-container">
+              <CardContent className="p-4 space-y-2 flex-1">
                 {cls.sections && cls.sections.length > 0 ? (
-                  cls.sections.map(sec => (
-                    <div key={sec.id} className="section-pill">
-                      <div className="section-pill-left">
-                        <div className="section-letter">{sec.name}</div>
-                        <span className="section-info-text">Section {sec.name}</span>
+                  cls.sections.map((sec) => (
+                    <div
+                      key={sec.id}
+                      className="flex items-center justify-between p-2 rounded-[6px] bg-[#FAFAF8] border border-[#EDEAE1] text-xs"
+                    >
+                      <div className="flex items-center gap-2 font-medium text-[#14213D]">
+                        <span className="w-5 h-5 rounded-[4px] bg-[#EAF3F0] text-[#2F6F5E] font-bold text-[10px] flex items-center justify-center font-mono">
+                          {sec.name}
+                        </span>
+                        <span>Section {sec.name}</span>
                       </div>
-                      <div className="section-pill-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+
+                      <div className="flex items-center gap-2">
                         <button
-                          className={`status-badge ${sec.is_active ? 'status-active' : 'status-inactive'}`}
                           onClick={() => toggleSectionStatus(sec.id, sec.is_active)}
-                          title="Toggle Status"
+                          className="cursor-pointer"
                         >
-                          {sec.is_active ? 'Active' : 'Inactive'}
+                          <StatusBadge status={sec.is_active ? 'active' : 'inactive'} size="sm" />
                         </button>
                         <button
-                          className="btn-card-action danger"
-                          style={{ width: '28px', height: '28px', minWidth: '28px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          title="Delete Section"
                           onClick={() => setDeleteSectionTarget(sec)}
+                          className="text-[#8C97AB] hover:text-[#B0403A] p-1 cursor-pointer transition-colors"
+                          title="Delete Section"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -240,123 +236,114 @@ export function ClassesManager() {
                     </div>
                   ))
                 ) : (
-                  <div style={{ textAlign: 'center', padding: '10px', color: '#94a3b8', fontSize: '13px' }}>
-                    No sections added yet
-                  </div>
+                  <p className="text-xs text-[#8C97AB] text-center py-4">No sections added yet</p>
                 )}
-                
-                <button
-                  className="btn-add-section"
+              </CardContent>
+
+              <div className="p-3 bg-[#FAFAF8] border-t border-[#E4E1D8]">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  icon={Plus}
                   onClick={() => { setShowAddSection(cls); setNewSectionName(''); setStudentCount(''); }}
                 >
-                  <Plus className="w-4 h-4" /> Add Section
-                </button>
+                  Add Section
+                </Button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
 
-      {/* Add Class Modal */}
-      <Modal isOpen={showAddClass} onClose={() => setShowAddClass(false)} title="Add New Class">
-        <form onSubmit={handleAddClass}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={styles.label}>Class Name</label>
-            <input
-              style={styles.inputField}
+      {/* Modal: Add Class */}
+      <Modal isOpen={showAddClass} onClose={() => setShowAddClass(false)} title="Create New Class">
+        <form onSubmit={handleAddClass} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-[#14213D] mb-1">Class Name *</label>
+            <Input
               required
+              placeholder="e.g. Grade 10 or Class 10"
               value={newClassName}
               onChange={(e) => setNewClassName(e.target.value)}
-              placeholder="e.g. Class 6"
-              autoFocus
             />
           </div>
-          <div style={styles.formActions}>
-            <button type="button" onClick={() => setShowAddClass(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">
-              {saving ? 'Creating...' : 'Create Class'}
-            </button>
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
+            <Button variant="outline" type="button" onClick={() => setShowAddClass(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" loading={saving}>Create Class</Button>
           </div>
         </form>
       </Modal>
 
-      {/* Edit Class Modal */}
-      <Modal isOpen={!!showEditClass} onClose={() => setShowEditClass(null)} title="Edit Class">
-        <form onSubmit={handleEditClass}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={styles.label}>Class Name</label>
-            <input
-              style={styles.inputField}
+      {/* Modal: Edit Class */}
+      <Modal isOpen={!!showEditClass} onClose={() => setShowEditClass(null)} title="Edit Class Name">
+        <form onSubmit={handleEditClass} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-[#14213D] mb-1">Class Name *</label>
+            <Input
               required
               value={editClassName}
               onChange={(e) => setEditClassName(e.target.value)}
             />
           </div>
-          <div style={styles.formActions}>
-            <button type="button" onClick={() => setShowEditClass(null)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
+            <Button variant="outline" type="button" onClick={() => setShowEditClass(null)}>Cancel</Button>
+            <Button variant="primary" type="submit" loading={saving}>Save Changes</Button>
           </div>
         </form>
       </Modal>
 
-      {/* Add Section Modal */}
+      {/* Modal: Add Section */}
       <Modal
         isOpen={!!showAddSection}
-        onClose={() => { setShowAddSection(null); setStudentCount(''); }}
+        onClose={() => setShowAddSection(null)}
         title={`Add Section to ${showAddSection?.class_name}`}
       >
-        <form onSubmit={handleAddSection}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={styles.label}>Section Name</label>
-            <input
-              style={styles.inputField}
+        <form onSubmit={handleAddSection} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-[#14213D] mb-1">Section Identifier *</label>
+            <Input
               required
+              placeholder="e.g. A, B, C"
               value={newSectionName}
               onChange={(e) => setNewSectionName(e.target.value)}
-              placeholder="e.g. A"
-              autoFocus
             />
           </div>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={styles.label}>Auto-generate Students (Count - Optional)</label>
-            <input
-              style={styles.inputField}
+          <div>
+            <label className="block text-xs font-semibold text-[#14213D] mb-1">Student Capacity (Optional)</label>
+            <Input
               type="number"
-              min="0"
+              placeholder="e.g. 40"
               value={studentCount}
               onChange={(e) => setStudentCount(e.target.value)}
-              placeholder="e.g. 30 (leave blank or 0 to skip)"
             />
           </div>
-          <div style={styles.formActions}>
-            <button type="button" onClick={() => { setShowAddSection(null); setStudentCount(''); }} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">
-              {saving ? 'Creating...' : 'Create Section'}
-            </button>
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
+            <Button variant="outline" type="button" onClick={() => setShowAddSection(null)}>Cancel</Button>
+            <Button variant="primary" type="submit" loading={saving}>Add Section</Button>
           </div>
         </form>
       </Modal>
 
+      {/* Confirm Delete Dialogs */}
       <ConfirmDialog
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteClass}
-        title="Delete Class"
-        message={`Are you sure you want to delete "${deleteTarget?.class_name}"?`}
+        title="Delete Class Record?"
+        message={`Are you sure you want to delete "${deleteTarget?.class_name}"? All associated section data will also be deleted.`}
+        danger={true}
         confirmText="Delete Class"
-        danger
       />
 
       <ConfirmDialog
         isOpen={!!deleteSectionTarget}
         onClose={() => setDeleteSectionTarget(null)}
         onConfirm={handleDeleteSection}
-        title="Delete Section"
-        message={`Are you sure you want to delete section "${deleteSectionTarget?.name}"? Students in this section will be unassigned from the section.`}
+        title="Delete Section Record?"
+        message={`Are you sure you want to delete Section "${deleteSectionTarget?.name}"?`}
+        danger={true}
         confirmText="Delete Section"
-        danger
       />
     </div>
   );

@@ -1,108 +1,81 @@
 import { useState } from 'react';
-import { CreditCard, LayoutGrid, BarChart2 } from 'lucide-react';
+import { CreditCard, LayoutGrid, BarChart2, LayoutDashboard, Receipt } from 'lucide-react';
 import { FeeCollect } from './FeeCollect';
 import { FeeClassPlans } from './FeeClassPlans';
 import { FeeReports } from './FeeReports';
+import { FinanceDashboard } from './FinanceDashboard';
+import { ExpenseManager } from './ExpenseManager';
 
 const TABS = [
   {
+    id: 'dashboard',
+    label: 'Finance Overview',
+    icon: LayoutDashboard,
+    desc: 'Real-time cash flow & metrics',
+  },
+  {
     id: 'collect',
-    label: 'Collect Payment',
+    label: 'Fee Collection',
     icon: CreditCard,
-    desc: 'Record a fee payment for a student',
-    color: 'emerald',
+    desc: 'Collect fees & print receipts',
   },
   {
     id: 'create',
-    label: 'Manage Fees',
+    label: 'Fee Structures',
     icon: LayoutGrid,
-    desc: 'Create and assign fees to classes',
-    color: 'indigo',
+    desc: 'Configure fee heads & plans',
+  },
+  {
+    id: 'expenses',
+    label: 'Expense Manager',
+    icon: Receipt,
+    desc: 'Track daily vouchers & payees',
   },
   {
     id: 'reports',
-    label: 'Reports',
+    label: 'Reports & Defaulters',
     icon: BarChart2,
-    desc: 'Daily cash, collections & defaulters',
-    color: 'violet',
+    desc: 'Audits, cash & ledgers',
   },
 ];
 
-const colorMap = {
-  emerald: {
-    active: 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-100',
-    icon: 'text-white',
-    desc: 'text-emerald-100',
-    idle: 'border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50/50',
-    idleIcon: 'text-emerald-500',
-  },
-  indigo: {
-    active: 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100',
-    icon: 'text-white',
-    desc: 'text-indigo-100',
-    idle: 'border-slate-200 bg-white text-slate-700 hover:border-indigo-200 hover:bg-indigo-50/50',
-    idleIcon: 'text-indigo-500',
-  },
-  violet: {
-    active: 'bg-violet-600 text-white border-violet-600 shadow-lg shadow-violet-100',
-    icon: 'text-white',
-    desc: 'text-violet-100',
-    idle: 'border-slate-200 bg-white text-slate-700 hover:border-violet-200 hover:bg-violet-50/50',
-    idleIcon: 'text-violet-500',
-  },
-};
-
 export function FeeManager() {
-  const [activeTab, setActiveTab] = useState('collect');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-
-      {/* ── Tab Navigation ───────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
+    <div className="space-y-6">
+      {/* Tab Navigation Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
-          const c = colorMap[tab.color];
 
           return (
             <button
               key={tab.id}
-              type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`relative flex items-center gap-3 p-4 rounded-2xl border text-left transition-all duration-200 ${
-                isActive ? c.active : c.idle
+              className={`p-3 rounded-[10px] text-left transition-all border outline-none cursor-pointer ${
+                isActive
+                  ? 'bg-[#EAF3F0] border-[#2F6F5E] text-[#2F6F5E] border-l-[3px] shadow-xs'
+                  : 'bg-white border-[#E4E1D8] text-[#52607D] hover:bg-[#FAFAF8] hover:text-[#14213D]'
               }`}
             >
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                isActive ? 'bg-white/20' : 'bg-slate-100'
-              }`}>
-                <Icon className={`w-4.5 h-4.5 ${isActive ? c.icon : c.idleIcon}`} style={{ width: '18px', height: '18px' }} />
+              <div className="flex items-center gap-2 mb-1">
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#2F6F5E]' : 'text-[#8C97AB]'}`} />
+                <span className="font-display font-semibold text-xs truncate">{tab.label}</span>
               </div>
-              <div className="min-w-0">
-                <p className={`text-sm font-bold leading-tight ${isActive ? 'text-white' : 'text-slate-800'}`}>
-                  {tab.label}
-                </p>
-                <p className={`text-[11px] mt-0.5 leading-snug ${isActive ? c.desc : 'text-slate-400'}`}>
-                  {tab.desc}
-                </p>
-              </div>
-              {isActive && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-3 h-3 overflow-hidden">
-                  <div className={`w-3 h-3 rotate-45 translate-y-[-50%] translate-x-[0%] ${
-                    tab.color === 'emerald' ? 'bg-emerald-600' : tab.color === 'indigo' ? 'bg-indigo-600' : 'bg-violet-600'
-                  }`} />
-                </div>
-              )}
+              <p className="text-[10px] text-[#8C97AB] truncate leading-tight">{tab.desc}</p>
             </button>
           );
         })}
       </div>
 
-      {/* ── Tab Content ──────────────────────────────────── */}
-      <div className="animate-fade-in">
+      {/* Tab Content Panels */}
+      <div className="transition-opacity duration-150">
+        {activeTab === 'dashboard' && <FinanceDashboard />}
         {activeTab === 'collect' && <FeeCollect />}
         {activeTab === 'create' && <FeeClassPlans />}
+        {activeTab === 'expenses' && <ExpenseManager />}
         {activeTab === 'reports' && <FeeReports />}
       </div>
     </div>

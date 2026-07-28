@@ -1,140 +1,47 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { teacherAssignmentsAPI, teachersAPI, classesAPI, subjectsAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
-import { UserCog, ChevronDown, ChevronRight, UserPlus, X, Check, UserCheck, BookOpen } from 'lucide-react';
-
-/* ── plain CSS styles ── */
-const s = {
-  pageHeader: {
-    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-    marginBottom: '24px', flexWrap: 'wrap', gap: '18px',
-  },
-  pageTitle: { fontSize: '28px', fontWeight: 850, letterSpacing: '-0.03em', color: '#0f172a', margin: 0 },
-  pageSubtitle: { fontSize: '14px', color: '#64748b', marginTop: '6px', lineHeight: 1.55 },
-
-  classCard: {
-    background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.04)', marginBottom: '12px', overflow: 'visible',
-  },
-  classHeader: {
-    display: 'flex', alignItems: 'center', gap: '10px',
-    padding: '14px 18px', cursor: 'pointer', userSelect: 'none',
-    background: '#fafafa',
-    borderTopLeftRadius: '15px',
-    borderTopRightRadius: '15px',
-  },
-  classIcon: {
-    width: '32px', height: '32px', borderRadius: '8px',
-    background: '#eef2ff', color: '#4f46e5',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
-  className: { fontWeight: 700, fontSize: '14px', color: '#0f172a', flex: 1 },
-
-  sectionsGrid: {
-    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-    gap: '12px', padding: '16px',
-  },
-  sectionCard: {
-    border: '1px solid #e2e8f0', borderRadius: '12px',
-    padding: '14px', background: '#fff', position: 'relative',
-  },
-  sectionLabel: {
-    fontSize: '11px', fontWeight: 600, color: '#94a3b8',
-    textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px',
-  },
-  sectionName: { fontSize: '15px', fontWeight: 800, color: '#1e293b', marginBottom: '10px' },
-
-  assignedRow: { display: 'flex', alignItems: 'center', gap: '8px' },
-  avatar: {
-    width: '28px', height: '28px', borderRadius: '50%',
-    background: '#e0e7ff', color: '#4f46e5',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '11px', fontWeight: 700, flexShrink: 0,
-  },
-  teacherName: { fontSize: '12px', fontWeight: 600, color: '#0f172a', lineHeight: 1.3 },
-  teacherSub: { fontSize: '11px', color: '#94a3b8' },
-
-  unassignedBadge: {
-    display: 'inline-flex', alignItems: 'center', gap: '4px',
-    fontSize: '11px', fontWeight: 600, color: '#94a3b8',
-    background: '#f8fafc', border: '1px dashed #cbd5e1',
-    borderRadius: '6px', padding: '3px 8px',
-  },
-  assignBtn: {
-    marginTop: '10px', width: '100%', height: '30px',
-    borderRadius: '8px', border: '1px solid #c7d2fe',
-    background: '#eef2ff', color: '#4f46e5',
-    fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-  },
-  changeBtn: {
-    marginTop: '10px', width: '100%', height: '28px',
-    borderRadius: '8px', border: '1px solid #e2e8f0',
-    background: '#f8fafc', color: '#64748b',
-    fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-  },
-
-  /* Picker dropdown */
-  pickerOverlay: {
-    position: 'fixed', inset: 0, zIndex: 40,
-    background: 'transparent',
-  },
-  pickerPopup: {
-    position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
-    background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.12)', zIndex: 50,
-    overflow: 'hidden', maxHeight: '220px', overflowY: 'auto',
-  },
-  pickerSearch: {
-    width: '100%', height: '36px', padding: '0 12px', fontSize: '13px',
-    border: 'none', borderBottom: '1px solid #f1f5f9',
-    outline: 'none', fontFamily: 'inherit', background: '#fafafa',
-    boxSizing: 'border-box',
-  },
-  pickerItem: {
-    display: 'flex', alignItems: 'center', gap: '10px',
-    padding: '8px 12px', cursor: 'pointer', fontSize: '13px',
-    color: '#1e293b', transition: 'background 0.1s',
-  },
-  pickerItemHovered: { background: '#f1f5f9' },
-  pickerEmpty: { padding: '16px', textAlign: 'center', fontSize: '13px', color: '#94a3b8' },
-
-  emptyState: {
-    background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0',
-    padding: '60px 24px', textAlign: 'center',
-  },
-  tabRow: {
-    display: 'flex', gap: '8px', borderBottom: '1px solid #e2e8f0', marginBottom: '24px', position: 'relative', zIndex: 1,
-  },
-  tabBtn: (isActive) => ({
-    padding: '10px 20px', fontSize: '14px', fontWeight: 600,
-    background: 'none', border: 'none', borderBottom: isActive ? '2px solid #4f46e5' : '2px solid transparent',
-    color: isActive ? '#4f46e5' : '#64748b', cursor: 'pointer', transition: 'all 0.15s',
-    outline: 'none', marginBottom: '-1px',
-  }),
-  subjectSectionsGrid: {
-    display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '12px', padding: '16px', overflow: 'visible',
-  },
-};
+import { Button } from '../../components/ui/Button';
+import { Input, Select } from '../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { EmptyState } from '../../components/common/EmptyState';
+import { Modal } from '../../components/common/Modal';
+import {
+  UserCog,
+  ChevronDown,
+  ChevronRight,
+  UserPlus,
+  X,
+  CheckCircle2,
+  BookOpen,
+  Trash2,
+  Users,
+  AlertTriangle,
+  Search,
+  SlidersHorizontal,
+  GraduationCap,
+  Layers,
+  Sparkles
+} from 'lucide-react';
 
 export function TeacherAssignments() {
-  const [activeTab, setActiveTab] = useState('class-teachers'); // 'class-teachers' | 'subject-teachers'
+  const [activeTab, setActiveTab] = useState('class-teachers');
   const [classes, setClasses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [subjects, setSubjects] = useState([]);
-  /* sectionAssignments: { [sectionId]: assignment | null } */
   const [sectionAssignments, setSectionAssignments] = useState({});
-  /* subjectAssignments: { [sectionId]: { [subjectId]: assignment } } */
   const [subjectAssignments, setSubjectAssignments] = useState({});
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
-  /* picker state */
-  const [activePicker, setActivePicker] = useState(null); // { sectionId, classId, subjectId }
+  const [activePicker, setActivePicker] = useState(null);
   const [pickerSearch, setPickerSearch] = useState('');
-  const [pickerHover, setPickerHover] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  // Filters & Search
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClassFilter, setSelectedClassFilter] = useState('ALL');
+  const [gapFilter, setGapFilter] = useState('ALL'); // ALL | UNASSIGNED_COORDINATOR | MISSING_SUBJECTS
+
   const toast = useToast();
 
   useEffect(() => { init(); }, []);
@@ -149,22 +56,25 @@ export function TeacherAssignments() {
         subjectsAPI.list(),
       ]);
 
-      const classList = clsRes.items || [];
-      const teacherList = tRes.items || [];
-      const allAssignments = assignRes.items || [];
-      const subjectList = subRes.items || [];
+      const classList = clsRes.items || clsRes.data || clsRes || [];
+      let teacherList = Array.isArray(tRes) ? tRes : (tRes.data || tRes.items || tRes.rows || []);
+      if (teacherList.length === 0) {
+        const fullT = await teachersAPI.list(500, 0);
+        teacherList = Array.isArray(fullT) ? fullT : (fullT.items || fullT.rows || fullT.data || []);
+      }
+      const allAssignments = assignRes.items || assignRes.data || assignRes || [];
+      const subjectList = subRes.items || subRes.data || subRes || [];
 
       setClasses(classList);
       setTeachers(teacherList);
       setSubjects(subjectList);
 
-      // Build maps
       const classMap = {};
       const subjectMap = {};
 
       for (const cls of classList) {
         for (const sec of cls.sections || []) {
-          classMap[sec.id] = null; // default: unassigned
+          classMap[sec.id] = null;
           subjectMap[sec.id] = {};
         }
       }
@@ -186,26 +96,33 @@ export function TeacherAssignments() {
       setSectionAssignments(classMap);
       setSubjectAssignments(subjectMap);
 
-      // expand all by default
       const exp = {};
       for (const cls of classList) exp[cls.id] = true;
       setExpanded(exp);
     } catch {
-      toast.error('Failed to load data');
+      toast.error('Failed to load mapping registry');
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleExpand = (id) => setExpanded(p => ({ ...p, [id]: !p[id] }));
+  const toggleExpand = (id) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
+  const expandAll = () => {
+    const exp = {};
+    for (const cls of classes) exp[cls.id] = true;
+    setExpanded(exp);
+  };
+  const collapseAll = () => setExpanded({});
 
   const openPicker = (sectionId, classId, subjectId = null) => {
     setPickerSearch('');
-    setPickerHover(null);
     setActivePicker({ sectionId, classId, subjectId });
   };
 
   const closePicker = () => setActivePicker(null);
+
+  const teacherDisplayName = (t) =>
+    t?.user?.name || t?.User?.name || t?.user?.username || t?.User?.username || t?.employee_id || `Teacher #${t?.id}`;
 
   const handleAssign = useCallback(async (teacher) => {
     if (!activePicker || saving) return;
@@ -215,7 +132,6 @@ export function TeacherAssignments() {
     closePicker();
     try {
       if (subjectId) {
-        // --- Subject Teacher Assignment ---
         const existing = subjectAssignments[sectionId]?.[subjectId];
         if (existing) {
           await teacherAssignmentsAPI.delete(existing.id);
@@ -225,18 +141,17 @@ export function TeacherAssignments() {
           Number(classId),
           Number(sectionId),
           Number(subjectId),
-          false // is_class_teacher
+          false
         );
 
         const assignmentData = created.data || created;
-        setSubjectAssignments(p => {
+        setSubjectAssignments((p) => {
           const updatedSec = { ...p[sectionId] };
-          updatedSec[subjectId] = { ...assignmentData, teacher, subject: subjects.find(s => s.id === subjectId) };
+          updatedSec[subjectId] = { ...assignmentData, teacher, subject: subjects.find((s) => s.id === subjectId) };
           return { ...p, [sectionId]: updatedSec };
         });
-        toast.success(`${teacherDisplayName(teacher)} assigned for ${subjects.find(s => s.id === subjectId)?.name || 'subject'}`);
+        toast.success(`${teacherDisplayName(teacher)} assigned for subject`);
       } else {
-        // --- Class Teacher Assignment ---
         const existing = sectionAssignments[sectionId];
         if (existing) {
           await teacherAssignmentsAPI.delete(existing.id);
@@ -246,15 +161,15 @@ export function TeacherAssignments() {
           Number(classId),
           Number(sectionId),
           undefined,
-          true // is_class_teacher
+          true
         );
         const assignmentData = created.data || created;
-        setSectionAssignments(p => ({ ...p, [sectionId]: { ...assignmentData, teacher, is_class_teacher: true } }));
-        toast.success(`${teacherDisplayName(teacher)} assigned as class teacher`);
+        setSectionAssignments((p) => ({ ...p, [sectionId]: { ...assignmentData, teacher, is_class_teacher: true } }));
+        toast.success(`${teacherDisplayName(teacher)} assigned as class coordinator`);
       }
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed to assign');
-      init(); // re-sync
+      toast.error(e.response?.data?.message || 'Failed to assign teacher');
+      init();
     } finally {
       setSaving(false);
     }
@@ -267,313 +182,495 @@ export function TeacherAssignments() {
     setSaving(true);
     try {
       await teacherAssignmentsAPI.delete(existing.id);
-
-      setSubjectAssignments(p => {
+      setSubjectAssignments((p) => {
         const updatedSec = { ...p[sectionId] };
         delete updatedSec[subjectId];
         return { ...p, [sectionId]: updatedSec };
       });
-      toast.success('Subject assignment removed');
-    } catch (e) {
+      toast.success('Subject mapping removed');
+    } catch {
       toast.error('Failed to remove assignment');
     } finally {
       setSaving(false);
     }
   };
 
-  const teacherDisplayName = (t) =>
-    t?.user?.name || t?.User?.name || t?.user?.username || t?.User?.username || t?.employee_id || `Teacher #${t?.id}`;
+  // Calculate Metrics
+  const stats = useMemo(() => {
+    let totalSections = 0;
+    let assignedCoordinators = 0;
+    let totalSubjectSlots = 0;
+    let filledSubjectSlots = 0;
 
-  const filteredTeachers = teachers.filter(t =>
-    teacherDisplayName(t).toLowerCase().includes(pickerSearch.toLowerCase())
+    classes.forEach((cls) => {
+      (cls.sections || []).forEach((sec) => {
+        totalSections++;
+        if (sectionAssignments[sec.id]?.teacher) assignedCoordinators++;
+        subjects.forEach((sub) => {
+          totalSubjectSlots++;
+          if (subjectAssignments[sec.id]?.[sub.id]?.teacher) filledSubjectSlots++;
+        });
+      });
+    });
+
+    const coordinatorCoverage = totalSections ? Math.round((assignedCoordinators / totalSections) * 100) : 0;
+    const subjectCoverage = totalSubjectSlots ? Math.round((filledSubjectSlots / totalSubjectSlots) * 100) : 0;
+    const missingCoordinators = totalSections - assignedCoordinators;
+    const missingSubjects = totalSubjectSlots - filledSubjectSlots;
+
+    return {
+      totalSections,
+      assignedCoordinators,
+      coordinatorCoverage,
+      totalSubjectSlots,
+      filledSubjectSlots,
+      subjectCoverage,
+      missingCoordinators,
+      missingSubjects,
+    };
+  }, [classes, sectionAssignments, subjectAssignments, subjects]);
+
+  // Filtered Classes & Sections
+  const filteredClasses = useMemo(() => {
+    return classes.map((cls) => {
+      if (selectedClassFilter !== 'ALL' && String(cls.id) !== String(selectedClassFilter)) {
+        return null;
+      }
+
+      const matchingSections = (cls.sections || []).filter((sec) => {
+        // Search term filter
+        const matchSearch =
+          !searchTerm ||
+          cls.class_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          sec.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+        if (!matchSearch) return false;
+
+        // Gap filter
+        if (gapFilter === 'UNASSIGNED_COORDINATOR') {
+          return !sectionAssignments[sec.id]?.teacher;
+        }
+        if (gapFilter === 'MISSING_SUBJECTS') {
+          const filledCount = subjects.filter((s) => subjectAssignments[sec.id]?.[s.id]?.teacher).length;
+          return filledCount < subjects.length;
+        }
+        return true;
+      });
+
+      if (matchingSections.length === 0) return null;
+      return { ...cls, sections: matchingSections };
+    }).filter(Boolean);
+  }, [classes, selectedClassFilter, searchTerm, gapFilter, sectionAssignments, subjectAssignments, subjects]);
+
+  const filteredTeachers = teachers.filter((t) =>
+    teacherDisplayName(t).toLowerCase().includes(pickerSearch.toLowerCase()) ||
+    (t.employee_id && String(t.employee_id).toLowerCase().includes(pickerSearch.toLowerCase()))
   );
 
-  if (loading) {
-    return (
-      <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
-        <div style={s.pageHeader}>
-          <div>
-            <h1 style={s.pageTitle}>Teacher Mapping</h1>
-            <p style={s.pageSubtitle}>Assign class coordinators and map subjects to teachers</p>
-          </div>
-        </div>
-        <div style={s.emptyState}><p style={{ color: '#94a3b8' }}>Loading…</p></div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
-      <div style={s.pageHeader}>
-        <div>
-          <h1 style={s.pageTitle}>Teacher Mapping</h1>
-          <p style={s.pageSubtitle}>Assign class coordinators and map subjects to teachers</p>
+    <div className="space-y-5">
+      {/* Compact Page Action Bar */}
+      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <h2 className="font-display font-bold text-base text-[#14213D] flex items-center gap-2">
+          <UserCog className="w-4 h-4 text-[#2F6F5E]" />
+          Faculty Assignments & Class Mapping
+        </h2>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={expandAll}>Expand All</Button>
+          <Button variant="outline" size="sm" onClick={collapseAll}>Collapse All</Button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-6 mb-6 border-b border-slate-200 pb-0 overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => { setActiveTab('class-teachers'); closePicker(); }}
-          className={`flex items-center gap-2 px-3 py-3 text-sm font-medium border-b-2 -mb-px transition-all duration-200 outline-none whitespace-nowrap ${
-            activeTab === 'class-teachers'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-          }`}
-        >
-          <UserCheck className={`w-4 h-4 ${activeTab === 'class-teachers' ? 'text-indigo-600' : 'text-slate-400'}`} />
-          <span>Class Coordinators</span>
-        </button>
-        <button
-          onClick={() => { setActiveTab('subject-teachers'); closePicker(); }}
-          className={`flex items-center gap-2 px-3 py-3 text-sm font-medium border-b-2 -mb-px transition-all duration-200 outline-none whitespace-nowrap ${
-            activeTab === 'subject-teachers'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-          }`}
-        >
-          <BookOpen className={`w-4 h-4 ${activeTab === 'subject-teachers' ? 'text-indigo-600' : 'text-slate-400'}`} />
-          <span>Subject Mapping</span>
-        </button>
-      </div>
-
-      {classes.length === 0 ? (
-        <div style={s.emptyState}>
-          <UserCog style={{ width: '48px', height: '48px', color: '#cbd5e1', marginBottom: '12px' }} />
-          <p style={{ fontSize: '16px', fontWeight: 700, color: '#475569' }}>No classes found</p>
-          <p style={{ fontSize: '13px', color: '#94a3b8' }}>Create classes and sections first</p>
-        </div>
-      ) : (
-        classes.map(cls => (
-          <div key={cls.id} style={s.classCard}>
-            {/* Class header */}
-            <div style={s.classHeader} onClick={() => toggleExpand(cls.id)}>
-              {expanded[cls.id]
-                ? <ChevronDown style={{ width: '15px', height: '15px', color: '#94a3b8', flexShrink: 0 }} />
-                : <ChevronRight style={{ width: '15px', height: '15px', color: '#94a3b8', flexShrink: 0 }} />}
-              <div style={s.classIcon}>
-                <UserCog style={{ width: '15px', height: '15px' }} />
-              </div>
-              <span style={s.className}>{cls.class_name}</span>
-              <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-                {cls.sections?.length || 0} section{cls.sections?.length !== 1 ? 's' : ''}
-              </span>
+      {/* Main Container Card */}
+      <Card className="overflow-hidden">
+        {/* Navigation & Filter Header */}
+        <div className="p-4 border-b border-[#EDEAE1] bg-[#FAFAF8] space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Tabs */}
+            <div className="flex bg-white border border-[#E4E1D8] p-1 rounded-[8px] shadow-2xs">
+              <button
+                onClick={() => { setActiveTab('class-teachers'); closePicker(); }}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-[6px] transition-all cursor-pointer ${
+                  activeTab === 'class-teachers'
+                    ? 'bg-[#2F6F5E] text-white shadow-xs'
+                    : 'text-[#52607D] hover:text-[#14213D] hover:bg-[#FAFAF8]'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Class Coordinators</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab('subject-teachers'); closePicker(); }}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-[6px] transition-all cursor-pointer ${
+                  activeTab === 'subject-teachers'
+                    ? 'bg-[#2F6F5E] text-white shadow-xs'
+                    : 'text-[#52607D] hover:text-[#14213D] hover:bg-[#FAFAF8]'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Subject Mapping</span>
+              </button>
             </div>
 
-            {/* Sections grid */}
-            {expanded[cls.id] && (cls.sections || []).length > 0 && (
-              <div style={{ borderTop: '1px solid #f1f5f9' }}>
-                <div style={activeTab === 'subject-teachers' ? s.subjectSectionsGrid : s.sectionsGrid}>
-                  {cls.sections.map(sec => {
-                    const classAssignment = sectionAssignments[sec.id];
-                    const classTeacher = classAssignment?.teacher;
-                    const isClassPickerOpen = activePicker?.sectionId === sec.id && !activePicker?.subjectId;
-
-                    return (
-                      <div key={sec.id} style={{ ...s.sectionCard, position: 'relative', zIndex: (activePicker?.sectionId === sec.id) ? 50 : 1 }}>
-                        <div style={s.sectionLabel}>{cls.class_name}</div>
-                        <div style={s.sectionName}>Section {sec.name}</div>
-
-                        {activeTab === 'class-teachers' ? (
-                          /* Class Teacher assignment card contents */
-                          classAssignment && classTeacher ? (
-                            <>
-                              <div style={s.assignedRow}>
-                                <div style={s.avatar}>
-                                  {teacherDisplayName(classTeacher)[0]?.toUpperCase() || 'T'}
-                                </div>
-                                <div>
-                                  <div style={s.teacherName}>{teacherDisplayName(classTeacher)}</div>
-                                  {classTeacher?.employee_id && (
-                                    <div style={s.teacherSub}>{classTeacher.employee_id}</div>
-                                  )}
-                                </div>
-                              </div>
-                              <div style={{ position: 'relative', zIndex: isClassPickerOpen ? 60 : 1 }}>
-                                <button style={s.changeBtn} onClick={() => isClassPickerOpen ? closePicker() : openPicker(sec.id, cls.id)}>
-                                  Change Teacher
-                                </button>
-                                {isClassPickerOpen && (
-                                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', zIndex: 100 }}>
-                                    <TeacherPicker
-                                      teachers={filteredTeachers}
-                                      search={pickerSearch}
-                                      onSearch={setPickerSearch}
-                                      hover={pickerHover}
-                                      onHover={setPickerHover}
-                                      onSelect={handleAssign}
-                                      onClose={closePicker}
-                                      saving={saving}
-                                      displayName={teacherDisplayName}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <span style={s.unassignedBadge}>
-                                <span style={{ fontSize: '10px' }}>●</span> Not assigned
-                              </span>
-                              <div style={{ position: 'relative', zIndex: isClassPickerOpen ? 60 : 1 }}>
-                                <button style={s.assignBtn} onClick={() => isClassPickerOpen ? closePicker() : openPicker(sec.id, cls.id)}>
-                                  <UserPlus style={{ width: '12px', height: '12px' }} /> Assign Teacher
-                                </button>
-                                {isClassPickerOpen && (
-                                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', zIndex: 100 }}>
-                                    <TeacherPicker
-                                      teachers={filteredTeachers}
-                                      search={pickerSearch}
-                                      onSearch={setPickerSearch}
-                                      hover={pickerHover}
-                                      onHover={setPickerHover}
-                                      onSelect={handleAssign}
-                                      onClose={closePicker}
-                                      saving={saving}
-                                      displayName={teacherDisplayName}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </>
-                          )
-                        ) : (
-                          /* Subject Teacher list */
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                            {subjects.map(sub => {
-                              const assignment = subjectAssignments[sec.id]?.[sub.id];
-                              const teacher = assignment?.teacher;
-                              const isSubPickerOpen = activePicker?.sectionId === sec.id && activePicker?.subjectId === sub.id;
-
-                              return (
-                                <div key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', border: '1px solid #f1f5f9', borderRadius: '8px', background: isSubPickerOpen ? '#eef2ff' : '#f8fafc', position: 'relative', zIndex: isSubPickerOpen ? 60 : 1, overflow: 'visible' }}>
-                                  <div style={{ flex: 1, minWidth: 0, marginRight: '8px' }}>
-                                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub.name}</div>
-                                    {teacher ? (
-                                      <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
-                                        👤 {teacherDisplayName(teacher)}
-                                      </div>
-                                    ) : (
-                                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>Unassigned</div>
-                                    )}
-                                  </div>
-                                  <div style={{ display: 'flex', gap: '4px' }}>
-                                    {teacher ? (
-                                      <>
-                                        <button style={{ ...s.changeBtn, marginTop: 0, height: '24px', padding: '0 8px', fontSize: '10px' }} onClick={() => isSubPickerOpen ? closePicker() : openPicker(sec.id, cls.id, sub.id)}>
-                                          Edit
-                                        </button>
-                                        <button style={{ ...s.changeBtn, marginTop: 0, height: '24px', color: '#f43f5e', borderColor: '#fecdd3', background: '#fff5f5', padding: '0 8px', fontSize: '10px' }} onClick={() => handleRemoveSubject(sec.id, sub.id)}>
-                                          Del
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <button style={{ ...s.assignBtn, marginTop: 0, height: '24px', padding: '0 8px', fontSize: '10px' }} onClick={() => isSubPickerOpen ? closePicker() : openPicker(sec.id, cls.id, sub.id)}>
-                                        Assign
-                                      </button>
-                                    )}
-                                  </div>
-                                  {isSubPickerOpen && (
-                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', zIndex: 100 }}>
-                                      <TeacherPicker
-                                        teachers={filteredTeachers}
-                                        search={pickerSearch}
-                                        onSearch={setPickerSearch}
-                                        hover={pickerHover}
-                                        onHover={setPickerHover}
-                                        onSelect={handleAssign}
-                                        onClose={closePicker}
-                                        saving={saving}
-                                        displayName={teacherDisplayName}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {/* Quick Filter Buttons */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setGapFilter('ALL')}
+                className={`px-2.5 py-1 text-xs font-medium rounded-full cursor-pointer transition-colors ${
+                  gapFilter === 'ALL'
+                    ? 'bg-[#14213D] text-white font-semibold'
+                    : 'bg-white border border-[#E4E1D8] text-[#52607D] hover:bg-[#FAFAF8]'
+                }`}
+              >
+                All Sections
+              </button>
+              <button
+                onClick={() => setGapFilter('UNASSIGNED_COORDINATOR')}
+                className={`px-2.5 py-1 text-xs font-medium rounded-full cursor-pointer transition-colors ${
+                  gapFilter === 'UNASSIGNED_COORDINATOR'
+                    ? 'bg-[#B0403A] text-white font-semibold'
+                    : 'bg-white border border-[#E4E1D8] text-[#52607D] hover:bg-[#FAFAF8]'
+                }`}
+              >
+                Missing Coordinator ({stats.missingCoordinators})
+              </button>
+              <button
+                onClick={() => setGapFilter('MISSING_SUBJECTS')}
+                className={`px-2.5 py-1 text-xs font-medium rounded-full cursor-pointer transition-colors ${
+                  gapFilter === 'MISSING_SUBJECTS'
+                    ? 'bg-[#B0403A] text-white font-semibold'
+                    : 'bg-white border border-[#E4E1D8] text-[#52607D] hover:bg-[#FAFAF8]'
+                }`}
+              >
+                Missing Subject Staff ({stats.missingSubjects})
+              </button>
+            </div>
           </div>
-        ))
-      )}
 
-      {/* Global overlay to close picker on outside click */}
-      {activePicker && (
-        <div style={s.pickerOverlay} onClick={closePicker} />
-      )}
-    </div>
-  );
-}
+          {/* Search & Filter Dropdown Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            <div className="relative sm:col-span-2">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#8C97AB]" />
+              <Input
+                placeholder="Search class name, section, or coordinator..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 text-xs h-8 bg-white"
+              />
+            </div>
+            <div>
+              <Select
+                value={selectedClassFilter}
+                onChange={(e) => setSelectedClassFilter(e.target.value)}
+                options={[
+                  { value: 'ALL', label: 'All Grade Levels' },
+                  ...classes.map((c) => ({ value: String(c.id), label: c.class_name })),
+                ]}
+                className="h-8 text-xs bg-white"
+              />
+            </div>
+          </div>
+        </div>
 
-/* ── Teacher Picker Dropdown ── */
-function TeacherPicker({ teachers, search, onSearch, hover, onHover, onSelect, onClose, saving, displayName }) {
-  return (
-    <div style={{
-      background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 100,
-      overflow: 'hidden', width: '100%',
-    }}
-      onClick={e => e.stopPropagation()}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
-        <input
-          autoFocus
-          style={{
-            flex: 1, height: '36px', padding: '0 12px', fontSize: '13px',
-            border: 'none', outline: 'none', fontFamily: 'inherit', background: '#fafafa',
-          }}
-          placeholder="Search teacher…"
-          value={search}
-          onChange={e => onSearch(e.target.value)}
-        />
-        <button
-          style={{ width: '32px', height: '36px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={onClose}
-        >
-          <X style={{ width: '13px', height: '13px' }} />
-        </button>
-      </div>
-      <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-        {teachers.length === 0 ? (
-          <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: '#94a3b8' }}>No teachers found</div>
-        ) : (
-          teachers.map(t => (
-            <div
-              key={t.id}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '8px 12px', cursor: saving ? 'not-allowed' : 'pointer',
-                fontSize: '13px', color: '#1e293b',
-                background: hover === t.id ? '#f1f5f9' : 'transparent',
-                transition: 'background 0.1s',
+        {/* Content Body */}
+        {loading ? (
+          <div className="p-12 text-center text-xs text-[#8C97AB] flex flex-col items-center gap-2">
+            <div className="w-6 h-6 border-2 border-[#2F6F5E] border-t-transparent rounded-full animate-spin" />
+            Loading faculty assignment registry...
+          </div>
+        ) : filteredClasses.length === 0 ? (
+          <div className="p-12">
+            <EmptyState
+              icon={UserCog}
+              title="No matching classes or mapping gaps"
+              description="Try clearing your search or filter settings to view all section allocations."
+              actionLabel="Reset Filters"
+              onAction={() => {
+                setSearchTerm('');
+                setSelectedClassFilter('ALL');
+                setGapFilter('ALL');
               }}
-              onMouseEnter={() => onHover(t.id)}
-              onMouseLeave={() => onHover(null)}
-              onClick={() => !saving && onSelect(t)}
-            >
-              <div style={{
-                width: '26px', height: '26px', borderRadius: '50%',
-                background: '#e0e7ff', color: '#4f46e5',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '10px', fontWeight: 700, flexShrink: 0,
-              }}>
-                {displayName(t)[0]?.toUpperCase() || 'T'}
+            />
+          </div>
+        ) : (
+          <div className="divide-y divide-[#EDEAE1]">
+            {filteredClasses.map((cls) => (
+              <div key={cls.id} className="transition-colors">
+                {/* Class Section Header Header */}
+                <div
+                  onClick={() => toggleExpand(cls.id)}
+                  className="px-5 py-3 bg-[#FAFAF8] hover:bg-[#F4F3EE] flex items-center justify-between cursor-pointer select-none border-b border-[#EDEAE1]"
+                >
+                  <div className="flex items-center gap-3">
+                    {expanded[cls.id] ? (
+                      <ChevronDown className="w-4 h-4 text-[#2F6F5E]" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-[#8C97AB]" />
+                    )}
+                    <div className="w-7 h-7 rounded-[6px] bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-xs">
+                      <GraduationCap className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-display font-bold text-sm text-[#14213D]">
+                        {cls.class_name}
+                      </h3>
+                      <p className="text-[11px] text-[#52607D]">
+                        {cls.sections?.length || 0} active section(s)
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-semibold bg-white px-2.5 py-1 rounded-full border border-[#E4E1D8] text-[#2F6F5E]">
+                    {cls.sections?.length || 0} Section(s)
+                  </span>
+                </div>
+
+                {/* Expanded Section Grid */}
+                {expanded[cls.id] && (cls.sections || []).length > 0 && (
+                  <div className="p-5 bg-white grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {cls.sections.map((sec) => {
+                      const classAssignment = sectionAssignments[sec.id];
+                      const classTeacher = classAssignment?.teacher;
+                      const isClassPickerOpen = activePicker?.sectionId === sec.id && !activePicker?.subjectId;
+
+                      const filledSubjectsCount = subjects.filter((s) => subjectAssignments[sec.id]?.[s.id]?.teacher).length;
+                      const isFullyStaffed = classTeacher && filledSubjectsCount === subjects.length;
+
+                      return (
+                        <div
+                          key={sec.id}
+                          className="bg-[#FAFAF8] border border-[#E4E1D8] rounded-[10px] p-3.5 space-y-3 relative shadow-2xs hover:border-[#D3E6E0] transition-all"
+                        >
+                          {/* Card Section Header */}
+                          <div className="flex items-center justify-between border-b border-[#EDEAE1] pb-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-[#14213D]">
+                                {cls.class_name} — Section {sec.name}
+                              </span>
+                            </div>
+                            {isFullyStaffed ? (
+                              <span className="text-[10px] font-semibold text-[#2F6F5E] bg-[#EAF3F0] px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" /> Fully Staffed
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-[#B0403A] bg-[#FDF2F1] px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" /> Action Needed
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Tab Mode Content */}
+                          {activeTab === 'class-teachers' ? (
+                            /* CLASS COORDINATOR TAB */
+                            <div className="space-y-2.5">
+                              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#8C97AB] block">
+                                CLASS COORDINATOR
+                              </span>
+                              {classAssignment && classTeacher ? (
+                                <div className="p-2.5 bg-white border border-[#E4E1D8] rounded-[8px] flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="w-8 h-8 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-xs shrink-0 border border-[#D3E6E0]">
+                                      {teacherDisplayName(classTeacher)[0]?.toUpperCase() || 'T'}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-xs font-bold text-[#14213D] truncate">
+                                        {teacherDisplayName(classTeacher)}
+                                      </p>
+                                      <p className="text-[10px] font-mono text-[#52607D] truncate">
+                                        ID: {classTeacher?.employee_id || 'Faculty'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-[11px] shrink-0"
+                                    onClick={() => isClassPickerOpen ? closePicker() : openPicker(sec.id, cls.id)}
+                                  >
+                                    Change
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="p-3 bg-white border border-dashed border-[#B0403A]/40 rounded-[8px] text-center space-y-2">
+                                  <p className="text-xs font-semibold text-[#B0403A]">No Coordinator Assigned</p>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="w-full text-xs"
+                                    icon={UserPlus}
+                                    onClick={() => isClassPickerOpen ? closePicker() : openPicker(sec.id, cls.id)}
+                                  >
+                                    Assign Class Coordinator
+                                  </Button>
+                                </div>
+                              )}
+
+                              {isClassPickerOpen && (
+                                <TeacherPicker
+                                  teachers={filteredTeachers}
+                                  search={pickerSearch}
+                                  onSearch={setPickerSearch}
+                                  onSelect={handleAssign}
+                                  onClose={closePicker}
+                                  saving={saving}
+                                  displayName={teacherDisplayName}
+                                  title={`Assign Coordinator: ${cls.class_name} - Sec ${sec.name}`}
+                                />
+                              )}
+                            </div>
+                          ) : (
+                            /* SUBJECT MAPPING TAB */
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#8C97AB]">
+                                  SUBJECT ALLOCATIONS
+                                </span>
+                                <span className="text-[10px] font-mono text-[#2F6F5E] font-semibold">
+                                  {filledSubjectsCount} / {subjects.length} Staffed
+                                </span>
+                              </div>
+
+                              <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                                {subjects.map((sub) => {
+                                  const assignment = subjectAssignments[sec.id]?.[sub.id];
+                                  const teacher = assignment?.teacher;
+                                  const isSubPickerOpen = activePicker?.sectionId === sec.id && activePicker?.subjectId === sub.id;
+
+                                  return (
+                                    <div
+                                      key={sub.id}
+                                      className="p-2 rounded-[6px] bg-white border border-[#EDEAE1] text-xs flex items-center justify-between gap-2 hover:border-[#D3E6E0] transition-colors"
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-semibold text-[#14213D] truncate">{sub.name}</p>
+                                        <p className="text-[10px] text-[#52607D] truncate">
+                                          {teacher ? `Faculty: ${teacherDisplayName(teacher)}` : '⚠️ Unassigned'}
+                                        </p>
+                                      </div>
+
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        {teacher ? (
+                                          <>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-6 px-2 text-[10px]"
+                                              onClick={() => isSubPickerOpen ? closePicker() : openPicker(sec.id, cls.id, sub.id)}
+                                            >
+                                              Edit
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0 text-[#B0403A] hover:bg-[#FDF2F1]"
+                                              onClick={() => handleRemoveSubject(sec.id, sub.id)}
+                                            >
+                                              <Trash2 className="w-3 h-3" />
+                                            </Button>
+                                          </>
+                                        ) : (
+                                          <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            className="h-6 px-2 text-[10px]"
+                                            onClick={() => isSubPickerOpen ? closePicker() : openPicker(sec.id, cls.id, sub.id)}
+                                          >
+                                            Assign
+                                          </Button>
+                                        )}
+                                      </div>
+
+                                      {isSubPickerOpen && (
+                                        <TeacherPicker
+                                          teachers={filteredTeachers}
+                                          search={pickerSearch}
+                                          onSearch={setPickerSearch}
+                                          onSelect={handleAssign}
+                                          onClose={closePicker}
+                                          saving={saving}
+                                          displayName={teacherDisplayName}
+                                          title={`Assign Faculty: ${sub.name} (${cls.class_name} - Sec ${sec.name})`}
+                                        />
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600 }}>{displayName(t)}</div>
-                {t.employee_id && <div style={{ fontSize: '11px', color: '#94a3b8' }}>{t.employee_id}</div>}
-              </div>
-              {hover === t.id && <Check style={{ width: '13px', height: '13px', color: '#4f46e5', flexShrink: 0 }} />}
-            </div>
-          ))
+            ))}
+          </div>
         )}
-      </div>
+      </Card>
+
+      {/* Global Backdrop overlay to close picker on outside click */}
+      {activePicker && (
+        <div className="fixed inset-0 z-40 bg-transparent" onClick={closePicker} />
+      )}
     </div>
   );
 }
+
+/* Modal Teacher Picker Component */
+function TeacherPicker({ teachers, search, onSearch, onSelect, onClose, saving, displayName, title }) {
+  return (
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={title || "Select Faculty Member"}
+      maxWidth="max-w-md"
+    >
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#8C97AB]" />
+          <Input
+            autoFocus
+            className="pl-8 text-xs h-8"
+            placeholder="Search faculty by name or employee ID..."
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+          />
+        </div>
+
+        <div className="max-h-64 overflow-y-auto divide-y divide-[#EDEAE1] border border-[#E4E1D8] rounded-[8px]">
+          {teachers.length === 0 ? (
+            <div className="p-4 text-center text-xs text-[#8C97AB]">No matching faculty members found</div>
+          ) : (
+            teachers.map((t) => (
+              <div
+                key={t.id}
+                onClick={() => !saving && onSelect(t)}
+                className="p-2.5 flex items-center justify-between hover:bg-[#EAF3F0] hover:text-[#2F6F5E] cursor-pointer transition-colors group"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-[#2F6F5E] group-hover:text-white transition-colors">
+                    {displayName(t)[0]?.toUpperCase() || 'T'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-xs text-[#14213D] group-hover:text-[#2F6F5E] truncate">
+                      {displayName(t)}
+                    </p>
+                    {t.employee_id && (
+                      <p className="text-[10px] text-[#52607D] font-mono">
+                        ID: {t.employee_id}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <Button variant="secondary" size="sm" className="h-6 text-[10px] shrink-0" loading={saving}>
+                  Assign
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+

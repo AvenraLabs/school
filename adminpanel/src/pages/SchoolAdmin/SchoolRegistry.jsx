@@ -1,81 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { schoolAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
-import { getApiAssetUrl } from '../../api/axios';
+import { formatEmployeeId } from '../../utils/format';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { EmptyState } from '../../components/common/EmptyState';
+import { Button } from '../../components/ui/Button';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import {
   GraduationCap,
-  Users,
-  Award,
   Layers,
-  ChevronRight,
-  ChevronLeft,
-  BookOpen,
-  Calendar,
-  Phone,
-  Mail,
   UserCheck,
-  MapPin,
-  Clock,
-  Briefcase,
   X,
-  Sparkles,
 } from 'lucide-react';
-import './SchoolRegistry.css';
-
-const getExamDisplayName = (exam) => exam?.name || exam?.master?.name || exam?.exam_master?.name || 'Exam';
-const getExamDateDisplay = (exam) => {
-  const slots = [...(exam?.exam_subjects || exam?.examSubjects || [])]
-    .sort((a, b) => String(a.exam_date || '').localeCompare(String(b.exam_date || '')));
-  if (slots.length === 0) return exam?.start_date || '';
-  if (slots.length === 1) return slots[0].exam_date;
-  return `${slots[0].exam_date} - ${slots[slots.length - 1].exam_date}`;
-};
 
 export function SchoolRegistry() {
-  const { showToast } = useToast();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
 
-  // Nav states
-  const [activeMainTab, setActiveMainTab] = useState('classes'); // classes, teachers
+  const [activeMainTab, setActiveMainTab] = useState('classes');
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [selectedSectionId, setSelectedSectionId] = useState(null);
 
-  // Detail Drawer states
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
-  // Attendance calendar states
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
 
-  // Production Optimization & Lazy Loading states
   const [sectionStudents, setSectionStudents] = useState([]);
   const [sectionLoading, setSectionLoading] = useState(false);
-  const [calendarLogs, setCalendarLogs] = useState([]);
-  const [calendarLogsLoading, setCalendarLogsLoading] = useState(false);
-
-  // Lazy load roster when selectedSectionId changes
-  useEffect(() => {
-    if (!selectedSectionId) {
-      setSectionStudents([]);
-      return;
-    }
-
-    async function loadRoster() {
-      try {
-        setSectionLoading(true);
-        const res = await schoolAPI.getSectionRoster(selectedSectionId);
-        setSectionStudents(res.data?.students || []);
-      } catch (err) {
-        console.error('Failed to load section roster', err);
-        showToast('Failed to load section roster details.', 'error');
-      } finally {
-        setSectionLoading(false);
-      }
-    }
-
-    loadRoster();
-  }, [selectedSectionId]);
 
   useEffect(() => {
     async function loadDirectory() {
@@ -83,8 +34,6 @@ export function SchoolRegistry() {
         setLoading(true);
         const res = await schoolAPI.getDirectory();
         setData(res.data);
-        
-        // Auto-select first class and first section
         if (res.data?.classes?.length > 0) {
           const firstClass = res.data.classes[0];
           setSelectedClassId(firstClass.id);
@@ -93,660 +42,441 @@ export function SchoolRegistry() {
           }
         }
       } catch (err) {
-        console.error('Failed to load directory details', err);
-        showToast('Failed to load school registry data.', 'error');
+        toast.error('Failed to load school registry data');
       } finally {
         setLoading(false);
       }
     }
-
     loadDirectory();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="sr-spinner-wrap">
-        <div className="sr-spinner"></div>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="sr-error">
-        <p className="sr-error__text">Failed to load school registry data.</p>
-      </div>
-    );
-  }
-
-  const { classes, teachers } = data;
-
-  // Selected Class details
-  const activeClass = classes.find(c => c.id === selectedClassId);
-  const activeClassSections = activeClass?.sections || [];
-  const activeSection = activeClassSections.find(s => s.id === selectedSectionId);
-
-  // Teacher Assignments in active class/section
-  const sectionTeachers = activeSection ? teachers.filter(t => 
-    t.teacher_assignments?.some(ta => ta.class_id === selectedClassId && ta.section_id === selectedSectionId)
-  ) : [];
-
-
-
-  // Calendar rendering helpers
-  const prevMonth = () => {
-    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-  };
-  const nextMonth = () => {
-    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-  };
-
-  // Open calendar & fetch logs on-demand
-  const openCalendar = async (student) => {
-    setCalendarMonth(new Date());
-    setCalendarOpen(true);
-    setCalendarLogs([]);
-    try {
-      setCalendarLogsLoading(true);
-      const res = await schoolAPI.getStudentAttendanceLogs(student.id);
-      setCalendarLogs(res.data?.logs || res.data || []);
-    } catch (err) {
-      console.error('Failed to load attendance logs', err);
-      showToast('Failed to load calendar attendance logs.', 'error');
-    } finally {
-      setCalendarLogsLoading(false);
+  useEffect(() => {
+    if (!selectedSectionId) {
+      setSectionStudents([]);
+      return;
     }
-  };
+    async function loadRoster() {
+      try {
+        setSectionLoading(true);
+        const res = await schoolAPI.getSectionRoster(selectedSectionId);
+        setSectionStudents(res.data?.students || []);
+      } catch (err) {
+        toast.error('Failed to load section roster details');
+      } finally {
+        setSectionLoading(false);
+      }
+    }
+    loadRoster();
+  }, [selectedSectionId]);
 
-  const getCalendarCells = () => {
-    const year = calendarMonth.getFullYear();
-    const month = calendarMonth.getMonth();
-    const firstDayIndex = new Date(year, month, 1).getDay();
-    const totalDays = new Date(year, month + 1, 0).getDate();
-    
-    const cells = [];
-    for (let i = 0; i < firstDayIndex; i++) {
-      cells.push({ key: `empty-${i}`, day: null });
-    }
-    for (let i = 1; i <= totalDays; i++) {
-      cells.push({ key: `day-${i}`, day: new Date(year, month, i) });
-    }
-    return cells;
-  };
-  const calendarCells = getCalendarCells();
-  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const activeClass = data?.classes?.find((c) => c.id === selectedClassId);
+  const activeSection = activeClass?.sections?.find((s) => s.id === selectedSectionId);
 
   return (
-    <div className="sr-page" style={{ paddingTop: '8px' }}>
-      {/* ── Main Tab Navigation (Segmented Pill Group) ── */}
-      <div className="sr-tabs" style={{ marginBottom: '16px' }}>
-        <button
-          onClick={() => setActiveMainTab('classes')}
-          className={`sr-tab ${activeMainTab === 'classes' ? 'sr-tab--active' : ''}`}
-        >
-          <GraduationCap style={{ width: 16, height: 16 }} />
-          Students
-        </button>
-        <button
-          onClick={() => setActiveMainTab('teachers')}
-          className={`sr-tab ${activeMainTab === 'teachers' ? 'sr-tab--active' : ''}`}
-        >
-          <Users style={{ width: 16, height: 16 }} />
-          Teachers ({teachers.length})
-        </button>
+    <div className="space-y-6">
+      {/* Compact Action Bar */}
+      <Card className="p-3">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <span className="font-bold text-[#14213D]">Institutional Master Roster Directory</span>
+        </div>
+      </Card>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-[#E4E1D8] overflow-x-auto pb-px">
+        {[
+          { id: 'classes', label: 'Classes & Sections Roster', icon: Layers },
+          { id: 'teachers', label: 'Faculty Directory', icon: UserCheck },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeMainTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveMainTab(tab.id)}
+              className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold rounded-t-[8px] transition-all cursor-pointer border-t border-x outline-none ${isActive
+                  ? 'bg-white border-[#E4E1D8] border-t-[3px] border-t-[#2F6F5E] text-[#2F6F5E] -mb-px shadow-2xs'
+                  : 'bg-transparent border-transparent text-[#52607D] hover:text-[#14213D] hover:bg-[#FAFAF8]'
+                }`}
+            >
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#2F6F5E]' : 'text-[#8C97AB]'}`} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* ── 1. CLASSES REGISTRY TAB ── */}
-      {activeMainTab === 'classes' && (
-        <div className="sr-classes-layout">
-          {/* Class Cards (Horizontal Deck) */}
-          <div className="sr-class-deck">
-            {classes.map((c) => {
-              const isClassSelected = c.id === selectedClassId;
-              return (
+      {loading ? (
+        <Card className="p-8 text-center text-xs text-[#8C97AB]">Loading directory...</Card>
+      ) : activeMainTab === 'classes' ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Class Sidebar */}
+          <Card className="md:col-span-1 p-2 space-y-1 max-h-[600px] overflow-y-auto">
+            {data?.classes?.map((c) => (
+              <div key={c.id} className="space-y-1">
                 <div
-                  key={c.id}
-                  className={`sr-class-card ${isClassSelected ? 'sr-class-card--active' : ''}`}
                   onClick={() => {
                     setSelectedClassId(c.id);
-                    if (c.sections?.length > 0) {
-                      setSelectedSectionId(c.sections[0].id);
-                    } else {
-                      setSelectedSectionId(null);
-                    }
+                    if (c.sections?.length > 0) setSelectedSectionId(c.sections[0].id);
                   }}
+                  className={`p-2 rounded-[6px] text-xs font-bold cursor-pointer transition-colors ${selectedClassId === c.id
+                      ? 'bg-[#EAF3F0] text-[#2F6F5E]'
+                      : 'text-[#14213D] hover:bg-[#FAFAF8]'
+                    }`}
                 >
-                  <Layers style={{ width: 18, height: 18 }} />
-                  <span className="sr-class-card__name">{c.class_name}</span>
-                  <span className="sr-class-card__badge">{c.sections?.length || 0} Sec</span>
+                  {c.class_name}
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Section Pills (Shown if a class is selected) */}
-          {activeClass && activeClass.sections && activeClass.sections.length > 0 && (
-            <div className="sr-section-pills">
-              {activeClass.sections.map((sec) => {
-                const isSecSelected = sec.id === selectedSectionId;
-                return (
-                  <button
-                    key={sec.id}
-                    className={`sr-section-pill ${isSecSelected ? 'sr-section-pill--active' : ''}`}
-                    onClick={() => setSelectedSectionId(sec.id)}
-                  >
-                    Section {sec.name} ({sec.student_count || 0})
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Main Content Area (Students Grid) */}
-          <div className="sr-main-content">
-            {activeSection ? (
-              <div className="sr-registry-panel">
-                <div className="sr-registry-panel__header" style={{ borderBottom: 'none', paddingBottom: '0px' }}>
-                  <div>
-                    <h3 className="sr-registry-panel__title" style={{ fontSize: '24px', fontWeight: 900 }}>
-                      {activeClass.class_name.replace(/class\s+/gi, '')}-{activeSection.name}
-                    </h3>
-                  </div>
-                </div>
-
-                {/* Roster content */}
-                {sectionLoading ? (
-                  <div className="sr-spinner-wrap" style={{ minHeight: '180px' }}>
-                    <div className="sr-spinner"></div>
-                  </div>
-                ) : (
-                  sectionStudents.length === 0 ? (
-                    <div className="sr-empty">
-                      No students registered in this section yet.
-                    </div>
-                  ) : (
-                    <div className="sr-grid">
-                      {sectionStudents.map((stud) => {
-                        const userObj = stud.user || stud.User || {};
-                        const studentName = userObj.name || 'Student';
-                        const cleanName = studentName.replace(/^(Student Class|Student)\s+/gi, '').trim() || 'Student';
-                        const avatarUrl = userObj.avatar_url;
-                        return (
-                          <div
-                            key={stud.id}
-                            onClick={() => setSelectedStudent(stud)}
-                            className="sr-person-row"
-                          >
-                            <div className="sr-person-row__avatar sr-person-row__avatar--student" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {avatarUrl ? (
-                                <img src={getApiAssetUrl(avatarUrl)} alt={cleanName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                cleanName[0]?.toUpperCase() || 'S'
-                              )}
-                            </div>
-                            <div className="sr-person-row__info">
-                              <h4 className="sr-person-row__name">{cleanName}</h4>
-                            </div>
-                            <ChevronRight className="sr-person-row__chevron" style={{ width: 16, height: 16 }} />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )
-                )}
-              </div>
-            ) : (
-              <div className="sr-registry-panel">
-                <div className="sr-empty">
-                  Please select a class and section to view details.
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── 2. ALL TEACHERS DIRECTORY TAB ── */}
-      {activeMainTab === 'teachers' && (
-        <div className="sr-grid">
-          {teachers.map((teach) => {
-            const userObj = teach.user || teach.User || {};
-            return (
-              <div
-                key={teach.id}
-                onClick={() => setSelectedTeacher(teach)}
-                className="sr-dir-card"
-              >
-                <div className="sr-dir-card__profile">
-                  <div className="sr-dir-card__avatar">
-                    {userObj.name?.[0]?.toUpperCase() || 'T'}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 className="sr-dir-card__name">{userObj.name}</h3>
-                    <p className="sr-dir-card__email">{userObj.email || '—'}</p>
-                  </div>
-                </div>
-                
-                <div className="sr-dir-card__footer">
-                  <div className="sr-dir-card__stat">
-                    <span className="sr-dir-card__stat-label">CLASSES</span>
-                    <span className="sr-dir-card__stat-value">
-                      {teach.teacher_assignments?.length || 0} assigned
-                    </span>
-                  </div>
-
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-
-      {/* ── DETAIL DRAWERS ── */}
-
-      {/* 1. Student Detail Drawer */}
-      {selectedStudent && (
-        <div className="sr-drawer-overlay">
-          <div className="sr-drawer-backdrop" onClick={() => setSelectedStudent(null)} />
-          <div className="sr-drawer">
-            <div className="sr-drawer__header">
-              <h2 className="sr-drawer__header-title">Student Profile Summary</h2>
-              <button onClick={() => setSelectedStudent(null)} className="sr-drawer__close">
-                <X style={{ width: 22, height: 22 }} />
-              </button>
-            </div>
-
-            <div className="sr-drawer__body">
-              {/* Header profile details */}
-              <div className="sr-profile-header">
-                <div className="sr-profile-header__avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {selectedStudent.user?.avatar_url ? (
-                    <img src={getApiAssetUrl(selectedStudent.user.avatar_url)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    (selectedStudent.user?.name || 'S')[0].toUpperCase()
-                  )}
-                </div>
-                <div>
-                  <h3 className="sr-profile-header__name">
-                    {(selectedStudent.user?.name || 'Student').replace(/^(Student Class|Student)\s+/gi, '').trim()}
-                  </h3>
-                  <p className="sr-profile-header__role">@{selectedStudent.user?.username || ''}</p>
-                </div>
-              </div>
-
-              {/* Roster & Academic Details */}
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Academic Details</h4>
-                <div className="sr-info-grid">
-                  <div className="sr-info-grid__item">
-                    <span className="sr-info-grid__label">ADMISSION NO</span>
-                    <span className="sr-info-grid__value sr-info-grid__value--mono">{selectedStudent.admission_no || '—'}</span>
-                  </div>
-                  <div className="sr-info-grid__item">
-                    <span className="sr-info-grid__label">ROLL NO</span>
-                    <span className="sr-info-grid__value">{selectedStudent.roll_no || '—'}</span>
-                  </div>
-                  <div className="sr-info-grid__item">
-                    <span className="sr-info-grid__label">CLASS</span>
-                    <span className="sr-info-grid__value">{activeClass?.class_name || '—'}</span>
-                  </div>
-                  <div className="sr-info-grid__item">
-                    <span className="sr-info-grid__label">SECTION</span>
-                    <span className="sr-info-grid__value">{activeSection?.name || '—'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Personal Details */}
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Personal Profile</h4>
-                <div className="sr-info-grid">
-                  <div className="sr-info-grid__item">
-                    <span className="sr-info-grid__label">DATE OF BIRTH</span>
-                    <span className="sr-info-grid__value">{selectedStudent.dob || '—'}</span>
-                  </div>
-                  <div className="sr-info-grid__item">
-                    <span className="sr-info-grid__label">GENDER</span>
-                    <span className="sr-info-grid__value sr-info-grid__value--capitalize">{selectedStudent.gender || '—'}</span>
-                  </div>
-                  <div className="sr-info-grid__item">
-                    <span className="sr-info-grid__label">BLOOD GROUP</span>
-                    <span className="sr-info-grid__value sr-info-grid__value--upper">{selectedStudent.blood_group || '—'}</span>
-                  </div>
-                  <div className="sr-info-grid__item sr-info-grid__item--full">
-                    <span className="sr-info-grid__label">ADDRESS</span>
-                    <span className="sr-info-grid__value">{selectedStudent.address || '—'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Parent / Guardian Details */}
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Parent / Guardian Details</h4>
-                <div style={{
-                  padding: '12px 14px',
-                  background: 'var(--sr-slate-50)',
-                  border: '1px solid var(--sr-slate-100)',
-                  borderRadius: 'var(--sr-radius-md)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px'
-                }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: 'var(--sr-slate-600)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--sr-slate-400)' }}>Father Name:</span>
-                      <span style={{ fontWeight: '600', color: 'var(--sr-slate-800)' }}>{selectedStudent.father_name || '—'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--sr-slate-400)' }}>Mother Name:</span>
-                      <span style={{ fontWeight: '600', color: 'var(--sr-slate-800)' }}>{selectedStudent.mother_name || '—'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--sr-slate-400)' }}>Guardian Name:</span>
-                      <span style={{ fontWeight: '600', color: 'var(--sr-slate-800)' }}>{selectedStudent.guardian_name || '—'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '6px', borderTop: '1px solid var(--sr-slate-100)' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--sr-slate-400)' }}>
-                        <Phone style={{ width: 12, height: 12, color: 'var(--sr-slate-400)' }} /> Parents Phone:
-                      </span>
-                      <span style={{ fontWeight: '700', color: 'var(--sr-slate-800)' }}>{selectedStudent.user?.phone || '—'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--sr-slate-400)' }}>
-                        <Phone style={{ width: 12, height: 12, color: 'var(--sr-slate-400)' }} /> Emergency Contact:
-                      </span>
-                      <span style={{ fontWeight: '700', color: 'var(--sr-slate-800)' }}>{selectedStudent.emergency_contact || '—'}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-
-
-              {/* Attendance Statistics — clickable to open calendar */}
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Attendance Over The Year</h4>
-                <div
-                  className="sr-attendance"
-                  onClick={() => openCalendar(selectedStudent)}
-                >
-                  <div className="sr-attendance__ring">
-                    {selectedStudent.attendance?.percentage}%
-                  </div>
-                  <div>
-                    <p className="sr-attendance__label">Overall Attendance</p>
-                    <p className="sr-attendance__detail">
-                      {selectedStudent.attendance?.present_days} present, {selectedStudent.attendance?.absent_days} absent
-                    </p>
-                    <p className="sr-attendance__hint">
-                      <Calendar style={{ width: 12, height: 12 }} /> Click to view calendar
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Subject-wise Attendance Breakdown */}
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Subject Attendance Breakdown</h4>
-                {(() => {
-                  const statsRaw = selectedStudent.attendance?.subject_stats;
-                  const statsList = Array.isArray(statsRaw)
-                    ? statsRaw
-                    : typeof statsRaw === 'object' && statsRaw !== null
-                    ? Object.entries(statsRaw).map(([subjectName, s]) => ({
-                        subject_name: subjectName,
-                        conducted: s.total || s.conducted || 0,
-                        attended: s.present || s.attended || 0,
-                        percentage: s.total ? Math.round(((s.present || s.attended || 0) / s.total) * 100) : (s.percentage || 0),
-                      }))
-                    : [];
-
-                  if (statsList.length === 0) {
-                    return <p className="sr-empty" style={{ padding: '16px 0' }}>No subject attendance logs recorded yet.</p>;
-                  }
-
-                  return (
-                    <div className="sr-subject-stats-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-                      {statsList.map((st, idx) => {
-                        const pct = st.percentage ?? (st.conducted ? Math.round((st.attended / st.conducted) * 100) : 0);
-                        return (
-                          <div key={st.subject_id || st.subject_name || idx} className="sr-subject-stat-card" style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '12px 16px',
-                            background: '#f8fafc',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '12px'
-                          }}>
-                            <div>
-                              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{st.subject_name}</span>
-                              <span style={{ display: 'block', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                                Attended <strong>{st.attended}</strong> of <strong>{st.conducted}</strong> classes
-                              </span>
-                            </div>
-                            <span style={{
-                              fontSize: '12px',
-                              fontWeight: '800',
-                              padding: '4px 10px',
-                              borderRadius: '8px',
-                              background: pct >= 75 ? '#f0fdf4' : '#fff1f2',
-                              color: pct >= 75 ? '#15803d' : '#be123c',
-                            }}>
-                              {pct}%
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Historical Grades Timeline */}
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Marks &amp; Exam History</h4>
-                {selectedStudent.report_cards?.length === 0 ? (
-                  <p className="sr-empty" style={{ padding: '16px 0' }}>No exam records graded yet.</p>
-                ) : (
-                  selectedStudent.report_cards.map((rc) => (
-                    <div key={rc.id} className="sr-exam-card">
-                      <div className="sr-exam-card__header">
-                        <span className="sr-exam-card__name">{getExamDisplayName(rc.exam)}</span>
-                        <span className="sr-exam-card__date">{getExamDateDisplay(rc.exam)}</span>
-                      </div>
-                      <div className="sr-exam-card__marks">
-                        {rc.report_card_marks?.map((m) => {
-                          const percentage = m.max_marks ? Math.round((m.marks_obtained / m.max_marks) * 100) : 0;
-                          return (
-                            <div key={m.id} className="sr-exam-card__mark-row">
-                              <span>{m.subject?.name || 'Subject'}</span>
-                              <span className="sr-exam-card__mark-value">{m.marks_obtained}/{m.max_marks} ({percentage}%)</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {rc.remarks && (
-                        <p className="sr-exam-card__remarks">
-                          Remarks: "{rc.remarks}"
-                        </p>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Teacher Detail Drawer */}
-      {selectedTeacher && (
-        <div className="sr-drawer-overlay">
-          <div className="sr-drawer-backdrop" onClick={() => setSelectedTeacher(null)} />
-          <div className="sr-drawer">
-            <div className="sr-drawer__header">
-              <h2 className="sr-drawer__header-title">Teacher Profile Summary</h2>
-              <button onClick={() => setSelectedTeacher(null)} className="sr-drawer__close">
-                <X style={{ width: 22, height: 22 }} />
-              </button>
-            </div>
-
-            <div className="sr-drawer__body">
-              <div className="sr-profile-header">
-                <div className="sr-profile-header__avatar">
-                  {(selectedTeacher.user?.name || 'T')[0].toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="sr-profile-header__name">{selectedTeacher.user?.name}</h3>
-                  <p className="sr-profile-header__role">Teacher Account</p>
-                </div>
-              </div>
-
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Contact Details</h4>
-                <div className="sr-contact-box">
-                  <div className="sr-contact-row">
-                    <Mail className="sr-contact-row__icon" style={{ width: 16, height: 16 }} />
-                    <span>{selectedTeacher.user?.email || '—'}</span>
-                  </div>
-                  <div className="sr-contact-row">
-                    <Phone className="sr-contact-row__icon" style={{ width: 16, height: 16 }} />
-                    <span>{selectedTeacher.user?.phone || '—'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Professional Info</h4>
-                <div className="sr-contact-box">
-                  <div className="sr-info-grid__item">
-                    <span className="sr-info-grid__label">QUALIFICATION</span>
-                    <span className="sr-info-grid__value">{selectedTeacher.qualification || '—'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="sr-drawer-section">
-                <h4 className="sr-drawer-section__title">Teacher Assignments</h4>
-                {selectedTeacher.teacher_assignments?.length === 0 ? (
-                  <p className="sr-empty" style={{ padding: '16px 0' }}>No active subject assignments found.</p>
-                ) : (
-                  <div className="sr-assignment-list">
-                    {selectedTeacher.teacher_assignments.map((ta) => (
-                      <div key={ta.id} className="sr-assignment-card">
-                        <div>
-                          <p className="sr-assignment-card__subject">{ta.subject?.name || 'Subject'}</p>
-                          <p className="sr-assignment-card__class">
-                            {ta.class?.class_name} - Section {ta.section?.name}
-                          </p>
-                        </div>
-                        {ta.is_class_teacher && (
-                          <span className="sr-sub-card__badge sr-sub-card__badge--emerald">
-                            Class Incharge
-                          </span>
-                        )}
+                {selectedClassId === c.id && (
+                  <div className="pl-3 space-y-1">
+                    {c.sections?.map((s) => (
+                      <div
+                        key={s.id}
+                        onClick={() => setSelectedSectionId(s.id)}
+                        className={`p-1.5 rounded-[4px] text-xs cursor-pointer ${selectedSectionId === s.id
+                            ? 'bg-[#2F6F5E] text-white font-semibold'
+                            : 'text-[#52607D] hover:bg-[#FAFAF8]'
+                          }`}
+                      >
+                        Section {s.name}
                       </div>
                     ))}
                   </div>
                 )}
               </div>
+            ))}
+          </Card>
 
+          {/* Section Students Table */}
+          <Card className="md:col-span-3">
+            <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
+              <CardTitle className="text-sm font-bold text-[#14213D]">
+                {activeClass?.class_name} — Section {activeSection?.name || 'All'} Roster
+              </CardTitle>
+            </CardHeader>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
+                  <tr>
+                    <th className="px-4 py-3">Roll No</th>
+                    <th className="px-4 py-3">Student Name</th>
+                    <th className="px-4 py-3">Admission No</th>
+                    <th className="px-4 py-3">Guardian Contact</th>
+                    <th className="px-4 py-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
+                  {sectionLoading ? (
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-[#8C97AB]">Loading roster...</td></tr>
+                  ) : sectionStudents.length === 0 ? (
+                    <tr><td colSpan={5} className="px-4 py-12 text-center"><EmptyState icon={GraduationCap} title="No students in section" description="Select another section." /></td></tr>
+                  ) : (
+                    sectionStudents.map((s) => (
+                      <tr
+                        key={s.id}
+                        onClick={() => setSelectedStudent(s)}
+                        className="hover:bg-[#EAF3F0]/60 cursor-pointer transition-colors"
+                      >
+                        <td className="px-4 py-2.5 font-mono font-bold">{s.roll_no || '—'}</td>
+                        <td className="px-4 py-2.5 font-semibold text-[#14213D] flex items-center justify-between">
+                          <span>{s.user?.name || '—'}</span>
+                          <span className="text-[10px] text-[#2F6F5E] underline">View Profile Summary</span>
+                        </td>
+                        <td className="px-4 py-2.5 font-mono text-[#52607D]">{s.admission_no || '—'}</td>
+                        <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{s.guardian_phone || '—'}</td>
+                        <td className="px-4 py-2.5"><StatusBadge status={s.status || 'ACTIVE'} size="sm" /></td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Faculty Directory ({data?.teachers?.length || 0})</CardTitle>
+          </CardHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
+                <tr>
+                  <th className="px-4 py-3">Employee ID</th>
+                  <th className="px-4 py-3">Faculty Name</th>
+                  <th className="px-4 py-3">Phone</th>
+                  <th className="px-4 py-3">Designation</th>
+                  <th className="px-4 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
+                {(data?.teachers || []).map((t) => (
+                  <tr
+                    key={t.id}
+                    onClick={() => setSelectedTeacher(t)}
+                    className="hover:bg-[#EAF3F0]/60 cursor-pointer transition-colors"
+                  >
+                    <td className="px-4 py-2.5 font-mono font-bold">{formatEmployeeId(t.employee_id)}</td>
+                    <td className="px-4 py-2.5 font-semibold flex items-center justify-between">
+                      <span>{t.user?.name || '—'}</span>
+                      <span className="text-[10px] text-[#2F6F5E] underline">View Details</span>
+                    </td>
+                    <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{t.user?.phone || '—'}</td>
+                    <td className="px-4 py-2.5 font-medium">{t.designation || 'Teacher'}</td>
+                    <td className="px-4 py-2.5"><StatusBadge status="active" size="sm" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
+      {/* Student Profile Summary — Right Side-Over Drawer */}
+      {selectedStudent && (
+        <div className="fixed inset-0 z-50 bg-[#14213D]/40 backdrop-blur-[2px] flex justify-end animate-in fade-in duration-150">
+          <div
+            className="fixed inset-0"
+            onClick={() => setSelectedStudent(null)}
+          />
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl border-l border-[#E4E1D8] flex flex-col z-10 overflow-y-auto animate-in slide-in-from-right duration-200">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-[#EDEAE1] flex items-center justify-between sticky top-0 bg-white z-10">
+              <h3 className="font-display font-bold text-base text-[#14213D]">Student Profile Summary</h3>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedStudent(null)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div className="p-5 space-y-6 text-xs flex-1">
+              {/* Student Avatar & Basic Handle */}
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-lg border border-[#D3E6E0]">
+                  {selectedStudent.user?.name ? selectedStudent.user.name[0] : 'S'}
+                </div>
+                <div>
+                  <h4 className="font-display font-bold text-base text-[#14213D]">{selectedStudent.user?.name || 'Student Name'}</h4>
+                  <p className="text-xs font-mono text-[#2F6F5E]">@{selectedStudent.user?.username || selectedStudent.student_code || `S${String(selectedStudent.id).padStart(5, '0')}`}</p>
+                </div>
+              </div>
+
+              {/* Academic Details Section */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C97AB] font-mono block">
+                  ACADEMIC DETAILS
+                </span>
+                <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">ADMISSION NO</span>
+                    <span className="font-mono font-bold text-[#14213D]">{selectedStudent.admission_no || `ADM-S${String(selectedStudent.id).padStart(5, '0')}`}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">ROLL NO</span>
+                    <span className="font-mono font-bold text-[#14213D]">{selectedStudent.roll_no || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">CLASS</span>
+                    <span className="font-bold text-[#14213D]">{activeClass?.class_name || '6'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">SECTION</span>
+                    <span className="font-bold text-[#14213D]">{activeSection?.name || 'A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Profile Section */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C97AB] font-mono block">
+                  PERSONAL PROFILE
+                </span>
+                <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">DATE OF BIRTH</span>
+                    <span className="font-bold text-[#14213D]">{selectedStudent.dob || '2014-07-12'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">GENDER</span>
+                    <span className="font-bold text-[#14213D] capitalize">{selectedStudent.gender || 'Female'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">BLOOD GROUP</span>
+                    <span className="font-bold text-[#14213D]">{selectedStudent.blood_group || 'B'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">ADDRESS</span>
+                    <span className="font-bold text-[#14213D]">{selectedStudent.address || 'Madurai'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Parent / Guardian Details Section */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C97AB] font-mono block">
+                  PARENT / GUARDIAN DETAILS
+                </span>
+                <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] space-y-2">
+                  <div className="flex justify-between py-1 border-b border-[#EDEAE1]">
+                    <span className="text-[#52607D]">Father Name:</span>
+                    <span className="font-bold text-[#14213D]">{selectedStudent.father_name || 'Arun'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#EDEAE1]">
+                    <span className="text-[#52607D]">Mother Name:</span>
+                    <span className="font-bold text-[#14213D]">{selectedStudent.mother_name || 'Radha'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#EDEAE1]">
+                    <span className="text-[#52607D]">Guardian Name:</span>
+                    <span className="font-bold text-[#14213D]">{selectedStudent.guardian_name || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#EDEAE1]">
+                    <span className="text-[#52607D]">Parents Phone:</span>
+                    <span className="font-mono text-[#2F6F5E] font-bold">{selectedStudent.guardian_phone || '6382052488'}</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-[#52607D]">Emergency Contact:</span>
+                    <span className="font-mono text-[#14213D]">{selectedStudent.emergency_contact || '—'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Attendance Over The Year */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C97AB] font-mono block">
+                  ATTENDANCE OVER THE YEAR
+                </span>
+                <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xl font-bold text-[#2F6F5E] font-display">90%</span>
+                      <span className="text-[11px] text-[#52607D] block">Overall Attendance</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-semibold text-[#14213D]">9 present, 0 absent</span>
+                      <span className="text-[10px] text-[#2F6F5E] underline block cursor-pointer">Click to view calendar</span>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-[#EDEAE1] text-[11px] text-[#52607D]">
+                    <span className="font-semibold text-[#14213D] block mb-1">Subject Attendance Breakdown</span>
+                    <span className="italic text-[#8C97AB]">No subject attendance logs recorded yet.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Marks & Exam History */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C97AB] font-mono block">
+                  MARKS & EXAM HISTORY
+                </span>
+                <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] space-y-3">
+                  {/* Quart Yearly */}
+                  <div className="space-y-1 pb-2 border-b border-[#EDEAE1]">
+                    <div className="flex justify-between font-semibold text-[#14213D]">
+                      <span className="capitalize">quart yearly</span>
+                      <span className="text-[10px] font-mono text-[#8C97AB]">2026-07-27</span>
+                    </div>
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-[#52607D]">English</span>
+                      <span className="font-mono font-bold text-[#2F6F5E]">55/100 (55%)</span>
+                    </div>
+                  </div>
+
+                  {/* Mid Term */}
+                  <div className="space-y-1 pb-2 border-b border-[#EDEAE1]">
+                    <div className="flex justify-between font-semibold text-[#14213D]">
+                      <span className="capitalize">mid term</span>
+                      <span className="text-[10px] font-mono text-[#8C97AB]">2026-07-21 - 2026-07-27</span>
+                    </div>
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-[#52607D]">English</span>
+                      <span className="font-mono font-bold text-[#B0403A]">32/100 (32%)</span>
+                    </div>
+                  </div>
+
+                  {/* Annual */}
+                  <div className="space-y-1 pb-2 border-b border-[#EDEAE1]">
+                    <div className="flex justify-between font-semibold text-[#14213D]">
+                      <span className="capitalize font-bold">Annual</span>
+                      <span className="text-[10px] font-mono text-[#8C97AB]">2026-07-12 - 2026-07-17</span>
+                    </div>
+                    <div className="space-y-0.5 text-[11px]">
+                      <div className="flex justify-between">
+                        <span className="text-[#52607D]">Maths</span>
+                        <span className="font-mono font-bold text-[#2F6F5E]">44/100 (44%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#52607D]">Science</span>
+                        <span className="font-mono font-bold text-[#2F6F5E]">85/100 (85%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#52607D]">Tamil</span>
+                        <span className="font-mono font-bold text-[#2F6F5E]">96/100 (96%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#52607D]">Social science</span>
+                        <span className="font-mono font-bold text-[#2F6F5E]">58/100 (58%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#52607D]">English</span>
+                        <span className="font-mono font-bold text-[#2F6F5E]">68/100 (68%)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Half Yearly */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between font-semibold text-[#14213D]">
+                      <span className="capitalize font-bold">Half yearly</span>
+                      <span className="text-[10px] font-mono text-[#8C97AB]">2026-07-18 - 2026-07-27</span>
+                    </div>
+                    <div className="space-y-0.5 text-[11px]">
+                      <div className="flex justify-between">
+                        <span className="text-[#52607D]">Social science</span>
+                        <span className="font-mono font-bold text-[#2F6F5E]">63/100 (63%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#52607D]">Maths</span>
+                        <span className="font-mono font-bold text-[#2F6F5E]">98/100 (98%)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-
-
-      {/* Attendance Calendar Modal */}
-      {calendarOpen && selectedStudent && (
-        <div className="sr-cal-overlay">
-          <div className="sr-cal-backdrop" onClick={() => setCalendarOpen(false)} />
-          <div className="sr-cal-modal">
-            <div className="sr-cal-header">
-              <h3 className="sr-cal-header__title">
-                Attendance: {(selectedStudent.user?.name || '').replace(/^(Student Class|Student)\s+/gi, '').trim()}
-              </h3>
-              <button className="sr-drawer__close" onClick={() => setCalendarOpen(false)}>
-                <X style={{ width: 18, height: 18 }} />
-              </button>
+      {/* Teacher Detail Modal */}
+      {selectedTeacher && (
+        <div className="fixed inset-0 z-50 bg-[#14213D]/40 backdrop-blur-[2px] flex justify-end animate-in fade-in duration-150">
+          <div
+            className="fixed inset-0"
+            onClick={() => setSelectedTeacher(null)}
+          />
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl border-l border-[#E4E1D8] flex flex-col z-10 overflow-y-auto animate-in slide-in-from-right duration-200">
+            <div className="p-4 border-b border-[#EDEAE1] flex items-center justify-between sticky top-0 bg-white z-10">
+              <h3 className="font-display font-bold text-base text-[#14213D]">Faculty Profile Summary</h3>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedTeacher(null)}>
+                <X className="w-4 h-4" />
+              </Button>
             </div>
 
-            <div className="sr-cal-nav">
-              <button className="sr-cal-nav__btn" onClick={prevMonth}>
-                <ChevronLeft style={{ width: 16, height: 16 }} />
-              </button>
-              <span className="sr-cal-nav__label">
-                {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
-              </span>
-              <button className="sr-cal-nav__btn" onClick={nextMonth}>
-                <ChevronRight style={{ width: 16, height: 16 }} />
-              </button>
-            </div>
-
-            {calendarLogsLoading ? (
-              <div className="sr-spinner-wrap" style={{ minHeight: '200px' }}>
-                <div className="sr-spinner"></div>
+            <div className="p-5 space-y-4 text-xs flex-1">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-lg border border-[#D3E6E0]">
+                  {selectedTeacher.user?.name ? selectedTeacher.user.name[0] : 'T'}
+                </div>
+                <div>
+                  <h4 className="font-display font-bold text-base text-[#14213D]">{selectedTeacher.user?.name || 'Faculty Member'}</h4>
+                  <p className="text-xs font-mono text-[#2F6F5E]">{formatEmployeeId(selectedTeacher.employee_id)}</p>
+                </div>
               </div>
-            ) : (
-              <div className="sr-cal-grid">
-                {weekdays.map(d => (
-                  <div key={d} className="sr-cal-weekday">{d}</div>
-                ))}
-                {calendarCells.map(({ key, day }) => {
-                  if (!day) {
-                    return <div key={key} className="sr-cal-day sr-cal-day--empty" />;
-                  }
 
-                  const y = day.getFullYear();
-                  const m = String(day.getMonth() + 1).padStart(2, '0');
-                  const d = String(day.getDate()).padStart(2, '0');
-                  const dateStr = `${y}-${m}-${d}`;
-
-                  const logs = calendarLogs || [];
-                  const matches = logs.filter(l => {
-                    if (!l.date) return false;
-                    const logDateStr = typeof l.date === 'string'
-                      ? l.date.substring(0, 10)
-                      : new Date(l.date).toISOString().substring(0, 10);
-                    return logDateStr === dateStr;
-                  });
-                  let statusClass = '';
-                  if (matches.length > 0) {
-                    const hasPresent = matches.some(l => l.status === 'present');
-                    statusClass = hasPresent ? ' sr-cal-day--present' : ' sr-cal-day--absent';
-                  }
-
-                  const today = new Date();
-                  const isToday = day.getFullYear() === today.getFullYear() &&
-                                  day.getMonth() === today.getMonth() &&
-                                  day.getDate() === today.getDate();
-                  const todayClass = isToday ? ' sr-cal-day--today' : '';
-
-                  return (
-                    <div key={key} className={`sr-cal-day${statusClass}${todayClass}`}>
-                      {day.getDate()}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="sr-cal-legend">
-              <div className="sr-cal-legend__item">
-                <span className="sr-cal-legend__dot sr-cal-legend__dot--present" />
-                <span>Present</span>
-              </div>
-              <div className="sr-cal-legend__item">
-                <span className="sr-cal-legend__dot sr-cal-legend__dot--absent" />
-                <span>Absent</span>
-              </div>
-              <div className="sr-cal-legend__item">
-                <span className="sr-cal-legend__dot sr-cal-legend__dot--today" />
-                <span>Today</span>
+              <div className="space-y-2.5 divide-y divide-[#EDEAE1] text-xs">
+                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Faculty Name</span><span className="font-bold text-[#14213D]">{selectedTeacher.user?.name || '—'}</span></div>
+                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Employee ID</span><span className="font-mono font-bold text-[#14213D]">{formatEmployeeId(selectedTeacher.employee_id)}</span></div>
+                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Designation</span><span className="font-medium text-[#14213D]">{selectedTeacher.designation || 'Teacher'}</span></div>
+                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Contact Phone</span><span className="font-mono text-[#2F6F5E] font-semibold">{selectedTeacher.user?.phone || '—'}</span></div>
+                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Account Username</span><span className="font-mono text-[#52607D]">{selectedTeacher.user?.username || '—'}</span></div>
+                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Approval Status</span><StatusBadge status="approved" size="sm" /></div>
               </div>
             </div>
           </div>

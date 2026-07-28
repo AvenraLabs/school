@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { libraryAPI, uploadAPI } from '../../../api';
 import { getApiAssetUrl } from '../../../api/axios';
 import { useToast } from '../../../context/ToastContext';
+import { Button } from '../../../components/ui/Button';
+import { Select, Input } from '../../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
+import { Modal } from '../../../components/common/Modal';
+import { EmptyState } from '../../../components/common/EmptyState';
 import {
-  Plus, Search, Edit2, Archive, BookOpen, X, Loader2, ChevronDown,
-  AlertCircle, Upload, Image as ImageIcon, LayoutGrid, List,
+  Plus, Search, Edit2, BookOpen, ChevronLeft, ChevronRight, X, Camera
 } from 'lucide-react';
 
 function BookCoverImage({ src, alt, className }) {
@@ -12,8 +16,8 @@ function BookCoverImage({ src, alt, className }) {
 
   if (!src || failed) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full bg-indigo-50/50 text-indigo-300">
-        <BookOpen className="h-10 w-10" />
+      <div className="flex flex-col items-center justify-center h-full w-full bg-[#EAF3F0] text-[#2F6F5E]">
+        <BookOpen className="h-8 w-8" />
       </div>
     );
   }
@@ -28,616 +32,304 @@ function BookCoverImage({ src, alt, className }) {
   );
 }
 
-function AddEditBookModal({ mode, book, onClose, onSaved }) {
-  const toast = useToast();
-  const fileInputRef = useRef(null);
-  const [form, setForm] = useState({
-    book_no: book?.book_no || '',
-    book_name: book?.book_name || '',
-    total_copies: book?.total_copies || '',
-    image_url: book?.image_url || '',
-  });
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    setError('');
-    try {
-      const res = await uploadAPI.uploadBookImage(file);
-      if (res?.url) {
-        setForm((prev) => ({ ...prev, image_url: res.url }));
-        toast.success('Book image uploaded');
-      }
-    } catch {
-      setError('Failed to upload image');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSaving(true);
-    try {
-      const payload = {
-        book_name: form.book_name.trim(),
-        ...(mode === 'add' ? { book_no: form.book_no.trim() } : {}),
-        total_copies: parseInt(form.total_copies, 10),
-        image_url: form.image_url || null,
-      };
-      if (mode === 'add') {
-        await libraryAPI.addBook(payload);
-        toast.success('Book added successfully');
-      } else {
-        await libraryAPI.editBook(book.id, payload);
-        toast.success('Book updated');
-      }
-      onSaved();
-      onClose();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to save book');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-[440px] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div>
-            <h3 className="text-base font-semibold text-slate-900">
-              {mode === 'add' ? 'Add New Book' : 'Edit Book'}
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {mode === 'add' ? 'Register a new book in the library master register' : 'Update book details'}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 p-5">
-          {/* Cover Image Upload */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Book Cover Image (Optional)
-            </label>
-            <div className="flex items-center gap-3">
-              <div className="relative h-20 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center">
-                {form.image_url ? (
-                  <img
-                    src={getApiAssetUrl(form.image_url)}
-                    alt="Book Cover"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <ImageIcon className="h-6 w-6 text-slate-300" />
-                )}
-                {uploading && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <Loader2 className="h-4 w-4 text-white animate-spin" />
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageUpload}
-                  accept="image/*"
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading || saving}
-                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                >
-                  <Upload className="h-3.5 w-3.5" />
-                  {form.image_url ? 'Change Photo' : 'Upload Cover Photo'}
-                </button>
-                {form.image_url && (
-                  <button
-                    type="button"
-                    onClick={() => setForm((prev) => ({ ...prev, image_url: '' }))}
-                    className="text-xs font-semibold text-rose-600 hover:underline block"
-                  >
-                    Remove Photo
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {mode === 'add' && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Book Number <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={form.book_no}
-                onChange={(e) => setForm({ ...form, book_no: e.target.value })}
-                placeholder="e.g. LIB001"
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-              />
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Book Name <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={form.book_name}
-              onChange={(e) => setForm({ ...form, book_name: e.target.value })}
-              placeholder="e.g. Science Class 6"
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Total Copies <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="number"
-              required
-              min={1}
-              value={form.total_copies}
-              onChange={(e) => setForm({ ...form, total_copies: e.target.value })}
-              placeholder="e.g. 40"
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-            />
-          </div>
-
-          {error && (
-            <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-700">
-              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || uploading}
-              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
-            >
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {mode === 'add' ? 'Add Book' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function ArchiveConfirmModal({ book, onClose, onConfirmed }) {
-  const toast = useToast();
-  const [loading, setLoading] = useState(false);
-  const isArchived = book.status === 'archived';
-
-  const handleToggleArchive = async () => {
-    setLoading(true);
-    try {
-      if (isArchived) {
-        await libraryAPI.unarchiveBook(book.id);
-        toast.success('Book restored to active catalog');
-      } else {
-        await libraryAPI.archiveBook(book.id);
-        toast.success('Book archived');
-      }
-      onConfirmed();
-      onClose();
-    } catch (err) {
-      toast.error(err?.response?.data?.message || `Failed to ${isArchived ? 'restore' : 'archive'} book`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-[380px] rounded-2xl border border-slate-200 bg-white shadow-2xl p-5 space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isArchived ? 'bg-emerald-100' : 'bg-amber-100'}`}>
-            <Archive className={`h-5 w-5 ${isArchived ? 'text-emerald-600' : 'text-amber-600'}`} />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900">
-              {isArchived ? 'Restore Book?' : 'Archive Book?'}
-            </h3>
-            <p className="text-xs text-slate-500">
-              {isArchived ? 'Re-activate book for issuing to students.' : 'This book will be hidden from active lists.'}
-            </p>
-          </div>
-        </div>
-        <p className="text-sm text-slate-700">
-          {isArchived ? 'Restore' : 'Archive'} <span className="font-semibold">{book.book_name}</span> ({book.book_no})?
-        </p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleToggleArchive}
-            disabled={loading}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 ${
-              isArchived ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'
-            }`}
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isArchived ? 'Restore Book' : 'Archive Book'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function LibraryBooks() {
   const [books, setBooks] = useState([]);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('active');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
-  const [offset, setOffset] = useState(0);
+  const [availabilityFilter, setAvailabilityFilter] = useState('all');
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const LIMIT = 12;
 
-  const [addModal, setAddModal] = useState(false);
-  const [editModal, setEditModal] = useState(null);
-  const [archiveModal, setArchiveModal] = useState(null);
+  const [modalState, setModalState] = useState(null);
+  const [bookForm, setBookForm] = useState({
+    book_name: '',
+    book_no: '',
+    author: '',
+    category: 'General',
+    total_copies: 1,
+    image_url: '',
+  });
+  const [savingBook, setSavingBook] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
-  const load = useCallback(async () => {
+  const toast = useToast();
+
+  const fetchBooks = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await libraryAPI.listBooks({
-        search: search || undefined,
-        status: statusFilter || undefined,
+      const res = await libraryAPI.getBooks({
+        search: search.trim() || undefined,
+        status: availabilityFilter !== 'all' ? availabilityFilter : undefined,
         limit: LIMIT,
-        offset,
+        offset: page * LIMIT,
       });
-      setBooks(data.books || []);
-      setTotal(data.total || 0);
+      setBooks(res?.items || []);
+      setTotalCount(res?.total || 0);
     } catch {
-      setBooks([]);
+      toast.error('Failed to load library catalog');
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, offset]);
+  }, [search, availabilityFilter, page, toast]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    fetchBooks();
+  }, [fetchBooks]);
 
-  const issuedCount = (book) => book.total_copies - book.available_copies;
+  const openAddModal = () => {
+    setBookForm({
+      book_name: '',
+      book_no: '',
+      author: '',
+      category: 'General',
+      total_copies: 1,
+      image_url: '',
+    });
+    setModalState({ mode: 'add' });
+  };
+
+  const openEditModal = (book) => {
+    setBookForm({
+      book_name: book.book_name || '',
+      book_no: book.book_no || '',
+      author: book.author || '',
+      category: book.category || 'General',
+      total_copies: book.total_copies || 1,
+      image_url: book.image_url || '',
+    });
+    setModalState({ mode: 'edit', book });
+  };
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingCover(true);
+    try {
+      const res = await uploadAPI.uploadBookImage(file);
+      if (res.url || res.data?.url) {
+        setBookForm((prev) => ({ ...prev, image_url: res.url || res.data?.url }));
+        toast.success('Cover image attached');
+      } else {
+        toast.error('Cover image upload failed');
+      }
+    } catch {
+      toast.error('Failed to upload cover image');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
+  const handleSaveBook = async (e) => {
+    e.preventDefault();
+    if (!bookForm.book_name.trim()) return toast.error('Book title is required');
+    setSavingBook(true);
+    try {
+      if (modalState.mode === 'add') {
+        await libraryAPI.addBook({
+          book_name: bookForm.book_name.trim(),
+          book_no: bookForm.book_no.trim() || `BK-${Date.now().toString().slice(-6)}`,
+          author: bookForm.author.trim() || 'Unknown',
+          category: bookForm.category || 'General',
+          total_copies: Number(bookForm.total_copies) || 1,
+          image_url: bookForm.image_url || undefined,
+        });
+        toast.success('Book added to library catalog!');
+      } else {
+        await libraryAPI.editBook(modalState.book.id, {
+          book_name: bookForm.book_name.trim(),
+          book_no: bookForm.book_no.trim(),
+          author: bookForm.author.trim(),
+          category: bookForm.category,
+          total_copies: Number(bookForm.total_copies) || 1,
+          image_url: bookForm.image_url || undefined,
+        });
+        toast.success('Book details updated!');
+      }
+      setModalState(null);
+      fetchBooks();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save book');
+    } finally {
+      setSavingBook(false);
+    }
+  };
+
+  const totalPages = Math.ceil(totalCount / LIMIT);
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search books..."
+    <div className="space-y-4 text-xs">
+      {/* Search & Filters */}
+      <Card className="p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Input
+              icon={Search}
+              placeholder="Search books by title or ISBN..."
+              className="w-64 text-xs"
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setOffset(0); }}
-              className="pl-9 pr-4 h-[38px] rounded-xl border border-slate-200 text-sm bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 w-48 sm:w-60"
+              onChange={(e) => setSearch(e.target.value)}
             />
+            <Select
+              className="w-36 text-xs"
+              value={availabilityFilter}
+              onChange={(e) => setAvailabilityFilter(e.target.value)}
+            >
+              <option value="all">All Copies</option>
+              <option value="available">Available Only</option>
+              <option value="issued">Issued Only</option>
+            </Select>
           </div>
 
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setOffset(0); }}
-              style={{ WebkitAppearance: 'none', appearance: 'none' }}
-              className="pl-3 pr-8 h-[38px] rounded-xl border border-slate-200 text-sm bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 cursor-pointer font-medium text-slate-700"
-            >
-              <option value="active">Active Books</option>
-              <option value="archived">Archived Books</option>
-              <option value="">All Books</option>
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-          </div>
-
-          {/* View Toggle */}
-          <div className="flex h-[38px] items-center rounded-xl border border-slate-200 bg-white p-0.5">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-900'}`}
-              title="Grid View"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg transition-colors ${viewMode === 'table' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-900'}`}
-              title="Table View"
-            >
-              <List className="h-4 w-4" />
-            </button>
-          </div>
+          <Button variant="primary" icon={Plus} onClick={openAddModal}>
+            Add New Book
+          </Button>
         </div>
+      </Card>
 
-        <button
-          id="library-add-book-btn"
-          onClick={() => setAddModal(true)}
-          className="flex h-[38px] items-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors flex-shrink-0"
+      {/* Catalog Grid */}
+      <Card>
+        <CardContent className="p-4">
+          {loading ? (
+            <div className="p-8 text-center text-[#8C97AB]">Loading book catalog...</div>
+          ) : books.length === 0 ? (
+            <EmptyState icon={BookOpen} title="No books found" description="Add books to your library catalog." />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {books.map((b) => (
+                <div key={b.id} className="p-3 bg-[#FAFAF8] border border-[#E4E1D8] rounded-[8px] space-y-2 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="h-36 rounded-[6px] overflow-hidden bg-[#EAF3F0]">
+                      <BookCoverImage src={b.image_url} alt={b.book_name} className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                      <p className="font-display font-bold text-xs text-[#14213D] truncate">{b.book_name}</p>
+                      <p className="text-[10px] text-[#8C97AB] font-mono">Acc No: {b.book_no}</p>
+                      {b.author && <p className="text-[10px] text-[#52607D] italic">By {b.author}</p>}
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-[#EDEAE1] flex items-center justify-between">
+                    <span className="font-mono text-[10px] text-[#2F6F5E] font-semibold">
+                      {b.available_copies ?? b.total_copies} / {b.total_copies} Copies
+                    </span>
+                    <Button variant="ghost" size="sm" icon={Edit2} onClick={() => openEditModal(b)} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+
+        {totalPages > 1 && (
+          <div className="px-4 py-3 bg-[#FAFAF8] border-t border-[#E4E1D8] flex items-center justify-between text-xs text-[#52607D]">
+            <span>Page <strong className="text-[#14213D] font-mono">{page + 1}</strong> of <strong className="text-[#14213D] font-mono">{totalPages}</strong></span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" icon={ChevronLeft} onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>Previous</Button>
+              <Button variant="outline" size="sm" iconRight={ChevronRight} onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}>Next</Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Add / Edit Book Modal */}
+      {modalState && (
+        <Modal
+          isOpen={true}
+          onClose={() => setModalState(null)}
+          title={modalState.mode === 'add' ? 'Add New Library Book' : 'Edit Book Catalog Entry'}
         >
-          <Plus className="h-4 w-4" />
-          Add Book
-        </button>
-      </div>
+          <form onSubmit={handleSaveBook} className="space-y-4 text-xs">
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">Book Title *</label>
+              <Input
+                required
+                placeholder="e.g. Higher Mathematics, Concepts of Physics"
+                value={bookForm.book_name}
+                onChange={(e) => setBookForm({ ...bookForm, book_name: e.target.value })}
+              />
+            </div>
 
-      {/* Summary Chips */}
-      <div className="flex gap-2 text-xs text-slate-500">
-        <span className="bg-slate-100 rounded-full px-3 py-1 font-medium">{total} books registered</span>
-      </div>
-
-      {/* Content Rendering */}
-      {loading ? (
-        <div className="flex items-center justify-center py-16 gap-2 text-slate-400">
-          <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
-          <span className="text-sm font-medium">Loading books...</span>
-        </div>
-      ) : books.length === 0 ? (
-        <div className="py-16 text-center rounded-2xl border border-slate-200 bg-white">
-          <BookOpen className="h-12 w-12 text-slate-200 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-slate-700">No books found</p>
-          <button
-            onClick={() => setAddModal(true)}
-            className="text-xs font-semibold text-indigo-600 hover:underline mt-1 inline-block"
-          >
-            + Add a book now
-          </button>
-        </div>
-      ) : viewMode === 'grid' ? (
-        /* App-like Grid Card Layout */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {books.map((book) => {
-            const isAvailable = book.available_copies > 0;
-            return (
-              <div
-                key={book.id}
-                className="group relative flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-indigo-200"
-              >
-                {/* Book Cover / Icon */}
-                <div className="relative h-44 w-full overflow-hidden rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center mb-3">
-                  <BookCoverImage
-                    src={book.image_url}
-                    alt={book.book_name}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-
-                  {/* Badges */}
-                  <div className="absolute top-2.5 right-2.5 flex gap-1">
-                    {book.status === 'archived' ? (
-                      <span className="rounded-full bg-slate-950/70 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-semibold text-white">Archived</span>
-                    ) : isAvailable ? (
-                      <span className="rounded-full bg-emerald-500/90 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-semibold text-white">
-                        {book.available_copies} Available
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-rose-500/90 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-semibold text-white">No Copies</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Details */}
-                <div className="flex-1 flex flex-col justify-between">
-                  <div>
-                    <h4 className="text-base font-bold text-slate-900 line-clamp-1 group-hover:text-indigo-600 transition-colors">
-                      {book.book_name}
-                    </h4>
-                    <p className="text-xs font-mono text-slate-400 mt-0.5">Book No: {book.book_no}</p>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <div className="text-xs text-slate-500">
-                      <span className="font-semibold text-slate-700">{book.available_copies}</span> / {book.total_copies} copies
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      {book.status === 'active' ? (
-                        <>
-                          <button
-                            onClick={() => setEditModal(book)}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-                            title="Edit Book"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setArchiveModal(book)}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-amber-500 hover:bg-amber-50 hover:text-amber-700 transition-colors"
-                            title="Archive Book"
-                          >
-                            <Archive className="h-3.5 w-3.5" />
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => setArchiveModal(book)}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
-                          title="Restore to Active Catalog"
-                        >
-                          <Archive className="h-3.5 w-3.5" />
-                          Restore
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-[#14213D] mb-1">Accession / Book No *</label>
+                <Input
+                  required
+                  placeholder="e.g. BK-1004"
+                  value={bookForm.book_no}
+                  onChange={(e) => setBookForm({ ...bookForm, book_no: e.target.value })}
+                />
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        /* Table View */
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Cover</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Book No</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Book Name</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Total</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Available</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Issued</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {books.map((book) => (
-                  <tr key={book.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-2">
-                      <div className="h-10 w-8 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 flex items-center justify-center">
-                        <BookCoverImage src={book.image_url} alt="" className="h-full w-full object-cover" />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-600">{book.book_no}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{book.book_name}</td>
-                    <td className="px-4 py-3 text-center text-slate-700">{book.total_copies}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`font-semibold ${book.available_copies === 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        {book.available_copies}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center text-slate-600">{issuedCount(book)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${book.status === 'archived' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {book.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-1">
-                        {book.status === 'active' ? (
-                          <>
-                            <button
-                              onClick={() => setEditModal(book)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-                              title="Edit Book"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setArchiveModal(book)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg text-amber-500 hover:bg-amber-50 hover:text-amber-700 transition-colors"
-                              title="Archive Book"
-                            >
-                              <Archive className="h-3.5 w-3.5" />
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => setArchiveModal(book)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
-                            title="Restore to Active Catalog"
-                          >
-                            <Archive className="h-3.5 w-3.5" />
-                            Restore
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+              <div>
+                <label className="block font-semibold text-[#14213D] mb-1">Author Name</label>
+                <Input
+                  placeholder="e.g. H.C. Verma, R.D. Sharma"
+                  value={bookForm.author}
+                  onChange={(e) => setBookForm({ ...bookForm, author: e.target.value })}
+                />
+              </div>
+            </div>
 
-      {/* Pagination */}
-      {total > LIMIT && (
-        <div className="flex items-center justify-between border-t border-slate-100 px-2 py-3">
-          <p className="text-xs text-slate-500">
-            Showing {offset + 1}–{Math.min(offset + LIMIT, total)} of {total}
-          </p>
-          <div className="flex gap-2">
-            <button
-              disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - LIMIT))}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
-            >
-              Previous
-            </button>
-            <button
-              disabled={offset + LIMIT >= total}
-              onClick={() => setOffset(offset + LIMIT)}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40 hover:bg-slate-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-[#14213D] mb-1">Genre / Category</label>
+                <Input
+                  placeholder="e.g. Science, Mathematics, Fiction"
+                  value={bookForm.category}
+                  onChange={(e) => setBookForm({ ...bookForm, category: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-[#14213D] mb-1">Total Copies Count *</label>
+                <Input
+                  type="number"
+                  min="1"
+                  required
+                  value={bookForm.total_copies}
+                  onChange={(e) => setBookForm({ ...bookForm, total_copies: e.target.value })}
+                />
+              </div>
+            </div>
 
-      {/* Modals */}
-      {addModal && (
-        <AddEditBookModal
-          mode="add"
-          onClose={() => setAddModal(false)}
-          onSaved={load}
-        />
-      )}
-      {editModal && (
-        <AddEditBookModal
-          mode="edit"
-          book={editModal}
-          onClose={() => setEditModal(null)}
-          onSaved={load}
-        />
-      )}
-      {archiveModal && (
-        <ArchiveConfirmModal
-          book={archiveModal}
-          onClose={() => setArchiveModal(null)}
-          onConfirmed={load}
-        />
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">Book Cover Image (Optional)</label>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] border border-[#E4E1D8] bg-[#FAFAF8] hover:bg-[#EAF3F0] text-xs text-[#52607D] cursor-pointer transition-colors">
+                  <Camera className="w-3.5 h-3.5 text-[#2F6F5E]" />
+                  <span>Attach Cover Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverUpload}
+                    disabled={uploadingCover}
+                    className="hidden"
+                  />
+                </label>
+                {uploadingCover && <span className="text-[11px] text-[#2F6F5E] animate-pulse">Uploading cover...</span>}
+              </div>
+              {bookForm.image_url && (
+                <div className="mt-2 relative w-20 h-24 rounded-[8px] overflow-hidden border border-[#E4E1D8]">
+                  <img src={getApiAssetUrl(bookForm.image_url)} alt="Cover Preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setBookForm((prev) => ({ ...prev, image_url: '' }))}
+                    className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-0.5 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
+              <Button type="button" variant="outline" size="sm" onClick={() => setModalState(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm" disabled={savingBook}>
+                {savingBook ? 'Saving...' : modalState.mode === 'add' ? 'Add Book' : 'Update Book'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

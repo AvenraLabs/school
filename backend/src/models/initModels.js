@@ -84,11 +84,13 @@ import TransportRequest from "../modules/transport/transport-request.model.js";
 import AcademicYear from "../modules/academic-years/academic-year.model.js";
 import StudentEnrollment from "../modules/students/student-enrollment.model.js";
 
-/* ===================== FEES ===================== */
+/* ===================== FEES & EXPENSES ===================== */
 import FeeCategory from "../modules/fees/fee-category.model.js";
 import FeeDefinition from "../modules/fees/fee-definition.model.js";
 import StudentFee from "../modules/fees/student-fee.model.js";
 import FeePayment from "../modules/fees/fee-payment.model.js";
+import ExpenseCategory from "../modules/expenses/expense-category.model.js";
+import Expense from "../modules/expenses/expense.model.js";
 
 /* ===================== LIBRARY ===================== */
 import Book from "../modules/library/book.model.js";
@@ -409,6 +411,20 @@ const initAssociations = () => {
   FeePayment.belongsTo(StudentFee, { foreignKey: "student_fee_id" });
 
   FeePayment.belongsTo(User, { as: "VoidedBy", foreignKey: "voided_by" });
+
+  /* ==================== EXPENSES ==================== */
+  School.hasMany(ExpenseCategory, { foreignKey: "school_id", onDelete: "CASCADE" });
+  ExpenseCategory.belongsTo(School, { foreignKey: "school_id" });
+
+  School.hasMany(Expense, { foreignKey: "school_id", onDelete: "CASCADE" });
+  Expense.belongsTo(School, { foreignKey: "school_id" });
+
+  ExpenseCategory.hasMany(Expense, { foreignKey: "category_id", onDelete: "CASCADE" });
+  Expense.belongsTo(ExpenseCategory, { as: "category", foreignKey: "category_id" });
+
+  Expense.belongsTo(AcademicYear, { foreignKey: "academic_year_id" });
+  Expense.belongsTo(User, { as: "Creator", foreignKey: "created_by" });
+  Expense.belongsTo(User, { as: "Canceller", foreignKey: "cancelled_by" });
 
   /* ==================== LIBRARY ==================== */
   School.hasMany(Book, { foreignKey: "school_id", onDelete: "CASCADE" });

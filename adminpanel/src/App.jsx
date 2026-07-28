@@ -35,7 +35,7 @@ import TermsConditions from './pages/Public/TermsConditions';
 import { NotFoundPage } from './pages/Public/NotFoundPage';
 import { LostFoundManager } from './pages/SchoolAdmin/LostFoundManager';
 import { FeedbackSubmit } from './pages/SchoolAdmin/FeedbackSubmit';
-import { AboutAdmin } from './pages/SchoolAdmin/AboutAdmin';
+import { StyleGuidePage } from './pages/SchoolAdmin/StyleGuidePage';
 
 import './App.css';
 
@@ -92,8 +92,7 @@ function App() {
               <Route path="/admin/lost-found" element={<LostFoundManager />} />
               <Route path="/admin/feedback" element={<FeedbackSubmit />} />
               <Route path="/admin/library" element={<LibraryManager />} />
-              <Route path="/admin/about" element={<AboutAdmin />} />
-
+              <Route path="/admin/style-guide" element={<StyleGuidePage />} />
             </Route>
 
             {/* Fallback */}

@@ -19,6 +19,7 @@ import {
   getDefaultersList,
   getMyFeeLedger,
   sendPaymentWhatsAppReceipt,
+  getUnifiedFinanceDashboard,
 } from "./fee.controller.js";
 
 const router = express.Router();
@@ -30,6 +31,9 @@ router.get("/my-ledger", allowRoles("student", "parent", "school_admin", "super_
 
 /* School Admin & Super Admin Only Routes */
 router.use(allowRoles("school_admin", "super_admin"));
+
+/* Finance Dashboard */
+router.get("/dashboard", getUnifiedFinanceDashboard);
 
 /* Fee Categories */
 router.post("/categories", createFeeCategory);

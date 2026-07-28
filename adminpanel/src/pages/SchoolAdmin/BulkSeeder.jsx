@@ -3,34 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { bulkAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { generateBulkCredentialsPDF } from '../../utils/pdfGenerator';
-import { Plus, Trash2, Database, Download, Layers, Users, GraduationCap, CheckCircle, UserCog, BookOpen } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { Plus, Trash2, Database, Download, Layers, GraduationCap, CheckCircle, UserCog, BookOpen } from 'lucide-react';
 
-/* ── shared styles ── */
-const card = { background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' };
-const input = {
-  height: '42px', padding: '0 14px', fontSize: '14px', color: '#0f172a',
-  border: '1px solid #e2e8f0', borderRadius: '10px', background: '#f8fafc',
-  outline: 'none', width: '100%', fontFamily: 'inherit', boxSizing: 'border-box',
-};
-const btnPrimary = {
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-  height: '44px', padding: '0 20px', borderRadius: '12px', fontSize: '14px', fontWeight: 600,
-  background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff',
-  border: 'none', cursor: 'pointer', boxShadow: '0 10px 24px rgba(79, 70, 229, 0.22)',
-};
-const btnSecondary = {
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-  height: '36px', padding: '0 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 500,
-  background: '#fff', color: '#475569', border: '1px solid #e2e8f0',
-  cursor: 'pointer',
-};
-const iconBtn = {
-  width: '30px', height: '30px', borderRadius: '8px', border: 'none',
-  background: 'transparent', cursor: 'pointer', display: 'flex',
-  alignItems: 'center', justifyContent: 'center', color: '#94a3b8',
-};
-
-/* blank row factories — no default values */
 const emptyClass = () => ({ name: '', sections: [emptySection()] });
 const emptySection = () => ({ name: '', students: '' });
 
@@ -42,25 +19,31 @@ export function BulkSeeder() {
   const [result, setResult] = useState(null);
   const toast = useToast();
 
-  const addClass = () => setClasses(p => [...p, emptyClass()]);
-  const removeClass = (ci) => setClasses(p => p.length <= 1 ? p : p.filter((_, i) => i !== ci));
-  const updateClass = (ci, val) => setClasses(p => p.map((c, i) => i === ci ? { ...c, name: val } : c));
-  const addSection = (ci) => setClasses(p => p.map((c, i) => i !== ci ? c : {
-    ...c, sections: [...c.sections, emptySection()],
-  }));
-  const removeSection = (ci, si) => setClasses(p => p.map((c, i) => (i !== ci || c.sections.length <= 1) ? c : {
-    ...c, sections: c.sections.filter((_, j) => j !== si),
-  }));
-  const updateSection = (ci, si, field, val) => setClasses(p => p.map((c, i) => i !== ci ? c : {
-    ...c, sections: c.sections.map((s, j) => j !== si ? s : { ...s, [field]: val }),
-  }));
+  const addClass = () => setClasses((p) => [...p, emptyClass()]);
+  const removeClass = (ci) => setClasses((p) => (p.length <= 1 ? p : p.filter((_, i) => i !== ci)));
+  const updateClass = (ci, val) => setClasses((p) => p.map((c, i) => (i === ci ? { ...c, name: val } : c)));
+  const addSection = (ci) =>
+    setClasses((p) =>
+      p.map((c, i) => (i !== ci ? c : { ...c, sections: [...c.sections, emptySection()] }))
+    );
+  const removeSection = (ci, si) =>
+    setClasses((p) =>
+      p.map((c, i) => (i !== ci || c.sections.length <= 1 ? c : { ...c, sections: c.sections.filter((_, j) => j !== si) }))
+    );
+  const updateSection = (ci, si, field, val) =>
+    setClasses((p) =>
+      p.map((c, i) =>
+        i !== ci
+          ? c
+          : { ...c, sections: c.sections.map((s, j) => (j !== si ? s : { ...s, [field]: val })) }
+      )
+    );
 
   const totalStudents = classes.reduce((s, c) => s + c.sections.reduce((a, sec) => a + (Number(sec.students) || 0), 0), 0);
   const totalSections = classes.reduce((s, c) => s + c.sections.length, 0);
   const tc = Number(teacherCount) || 0;
 
   const handleSubmit = async () => {
-    /* basic validation */
     for (const cls of classes) {
       if (!cls.name.trim()) { toast.error('All classes must have a name'); return; }
       for (const sec of cls.sections) {
@@ -68,14 +51,14 @@ export function BulkSeeder() {
         if (!sec.students || Number(sec.students) < 1) { toast.error('All sections need a student count'); return; }
       }
     }
-    if (teacherCount === '' || teacherCount === null || teacherCount === undefined || tc < 0) { toast.error('Enter teacher count'); return; }
+    if (teacherCount === '' || tc < 0) { toast.error('Enter teacher count'); return; }
 
     setLoading(true);
     try {
       const res = await bulkAPI.createData({
-        classes: classes.map(c => ({
+        classes: classes.map((c) => ({
           name: c.name.trim(),
-          sections: c.sections.map(s => ({ name: s.name.trim(), students: Number(s.students) })),
+          sections: c.sections.map((s) => ({ name: s.name.trim(), students: Number(s.students) })),
         })),
         teacher_count: tc,
       });
@@ -88,196 +71,112 @@ export function BulkSeeder() {
     }
   };
 
-  /* ── success screen ── */
   if (result) {
     const s = result.summary || {};
-    const items = [
-      { label: 'Classes',   val: s.classes_created,  icon: Layers,       c: '#4f46e5', bg: '#eef2ff' },
-      { label: 'Sections',  val: s.sections_created, icon: BookOpen,     c: '#7c3aed', bg: '#f5f3ff' },
-      { label: 'Students',  val: s.students_created, icon: GraduationCap,c: '#16a34a', bg: '#f0fdf4' },
-      { label: 'Teachers',  val: s.teachers_created, icon: UserCog,      c: '#0284c7', bg: '#f0f9ff' },
-    ].filter(i => i.val != null);
-
     return (
-      <div style={{ maxWidth: '560px', margin: '0 auto', paddingTop: '24px' }}>
-        <div style={{ ...card, padding: '40px', textAlign: 'center', marginBottom: '20px', borderColor: '#bbf7d0' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <CheckCircle style={{ width: '28px', height: '28px', color: '#16a34a' }} />
+      <div className="max-w-2xl mx-auto space-y-4 text-xs">
+        <Card className="p-6 text-center space-y-4 border-[#2F6F5E]/30 bg-[#EAF3F0]">
+          <CheckCircle className="w-12 h-12 text-[#2F6F5E] mx-auto" />
+          <h3 className="text-base font-bold text-[#14213D]">Bulk Roster Seeding Complete!</h3>
+          <p className="text-xs text-[#52607D]">
+            Created {s.classes_created} classes, {s.sections_created} sections, {s.students_created} students, and {s.teachers_created} teachers.
+          </p>
+
+          <div className="flex justify-center gap-3 pt-2">
+            <Button
+              variant="primary"
+              icon={Download}
+              onClick={() => generateBulkCredentialsPDF(result.teachers, result.students)}
+            >
+              Download PDF Credentials
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/admin')}>
+              Go to Dashboard
+            </Button>
           </div>
-          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>All done!</h2>
-          <p style={{ fontSize: '14px', color: '#94a3b8', marginTop: '6px' }}>School data created successfully.</p>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
-          {items.map(({ label, val, icon: Icon, c, bg }) => (
-            <div key={label} style={{ ...card, padding: '16px', textAlign: 'center' }}>
-              <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: bg, color: c, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
-                <Icon style={{ width: '16px', height: '16px' }} />
-              </div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a' }}>{val}</div>
-              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>{label}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button style={{ ...btnPrimary, flex: 1 }} onClick={() => navigate('/admin/login-roster')}>
-             View Login Roster
-          </button>
-          <button style={btnSecondary} onClick={() => { setResult(null); setClasses([emptyClass()]); setTeacherCount(''); }}>Reset</button>
-        </div>
+        </Card>
       </div>
     );
   }
 
-  const summaryRows = [
-    { label: 'Classes',      val: classes.length, icon: Layers,        c: '#4f46e5' },
-    { label: 'Sections',     val: totalSections,  icon: BookOpen,      c: '#7c3aed' },
-    { label: 'Students',     val: totalStudents,  icon: GraduationCap, c: '#16a34a' },
-    { label: 'Teachers',     val: tc,             icon: UserCog,       c: '#0284c7' },
-  ];
-
   return (
-    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
-      {/* Header */}
-      <div className="page-header" style={{ marginBottom: '28px' }}>
-        <div>
-          <h1 className="page-title">Bulk Setup</h1>
-          <p className="page-subtitle">Configure school classrooms, sections, students, and teachers in one click</p>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px', alignItems: 'start' }}>
-
-        {/* Left */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>Classes &amp; Sections</span>
-            <button style={btnSecondary} onClick={addClass}>
-              <Plus style={{ width: '14px', height: '14px' }} /> Add Class
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div className="space-y-4 max-w-4xl mx-auto text-xs">
+      <Card>
+        <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
+          <CardTitle className="text-sm font-bold text-[#14213D] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-[#2F6F5E]" />
+              <span>Bulk Institutional Data Seeder</span>
+            </div>
+            <span className="text-xs text-[#52607D] font-normal">
+              Summary: {classes.length} Classes · {totalSections} Sections · {totalStudents} Students · {tc} Faculty
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 space-y-4">
+          <div className="space-y-4">
             {classes.map((cls, ci) => (
-              <div key={ci} style={card}>
-                {/* Class header row */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '12px',
-                  padding: '12px 16px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc',
-                  borderRadius: '16px 16px 0 0',
-                }}>
-                  <span style={{
-                    width: '26px', height: '26px', borderRadius: '6px',
-                    background: '#eef2ff', color: '#4f46e5',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '12px', fontWeight: 700, flexShrink: 0,
-                  }}>{ci + 1}</span>
-                  <input
-                    style={{ ...input, flex: 1, background: 'transparent', border: 'none', height: '32px', padding: '0', fontWeight: 600, fontSize: '14px' }}
+              <Card key={ci} className="p-3 border border-[#E4E1D8] space-y-3">
+                <div className="flex items-center gap-3">
+                  <Input
+                    placeholder="Class Name (e.g. 10)"
                     value={cls.name}
-                    onChange={e => updateClass(ci, e.target.value)}
-                    placeholder="Enter class name"
+                    onChange={(e) => updateClass(ci, e.target.value)}
+                    className="w-48 text-xs font-semibold"
                   />
-                  <button
-                    style={iconBtn}
-                    disabled={classes.length <= 1}
-                    onClick={() => removeClass(ci)}
-                    onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                    onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
-                  >
-                    <Trash2 style={{ width: '14px', height: '14px' }} />
-                  </button>
+                  {classes.length > 1 && (
+                    <Button variant="ghost" size="sm" icon={Trash2} className="text-[#B0403A]" onClick={() => removeClass(ci)} />
+                  )}
                 </div>
 
-                {/* Sections */}
-                <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="space-y-2 pl-4 border-l-2 border-[#E4E1D8]">
                   {cls.sections.map((sec, si) => (
-                    <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94a3b8', whiteSpace: 'nowrap', flexShrink: 0 }}>Section Name</span>
-                      <input
-                        style={{ ...input, width: '80px', textAlign: 'center', fontWeight: 600 }}
+                    <div key={si} className="flex items-center gap-3">
+                      <Input
+                        placeholder="Section (e.g. A)"
                         value={sec.name}
-                        onChange={e => updateSection(ci, si, 'name', e.target.value)}
-                        placeholder="A"
+                        onChange={(e) => updateSection(ci, si, 'name', e.target.value)}
+                        className="w-32 text-xs"
                       />
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#94a3b8', flexShrink: 0, whiteSpace: 'nowrap' }}>Total Students</span>
-                      <input
-                        style={{ ...input, width: '90px', textAlign: 'center' }}
-                        type="number" min="1" max="200"
+                      <Input
+                        type="number"
+                        placeholder="Student Count"
                         value={sec.students}
-                        onChange={e => updateSection(ci, si, 'students', e.target.value)}
-                        placeholder="30"
+                        onChange={(e) => updateSection(ci, si, 'students', e.target.value)}
+                        className="w-36 text-xs font-mono"
                       />
-                      <button
-                        style={{ ...iconBtn, marginLeft: 'auto' }}
-                        disabled={cls.sections.length <= 1}
-                        onClick={() => removeSection(ci, si)}
-                        onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                        onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
-                      >
-                        <Trash2 style={{ width: '13px', height: '13px' }} />
-                      </button>
+                      {cls.sections.length > 1 && (
+                        <Button variant="ghost" size="sm" icon={Trash2} className="text-[#B0403A]" onClick={() => removeSection(ci, si)} />
+                      )}
                     </div>
                   ))}
-                  <button
-                    style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#4f46e5', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0' }}
-                    onClick={() => addSection(ci)}
-                  >
-                    <Plus style={{ width: '13px', height: '13px' }} /> Add Section
-                  </button>
+                  <Button variant="ghost" size="sm" icon={Plus} onClick={() => addSection(ci)}>
+                    Add Section
+                  </Button>
                 </div>
-              </div>
+              </Card>
             ))}
+          </div>
 
-            {/* Teachers */}
-            <div style={{ ...card, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#f0f9ff', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Users style={{ width: '18px', height: '18px' }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a' }}>Total Teachers</div>
-              </div>
-              <input
-                style={{ ...input, width: '90px', textAlign: 'center', fontWeight: 600 }}
-                type="number" min="0" max="200"
+          <div className="flex justify-between items-center pt-2 border-t border-[#EDEAE1]">
+            <Button variant="outline" icon={Plus} onClick={addClass}>
+              Add Another Class
+            </Button>
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                placeholder="Faculty Count"
                 value={teacherCount}
-                onChange={e => setTeacherCount(e.target.value)}
-                placeholder="e.g. 10"
+                onChange={(e) => setTeacherCount(e.target.value)}
+                className="w-36 text-xs font-mono"
               />
+              <Button variant="primary" icon={Database} loading={loading} onClick={handleSubmit}>
+                Seed Roster Data
+              </Button>
             </div>
           </div>
-        </div>
-
-        {/* Right: summary */}
-        <div style={{ ...card, padding: '20px', position: 'sticky', top: '20px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '16px' }}>Summary</h3>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-            {summaryRows.map(({ label, val, icon: Icon, c }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Icon style={{ width: '14px', height: '14px', color: c, flexShrink: 0 }} />
-                  <span style={{ fontSize: '13px', color: '#64748b' }}>{label}</span>
-                </div>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>{val.toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ background: '#eef2ff', borderRadius: '10px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#3730a3' }}>Total accounts</span>
-            <span style={{ fontSize: '18px', fontWeight: 800, color: '#4f46e5' }}>{(totalStudents + tc).toLocaleString()}</span>
-          </div>
-
-          <button style={{ ...btnPrimary, width: '100%' }} onClick={handleSubmit} disabled={loading || classes.length === 0}>
-            {loading
-              ? <><span style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />Creating…</>
-              : <><Database style={{ width: '16px', height: '16px' }} />Create All Data</>
-            }
-          </button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

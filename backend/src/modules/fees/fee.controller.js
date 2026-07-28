@@ -16,6 +16,7 @@ import {
   getFeeCollectionSummaryService,
   getMyFeeLedgerService,
   sendPaymentWhatsAppReceiptService,
+  getUnifiedFinanceDashboardService,
 } from "./fee.service.js";
 
 /* Categories */
@@ -110,4 +111,9 @@ export const getFeeCollectionSummary = asyncHandler(async (req, res) => {
 export const getDefaultersList = asyncHandler(async (req, res) => {
   const defaulters = await getDefaultersListService(req.user.school_id, req.query);
   res.json(defaulters);
+});
+
+export const getUnifiedFinanceDashboard = asyncHandler(async (req, res) => {
+  const dashboard = await getUnifiedFinanceDashboardService(req.user.school_id);
+  res.json(dashboard);
 });

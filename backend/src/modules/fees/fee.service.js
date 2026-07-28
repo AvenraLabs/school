@@ -3,6 +3,8 @@ import FeeCategory from "./fee-category.model.js";
 import FeeDefinition from "./fee-definition.model.js";
 import StudentFee from "./student-fee.model.js";
 import FeePayment from "./fee-payment.model.js";
+import Expense from "../expenses/expense.model.js";
+import ExpenseCategory from "../expenses/expense-category.model.js";
 import AcademicYear from "../academic-years/academic-year.model.js";
 import Student from "../students/student.model.js";
 import Class from "../classes/classes.model.js";
@@ -720,5 +722,133 @@ export const sendPaymentWhatsAppReceiptService = async (payment_id, school_id) =
   return {
     success: true,
     message: `WhatsApp receipt sent to parent (${rawPhone}) successfully!`,
+  };
+};
+
+export const getUnifiedFinanceDashboardService = async (school_id) => {
+  const currentYear = await getCurrentAcademicYear(school_id);
+  const now = new Date();
+  
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+  // Today's Collection
+  const todayPayments = await FeePayment.findAll({
+    where: {
+      school_id,
+      is_void: false,
+      paid_at: { [Op.between]: [startOfDay, endOfDay] },
+    },
+    attributes: ["amount"],
+  });
+  const todayCollection = todayPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+  // Month Collection
+  const monthPayments = await FeePayment.findAll({
+    where: {
+      school_id,
+      is_void: false,
+      paid_at: { [Op.between]: [startOfMonth, endOfMonth] },
+    },
+    attributes: ["amount"],
+  });
+  const monthCollection = monthPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+  // All Time / Academic Year Collection
+  const yearPayments = await FeePayment.findAll({
+    where: { school_id, is_void: false },
+    attributes: ["amount"],
+  });
+  const totalFeesCollected = yearPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+  // Pending Fees & Count
+  const studentFees = await StudentFee.findAll({
+    where: { school_id, academic_year_id: currentYear.id },
+    attributes: ["balance_amount", "status", "student_id"],
+  });
+
+  const pendingFees = studentFees.reduce((sum, f) => sum + Number(f.balance_amount), 0);
+  const pendingStudentIds = new Set(
+    studentFees.filter((f) => Number(f.balance_amount) > 0).map((f) => f.student_id)
+  );
+
+  // Total Expenses (All time & Month)
+  const monthExpenses = await Expense.findAll({
+    where: {
+      school_id,
+      is_cancelled: false,
+      expense_date: { [Op.between]: [startOfMonth.toISOString().split("T")[0], endOfMonth.toISOString().split("T")[0]] },
+    },
+    attributes: ["amount"],
+  });
+  const thisMonthExpenses = monthExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const allExpenses = await Expense.findAll({
+    where: { school_id, is_cancelled: false },
+    attributes: ["amount"],
+  });
+  const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const netCash = monthCollection - thisMonthExpenses;
+
+  // Monthly trends (Last 6 Months)
+  const monthlyTrends = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const mStart = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0);
+    const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+    const monthLabel = d.toLocaleString("default", { month: "short" });
+
+    const mPay = await FeePayment.findAll({
+      where: { school_id, is_void: false, paid_at: { [Op.between]: [mStart, mEnd] } },
+      attributes: ["amount"],
+    });
+    const mColl = mPay.reduce((acc, p) => acc + Number(p.amount), 0);
+
+    const mExp = await Expense.findAll({
+      where: {
+        school_id,
+        is_cancelled: false,
+        expense_date: { [Op.between]: [mStart.toISOString().split("T")[0], mEnd.toISOString().split("T")[0]] },
+      },
+      attributes: ["amount"],
+    });
+    const mExpTot = mExp.reduce((acc, e) => acc + Number(e.amount), 0);
+
+    monthlyTrends.push({
+      month: monthLabel,
+      collection: mColl,
+      expense: mExpTot,
+    });
+  }
+
+  // Expense Category Breakdown for Charts
+  const expCategories = await Expense.findAll({
+    where: { school_id, is_cancelled: false },
+    attributes: ["category_id", [db.fn("SUM", db.col("amount")), "total"]],
+    include: [{ model: ExpenseCategory, as: "category", attributes: ["name"] }],
+    group: ["expense.category_id", "category.id", "category.name"],
+    raw: false,
+  });
+
+  const expenseDistribution = expCategories.map((c) => ({
+    name: c.category ? c.category.name : "Other",
+    amount: Number(c.get("total")),
+  }));
+
+  return {
+    today_collection: todayCollection,
+    this_month_collection: monthCollection,
+    total_fees_collected: totalFeesCollected,
+    pending_fees: pendingFees,
+    pending_students_count: pendingStudentIds.size,
+    this_month_expenses: thisMonthExpenses,
+    total_expenses: totalExpenses,
+    net_cash: netCash,
+    monthly_trends: monthlyTrends,
+    expense_distribution: expenseDistribution,
   };
 };

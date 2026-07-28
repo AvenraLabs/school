@@ -266,11 +266,33 @@ export const teachersAPI = {
 
 // Students API
 export const studentsAPI = {
-  create: async (classId, sectionId) => {
-    const response = await axiosInstance.post('/students', {
-      class_id: classId,
-      section_id: sectionId,
+  create: async (classId, sectionId, name, guardianPhone, rollNo) => {
+    let payload = {};
+    if (typeof classId === 'object' && classId !== null) {
+      payload = {
+        class_id: Number(classId.class_id || classId.classId),
+        section_id: Number(classId.section_id || classId.sectionId),
+        name: (typeof classId.name === 'string' && classId.name.trim()) ? classId.name.trim() : undefined,
+        guardian_phone: (classId.guardian_phone || classId.guardianPhone || classId.phone) ? String(classId.guardian_phone || classId.guardianPhone || classId.phone).trim() : undefined,
+        roll_no: classId.roll_no || classId.rollNo || undefined,
+      };
+    } else {
+      payload = {
+        class_id: Number(classId),
+        section_id: Number(sectionId),
+        name: (typeof name === 'string' && name.trim()) ? name.trim() : undefined,
+        guardian_phone: (typeof guardianPhone === 'string' && guardianPhone.trim()) ? guardianPhone.trim() : undefined,
+        roll_no: rollNo || undefined,
+      };
+    }
+
+    Object.keys(payload).forEach((key) => {
+      if (payload[key] === undefined || payload[key] === null || payload[key] === '') {
+        delete payload[key];
+      }
     });
+
+    const response = await axiosInstance.post('/students', payload);
     return response.data;
   },
 
@@ -992,6 +1014,37 @@ export const feeAPI = {
     const response = await axiosInstance.get('/fees/defaulters', { params });
     return response.data;
   },
+  getDashboard: async () => {
+    const response = await axiosInstance.get('/fees/dashboard');
+    return response.data;
+  },
+};
+
+export const expenseAPI = {
+  listCategories: async () => {
+    const response = await axiosInstance.get('/expenses/categories');
+    return response.data;
+  },
+  createCategory: async (data) => {
+    const response = await axiosInstance.post('/expenses/categories', data);
+    return response.data;
+  },
+  listExpenses: async (params = {}) => {
+    const response = await axiosInstance.get('/expenses', { params });
+    return response.data;
+  },
+  createExpense: async (data) => {
+    const response = await axiosInstance.post('/expenses', data);
+    return response.data;
+  },
+  cancelExpense: async (id, cancel_reason) => {
+    const response = await axiosInstance.patch(`/expenses/${id}/cancel`, { cancel_reason });
+    return response.data;
+  },
+  getSummary: async (params = {}) => {
+    const response = await axiosInstance.get('/expenses/summary', { params });
+    return response.data;
+  },
 };
 
 export const libraryAPI = {
@@ -1007,6 +1060,10 @@ export const libraryAPI = {
 
   /* Books */
   listBooks: async (params = {}) => {
+    const response = await axiosInstance.get('/library/books', { params });
+    return response.data;
+  },
+  getBooks: async (params = {}) => {
     const response = await axiosInstance.get('/library/books', { params });
     return response.data;
   },
@@ -1047,6 +1104,10 @@ export const libraryAPI = {
 
   /* History */
   listIssues: async (params = {}) => {
+    const response = await axiosInstance.get('/library/issues', { params });
+    return response.data;
+  },
+  getIssuedBooks: async (params = {}) => {
     const response = await axiosInstance.get('/library/issues', { params });
     return response.data;
   },

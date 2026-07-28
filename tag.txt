@@ -1,11 +1,9 @@
+Ater Pushes code to main
 
 
-git add .
-git commit -m "Finalized driver feature"
-git push origin main            # Pushes code to main
-git tag v1.1                     # Create new version tag
+git tag v1.1                    # Create new version tag everytime
 git push origin v1.1            # Triggers Android APK Build
 
 
 
-When you want a new APK, simply go to GitHub → Actions → Build Android APK → Click Run workflow.
+ GitHub → Actions → Build Android APK → Click Run workflow.

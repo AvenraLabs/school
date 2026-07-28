@@ -2,155 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { timetableAPI, classesAPI, teacherAssignmentsAPI, subjectsAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
-import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { Select, Input } from '../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { EmptyState } from '../../components/common/EmptyState';
+import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck, AlertTriangle, Check, Printer, Copy } from 'lucide-react';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-
-const DAY_COLORS = {
-  monday:    { bg: '#eef2ff', border: '#c7d2fe', accent: '#4f46e5', text: '#3730a3' },
-  tuesday:   { bg: '#fdf4ff', border: '#e9d5ff', accent: '#9333ea', text: '#7e22ce' },
-  wednesday: { bg: '#f0fdf4', border: '#bbf7d0', accent: '#16a34a', text: '#15803d' },
-  thursday:  { bg: '#fff7ed', border: '#fed7aa', accent: '#ea580c', text: '#c2410c' },
-  friday:    { bg: '#eff6ff', border: '#bfdbfe', accent: '#2563eb', text: '#1d4ed8' },
-  saturday:  { bg: '#fdf2f8', border: '#fbcfe8', accent: '#db2777', text: '#be185d' },
-};
-
-/* ── shared inline styles ── */
-const st = {
-  pageHeader: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '18px' },
-  pageTitle:  { fontSize: '28px', fontWeight: 850, letterSpacing: '-0.03em', color: '#0f172a', margin: 0 },
-  pageSubtitle: { fontSize: '14px', color: '#64748b', marginTop: '6px', lineHeight: 1.55 },
-
-  selectRow: { display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' },
-  selectWrap: { display: 'flex', flexDirection: 'column', gap: '4px' },
-  selectLabel: { fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  select: {
-    height: '42px', padding: '0 36px 0 14px', fontSize: '14px', fontWeight: 500,
-    color: '#0f172a', border: '1px solid #dbe3ef', borderRadius: '12px',
-    background: '#fff', outline: 'none', cursor: 'pointer', minWidth: '180px',
-    appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', backgroundSize: '20px',
-  },
-  selectFocus: { borderColor: '#6366f1', boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.12)' },
-
-  emptyCard: {
-    background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0',
-    padding: '60px 24px', textAlign: 'center',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-  },
-
-  /* Week grid */
-  weekGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' },
-
-  dayCard: (day, hasEntries) => ({
-    borderRadius: '16px', border: `1px solid ${DAY_COLORS[day].border}`,
-    background: '#fff', cursor: 'pointer', overflow: 'hidden',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-    transition: 'box-shadow 0.15s, transform 0.15s',
-  }),
-  dayCardHeader: (day) => ({
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '10px 14px', background: DAY_COLORS[day].bg,
-    borderBottom: `1px solid ${DAY_COLORS[day].border}`,
-  }),
-  dayName: (day) => ({
-    fontSize: '13px', fontWeight: 700, color: DAY_COLORS[day].text,
-    textTransform: 'capitalize',
-  }),
-  periodCount: (day) => ({
-    fontSize: '11px', fontWeight: 600, color: DAY_COLORS[day].accent,
-    background: '#fff', border: `1px solid ${DAY_COLORS[day].border}`,
-    padding: '2px 8px', borderRadius: '20px',
-  }),
-  dayBody: { padding: '12px 14px', minHeight: '80px' },
-  emptyDay: { fontSize: '12px', color: '#94a3b8', textAlign: 'center', padding: '16px 0' },
-
-  periodPill: (isBreak, day) => ({
-    display: 'flex', alignItems: 'center', gap: '8px',
-    padding: '6px 10px', borderRadius: '8px', marginBottom: '6px',
-    background: isBreak ? '#fffbeb' : DAY_COLORS[day].bg,
-    border: `1px solid ${isBreak ? '#fde68a' : DAY_COLORS[day].border}`,
-  }),
-  periodTime: (isBreak, day) => ({
-    fontSize: '11px', fontWeight: 700, fontFamily: 'monospace',
-    color: isBreak ? '#92400e' : DAY_COLORS[day].accent,
-    flexShrink: 0,
-  }),
-  periodSubject: (isBreak) => ({
-    fontSize: '12px', fontWeight: 600, color: isBreak ? '#92400e' : '#1e293b',
-    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-  }),
-
-  /* Day editor */
-  editorCard: {
-    background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden',
-  },
-  editorHeader: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '16px 20px', borderBottom: '1px solid #f1f5f9', background: '#fafafa',
-  },
-  editorTitle: { display: 'flex', alignItems: 'center', gap: '10px' },
-  editorTitleText: { fontSize: '16px', fontWeight: 700, color: '#0f172a', textTransform: 'capitalize' },
-  editorActions: { display: 'flex', gap: '8px' },
-
-  btnSecondary: {
-    display: 'inline-flex', alignItems: 'center', gap: '6px',
-    height: '38px', padding: '0 16px', borderRadius: '10px',
-    fontSize: '13px', fontWeight: 600,
-    background: '#fff', color: '#475569', border: '1px solid #e2e8f0',
-    cursor: 'pointer',
-  },
-  btnPrimary: {
-    display: 'inline-flex', alignItems: 'center', gap: '6px',
-    height: '38px', padding: '0 18px', borderRadius: '10px',
-    fontSize: '13px', fontWeight: 600,
-    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none',
-    cursor: 'pointer', boxShadow: '0 10px 24px rgba(79, 70, 229, 0.22)',
-  },
-  btnAddPeriod: {
-    display: 'inline-flex', alignItems: 'center', gap: '6px',
-    height: '36px', padding: '0 14px', borderRadius: '9px',
-    fontSize: '12px', fontWeight: 600,
-    background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe',
-    cursor: 'pointer', marginTop: '12px',
-  },
-  btnIconDanger: {
-    width: '32px', height: '32px', borderRadius: '8px', border: 'none',
-    background: 'transparent', cursor: 'pointer', color: '#f43f5e',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
-  },
-
-  entryRow: {
-    display: 'flex', alignItems: 'center', gap: '10px',
-    padding: '10px 14px', borderRadius: '12px', marginBottom: '8px',
-    background: '#f8fafc', border: '1px solid #f1f5f9',
-  },
-  inputField: {
-    height: '38px', padding: '0 12px', fontSize: '13px',
-    border: '1px solid #e2e8f0', borderRadius: '9px',
-    background: '#fff', color: '#0f172a', outline: 'none',
-    fontFamily: 'inherit',
-  },
-  selectField: {
-    height: '38px', padding: '0 32px 0 12px', fontSize: '13px',
-    border: '1px solid #e2e8f0', borderRadius: '9px',
-    background: '#fff', color: '#0f172a', outline: 'none',
-    fontFamily: 'inherit', flex: 1, cursor: 'pointer',
-    appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', backgroundSize: '16px',
-  },
-  timeSep: { fontSize: '14px', color: '#94a3b8', fontWeight: 700, flexShrink: 0 },
-  breakLabel: {
-    display: 'flex', alignItems: 'center', gap: '5px',
-    fontSize: '12px', fontWeight: 600, color: '#64748b',
-    cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
-  },
-  sectionBody: { padding: '16px 20px' },
-};
 
 export function Timetables() {
   const navigate = useNavigate();
@@ -185,7 +43,6 @@ export function Timetables() {
     } catch { /* ignore */ }
   };
 
-
   const loadSubjects = async () => {
     try {
       const res = await subjectsAPI.list();
@@ -216,26 +73,23 @@ export function Timetables() {
 
   const openDayEditor = (day) => {
     const dayEntries = timetable[day] || [];
-    setEntries(dayEntries.length > 0
-      ? dayEntries.map((e) => ({
-          start_time: e.start_time || '',
-          end_time: e.end_time || '',
-          teacher_assignment_id: e.teacher_assignment_id || undefined,
-          subject_id: e.subject_id || undefined,
-          title: e.title || '',
-          is_break: e.is_break || false,
-          // Hydrate teacher name from the existing entry for the chip display
-          _assignedTeacherName: e.teacher
-            ? (e.teacher.name || e.teacher.user?.name)
-            : null,
-          _hasAssignment: !!e.teacher_assignment_id,
-        }))
-      : [{ start_time: '09:00', end_time: '09:45', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false }]
+    setEntries(
+      dayEntries.length > 0
+        ? dayEntries.map((e) => ({
+            start_time: e.start_time || '',
+            end_time: e.end_time || '',
+            teacher_assignment_id: e.teacher_assignment_id || undefined,
+            subject_id: e.subject_id || undefined,
+            title: e.title || '',
+            is_break: e.is_break || false,
+            _assignedTeacherName: e.teacher ? (e.teacher.name || e.teacher.user?.name) : null,
+            _hasAssignment: !!e.teacher_assignment_id,
+          }))
+        : [{ start_time: '09:00', end_time: '09:45', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false }]
     );
     setEditDay(day);
   };
 
-  // Build subject → assignment map from loaded section assignments
   const subjectAssignmentMap = {};
   for (const a of assignments) {
     if (a.subject_id && !a.is_class_teacher) {
@@ -243,8 +97,14 @@ export function Timetables() {
     }
   }
 
-  const addEntry = () => setEntries([...entries, { start_time: '', end_time: '', teacher_assignment_id: '', subject_id: '', title: '', is_break: false }]);
+  const addEntry = () =>
+    setEntries([
+      ...entries,
+      { start_time: '', end_time: '', teacher_assignment_id: '', subject_id: '', title: '', is_break: false },
+    ]);
+
   const removeEntry = (idx) => setEntries(entries.filter((_, i) => i !== idx));
+
   const updateEntry = (idx, field, value) => {
     const updated = [...entries];
     if (field === 'is_break') {
@@ -252,7 +112,6 @@ export function Timetables() {
     } else if (field === 'subject_id') {
       const subId = value === '' ? undefined : Number(value);
       updated[idx].subject_id = subId;
-      // Auto-resolve teacher assignment for this subject
       const matched = subId ? subjectAssignmentMap[subId] : null;
       updated[idx].teacher_assignment_id = matched ? matched.id : undefined;
       updated[idx]._assignedTeacherName = matched
@@ -266,270 +125,317 @@ export function Timetables() {
   };
 
   const handleSaveDay = async () => {
-    // Validate: non-break entries must have an assignment resolved
-    const unresolved = entries.filter(e => !e.is_break && e.subject_id && !e.teacher_assignment_id);
+    const unresolved = entries.filter((e) => !e.is_break && e.subject_id && !e.teacher_assignment_id);
     if (unresolved.length > 0) {
       toast.error('Some subjects have no teacher assigned. Please assign teachers first.');
       return;
     }
     setSaving(true);
     try {
-      await timetableAPI.create(Number(selectedClass), Number(selectedSection), editDay, entries.map((e) => ({
-        start_time: e.start_time,
-        end_time: e.end_time,
-        teacher_assignment_id: e.teacher_assignment_id ? Number(e.teacher_assignment_id) : undefined,
-        subject_id: e.subject_id ? Number(e.subject_id) : undefined,
-        title: e.title || undefined,
-        is_break: e.is_break,
-      })));
-      toast.success(`${editDay.charAt(0).toUpperCase() + editDay.slice(1)} saved`);
+      await timetableAPI.create(
+        Number(selectedClass),
+        Number(selectedSection),
+        editDay,
+        entries.map((e) => ({
+          start_time: e.start_time,
+          end_time: e.end_time,
+          teacher_assignment_id: e.teacher_assignment_id ? Number(e.teacher_assignment_id) : undefined,
+          subject_id: e.subject_id ? Number(e.subject_id) : undefined,
+          title: e.title || undefined,
+          is_break: e.is_break,
+        }))
+      );
+      toast.success(`${editDay.charAt(0).toUpperCase() + editDay.slice(1)} timetable saved!`);
       setEditDay(null);
       loadTimetable();
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed to save');
+      toast.error(e.response?.data?.message || 'Failed to save timetable');
     } finally {
       setSaving(false);
     }
   };
 
-  const selectedClassName = classes.find(c => String(c.id) === String(selectedClass))?.class_name || '';
-  const selectedSectionName = selectedSections.find(s => String(s.id) === String(selectedSection))?.name || '';
+  const handleCopyDayToWeek = async (sourceDay) => {
+    const sourceEntries = timetable[sourceDay];
+    if (!sourceEntries || sourceEntries.length === 0) {
+      toast.error(`No schedule created for ${sourceDay} to copy.`);
+      return;
+    }
+    const otherDays = DAYS.filter((d) => d !== sourceDay);
+    setSaving(true);
+    try {
+      for (const targetDay of otherDays) {
+        await timetableAPI.create(
+          Number(selectedClass),
+          Number(selectedSection),
+          targetDay,
+          sourceEntries.map((e) => ({
+            start_time: e.start_time,
+            end_time: e.end_time,
+            teacher_assignment_id: e.teacher_assignment_id ? Number(e.teacher_assignment_id) : undefined,
+            subject_id: e.subject_id ? Number(e.subject_id) : undefined,
+            title: e.title || undefined,
+            is_break: e.is_break,
+          }))
+        );
+      }
+      toast.success(`Copied ${sourceDay}'s schedule to all other days!`);
+      loadTimetable();
+    } catch {
+      toast.error('Failed to copy schedule across week');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedClassName = classes.find((c) => String(c.id) === String(selectedClass))?.class_name || '';
+  const selectedSectionName = selectedSections.find((s) => String(s.id) === String(selectedSection))?.name || '';
 
   return (
-    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
-      {/* Header */}
-      <div style={st.pageHeader}>
-        <div>
-          <h1 style={st.pageTitle}>Timetables</h1>
-          <p style={st.pageSubtitle}>Create and manage section timetables</p>
-        </div>
-        <button
-          style={st.btnPrimary}
-          onClick={() => navigate('/admin/timetables/substitutions')}
-        >
-          <UserCheck style={{ width: '16px', height: '16px' }} />
-          Substitute Teachers
-        </button>
-      </div>
-
-      {/* Class + Section selectors */}
-      <div style={st.selectRow}>
-        <div style={st.selectWrap}>
-          <span style={st.selectLabel}>Class</span>
-          <select
-            style={st.select}
-            value={selectedClass}
-            onChange={e => { setSelectedClass(e.target.value); setSelectedSection(''); setTimetable({}); setEditDay(null); }}
-          >
-            <option value="">Select class…</option>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.class_name}</option>)}
-          </select>
-        </div>
-        <div style={st.selectWrap}>
-          <span style={st.selectLabel}>Section</span>
-          <select
-            style={{ ...st.select, opacity: !selectedClass ? 0.5 : 1, cursor: !selectedClass ? 'not-allowed' : 'pointer' }}
-            value={selectedSection}
-            onChange={e => { setSelectedSection(e.target.value); setEditDay(null); }}
-            disabled={!selectedClass}
-          >
-            <option value="">Select section…</option>
-            {selectedSections.map(s => <option key={s.id} value={s.id}>Section {s.name}</option>)}
-          </select>
-        </div>
-
-        {/* Breadcrumb pill when both selected */}
-        {selectedClass && selectedSection && (
-          <div style={{ alignSelf: 'flex-end', display: 'flex', alignItems: 'center', gap: '6px', height: '42px', padding: '0 14px', background: '#eef2ff', borderRadius: '10px', border: '1px solid #c7d2fe' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#4f46e5' }}>{selectedClassName}</span>
-            <span style={{ fontSize: '13px', color: '#a5b4fc' }}>·</span>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#6366f1' }}>Section {selectedSectionName}</span>
+    <div className="space-y-4 text-xs">
+      {/* Compact Action Bar */}
+      <Card className="p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#14213D]">Class Timetables & Weekly Schedules</span>
+            {selectedClass && selectedSection && (
+              <>
+                <span className="text-[#8C97AB]">|</span>
+                <span className="text-[#2F6F5E] font-semibold">Class {selectedClassName} - Sec {selectedSectionName}</span>
+              </>
+            )}
           </div>
-        )}
-      </div>
+          <div className="flex items-center gap-2">
+            {selectedClass && selectedSection && (
+              <Button variant="outline" size="sm" icon={Printer} onClick={() => window.print()}>
+                Print Schedule
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              icon={UserCheck}
+              onClick={() => navigate('/admin/timetables/substitutions')}
+            >
+              Substitute Teachers
+            </Button>
+          </div>
+        </div>
+      </Card>
 
-      {/* Body */}
+      {/* Class & Section Selectors */}
+      <Card className="p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider mb-1 font-mono">
+              Class *
+            </label>
+            <Select
+              value={selectedClass}
+              onChange={(e) => {
+                setSelectedClass(e.target.value);
+                setSelectedSection('');
+                setTimetable({});
+                setEditDay(null);
+              }}
+            >
+              <option value="">Select Class...</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>Class {c.class_name}</option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider mb-1 font-mono">
+              Section *
+            </label>
+            <Select
+              value={selectedSection}
+              onChange={(e) => { setSelectedSection(e.target.value); setEditDay(null); }}
+              disabled={!selectedClass}
+            >
+              <option value="">Select Section...</option>
+              {selectedSections.map((s) => (
+                <option key={s.id} value={s.id}>Section {s.name}</option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      </Card>
+
+      {/* Weekly Schedule Display / Day Editor */}
       {!selectedClass || !selectedSection ? (
-        <div style={st.emptyCard}>
-          <Calendar style={{ width: '44px', height: '44px', color: '#cbd5e1', margin: '0 auto 12px' }} />
-          <p style={{ fontSize: '15px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Select a class and section</p>
-          <p style={{ fontSize: '13px', color: '#94a3b8' }}>Choose above to view or edit the timetable</p>
-        </div>
-      ) : loading ? (
-        <div style={{ ...st.emptyCard, padding: '40px' }}>
-          <p style={{ color: '#94a3b8', fontSize: '14px' }}>Loading timetable…</p>
-        </div>
+        <Card className="p-12">
+          <EmptyState
+            icon={Calendar}
+            title="Select Class & Section"
+            description="Choose a class and section from the dropdowns above to view or build the weekly master timetable."
+          />
+        </Card>
       ) : editDay ? (
-        /* ── Day Editor ── */
-        <div style={st.editorCard}>
-          <div style={st.editorHeader}>
-            <div style={st.editorTitle}>
-              <button
-                style={{ ...st.btnSecondary, width: '34px', height: '34px', padding: 0, borderRadius: '8px' }}
-                onClick={() => setEditDay(null)}
-                title="Back to week view"
-              >
-                <ChevronLeft style={{ width: '16px', height: '16px' }} />
-              </button>
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: DAY_COLORS[editDay].accent, flexShrink: 0 }} />
-              <span style={{ ...st.editorTitleText, color: DAY_COLORS[editDay].text }}>{editDay} Schedule</span>
+        <Card>
+          <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" icon={ChevronLeft} onClick={() => setEditDay(null)}>
+                Back
+              </Button>
+              <CardTitle className="text-xs font-bold uppercase text-[#14213D]">
+                Editing {editDay.toUpperCase()} Schedule — Class {selectedClassName} ({selectedSectionName})
+              </CardTitle>
             </div>
-            <div style={st.editorActions}>
-              <button style={st.btnSecondary} onClick={() => setEditDay(null)}>Cancel</button>
-              <button style={st.btnPrimary} onClick={handleSaveDay} disabled={saving}>
-                <Save style={{ width: '14px', height: '14px' }} />
-                {saving ? 'Saving…' : 'Save'}
-              </button>
-            </div>
-          </div>
-
-          <div style={st.sectionBody}>
+            <Button variant="primary" size="sm" icon={Save} disabled={saving} onClick={handleSaveDay}>
+              {saving ? 'Saving...' : 'Save Schedule'}
+            </Button>
+          </CardHeader>
+          <CardContent className="p-4 space-y-3">
             {entries.map((entry, idx) => (
-              <div key={idx} style={st.entryRow}>
-                {/* Time range */}
-                <input
-                  type="time"
-                  style={{ ...st.inputField, width: '112px' }}
-                  value={entry.start_time}
-                  onChange={e => updateEntry(idx, 'start_time', e.target.value)}
-                />
-                <span style={st.timeSep}>–</span>
-                <input
-                  type="time"
-                  style={{ ...st.inputField, width: '112px' }}
-                  value={entry.end_time}
-                  onChange={e => updateEntry(idx, 'end_time', e.target.value)}
-                />
-
-                {/* Subject / Break input */}
-                {entry.is_break ? (
-                  <input
-                    style={{ ...st.inputField, flex: 1 }}
-                    value={entry.title}
-                    onChange={e => updateEntry(idx, 'title', e.target.value)}
-                    placeholder="Break label (e.g. Lunch)"
-                  />
-                ) : (
-                  <>
-                    {/* Subject selector */}
-                    <select
-                      style={{ ...st.selectField, flex: '0 0 160px', marginRight: '8px' }}
-                      value={entry.subject_id || ''}
-                      onChange={e => updateEntry(idx, 'subject_id', e.target.value)}
-                    >
-                      <option value="">Select subject…</option>
-                      {subjects.map(sub => (
-                        <option key={sub.id} value={sub.id}>
-                          {sub.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    {/* Auto-filled teacher chip */}
-                    {entry.subject_id ? (
-                      entry.teacher_assignment_id ? (
-                        <div style={{
-                          display: 'flex', alignItems: 'center', gap: '6px',
-                          height: '38px', padding: '0 12px', borderRadius: '9px',
-                          background: '#f0fdf4', border: '1px solid #bbf7d0',
-                          fontSize: '12px', fontWeight: 600, color: '#15803d',
-                          flex: 1, minWidth: 0, overflow: 'hidden',
-                        }}>
-                          <span style={{ fontSize: '14px' }}>✓</span>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {entry._assignedTeacherName
-                              || (() => {
-                                const a = subjectAssignmentMap[entry.subject_id];
-                                return a
-                                  ? (a.teacher?.user?.name || a.teacher?.User?.name || a.teacher?.employee_id || `Teacher #${a.teacher_id}`)
-                                  : 'Assigned';
-                              })()}
-                          </span>
-                        </div>
-                      ) : (
-                        <div style={{
-                          display: 'flex', alignItems: 'center', gap: '6px',
-                          height: '38px', padding: '0 12px', borderRadius: '9px',
-                          background: '#fffbeb', border: '1px solid #fde68a',
-                          fontSize: '12px', fontWeight: 600, color: '#92400e',
-                          flex: 1, minWidth: 0,
-                        }}>
-                          <span style={{ fontSize: '14px' }}>⚠</span>
-                          No teacher assigned
-                        </div>
-                      )
-                    ) : (
-                      <div style={{
-                        height: '38px', padding: '0 12px', borderRadius: '9px',
-                        background: '#f8fafc', border: '1px dashed #e2e8f0',
-                        fontSize: '12px', color: '#94a3b8', display: 'flex',
-                        alignItems: 'center', flex: 1,
-                      }}>
-                        Teacher auto-fills on subject select
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Break toggle */}
-                <label style={st.breakLabel}>
-                  <input
-                    type="checkbox"
-                    checked={entry.is_break}
-                    onChange={e => updateEntry(idx, 'is_break', e.target.checked)}
-                    style={{ accentColor: '#f59e0b', width: '14px', height: '14px' }}
-                  />
-                  Break
-                </label>
-
-                <button style={st.btnIconDanger} onClick={() => removeEntry(idx)} title="Remove">
-                  <Trash2 style={{ width: '14px', height: '14px' }} />
-                </button>
-              </div>
-            ))}
-
-            <button style={st.btnAddPeriod} onClick={addEntry}>
-              <Plus style={{ width: '14px', height: '14px' }} /> Add Period
-            </button>
-          </div>
-        </div>
-      ) : (
-        /* ── Week View ── */
-        <div style={st.weekGrid}>
-          {DAYS.map(day => {
-            const dayEntries = timetable[day] || [];
-            const col = DAY_COLORS[day];
-            return (
-              <div
-                key={day}
-                style={st.dayCard(day)}
-                onClick={() => openDayEditor(day)}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,0,0,0.10)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-              >
-                <div style={st.dayCardHeader(day)}>
-                  <span style={st.dayName(day)}>{day}</span>
-                  <span style={st.periodCount(day)}>
-                    {dayEntries.length} {dayEntries.length === 1 ? 'period' : 'periods'}
-                  </span>
+              <div key={idx} className="p-3 border border-[#E4E1D8] rounded-[8px] bg-white space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-[#52607D]">Period #{idx + 1}</span>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={entry.is_break}
+                        onChange={(e) => updateEntry(idx, 'is_break', e.target.checked)}
+                        className="rounded accent-[#2F6F5E]"
+                      />
+                      <span>Is Break / Recess</span>
+                    </label>
+                    <Button variant="ghost" size="icon" onClick={() => removeEntry(idx)} className="text-[#B0403A]">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <div style={st.dayBody}>
-                  {dayEntries.length === 0 ? (
-                    <p style={st.emptyDay}>No entries — click to add</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-[#8C97AB] mb-1">Start Time</label>
+                    <Input
+                      type="time"
+                      value={entry.start_time}
+                      onChange={(e) => updateEntry(idx, 'start_time', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[#8C97AB] mb-1">End Time</label>
+                    <Input
+                      type="time"
+                      value={entry.end_time}
+                      onChange={(e) => updateEntry(idx, 'end_time', e.target.value)}
+                    />
+                  </div>
+
+                  {entry.is_break ? (
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] text-[#8C97AB] mb-1">Break Title</label>
+                      <Input
+                        placeholder="e.g. Lunch Break, Morning Recess..."
+                        value={entry.title}
+                        onChange={(e) => updateEntry(idx, 'title', e.target.value)}
+                      />
+                    </div>
                   ) : (
-                    dayEntries.map((e, i) => (
-                      <div key={i} style={st.periodPill(e.is_break, day)}>
-                        <span style={st.periodTime(e.is_break, day)}>
-                          {e.start_time}–{e.end_time}
-                        </span>
-                        <span style={st.periodSubject(e.is_break)}>
-                          {e.is_break ? (e.title || 'Break') : (e.subject?.name || e.title || 'Period')}
-                        </span>
-                      </div>
-                    ))
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] text-[#8C97AB] mb-1">Subject</label>
+                      <Select
+                        value={entry.subject_id || ''}
+                        onChange={(e) => updateEntry(idx, 'subject_id', e.target.value)}
+                      >
+                        <option value="">Select Subject...</option>
+                        {subjects.map((sub) => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.name}
+                          </option>
+                        ))}
+                      </Select>
+                      {entry.subject_id && (
+                        <div className="mt-1 text-[11px]">
+                          {entry._hasAssignment ? (
+                            <span className="text-[#2F6F5E] font-medium flex items-center gap-1">
+                              <Check className="w-3 h-3" /> Teacher: {entry._assignedTeacherName}
+                            </span>
+                          ) : (
+                            <span className="text-[#B0403A] font-semibold flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" /> No teacher mapped to this subject!
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
+            ))}
+
+            <Button variant="outline" size="sm" icon={Plus} onClick={addEntry} className="w-full">
+              Add Period Slot
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {DAYS.map((day) => {
+            const dayEntries = timetable[day] || [];
+            return (
+              <Card key={day} className="flex flex-col justify-between">
+                <CardHeader className="py-2.5 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8] flex items-center justify-between">
+                  <CardTitle className="text-xs font-bold uppercase text-[#14213D]">
+                    {day} ({dayEntries.length} Periods)
+                  </CardTitle>
+                  <div className="flex items-center gap-1">
+                    {dayEntries.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title={`Copy ${day}'s schedule to all other days`}
+                        onClick={() => handleCopyDayToWeek(day)}
+                        disabled={saving}
+                      >
+                        <Copy className="w-3.5 h-3.5 text-[#2F6F5E]" />
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => openDayEditor(day)}>
+                      {dayEntries.length > 0 ? 'Edit' : 'Build'}
+                    </Button>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="p-3 space-y-2 flex-1">
+                  {loading ? (
+                    <div className="p-4 text-center text-[#8C97AB]">Loading...</div>
+                  ) : dayEntries.length === 0 ? (
+                    <div className="p-4 text-center text-[#8C97AB] italic">No periods scheduled</div>
+                  ) : (
+                    dayEntries.map((period, pIdx) => (
+                      <div
+                        key={pIdx}
+                        className={`p-2 rounded-[6px] border text-xs ${
+                          period.is_break
+                            ? 'bg-[#FDF8EC] border-[#F8D7D5] text-[#B8860B]'
+                            : 'bg-white border-[#E4E1D8]'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center font-mono text-[10px] text-[#52607D]">
+                          <span>
+                            {period.start_time} - {period.end_time}
+                          </span>
+                          {period.is_break && <span className="font-semibold uppercase">Recess</span>}
+                        </div>
+                        {!period.is_break && (
+                          <div className="mt-1">
+                            <div className="font-semibold text-[#14213D]">{period.subject_name || period.subject?.name || 'Subject'}</div>
+                            <div className="text-[10px] text-[#2F6F5E]">
+                              {period.teacher_name || period.teacher?.name || 'Assigned Teacher'}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
             );
           })}
         </div>

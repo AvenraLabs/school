@@ -60,21 +60,24 @@ export const createStudentService = async ({
       transaction: t,
     });
 
-    const serial = baseSerial + 1;
-    const username = `STU-${school_id}-${section_id}-${String(serial).padStart(3, "0")}`;
-    const password = `${username}@123`;
+    let serial = baseSerial + 1;
+    let username = "";
+    let isUnique = false;
 
-    /**
-     * 3️⃣ Ensure username uniqueness
-     */
-    const exists = await User.findOne({
-      where: { school_id, username },
-      transaction: t,
-    });
-
-    if (exists) {
-      throw new AppError("Generated username already exists", 409);
+    while (!isUnique) {
+      username = `S${String(serial).padStart(5, "0")}`;
+      const exists = await User.findOne({
+        where: { school_id, username },
+        transaction: t,
+      });
+      if (!exists) {
+        isUnique = true;
+      } else {
+        serial++;
+      }
     }
+
+    const password = `${username}@123`;
 
     /**
      * 4️⃣ Create user

@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { auditLogsAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
-import { ScrollText } from 'lucide-react';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { EmptyState } from '../../components/common/EmptyState';
+import { Button } from '../../components/ui/Button';
+import { Select, Input } from '../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { ScrollText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatDate } from '../../utils/date';
 
 export function AuditLogs() {
   const [logs, setLogs] = useState([]);
@@ -36,77 +42,94 @@ export function AuditLogs() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Audit Logs</h1>
-          <p className="page-subtitle">System activity history ({total} entries)</p>
+    <div className="space-y-6">
+      {/* Compact Action Bar */}
+      <Card className="p-3">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#14213D]">Security Audit Trail & Activity Logs</span>
+            <span className="text-[#8C97AB]">|</span>
+            <span className="text-[#52607D]">Total Log Entries: {total}</span>
+          </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Filters */}
-      <div className="filters-row">
-        <select className="select-field" style={{ flex: '1 1 180px' }} value={entityType} onChange={(e) => { setEntityType(e.target.value); setPage(0); }}>
+      {/* Filters Bar */}
+      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-3 shadow-xs flex flex-wrap items-center gap-3">
+        <Select
+          className="w-48 text-xs"
+          value={entityType}
+          onChange={(e) => { setEntityType(e.target.value); setPage(0); }}
+        >
           <option value="">All Entity Types</option>
           <option value="student">Student</option>
           <option value="teacher">Teacher</option>
-        </select>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500">From:</span>
-          <input type="date" className="input-field" style={{ width: '160px' }} value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(0); }} />
+          <option value="fee">Fee Record</option>
+        </Select>
+
+        <div className="flex items-center gap-2 text-xs text-[#52607D]">
+          <span>From:</span>
+          <Input type="date" className="w-36 text-xs" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(0); }} />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500">To:</span>
-          <input type="date" className="input-field" style={{ width: '160px' }} value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(0); }} />
+
+        <div className="flex items-center gap-2 text-xs text-[#52607D]">
+          <span>To:</span>
+          <Input type="date" className="w-36 text-xs" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(0); }} />
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-slate-400">Loading...</div>
-        ) : logs.length === 0 ? (
-          <div className="empty-state">
-            <ScrollText className="empty-state-icon" />
-            <p className="empty-state-title">No audit logs found</p>
-            <p className="empty-state-desc">Try adjusting your filters</p>
-          </div>
-        ) : (
-          <>
-            <div className="table-responsive">
-            <table className="data-table">
-              <thead>
-                <tr><th>Timestamp</th><th>Action</th><th>Entity Type</th><th>Entity ID</th><th>User</th><th>Details</th></tr>
-              </thead>
-              <tbody>
-                {logs.map((log, i) => (
-                  <tr key={i}>
-                    <td className="text-xs text-slate-500 whitespace-nowrap">
+      {/* Logs Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>System Activity Ledger</CardTitle>
+        </CardHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
+              <tr>
+                <th className="px-4 py-3">Timestamp</th>
+                <th className="px-4 py-3">Action Triggered</th>
+                <th className="px-4 py-3">Entity Scope</th>
+                <th className="px-4 py-3">Entity ID</th>
+                <th className="px-4 py-3">User Principal</th>
+                <th className="px-4 py-3">Payload Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
+              {loading ? (
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-[#8C97AB]">Loading activity ledger...</td></tr>
+              ) : logs.length === 0 ? (
+                <tr><td colSpan={6} className="px-4 py-12 text-center"><EmptyState icon={ScrollText} title="No audit entries" description="No system activity matches your filter criteria." /></td></tr>
+              ) : (
+                logs.map((log, i) => (
+                  <tr key={i} className="hover:bg-[#FAFAF8]">
+                    <td className="px-4 py-2.5 font-mono text-[11px] text-[#52607D] whitespace-nowrap">
                       {log.created_at ? new Date(log.created_at).toLocaleString() : '—'}
                     </td>
-                    <td className="capitalize font-medium text-sm">{log.action || '—'}</td>
-                    <td className="capitalize">{log.entity_type || '—'}</td>
-                    <td className="font-mono text-xs">{log.entity_id || '—'}</td>
-                    <td className="text-sm">{log.user?.name || log.user?.username || log.user_id || '—'}</td>
-                    <td className="text-xs text-slate-500 max-w-[200px] truncate">
+                    <td className="px-4 py-2.5 font-semibold capitalize text-[#14213D]">{log.action || '—'}</td>
+                    <td className="px-4 py-2.5 capitalize">{log.entity_type || '—'}</td>
+                    <td className="px-4 py-2.5 font-mono text-[#52607D]">{log.entity_id || '—'}</td>
+                    <td className="px-4 py-2.5 font-medium">{log.user?.name || log.user?.username || log.user_id || '—'}</td>
+                    <td className="px-4 py-2.5 font-mono text-[10px] text-[#8C97AB] max-w-xs truncate">
                       {log.details ? (typeof log.details === 'string' ? log.details : JSON.stringify(log.details)) : '—'}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="px-4 py-3 bg-[#FAFAF8] border-t border-[#E4E1D8] flex items-center justify-between text-xs text-[#52607D]">
+            <span>Page <strong className="text-[#14213D] font-mono">{page + 1}</strong> of <strong className="text-[#14213D] font-mono">{totalPages}</strong></span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" icon={ChevronLeft} onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>Previous</Button>
+              <Button variant="outline" size="sm" iconRight={ChevronRight} onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}>Next</Button>
             </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between p-4 border-t border-slate-100">
-                <span className="text-sm text-slate-500">Page {page + 1} of {totalPages}</span>
-                <div className="flex gap-2">
-                  <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} className="btn-sm btn-secondary">Previous</button>
-                  <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1} className="btn-sm btn-secondary">Next</button>
-                </div>
-              </div>
-            )}
-          </>
+          </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

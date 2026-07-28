@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { subjectsAPI } from '../../api';
-import './Academic.css';
+import { useToast } from '../../context/ToastContext';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
+import { EmptyState } from '../../components/common/EmptyState';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
-import { useToast } from '../../context/ToastContext';
-import { Plus, Edit2, Trash2, BookOpen } from 'lucide-react';
+import { BookOpen, Plus, Edit2, Trash2 } from 'lucide-react';
 
 export function SubjectsManager() {
   const [subjects, setSubjects] = useState([]);
@@ -16,47 +19,51 @@ export function SubjectsManager() {
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
-  useEffect(() => { loadSubjects(); }, []);
+  useEffect(() => {
+    loadSubjects();
+  }, []);
 
   const loadSubjects = async () => {
     try {
+      setLoading(true);
       const res = await subjectsAPI.list();
       setSubjects(res.items || []);
-    } catch (e) {
+    } catch {
       toast.error('Failed to load subjects');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAdd = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
+    if (!name.trim() || saving) return;
     setSaving(true);
     try {
-      const formattedName = name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
-      await subjectsAPI.create(formattedName);
+      await subjectsAPI.create(name.trim());
       toast.success('Subject created');
       setShowAdd(false);
       setName('');
       loadSubjects();
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed');
+      toast.error(e.response?.data?.message || 'Failed to create subject');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleEdit = async (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
+    if (!name.trim() || saving) return;
     setSaving(true);
     try {
-      const formattedName = name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
-      await subjectsAPI.update(showEdit.id, formattedName);
+      await subjectsAPI.update(showEdit.id, name.trim());
       toast.success('Subject updated');
       setShowEdit(null);
+      setName('');
       loadSubjects();
     } catch (e) {
-      toast.error('Failed to update');
+      toast.error('Failed to update subject');
     } finally {
       setSaving(false);
     }
@@ -69,92 +76,146 @@ export function SubjectsManager() {
       setDeleteTarget(null);
       loadSubjects();
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed to delete');
+      toast.error(e.response?.data?.message || 'Failed to delete subject');
     }
   };
 
   return (
-    <div className="academic-page-container">
-      <div className="academic-page-header">
-        <div>
-          <h1 className="academic-title">Subjects</h1>
-          <p className="academic-subtitle">Manage school subjects</p>
-        </div>
-        <button onClick={() => { setShowAdd(true); setName(''); }} className="btn-primary">
-          <Plus className="w-4 h-4" /> Add Subject
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="academic-empty">
-          <p className="academic-empty-desc">Loading subjects...</p>
-        </div>
-      ) : subjects.length === 0 ? (
-        <div className="academic-empty">
-          <BookOpen className="academic-empty-icon" />
-          <h2 className="academic-empty-title">No subjects yet</h2>
-          <p className="academic-empty-desc">Create subjects to assign to your classes.</p>
-        </div>
-      ) : (
-        <div className="subjects-grid">
-          {subjects.map((s) => (
-            <div key={s.id} className="academic-card subject-card">
-              <div>
-                <div className="subject-icon-wrap">
-                  <BookOpen className="w-6 h-6" />
-                </div>
-                <h3 className="subject-name">{s.name}</h3>
-                <p className="subject-id">ID: {s.id}</p>
-              </div>
-              
-              <div className="subject-actions">
-                <button
-                  className="btn-card-action"
-                  title="Edit Subject"
-                  onClick={() => { setShowEdit(s); setName(s.name); }}
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  className="btn-card-action danger"
-                  title="Delete Subject"
-                  onClick={() => setDeleteTarget(s)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Add Subject">
-        <form onSubmit={handleAdd} className="form-container">
-          <div>
-            <label className="label">Subject Name</label>
-            <input className="input-field" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Mathematics" autoFocus />
+    <div className="space-y-4 text-xs">
+      {/* Action Bar with single Add Subject button */}
+      <Card className="p-3">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#14213D]">Subject Catalog & Curriculum</span>
+            <span className="text-[#8C97AB]">|</span>
+            <span className="text-[#52607D]">Total Subjects: {subjects.length}</span>
           </div>
-          <div className="modal-actions">
-            <button type="button" onClick={() => setShowAdd(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Creating...' : 'Create'}</button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Plus}
+            onClick={() => { setShowAdd(true); setName(''); }}
+          >
+            Add Subject
+          </Button>
+        </div>
+      </Card>
+
+      {/* Clean Table View */}
+      <Card>
+        <CardHeader className="py-2.5 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
+          <CardTitle className="text-xs font-bold uppercase text-[#52607D]">Curriculum Master List ({subjects.length})</CardTitle>
+        </CardHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
+              <tr>
+                <th className="px-4 py-2.5 w-20">ID</th>
+                <th className="px-4 py-2.5">Subject Name</th>
+                <th className="px-4 py-2.5 text-right w-32">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
+              {loading ? (
+                <tr><td colSpan={3} className="px-4 py-8 text-center text-[#8C97AB]">Loading subject catalog...</td></tr>
+              ) : subjects.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-4 py-12 text-center">
+                    <EmptyState
+                      icon={BookOpen}
+                      title="No subjects created yet"
+                      description="Create your first subject to start building curriculum schedules."
+                    />
+                  </td>
+                </tr>
+              ) : (
+                subjects.map((s) => (
+                  <tr key={s.id} className="hover:bg-[#FAFAF8] transition-colors">
+                    <td className="px-4 py-2.5 font-mono text-[#8C97AB]">#{s.id}</td>
+                    <td className="px-4 py-2.5 font-semibold text-[#14213D]">{s.name}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => { setShowEdit(s); setName(s.name); }}
+                          title="Edit Subject"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteTarget(s)}
+                          title="Delete Subject"
+                          className="text-[#B0403A] hover:bg-[#FDF2F1]"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Add Modal */}
+      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Create Subject">
+        <form onSubmit={handleCreate} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-semibold text-[#14213D] mb-1">Subject Name *</label>
+            <Input
+              required
+              autoFocus
+              placeholder="e.g. Physical Education, Computer Science..."
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setShowAdd(false)}>Cancel</Button>
+            <Button type="submit" variant="primary" size="sm" disabled={saving}>
+              {saving ? 'Saving...' : 'Create Subject'}
+            </Button>
           </div>
         </form>
       </Modal>
 
+      {/* Edit Modal */}
       <Modal isOpen={!!showEdit} onClose={() => setShowEdit(null)} title="Edit Subject">
-        <form onSubmit={handleEdit} className="space-y-4">
+        <form onSubmit={handleUpdate} className="space-y-4 text-xs">
           <div>
-            <label className="label">Subject Name</label>
-            <input className="input-field" required value={name} onChange={(e) => setName(e.target.value)} />
+            <label className="block font-semibold text-[#14213D] mb-1">Subject Name *</label>
+            <Input
+              required
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setShowEdit(null)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : 'Save'}</button>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setShowEdit(null)}>Cancel</Button>
+            <Button type="submit" variant="primary" size="sm" disabled={saving}>
+              {saving ? 'Saving...' : 'Update Subject'}
+            </Button>
           </div>
         </form>
       </Modal>
 
-      <ConfirmDialog isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} title="Delete Subject" message={`Delete "${deleteTarget?.name}"?`} confirmText="Delete" danger />
+      {/* Confirm Delete */}
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Subject"
+        message={`Are you sure you want to delete "${deleteTarget?.name}"?`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

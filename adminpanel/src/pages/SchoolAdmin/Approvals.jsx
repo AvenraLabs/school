@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { approvalsAPI, teachersAPI, studentsAPI } from '../../api';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { Modal } from '../../components/common/Modal';
+import { EmptyState } from '../../components/common/EmptyState';
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
 import { useToast } from '../../context/ToastContext';
-import { UserCheck, CheckCircle, XCircle } from 'lucide-react';
+import { UserCheck, CheckCircle, XCircle, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 
 const getAssetUrl = (path) => {
   if (!path) return '';
@@ -30,8 +33,6 @@ export function Approvals() {
   const [processing, setProcessing] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalType, setModalType] = useState(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [showRejectModal, setShowRejectModal] = useState(false);
   const toast = useToast();
 
   const [teachersPage, setTeachersPage] = useState(0);
@@ -51,221 +52,6 @@ export function Approvals() {
   const closeDetails = () => {
     setSelectedItem(null);
     setModalType(null);
-  };
-
-  const renderDetailsContent = () => {
-    if (!selectedItem) return null;
-    const user = selectedItem.user || selectedItem.User || {};
-
-    return (
-      <div className="flex flex-col gap-6">
-        {/* Avatar and basic info */}
-        <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
-          <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-            {user.avatar_url ? (
-              <img src={getAssetUrl(user.avatar_url)} alt={user.name} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-xl font-bold text-indigo-600">
-                {(user.name || 'P')[0].toUpperCase()}
-              </span>
-            )}
-          </div>
-          <div>
-            <h4 className="text-lg font-bold text-slate-950">{user.name || '—'}</h4>
-            <p className="text-sm text-slate-500">@{user.username || '—'}</p>
-          </div>
-        </div>
-
-        {/* Dynamic details based on type */}
-        {modalType === 'teacher' && (
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-slate-400 block mb-1">Employee ID</span>
-              <span className="font-medium text-slate-800 font-mono">{selectedItem.employee_id || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Designation</span>
-              <span className="font-medium text-slate-800">{selectedItem.designation || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Qualification</span>
-              <span className="font-medium text-slate-800">{selectedItem.qualification || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Experience</span>
-              <span className="font-medium text-slate-800">{selectedItem.experience !== null ? `${selectedItem.experience} Years` : '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Gender</span>
-              <span className="font-medium text-slate-800 capitalize">{selectedItem.gender || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Email Address</span>
-              <span className="font-medium text-slate-800">{user.email || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Phone Number</span>
-              <span className="font-medium text-slate-800">{user.phone || '—'}</span>
-            </div>
-
-          </div>
-        )}
-
-        {modalType === 'student' && (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-            <div>
-              <span className="text-slate-400 block mb-0.5">Admission Number</span>
-              <span className="font-medium text-slate-800 font-mono">{selectedItem.admission_no || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Class & Section</span>
-              <span className="font-medium text-slate-800">{selectedItem.class?.class_name || '—'} · Section {selectedItem.section?.name || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Date of Birth</span>
-              <span className="font-medium text-slate-800">{selectedItem.dob || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Gender</span>
-              <span className="font-medium text-slate-800 capitalize">{selectedItem.gender || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Blood Group</span>
-              <span className="font-medium text-slate-800 uppercase">{selectedItem.blood_group || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Father's Name</span>
-              <span className="font-medium text-slate-800">{selectedItem.father_name || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Mother's Name</span>
-              <span className="font-medium text-slate-800">{selectedItem.mother_name || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Guardian Name</span>
-              <span className="font-medium text-slate-800">{selectedItem.guardian_name || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Contact Email</span>
-              <span className="font-medium text-slate-800">{user.email || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-0.5">Contact Phone</span>
-              <span className="font-medium text-slate-800">{user.phone || '—'}</span>
-            </div>
-            <div className="col-span-2">
-              <span className="text-slate-400 block mb-0.5">Address</span>
-              <span className="font-medium text-slate-800 block whitespace-pre-line bg-slate-50 p-2.5 rounded-lg border border-slate-100">{selectedItem.address || '—'}</span>
-            </div>
-          </div>
-        )}
-
-        {modalType === 'parent' && (
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-slate-400 block mb-1">Relation Type</span>
-              <span className="font-medium text-slate-800 capitalize">{selectedItem.relation_type || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Contact Email</span>
-              <span className="font-medium text-slate-800">{user.email || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Contact Phone</span>
-              <span className="font-medium text-slate-800">{user.phone || '—'}</span>
-            </div>
-            <div className="col-span-2 border-t border-slate-100 pt-3 mt-1">
-              <h5 className="font-semibold text-slate-900 mb-2">Linked Student Profile</h5>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Student Name</span>
-              <span className="font-medium text-slate-800">{selectedItem.student?.user?.name || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Student Username</span>
-              <span className="font-medium text-slate-800 font-mono">@{selectedItem.student?.user?.username || '—'}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block mb-1">Student Class & Section</span>
-              <span className="font-medium text-slate-800">
-                {selectedItem.student?.class?.class_name || '—'} · Section {selectedItem.student?.section?.name || '—'}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {modalType === 'profile_update' && (
-          <div className="flex flex-col gap-4 text-sm" style={{ width: '100%' }}>
-            <p className="text-slate-600 font-medium mb-1">This user is already approved. Below is a list of their updated fields waiting for review:</p>
-            <div className="overflow-x-auto border border-slate-100 rounded-lg">
-              <table className="min-w-full divide-y divide-slate-150 text-left">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Field</th>
-                    <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Current Active Value</th>
-                    <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Proposed Value</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
-                  {Object.entries(selectedItem.pending_data || {}).map(([key, newVal]) => {
-                    let currentVal = '—';
-                    const activeProfile = selectedItem.user?.student || selectedItem.user?.Student || selectedItem.user?.teacher || selectedItem.user?.Teacher || {};
-                    if (key === 'name' || key === 'email' || key === 'phone' || key === 'avatar_url') {
-                      currentVal = selectedItem.user?.[key];
-                    } else {
-                      currentVal = activeProfile[key];
-                    }
-
-                    const isAvatar = key === 'avatar_url' || key === 'avatar' || key === 'photo';
-
-                    return (
-                      <tr key={key}>
-                        <td className="px-4 py-3 font-semibold text-slate-700 capitalize">{key.replace(/_/g, ' ')}</td>
-                        <td className="px-4 py-3 text-slate-500">
-                          {isAvatar ? (
-                            currentVal ? (
-                              <img
-                                src={getAssetUrl(currentVal)}
-                                alt="Current Profile"
-                                className="w-16 h-16 rounded-xl object-cover border border-slate-200 shadow-sm transition-transform hover:scale-110 cursor-pointer"
-                                onClick={() => window.open(getAssetUrl(currentVal), '_blank')}
-                                title="Click to open full picture"
-                              />
-                            ) : 'No Avatar'
-                          ) : (
-                            String(currentVal ?? '—')
-                          )}
-                        </td>
-                        <td className="px-4 py-3 font-medium text-emerald-600 bg-emerald-50/20">
-                          {isAvatar ? (
-                            newVal ? (
-                              <div className="flex items-center gap-2">
-                                <img
-                                  src={getAssetUrl(newVal)}
-                                  alt="New Proposed Profile"
-                                  className="w-16 h-16 rounded-xl object-cover border-2 border-emerald-500 shadow-sm transition-transform hover:scale-110 cursor-pointer"
-                                  onClick={() => window.open(getAssetUrl(newVal), '_blank')}
-                                  title="Click to open full picture"
-                                />
-                                <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md">
-                                  Click image to inspect
-                                </span>
-                              </div>
-                            ) : 'Remove Avatar'
-                          ) : (
-                            String(newVal ?? '—')
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-    );
   };
 
   useEffect(() => { loadPending(); }, []);
@@ -312,13 +98,13 @@ export function Approvals() {
   const handleApprove = async (type, id, action) => {
     try {
       await approvalsAPI.approveRequest(type, id, action);
-      toast.success(`${type} ${action}d`);
+      toast.success(`${type} ${action}d successfully`);
       const pg = type === 'teacher' ? teachersPage : studentsPage;
       const currentItems = type === 'teacher' ? teachers : students;
       const nextPg = (currentItems.length === 1 && pg > 0) ? pg - 1 : pg;
       await loadTab(type, nextPg);
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed');
+      toast.error(e.response?.data?.message || 'Failed to process request');
     }
   };
 
@@ -371,7 +157,6 @@ export function Approvals() {
     setSelectedTeachers((prev) => prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]);
   };
 
-
   const toggleStudent = (id) => {
     setSelectedStudents((prev) => prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]);
   };
@@ -380,7 +165,6 @@ export function Approvals() {
     setSelectedTeachers(selectedTeachers.length === teachers.length ? [] : teachers.map((t) => t.id));
   };
 
-
   const toggleAllStudents = () => {
     setSelectedStudents(selectedStudents.length === students.length ? [] : students.map((s) => s.id));
   };
@@ -388,205 +172,438 @@ export function Approvals() {
   const teachersTotalPages = Math.ceil(teachersTotal / PAGE_SIZE);
   const studentsTotalPages = Math.ceil(studentsTotal / PAGE_SIZE);
 
+  const renderDetailsContent = () => {
+    if (!selectedItem) return null;
+    const user = selectedItem.user || selectedItem.User || {};
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 pb-4 border-b border-[#EDEAE1]">
+          <div className="w-14 h-14 rounded-full bg-[#EAF3F0] border border-[#D3E6E0] flex items-center justify-center overflow-hidden shrink-0">
+            {user.avatar_url ? (
+              <img src={getAssetUrl(user.avatar_url)} alt={user.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="font-display font-bold text-lg text-[#2F6F5E]">
+                {(user.name || 'P')[0].toUpperCase()}
+              </span>
+            )}
+          </div>
+          <div>
+            <h4 className="font-display font-bold text-base text-[#14213D]">{user.name || '—'}</h4>
+            <p className="text-xs text-[#52607D]">@{user.username || '—'}</p>
+          </div>
+        </div>
+
+        {modalType === 'teacher' && (
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <span className="text-[#8C97AB] block mb-0.5">Employee ID</span>
+              <span className="font-semibold text-[#14213D] font-mono">{selectedItem.employee_id || '—'}</span>
+            </div>
+            <div>
+              <span className="text-[#8C97AB] block mb-0.5">Designation</span>
+              <span className="font-semibold text-[#14213D]">{selectedItem.designation || '—'}</span>
+            </div>
+            <div>
+              <span className="text-[#8C97AB] block mb-0.5">Qualification</span>
+              <span className="font-semibold text-[#14213D]">{selectedItem.qualification || '—'}</span>
+            </div>
+            <div>
+              <span className="text-[#8C97AB] block mb-0.5">Experience</span>
+              <span className="font-semibold text-[#14213D]">{selectedItem.experience !== null ? `${selectedItem.experience} Years` : '—'}</span>
+            </div>
+            <div>
+              <span className="text-[#8C97AB] block mb-0.5">Email</span>
+              <span className="font-semibold text-[#14213D]">{user.email || '—'}</span>
+            </div>
+            <div>
+              <span className="text-[#8C97AB] block mb-0.5">Phone</span>
+              <span className="font-semibold text-[#14213D]">{user.phone || '—'}</span>
+            </div>
+          </div>
+        )}
+
+        {modalType === 'student' && (
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <span className="text-[#8C97AB] block mb-0.5">Admission Number</span>
+              <span className="font-semibold text-[#14213D] font-mono">{selectedItem.admission_no || '—'}</span>
+            </div>
+            <div>
+              <span className="text-[#8C97AB] block mb-0.5">Class & Section</span>
+              <span className="font-semibold text-[#14213D]">{selectedItem.class?.class_name || '—'} · Section {selectedItem.section?.name || '—'}</span>
+            </div>
+            <div>
+              <span className="text-[#8C97AB] block mb-0.5">Father's Name</span>
+              <span className="font-semibold text-[#14213D]">{selectedItem.father_name || '—'}</span>
+            </div>
+            <div>
+              <span className="text-[#8C97AB] block mb-0.5">Mother's Name</span>
+              <span className="font-semibold text-[#14213D]">{selectedItem.mother_name || '—'}</span>
+            </div>
+          </div>
+        )}
+
+        {modalType === 'profile_update' && (
+          <div className="space-y-3 text-xs">
+            <p className="text-[#52607D]">Review proposed profile modifications below:</p>
+            <div className="border border-[#E4E1D8] rounded-[8px] overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#8C97AB] font-semibold uppercase">
+                  <tr>
+                    <th className="px-3 py-2">Field</th>
+                    <th className="px-3 py-2">Current Value</th>
+                    <th className="px-3 py-2">Proposed Value</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EDEAE1]">
+                  {Object.entries(selectedItem.pending_data || {}).map(([key, newVal]) => {
+                    let currentVal = '—';
+                    const activeProfile = selectedItem.user?.student || selectedItem.user?.Student || selectedItem.user?.teacher || selectedItem.user?.Teacher || {};
+                    if (key === 'name' || key === 'email' || key === 'phone' || key === 'avatar_url') {
+                      currentVal = selectedItem.user?.[key];
+                    } else {
+                      currentVal = activeProfile[key];
+                    }
+                    return (
+                      <tr key={key}>
+                        <td className="px-3 py-2 font-semibold text-[#14213D] capitalize">{key.replace(/_/g, ' ')}</td>
+                        <td className="px-3 py-2 text-[#52607D]">{String(currentVal ?? '—')}</td>
+                        <td className="px-3 py-2 font-semibold text-[#2F6F5E] bg-[#EAF3F0]/30">{String(newVal ?? '—')}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Approvals</h1>
-          <p className="page-subtitle">
-            {teachersTotal} pending teachers, {studentsTotal} pending students, {profileUpdatesTotal} pending updates
-          </p>
+    <div className="space-y-6">
+      {/* Compact Action Toolbar */}
+      <Card className="p-3">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#14213D]">Approvals & Verification Queue</span>
+            <span className="text-[#8C97AB]">|</span>
+            <span className="text-[#52607D]">Total Pending: {teachersTotal + studentsTotal + profileUpdatesTotal}</span>
+          </div>
         </div>
+      </Card>
+
+      {/* Navigation Tabs */}
+      <div className="flex gap-1 border-b border-[#E4E1D8] overflow-x-auto pb-px">
+        {[
+          { id: 'teachers', label: `Teachers (${teachersTotal})` },
+          { id: 'students', label: `Students (${studentsTotal})` },
+          { id: 'profile_updates', label: `Profile Updates (${profileUpdatesTotal})` },
+        ].map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2.5 text-xs font-semibold rounded-t-[8px] transition-all cursor-pointer border-t border-x outline-none ${
+                isActive
+                  ? 'bg-white border-[#E4E1D8] border-t-[3px] border-t-[#2F6F5E] text-[#2F6F5E] -mb-px shadow-2xs'
+                  : 'bg-transparent border-transparent text-[#52607D] hover:text-[#14213D] hover:bg-[#FAFAF8]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="tabs mb-6">
-        <button className={`tab ${activeTab === 'teachers' ? 'active' : ''}`} onClick={() => setActiveTab('teachers')}>
-          Teachers ({teachersTotal})
-        </button>
-        <button className={`tab ${activeTab === 'students' ? 'active' : ''}`} onClick={() => setActiveTab('students')}>
-          Students ({studentsTotal})
-        </button>
-        <button className={`tab ${activeTab === 'profile_updates' ? 'active' : ''}`} onClick={() => setActiveTab('profile_updates')}>
-          Profile Updates ({profileUpdatesTotal})
-        </button>
-      </div>
+      {/* Main Content Card */}
+      <Card>
+        {loading ? (
+          <div className="p-8 text-center text-xs text-[#8C97AB]">Loading approvals...</div>
+        ) : activeTab === 'teachers' ? (
+          <div>
+            {teachers.length > 0 && (
+              <div className="p-3 bg-[#FAFAF8] border-b border-[#E4E1D8] flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={CheckCircle}
+                  disabled={processing || selectedTeachers.length === 0}
+                  onClick={() => handleBulkTeachers('approve')}
+                >
+                  Approve Selected ({selectedTeachers.length})
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  icon={XCircle}
+                  disabled={processing || selectedTeachers.length === 0}
+                  onClick={() => handleBulkTeachers('reject')}
+                >
+                  Reject Selected
+                </Button>
+              </div>
+            )}
 
-      {loading ? (
-        <div className="card p-8 text-center text-slate-400">Loading...</div>
-      ) : activeTab === 'teachers' ? (
-        <div className="card overflow-hidden">
-          {teachers.length > 0 && (
-            <div className="flex items-center gap-3 p-4 border-b border-slate-100 bg-slate-50">
-              <button onClick={() => handleBulkTeachers('approve')} disabled={processing || selectedTeachers.length === 0} className="btn-sm btn-success">
-                <CheckCircle className="w-3.5 h-3.5" /> Approve Selected ({selectedTeachers.length})
-              </button>
-              <button onClick={() => handleBulkTeachers('reject')} disabled={processing || selectedTeachers.length === 0} className="btn-sm btn-danger">
-                <XCircle className="w-3.5 h-3.5" /> Reject Selected
-              </button>
-            </div>
-          )}
-          {teachers.length === 0 ? (
-            <div className="empty-state">
-              <UserCheck className="empty-state-icon" />
-              <p className="empty-state-title">No pending teachers</p>
-            </div>
-          ) : (
-            <>
-              <div className="table-responsive">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th><input type="checkbox" className="checkbox-custom" checked={selectedTeachers.length === teachers.length && teachers.length > 0} onChange={toggleAllTeachers} /></th>
-                    <th>Employee ID</th><th>Username</th><th>Name</th><th>Status</th><th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teachers.map((t) => (
-                    <tr key={t.id} className="cursor-pointer hover:bg-slate-50" onClick={() => openDetails('teacher', t)}>
-                      <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="checkbox-custom" checked={selectedTeachers.includes(t.id)} onChange={() => toggleTeacher(t.id)} /></td>
-                      <td className="font-mono text-xs">{t.employee_id || '—'}</td>
-                      <td className="font-mono text-xs">{t.user?.username || '—'}</td>
-                      <td>{t.user?.name || '—'}</td>
-                      <td><StatusBadge status="pending" /></td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div className="flex gap-1">
-                          <button onClick={() => handleApprove('teacher', t.id, 'approve')} className="btn-sm btn-success">Approve</button>
-                          <button onClick={() => handleApprove('teacher', t.id, 'reject')} className="btn-sm btn-danger">Reject</button>
-                        </div>
-                      </td>
+            {teachers.length === 0 ? (
+              <EmptyState
+                icon={UserCheck}
+                title="No pending teachers"
+                description="All teacher registration requests have been processed."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
+                    <tr>
+                      <th className="px-4 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedTeachers.length === teachers.length && teachers.length > 0}
+                          onChange={toggleAllTeachers}
+                          className="rounded border-[#E4E1D8] text-[#2F6F5E] cursor-pointer"
+                        />
+                      </th>
+                      <th className="px-4 py-3">Employee ID</th>
+                      <th className="px-4 py-3">Username</th>
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
+                    {teachers.map((t) => (
+                      <tr
+                        key={t.id}
+                        className="hover:bg-[#FAFAF8] transition-colors cursor-pointer"
+                        onClick={() => openDetails('teacher', t)}
+                      >
+                        <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedTeachers.includes(t.id)}
+                            onChange={() => toggleTeacher(t.id)}
+                            className="rounded border-[#E4E1D8] text-[#2F6F5E] cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-2.5 font-mono font-semibold">{t.employee_id || '—'}</td>
+                        <td className="px-4 py-2.5 font-mono text-[#52607D]">{t.user?.username || '—'}</td>
+                        <td className="px-4 py-2.5 font-medium">{t.user?.name || '—'}</td>
+                        <td className="px-4 py-2.5">
+                          <StatusBadge status="pending" size="sm" />
+                        </td>
+                        <td className="px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleApprove('teacher', t.id, 'approve')}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleApprove('teacher', t.id, 'reject')}
+                            >
+                              Reject
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              {teachersTotalPages > 1 && (
-                <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
-                  <span className="text-sm text-slate-500">Page {teachersPage + 1} of {teachersTotalPages}</span>
-                  <div className="flex gap-2">
-                    <button onClick={() => loadTab('teacher', Math.max(0, teachersPage - 1))} disabled={teachersPage === 0} className="btn-sm btn-secondary">Previous</button>
-                    <button onClick={() => loadTab('teacher', Math.min(teachersTotalPages - 1, teachersPage + 1))} disabled={teachersPage >= teachersTotalPages - 1} className="btn-sm btn-secondary">Next</button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      ) : activeTab === 'students' ? (
-        <div className="card overflow-hidden">
-          {students.length > 0 && (
-            <div className="flex items-center gap-3 p-4 border-b border-slate-100 bg-slate-50">
-              <button onClick={() => handleBulkStudents('approve')} disabled={processing || selectedStudents.length === 0} className="btn-sm btn-success">
-                <CheckCircle className="w-3.5 h-3.5" /> Approve Selected ({selectedStudents.length})
-              </button>
-              <button onClick={() => handleBulkStudents('reject')} disabled={processing || selectedStudents.length === 0} className="btn-sm btn-danger">
-                <XCircle className="w-3.5 h-3.5" /> Reject Selected
-              </button>
-            </div>
-          )}
-          {students.length === 0 ? (
-            <div className="empty-state">
-              <UserCheck className="empty-state-icon" />
-              <p className="empty-state-title">No pending students</p>
-            </div>
-          ) : (
-            <>
-              <div className="table-responsive">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th><input type="checkbox" className="checkbox-custom" checked={selectedStudents.length === students.length && students.length > 0} onChange={toggleAllStudents} /></th>
-                    <th>Admission No</th><th>Username</th><th>Name</th><th>Class</th><th>Section</th><th>Status</th><th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((s) => (
-                    <tr key={s.id} className="cursor-pointer hover:bg-slate-50" onClick={() => openDetails('student', s)}>
-                      <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="checkbox-custom" checked={selectedStudents.includes(s.id)} onChange={() => toggleStudent(s.id)} /></td>
-                      <td className="font-mono text-xs">{s.admission_no || '—'}</td>
-                      <td className="font-mono text-xs">{s.user?.username || '—'}</td>
-                      <td>{s.user?.name || '—'}</td>
-                      <td>{s.class?.class_name || '—'}</td>
-                      <td>{s.section?.name || '—'}</td>
-                      <td><StatusBadge status="pending" /></td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div className="flex gap-1">
-                          <button onClick={() => handleApprove('student', s.id, 'approve')} className="btn-sm btn-success">Approve</button>
-                          <button onClick={() => handleApprove('student', s.id, 'reject')} className="btn-sm btn-danger">Reject</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            )}
+          </div>
+        ) : activeTab === 'students' ? (
+          <div>
+            {students.length > 0 && (
+              <div className="p-3 bg-[#FAFAF8] border-b border-[#E4E1D8] flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={CheckCircle}
+                  disabled={processing || selectedStudents.length === 0}
+                  onClick={() => handleBulkStudents('approve')}
+                >
+                  Approve Selected ({selectedStudents.length})
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  icon={XCircle}
+                  disabled={processing || selectedStudents.length === 0}
+                  onClick={() => handleBulkStudents('reject')}
+                >
+                  Reject Selected
+                </Button>
               </div>
-              {studentsTotalPages > 1 && (
-                <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
-                  <span className="text-sm text-slate-500">Page {studentsPage + 1} of {studentsTotalPages}</span>
-                  <div className="flex gap-2">
-                    <button onClick={() => loadTab('student', Math.max(0, studentsPage - 1))} disabled={studentsPage === 0} className="btn-sm btn-secondary">Previous</button>
-                    <button onClick={() => loadTab('student', Math.min(studentsTotalPages - 1, studentsPage + 1))} disabled={studentsPage >= studentsTotalPages - 1} className="btn-sm btn-secondary">Next</button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="card overflow-hidden">
-          {profileUpdates.length === 0 ? (
-            <div className="empty-state">
-              <UserCheck className="empty-state-icon" />
-              <p className="empty-state-title">No pending profile updates</p>
-            </div>
-          ) : (
-            <div className="table-responsive">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>User ID</th>
-                  <th>Role</th>
-                  <th>Username</th>
-                  <th>Name</th>
-                  <th>Updated Fields</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {profileUpdates.map((u) => {
-                  const changedCount = Object.keys(u.pending_data || {}).length;
-                  return (
-                    <tr key={u.id} className="cursor-pointer hover:bg-slate-50" onClick={() => openDetails('profile_update', u)}>
-                      <td className="font-mono text-xs">#{u.user_id}</td>
-                      <td className="capitalize text-xs font-semibold">{u.role}</td>
-                      <td className="font-mono text-xs">{u.user?.username || '—'}</td>
-                      <td>{u.user?.name || '—'}</td>
-                      <td className="text-slate-500 font-semibold">{changedCount} fields changed</td>
-                      <td><StatusBadge status="pending" /></td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div className="flex gap-1">
-                          <button onClick={() => handleProcessProfileUpdate(u.id, 'approve')} className="btn-sm btn-success">Approve</button>
-                          <button onClick={() => handleProcessProfileUpdate(u.id, 'reject')} className="btn-sm btn-danger">Reject</button>
-                        </div>
-                      </td>
+            )}
+
+            {students.length === 0 ? (
+              <EmptyState
+                icon={UserCheck}
+                title="No pending students"
+                description="All student registration requests have been processed."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
+                    <tr>
+                      <th className="px-4 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedStudents.length === students.length && students.length > 0}
+                          onChange={toggleAllStudents}
+                          className="rounded border-[#E4E1D8] text-[#2F6F5E] cursor-pointer"
+                        />
+                      </th>
+                      <th className="px-4 py-3">Admission No</th>
+                      <th className="px-4 py-3">Username</th>
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">Class & Section</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            </div>
-          )}
-        </div>
-      )}
+                  </thead>
+                  <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
+                    {students.map((s) => (
+                      <tr
+                        key={s.id}
+                        className="hover:bg-[#FAFAF8] transition-colors cursor-pointer"
+                        onClick={() => openDetails('student', s)}
+                      >
+                        <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedStudents.includes(s.id)}
+                            onChange={() => toggleStudent(s.id)}
+                            className="rounded border-[#E4E1D8] text-[#2F6F5E] cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-2.5 font-mono font-semibold">{s.admission_no || '—'}</td>
+                        <td className="px-4 py-2.5 font-mono text-[#52607D]">{s.user?.username || '—'}</td>
+                        <td className="px-4 py-2.5 font-medium">{s.user?.name || '—'}</td>
+                        <td className="px-4 py-2.5">
+                          {s.class?.class_name ? `${s.class.class_name} - ${s.section?.name || ''}` : '—'}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <StatusBadge status="pending" size="sm" />
+                        </td>
+                        <td className="px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleApprove('student', s.id, 'approve')}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleApprove('student', s.id, 'reject')}
+                            >
+                              Reject
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            {profileUpdates.length === 0 ? (
+              <EmptyState
+                icon={UserCheck}
+                title="No pending profile updates"
+                description="There are no profile modification requests waiting for review."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
+                    <tr>
+                      <th className="px-4 py-3">User ID</th>
+                      <th className="px-4 py-3">Role</th>
+                      <th className="px-4 py-3">Username</th>
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">Fields Changed</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
+                    {profileUpdates.map((u) => {
+                      const changedCount = Object.keys(u.pending_data || {}).length;
+                      return (
+                        <tr
+                          key={u.id}
+                          className="hover:bg-[#FAFAF8] transition-colors cursor-pointer"
+                          onClick={() => openDetails('profile_update', u)}
+                        >
+                          <td className="px-4 py-2.5 font-mono font-semibold">#{u.user_id}</td>
+                          <td className="px-4 py-2.5 capitalize font-medium">{u.role}</td>
+                          <td className="px-4 py-2.5 font-mono text-[#52607D]">{u.user?.username || '—'}</td>
+                          <td className="px-4 py-2.5 font-medium">{u.user?.name || '—'}</td>
+                          <td className="px-4 py-2.5 text-[#2F6F5E] font-semibold">{changedCount} field(s)</td>
+                          <td className="px-4 py-2.5">
+                            <StatusBadge status="pending" size="sm" />
+                          </td>
+                          <td className="px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleProcessProfileUpdate(u.id, 'approve')}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleProcessProfileUpdate(u.id, 'reject')}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* Details Inspect Modal */}
       {selectedItem && (
         <Modal
           isOpen={!!selectedItem}
           onClose={closeDetails}
-          title={modalType === 'profile_update' ? "Review Profile Update Request" : `Review Pending ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}`}
+          title={
+            modalType === 'profile_update'
+              ? 'Review Profile Modification Request'
+              : `Review ${modalType.charAt(0).toUpperCase() + modalType.slice(1)} Registration`
+          }
           maxWidth="max-w-xl"
           footer={
-            <div className="flex justify-end gap-3 w-full">
-              <button
+            <div className="flex items-center justify-end gap-2 w-full">
+              <Button
+                variant="destructive"
                 onClick={() => {
                   if (modalType === 'profile_update') {
                     handleProcessProfileUpdate(selectedItem.id, 'reject');
@@ -595,11 +612,11 @@ export function Approvals() {
                     closeDetails();
                   }
                 }}
-                className="btn btn-danger btn-sm"
               >
-                Reject
-              </button>
-              <button
+                Reject Request
+              </Button>
+              <Button
+                variant="primary"
                 onClick={() => {
                   if (modalType === 'profile_update') {
                     handleProcessProfileUpdate(selectedItem.id, 'approve');
@@ -608,10 +625,9 @@ export function Approvals() {
                     closeDetails();
                   }
                 }}
-                className="btn btn-success btn-sm"
               >
-                Approve
-              </button>
+                Approve Request
+              </Button>
             </div>
           }
         >

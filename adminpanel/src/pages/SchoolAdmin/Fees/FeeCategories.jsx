@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { feeAPI } from '../../../api';
 import { useToast } from '../../../context/ToastContext';
-import { Plus, Tag, Edit2, Trash2 } from 'lucide-react';
+import { Button } from '../../../components/ui/Button';
+import { Input } from '../../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
+import { EmptyState } from '../../../components/common/EmptyState';
+import { Plus, Tag, Edit2, Trash2, Check, X } from 'lucide-react';
 
 export function FeeCategories() {
   const [categories, setCategories] = useState([]);
@@ -69,77 +73,62 @@ export function FeeCategories() {
   };
 
   return (
-    <div className="card p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-        <div className="flex items-center gap-2">
-          <Tag className="w-5 h-5 text-indigo-600" />
-          <h3 className="text-base font-bold text-slate-900">Fee Categories Master</h3>
-        </div>
-        <p className="text-xs text-slate-500">Categories used for receipt itemization</p>
-      </div>
+    <Card>
+      <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
+        <CardTitle className="text-sm font-bold text-[#14213D] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Tag className="w-4 h-4 text-[#2F6F5E]" />
+            <span>Fee Categories Master</span>
+          </div>
+          <span className="text-xs text-[#52607D] font-normal">Categories used for fee itemization</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 space-y-4 text-xs">
+        <form onSubmit={handleAddCategory} className="flex items-center gap-2">
+          <Input
+            placeholder="New Fee Category Name..."
+            className="flex-1 text-xs"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+          />
+          <Button variant="primary" icon={Plus} type="submit" loading={saving} disabled={!newCategoryName.trim()}>
+            Add Category
+          </Button>
+        </form>
 
-      <form onSubmit={handleAddCategory} className="flex items-center gap-3">
-        <input
-          type="text"
-          placeholder="New Category Name..."
-          className="input-field text-xs font-semibold flex-1"
-          value={newCategoryName}
-          onChange={(e) => setNewCategoryName(e.target.value)}
-        />
-        <button
-          type="submit"
-          disabled={saving || !newCategoryName.trim()}
-          className="btn-primary text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl flex items-center gap-1 border-none shadow-md shadow-indigo-100 disabled:opacity-50"
-        >
-          <Plus className="w-4 h-4" /> Add Category
-        </button>
-      </form>
-
-      {loading ? (
-        <div className="text-xs text-slate-400 text-center py-6">Loading categories...</div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          {categories.map((cat) => (
-            <div key={cat.id} className="p-3.5 bg-slate-50 border border-slate-200/70 rounded-xl flex items-center justify-between gap-2">
-              {editingId === cat.id ? (
-                <div className="flex items-center gap-1 w-full">
-                  <input
-                    type="text"
-                    className="input-field text-xs font-bold py-1 flex-1"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                  />
-                  <button type="button" onClick={() => handleSaveEdit(cat.id)} className="text-xs font-bold text-emerald-600 px-2 py-1 bg-emerald-50 rounded">Save</button>
-                  <button type="button" onClick={() => setEditingId(null)} className="text-xs font-bold text-slate-400 px-2 py-1">Cancel</button>
-                </div>
-              ) : (
-                <>
-                  <span className="text-xs font-extrabold text-slate-800">{cat.name}</span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingId(cat.id);
-                        setEditingName(cat.name);
-                      }}
-                      className="text-slate-400 hover:text-indigo-600 p-1"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(cat.id, cat.name)}
-                      className="text-slate-400 hover:text-rose-600 p-1"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+        {loading ? (
+          <div className="p-6 text-center text-[#8C97AB]">Loading categories...</div>
+        ) : categories.length === 0 ? (
+          <EmptyState icon={Tag} title="No categories defined" description="Add your first fee category above." />
+        ) : (
+          <div className="divide-y divide-[#EDEAE1] border border-[#E4E1D8] rounded-[8px] overflow-hidden">
+            {categories.map((c) => (
+              <div key={c.id} className="p-3 flex items-center justify-between gap-3 hover:bg-[#FAFAF8]">
+                {editingId === c.id ? (
+                  <div className="flex items-center gap-2 flex-1">
+                    <Input
+                      autoFocus
+                      className="text-xs h-8"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                    />
+                    <Button variant="primary" size="sm" icon={Check} onClick={() => handleSaveEdit(c.id)} />
+                    <Button variant="outline" size="sm" icon={X} onClick={() => setEditingId(null)} />
                   </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+                ) : (
+                  <>
+                    <span className="font-semibold text-[#14213D]">{c.name}</span>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" icon={Edit2} onClick={() => { setEditingId(c.id); setEditingName(c.name); }} />
+                      <Button variant="ghost" size="sm" icon={Trash2} className="text-[#B0403A] hover:bg-[#FDF2F1]" onClick={() => handleDelete(c.id, c.name)} />
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

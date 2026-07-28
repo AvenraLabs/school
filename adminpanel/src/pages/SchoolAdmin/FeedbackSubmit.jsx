@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { feedbackAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
-import { Camera, X, Sparkles } from 'lucide-react';
-import './FeedbackSubmit.css';
+import { Button } from '../../components/ui/Button';
+import { Select, Input, Textarea } from '../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { Camera, X, Sparkles, Send } from 'lucide-react';
 
 function getBrowserInfo() {
   const ua = navigator.userAgent;
@@ -74,97 +76,80 @@ export function FeedbackSubmit() {
   };
 
   return (
-    <div className="feedback-page">
-      {/* Hero Card */}
-      <section className="feedback-hero">
-        <div>
-          <div className="feedback-kicker">
-            <Sparkles size={16} />
-            Platform Support
-          </div>
-          <h1>Feedback Desk</h1>
-          <p>Report bugs, request new features, or send appreciation to our platform developers.</p>
+    <div className="space-y-6">
+      {/* Compact Action Bar */}
+      <Card className="p-3">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <span className="font-bold text-[#14213D]">Feedback & Support Ticket Desk</span>
         </div>
-      </section>
+      </Card>
 
-      {/* Form Card */}
-      <div className="feedback-card">
-        <form onSubmit={handleSubmit} className="feedback-form">
-          <label>
-            <span>Feedback Category</span>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option value="bug_report">Bug Report</option>
-              <option value="feature_request">Feature Request</option>
-              <option value="suggestion">Suggestion</option>
-              <option value="complaint">Complaint</option>
-              <option value="appreciation">Appreciation</option>
-            </select>
-          </label>
+      <Card className="max-w-2xl">
+        <CardHeader>
+          <CardTitle>Submit Support Ticket</CardTitle>
+        </CardHeader>
+        <CardContent className="p-5">
+          <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">Feedback Category *</label>
+              <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+                <option value="bug_report">Bug Report</option>
+                <option value="feature_request">Feature Request</option>
+                <option value="appreciation">Appreciation & General Inquiry</option>
+              </Select>
+            </div>
 
-          <label>
-            <span>Subject Title *</span>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Seeder page hangs on big student Excel sheets"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </label>
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">Summary Title *</label>
+              <Input
+                required
+                placeholder="Brief summary of issue or request..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
 
-          <label>
-            <span>Description *</span>
-            <textarea
-              required
-              placeholder="Provide details about the issue, steps to reproduce, or details of your suggestion..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </label>
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">Detailed Description *</label>
+              <Textarea
+                required
+                rows={5}
+                placeholder="Provide steps to reproduce or elaborate on feature request..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
 
-          <label>
-            <span>Screenshot (Optional)</span>
-            <div className="feedback-screenshot-upload">
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">Attach Screenshot (Optional)</label>
               {screenshot ? (
-                <div className="feedback-screenshot-preview">
-                  <img src={screenshot} alt="screenshot preview" />
+                <div className="relative inline-block border border-[#E4E1D8] rounded-[8px] overflow-hidden">
+                  <img src={screenshot} alt="Attachment" className="max-h-40 object-cover" />
                   <button
                     type="button"
                     onClick={removeScreenshot}
-                    className="feedback-screenshot-remove"
+                    className="absolute top-1 right-1 p-1 bg-[#B0403A] text-white rounded-full hover:bg-red-700 cursor-pointer"
                   >
-                    <X size={12} />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ) : (
-                <label className="feedback-upload-placeholder">
-                  <Camera size={16} />
-                  <span>Upload Screenshot</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleScreenshotChange}
-                    className="hidden"
-                  />
+                <label className="flex items-center gap-2 p-3 border border-dashed border-[#E4E1D8] rounded-[8px] bg-[#FAFAF8] cursor-pointer hover:border-[#2F6F5E] transition-colors text-[#52607D]">
+                  <Camera className="w-4 h-4 text-[#2F6F5E]" />
+                  <span>Click to attach image file...</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleScreenshotChange} />
                 </label>
               )}
             </div>
-          </label>
 
-          <div style={{ marginTop: '8px' }}>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="feedback-btn-submit"
-            >
-              {submitting ? 'Submitting Feedback...' : 'Submit Feedback'}
-            </button>
-          </div>
-        </form>
-      </div>
+            <div className="flex justify-end pt-2 border-t border-[#EDEAE1]">
+              <Button variant="primary" icon={Send} type="submit" loading={submitting}>
+                Submit Feedback
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

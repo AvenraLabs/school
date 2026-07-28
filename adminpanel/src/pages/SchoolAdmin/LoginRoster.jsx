@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { classesAPI, authAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { generateRosterPDF } from '../../utils/pdfGenerator';
-import { Download, ClipboardList } from 'lucide-react';
+import { Modal } from '../../components/common/Modal';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { EmptyState } from '../../components/common/EmptyState';
+import { Button } from '../../components/ui/Button';
+import { Select, Input } from '../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { Download, ClipboardList, KeyRound } from 'lucide-react';
 
 export function LoginRoster() {
   const [data, setData] = useState(null);
@@ -87,174 +93,144 @@ export function LoginRoster() {
       }
 
       generateRosterPDF(filteredData, labelParts.join(' | '));
-      toast.success('PDF downloaded');
+      toast.success('PDF roster downloaded');
     }
   };
 
   return (
-    <div style={{ width: '100%', maxWidth: '1240px', margin: '0 auto', padding: '24px' }}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Login Roster</h1>
-          <p className="page-subtitle">View and download all login credentials</p>
+    <div className="space-y-6">
+      {/* Compact Action Bar */}
+      <Card className="p-3">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <span className="font-bold text-[#14213D]">User Account Login Credentials Roster</span>
+          {data && (
+            <Button variant="primary" size="sm" icon={Download} onClick={handleDownloadPDF}>
+              Download Credentials PDF
+            </Button>
+          )}
         </div>
-        <button onClick={handleDownloadPDF} disabled={!data} className="btn-primary">
-          <Download className="w-4 h-4" /> Download PDF
-        </button>
-      </div>
+      </Card>
 
-      {/* Filters */}
-      <div className="flex gap-3 mb-6">
-        <select className="select-field w-48" value={filterRole} onChange={(e) => {
-          setFilterRole(e.target.value);
-          if (e.target.value === 'teachers') {
-            setFilterClass('');
-            setFilterSection('');
-          }
-        }}>
+      {/* Filter Bar */}
+      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-3 shadow-xs flex flex-wrap items-center gap-3">
+        <Select className="w-40 text-xs" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
           <option value="all">All Roles</option>
-          <option value="teachers">Teachers Only</option>
           <option value="students">Students Only</option>
-        </select>
+          <option value="teachers">Teachers Only</option>
+        </Select>
 
         {filterRole !== 'teachers' && (
           <>
-            <select className="select-field w-48" value={filterClass} onChange={(e) => { setFilterClass(e.target.value); setFilterSection(''); }}>
+            <Select className="w-44 text-xs" value={filterClass} onChange={(e) => { setFilterClass(e.target.value); setFilterSection(''); }}>
               <option value="">All Classes</option>
-              {classes.map((c) => <option key={c.id} value={c.id}>{c.class_name}</option>)}
-            </select>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>{c.class_name}</option>
+              ))}
+            </Select>
+
             {filterClass && (
-              <select className="select-field w-48" value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
+              <Select className="w-44 text-xs" value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
                 <option value="">All Sections</option>
-                {selectedClassSections.map((s) => <option key={s.id} value={s.id}>Section {s.name}</option>)}
-              </select>
+                {selectedClassSections.map((s) => (
+                  <option key={s.id} value={s.id}>Section {s.name}</option>
+                ))}
+              </Select>
             )}
           </>
         )}
       </div>
 
-      {loading ? (
-        <div className="card p-8 text-center text-slate-400">Loading roster...</div>
-      ) : !data ? (
-        <div className="card empty-state">
-          <ClipboardList className="empty-state-icon" />
-          <p className="empty-state-title">No data</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Teachers */}
-          {filterRole !== 'students' && data.teachers && data.teachers.length > 0 && (
-            <div className="card overflow-hidden">
-              <div className="p-4 border-b border-slate-100">
-                <h3 className="font-semibold text-slate-900">Teachers ({data.teachers.length})</h3>
-              </div>
-              <div className="table-responsive">
-              <table className="data-table">
-                <thead><tr><th>Username</th><th>Password</th><th>Name</th><th>Employee ID</th><th className="text-right">Actions</th></tr></thead>
-                <tbody>
-                  {data.teachers.map((t, i) => {
-                    const username = t.user?.username || t.username || '';
-                    return (
-                      <tr key={i}>
-                        <td className="font-mono text-xs">{username || '—'}</td>
-                        <td className="font-mono text-xs">{username ? `${username}@123` : '—'}</td>
-                        <td>{t.user?.name || t.name || '—'}</td>
-                        <td className="font-mono text-xs">{t.employee_id || '—'}</td>
-                        <td className="text-right">
-                          <button 
-                            className="btn btn-secondary text-xs px-2 py-1 h-auto"
-                            onClick={() => setResetModal({ userId: t.user?.id || t.user_id, name: t.user?.name || t.name })}
-                          >
-                            Reset Password
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              </div>
-            </div>
-          )}
+      {/* Credentials Roster Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Master User Login Directory</CardTitle>
+        </CardHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
+              <tr>
+                <th className="px-4 py-3">Account Name</th>
+                <th className="px-4 py-3">Login Username</th>
+                <th className="px-4 py-3">User Role</th>
+                <th className="px-4 py-3">Placement</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
+              {loading ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-[#8C97AB]">Loading login roster...</td></tr>
+              ) : !data ? (
+                <tr><td colSpan={5} className="px-4 py-12 text-center"><EmptyState icon={ClipboardList} title="No user accounts" description="No login credentials found." /></td></tr>
+              ) : (
+                <>
+                  {(filterRole === 'all' || filterRole === 'teachers') && (data.teachers || []).map((t) => (
+                    <tr key={`teacher-${t.id}`} className="hover:bg-[#FAFAF8]">
+                      <td className="px-4 py-2.5 font-bold text-[#14213D]">{t.user?.name || '—'}</td>
+                      <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{t.user?.username || '—'}</td>
+                      <td className="px-4 py-2.5"><StatusBadge status="active" label="Teacher" size="sm" /></td>
+                      <td className="px-4 py-2.5 text-[#52607D]">Faculty Staff</td>
+                      <td className="px-4 py-2.5 text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={KeyRound}
+                          onClick={() => setResetModal({ userId: t.user?.id, name: t.user?.name })}
+                        >
+                          Reset Password
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
 
-          {/* Students by class */}
-          {filterRole !== 'teachers' && data.classes && data.classes.map((cls, ci) => (
-            <div key={ci} className="card overflow-hidden">
-              <div className="p-4 border-b border-slate-100">
-                <h3 className="font-semibold text-slate-900">{cls.class_name}</h3>
-              </div>
-              {cls.sections && cls.sections.map((sec, si) => (
-                <div key={si}>
-                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 text-sm font-medium text-slate-600">
-                    Section {sec.name} ({sec.students?.length || 0} students)
-                  </div>
-                  {sec.students && sec.students.length > 0 && (
-                    <div className="table-responsive">
-                    <table className="data-table">
-                      <thead><tr><th>Roll No</th><th>Username</th><th>Password</th><th>Name</th><th className="text-right">Actions</th></tr></thead>
-                      <tbody>
-                        {sec.students.map((s, si2) => {
-                          const username = s.user?.username || s.username || '';
-                          return (
-                            <tr key={si2}>
-                              <td className="font-mono">{s.roll_no || '—'}</td>
-                              <td className="font-mono text-xs">{username || '—'}</td>
-                              <td className="font-mono text-xs">{username ? `${username}@123` : '—'}</td>
-                              <td>{s.user?.name || s.name || '—'}</td>
-                              <td className="text-right">
-                                <button 
-                                  className="btn btn-secondary text-xs px-2 py-1 h-auto"
-                                  onClick={() => setResetModal({ userId: s.user?.id || s.user_id, name: s.user?.name || s.name })}
-                                >
-                                  Reset Password
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                    </div>
+                  {(filterRole === 'all' || filterRole === 'students') && (data.classes || []).flatMap((c) =>
+                    (c.sections || []).flatMap((sec) =>
+                      (sec.students || []).map((st) => (
+                        <tr key={`student-${st.id}`} className="hover:bg-[#FAFAF8]">
+                          <td className="px-4 py-2.5 font-bold text-[#14213D]">{st.user?.name || '—'}</td>
+                          <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{st.user?.username || '—'}</td>
+                          <td className="px-4 py-2.5"><StatusBadge status="warning" label="Student" size="sm" /></td>
+                          <td className="px-4 py-2.5 text-[#52607D]">{c.class_name} - Sec {sec.name}</td>
+                          <td className="px-4 py-2.5 text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              icon={KeyRound}
+                              onClick={() => setResetModal({ userId: st.user?.id, name: st.user?.name })}
+                            >
+                              Reset Password
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )
                   )}
-                </div>
-              ))}
-            </div>
-          ))}
+                </>
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </Card>
 
-      {resetModal && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-semibold text-slate-900">Reset Password</h3>
-              <button onClick={() => setResetModal(null)} className="text-slate-400 hover:text-slate-600">&times;</button>
-            </div>
-            <form onSubmit={handleResetPassword} className="p-4 space-y-4">
-              <p className="text-sm text-slate-600">
-                Set a new password for <strong className="text-slate-900">{resetModal.name}</strong>.
-              </p>
-              <div>
-                <input
-                  type="text"
-                  className="input-field w-full"
-                  placeholder="New Password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  autoFocus
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" className="btn btn-secondary" onClick={() => setResetModal(null)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={resetting}>
-                  {resetting ? 'Saving...' : 'Save Password'}
-                </button>
-              </div>
-            </form>
+      {/* Modal: Reset Password */}
+      <Modal isOpen={!!resetModal} onClose={() => setResetModal(null)} title={`Reset Password for ${resetModal?.name}`}>
+        <form onSubmit={handleResetPassword} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-semibold text-[#14213D] mb-1">New Password (Min 4 chars) *</label>
+            <Input
+              type="password"
+              required
+              minLength={4}
+              placeholder="Enter new password..."
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
           </div>
-        </div>
-      )}
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
+            <Button variant="outline" type="button" onClick={() => setResetModal(null)}>Cancel</Button>
+            <Button variant="primary" type="submit" loading={resetting}>Update Password</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

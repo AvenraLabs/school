@@ -1,8 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { lostFoundAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { EmptyState } from '../../components/common/EmptyState';
+import { Button } from '../../components/ui/Button';
+import { Select, Input, Textarea } from '../../components/ui/Input';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import {
   Search,
   Plus,
@@ -12,15 +18,17 @@ import {
   X,
   Sparkles,
   Megaphone,
-  Clock3
+  Clock3,
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle
 } from 'lucide-react';
 import { formatDate } from '../../utils/date';
-import './LostFoundManager.css';
 
 export function LostFoundManager() {
   const { user } = useAuth();
   const toast = useToast();
-  const [tab, setTab] = useState('open'); // open, my, closed
+  const [tab, setTab] = useState('open');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -29,13 +37,13 @@ export function LostFoundManager() {
   const [totalCount, setTotalCount] = useState(0);
   const LIMIT = 12;
 
-  // Modal State
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [type, setType] = useState('lost');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState([]);
+  const [imageUrl, setImageUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
 
@@ -79,478 +87,206 @@ export function LostFoundManager() {
     }
   }
 
-  const handleSearchSubmit = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    loadItems();
-  };
-
-  const handlePhotoChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (photos.length + files.length > 2) {
-      toast.error('Maximum 2 photos allowed');
-      return;
-    }
-
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotos((prev) => [...prev, reader.result]);
-      };
-      reader.readAsDataURL(file);
-    });
-    e.target.value = '';
-  };
-
-  const removePhoto = (idx) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!title.trim()) return toast.error('Title is required');
     setSubmitting(true);
-
     try {
       await lostFoundAPI.create({
         title,
         type,
         date,
         description,
-        photos,
+        photos: imageUrl ? [imageUrl] : photos,
       });
-      toast.success('Post created successfully!');
+      toast.success('Report posted successfully');
       setShowCreate(false);
-      resetForm();
+      setTitle('');
+      setDescription('');
+      setPhotos([]);
+      setImageUrl('');
       loadItems();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create post');
+      toast.error(err.response?.data?.message || 'Failed to create item');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const resetForm = () => {
-    setTitle('');
-    setType('lost');
-    setDate(new Date().toISOString().split('T')[0]);
-    setDescription('');
-    setPhotos([]);
-  };
-
-  const handleClose = (id) => {
-    setConfirmAction({
-      id,
-      type: 'close',
-      title: 'Solve Lost & Found Post',
-      message: 'Are you sure you want to mark this lost & found post as solved? It will be moved to the closed registry.',
-    });
-  };
-
-  const handleDelete = (id) => {
-    setConfirmAction({
-      id,
-      type: 'delete',
-      title: 'Delete Lost & Found Post',
-      message: 'Are you sure you want to delete this lost & found post permanently? This action cannot be undone.',
-    });
-  };
-
-  const executeConfirmAction = async () => {
-    if (!confirmAction) return;
-    const { id, type } = confirmAction;
-    setConfirmAction(null);
+  const handleCloseItem = async (id) => {
     try {
-      if (type === 'close') {
-        await lostFoundAPI.close(id);
-        toast.success('Post marked as Closed/Solved!');
-      } else if (type === 'delete') {
-        await lostFoundAPI.delete(id);
-        toast.success('Post deleted successfully!');
-      }
+      await lostFoundAPI.update(id, { status: 'CLOSED' });
+      toast.success('Item marked resolved');
       loadItems();
     } catch (err) {
-      toast.error(`Failed to execute action`);
+      toast.error('Failed to update item');
     }
   };
 
-  const getAssetUrl = (path) => {
-    if (!path) return '';
-    if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
-    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-    return `${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/${cleanPath}`;
+  const handleDeleteItem = async (id) => {
+    try {
+      await lostFoundAPI.delete(id);
+      toast.success('Item deleted');
+      loadItems();
+    } catch (err) {
+      toast.error('Failed to delete item');
+    }
   };
 
   const totalPages = Math.ceil(totalCount / LIMIT);
 
-  // Calculate statistics based on items currently displayed or in lists
-  const stats = useMemo(() => {
-    return {
-      total: totalCount,
-      lost: items.filter((item) => item.type === 'lost').length,
-      found: items.filter((item) => item.type === 'found').length,
-    };
-  }, [items, totalCount]);
-
   return (
-    <div className="lostfound-page">
-      {/* Hero Header */}
-      <section className="lostfound-hero">
-        <div className="lostfound-hero-copy">
-          <div className="lostfound-kicker">
-            <Sparkles size={16} />
-            School Registry
-          </div>
-          <h1>Lost & Found</h1>
-          <p>Track, report, and claim lost or found items inside the school campus.</p>
+    <div className="space-y-6">
+      {/* Compact Action Bar */}
+      <Card className="p-3">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <span className="font-bold text-[#14213D]">Campus Lost & Found Register</span>
+          <Button variant="primary" size="sm" icon={Plus} onClick={() => setShowCreate(true)}>
+            Report Item
+          </Button>
         </div>
-        <button
-          onClick={() => {
-            resetForm();
-            setShowCreate(true);
-          }}
-          className="lostfound-btn lostfound-btn-primary"
-        >
-          <Plus size={18} />
-          Create Post
-        </button>
-      </section>
+      </Card>
 
-      {/* Stats Cards */}
-      <section className="lostfound-stats">
-        <div className="lostfound-stat-card">
-          <span>Items Displayed</span>
-          <strong>{stats.total}</strong>
-        </div>
-        <div className="lostfound-stat-card">
-          <span>Lost Items</span>
-          <strong>{stats.lost}</strong>
-        </div>
-        <div className="lostfound-stat-card">
-          <span>Found Items</span>
-          <strong>{stats.found}</strong>
-        </div>
-      </section>
-
-      {/* Toolbar / Search & Filters */}
-      <section className="lostfound-toolbar">
-        {tab !== 'my' ? (
-          <form onSubmit={handleSearchSubmit} className="lostfound-search-container">
-            <div className="lostfound-search">
-              <Search size={18} />
-              <input
-                type="text"
-                placeholder="Search items..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="lostfound-select"
-            >
-              <option value="all">All Types</option>
-              <option value="lost">Lost</option>
-              <option value="found">Found</option>
-            </select>
-            <button type="submit" className="lostfound-btn lostfound-btn-primary">
-              Search
-            </button>
-          </form>
-        ) : (
-          <div style={{ flex: 1 }} />
-        )}
-
-        <div className="lostfound-filters">
+      {/* Tabs Row & Filters */}
+      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1 border-b border-transparent">
           {[
-            { key: 'open', label: 'Open Items' },
-            { key: 'my', label: 'My Posts' },
-            { key: 'closed', label: 'Closed Items' },
+            { id: 'open', label: 'Active Reports' },
+            { id: 'my', label: 'My Submissions' },
+            { id: 'closed', label: 'Resolved / Returned' },
           ].map((t) => (
             <button
-              key={t.key}
-              type="button"
-              className={tab === t.key ? 'active' : ''}
-              onClick={() => setTab(t.key)}
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-3.5 py-1.5 rounded-[6px] text-xs font-semibold transition-colors cursor-pointer ${
+                tab === t.id
+                  ? 'bg-[#EAF3F0] text-[#2F6F5E] border border-[#D3E6E0]'
+                  : 'text-[#52607D] hover:bg-[#FAFAF8]'
+              }`}
             >
               {t.label}
             </button>
           ))}
         </div>
-      </section>
 
-      {/* Item Grid */}
-      <section className="lostfound-grid">
-        {loading ? (
-          <div className="lostfound-empty">Loading registry items...</div>
-        ) : items.length === 0 ? (
-          <div className="lostfound-empty">
-            <Megaphone size={42} />
-            <strong>No items found</strong>
-            <span>There are no registered posts matching your current filter.</span>
-          </div>
-        ) : (
-          items.map((item) => {
-            const isOwner = String(item.created_by) === String(user?.id);
-            const isAdmin = ['school_admin', 'super_admin'].includes(user?.role);
-            return (
-              <article key={item.id} className="lostfound-card">
-                <div>
-                  <div className="lostfound-card-top">
-                    <span className={`lostfound-chip ${item.type === 'lost' ? 'lost' : 'found'}`}>
-                      {item.type}
-                    </span>
-                    <span className="lostfound-card-date">
-                      {formatDate(item.date)}
-                    </span>
-                  </div>
-
-                  <h3>{item.title}</h3>
-                  {item.description && <p>{item.description}</p>}
-
-                  {item.photos && item.photos.length > 0 && (
-                    <div className="lostfound-photos-grid">
-                      {item.photos.map((p, i) => (
-                        <img key={i} src={getAssetUrl(p)} alt="" className="lostfound-photo" />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="lostfound-card-footer">
-                  <div className="lostfound-creator" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      backgroundColor: item.Creator?.role === 'teacher' ? '#eef2ff' : '#ecfdf5',
-                      color: item.Creator?.role === 'teacher' ? '#4f46e5' : '#047857',
-                      fontWeight: 800,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '11px',
-                      overflow: 'hidden',
-                      flexShrink: 0,
-                      border: '1px solid currentColor'
-                    }}>
-                      {item.Creator?.avatar_url ? (
-                        <img src={getAssetUrl(item.Creator.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        (item.Creator?.name || 'U')[0].toUpperCase()
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span className="lostfound-creator-name">
-                        By {item.Creator?.name || 'Unknown'}
-                      </span>
-                      <span className="lostfound-creator-role">
-                        {item.Creator?.role?.replace(/_/g, ' ')}
-                        {(() => {
-                          const student = item.Creator?.student || item.Creator?.Student;
-                          if (student) {
-                            const className = student.class?.class_name || student.Class?.class_name || '';
-                            const sectionName = student.section?.name || student.Section?.name || '';
-                            const cleanClass = className.replace(/class\s+/gi, '').trim();
-                            if (cleanClass || sectionName) {
-                              return ` (${cleanClass}-${sectionName})`;
-                            }
-                          }
-                          return '';
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="lostfound-actions">
-                    {item.status === 'OPEN' && (isOwner || isAdmin) && (
-                      <button
-                        onClick={() => handleClose(item.id)}
-                        className="lostfound-action-close"
-                        title="Mark Solved/Closed"
-                        type="button"
-                      >
-                        <CheckCircle2 size={16} />
-                      </button>
-                    )}
-                    {(isOwner || isAdmin) && (
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="lostfound-action-delete"
-                        title="Delete Post"
-                        type="button"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </article>
-            );
-          })
-        )}
-      </section>
-
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginTop: '24px',
-            padding: '0 4px',
-          }}
-        >
-          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>
-            Page {page + 1} of {totalPages} &nbsp;·&nbsp; {totalCount} items total
-          </span>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              className="lostfound-btn lostfound-btn-soft"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              style={{ opacity: page === 0 ? 0.45 : 1 }}
-            >
-              ← Previous
-            </button>
-            <button
-              className="lostfound-btn lostfound-btn-soft"
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-              style={{ opacity: page >= totalPages - 1 ? 0.45 : 1 }}
-            >
-              Next →
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+          <Select className="w-36 text-xs" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <option value="all">All Types</option>
+            <option value="lost">Lost Only</option>
+            <option value="found">Found Only</option>
+          </Select>
+          <Input
+            icon={Search}
+            placeholder="Search items..."
+            className="w-48 text-xs"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-      )}
+      </div>
 
-      {/* Creation Modal */}
-      <Modal
-        isOpen={showCreate}
-        onClose={() => setShowCreate(false)}
-        title="Create Lost & Found Post"
-        maxWidth="max-w-md"
-      >
-        <form onSubmit={handleSubmit} className="lostfound-form">
-          <label>
-            <span>Item Title *</span>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Red Pencil Box, Math Book"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+      {/* Grid of Items */}
+      <Card>
+        <CardContent className="p-4">
+          {loading ? (
+            <div className="p-8 text-center text-xs text-[#8C97AB]">Loading items catalog...</div>
+          ) : items.length === 0 ? (
+            <EmptyState
+              icon={HelpCircle}
+              title="No items found"
+              description="No lost or found reports match the current filters."
             />
-          </label>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {items.map((item) => (
+                <div key={item.id} className="p-3 bg-[#FAFAF8] border border-[#E4E1D8] rounded-[8px] space-y-2 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <StatusBadge status={item.type === 'lost' ? 'danger' : 'active'} label={item.type.toUpperCase()} size="sm" />
+                      <span className="text-[10px] font-mono text-[#8C97AB]">{formatDate(item.date)}</span>
+                    </div>
+                    <h4 className="font-display font-bold text-xs text-[#14213D] truncate">{item.title}</h4>
+                    <p className="text-[11px] text-[#52607D] line-clamp-2">{item.description || 'No description provided.'}</p>
+                  </div>
 
-          <div className="lostfound-form-grid">
-            <label>
-              <span>Post Type</span>
-              <select value={type} onChange={(e) => setType(e.target.value)}>
-                <option value="lost">Lost Item</option>
-                <option value="found">Found Item</option>
-              </select>
-            </label>
-            <label>
-              <span>Date</span>
-              <input
-                type="date"
-                required
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </label>
-          </div>
-
-          <label>
-            <span>Description</span>
-            <textarea
-              placeholder="Provide detail description of the item, where it was lost/found, tags, stickers, etc."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </label>
-
-          <label>
-            <span>Photos (Max 2)</span>
-            <div className="lostfound-photos-upload">
-              {photos.map((p, i) => (
-                <div key={i} className="lostfound-photo-preview">
-                  <img src={p} alt="upload preview" />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(i)}
-                    className="lostfound-photo-remove"
-                  >
-                    <X size={12} />
-                  </button>
+                  <div className="pt-2 border-t border-[#EDEAE1] flex items-center justify-between gap-1">
+                    <span className="text-[10px] text-[#8C97AB] truncate">By {item.user?.name || 'Anonymous'}</span>
+                    {item.status === 'OPEN' && (
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" icon={CheckCircle2} className="h-6 px-2 text-[10px]" onClick={() => handleCloseItem(item.id)}>
+                          Resolve
+                        </Button>
+                        <Button variant="ghost" size="sm" icon={Trash2} className="h-6 px-1 text-[#B0403A]" onClick={() => handleDeleteItem(item.id)} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
-              {photos.length < 2 && (
-                <label className="lostfound-upload-placeholder">
-                  <ImageIcon size={20} />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handlePhotoChange}
-                    className="hidden"
-                  />
-                </label>
-              )}
             </div>
-          </label>
+          )}
+        </CardContent>
 
-          <div className="lostfound-form-actions">
-            <button
-              type="button"
-              onClick={() => setShowCreate(false)}
-              className="lostfound-btn lostfound-btn-soft"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="lostfound-btn lostfound-btn-primary"
-            >
-              {submitting ? 'Creating...' : 'Create Post'}
-            </button>
+        {totalPages > 1 && (
+          <div className="px-4 py-3 bg-[#FAFAF8] border-t border-[#E4E1D8] flex items-center justify-between text-xs text-[#52607D]">
+            <span>Page <strong className="text-[#14213D] font-mono">{page + 1}</strong> of <strong className="text-[#14213D] font-mono">{totalPages}</strong></span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" icon={ChevronLeft} onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>Previous</Button>
+              <Button variant="outline" size="sm" iconRight={ChevronRight} onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}>Next</Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Modal: Create Item */}
+      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Report Lost or Found Article">
+        <form onSubmit={handleCreate} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-semibold text-[#14213D] mb-1">Item Title *</label>
+            <Input required placeholder="e.g. Red Water Bottle, Blue Backpack" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">Report Category *</label>
+              <Select value={type} onChange={(e) => setType(e.target.value)}>
+                <option value="lost">Lost Item</option>
+                <option value="found">Found Item</option>
+              </Select>
+            </div>
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">Date *</label>
+              <Input type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-[#14213D] mb-1">Item Photo / Image (Optional)</label>
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                  const res = await uploadAPI.uploadAnnouncement(file);
+                  if (res.url || res.data?.url) {
+                    setImageUrl(res.url || res.data?.url);
+                    toast.success('Image uploaded');
+                  }
+                } catch {
+                  toast.error('Failed to upload image');
+                }
+              }}
+            />
+            {imageUrl && (
+              <p className="mt-1 text-[11px] text-[#2F6F5E] font-medium">Image attached ✓</p>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
+            <Button variant="outline" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" loading={submitting}>Post Report</Button>
           </div>
         </form>
-      </Modal>
-
-      {/* Action Confirmation Dialog Modal */}
-      <Modal
-        isOpen={confirmAction !== null}
-        onClose={() => setConfirmAction(null)}
-        title={confirmAction?.title || 'Confirm Action'}
-      >
-        <div style={{ padding: '16px 0 24px', color: '#4b5563', fontSize: '14px', lineHeight: 1.5 }}>
-          {confirmAction?.message}
-        </div>
-        <div className="lostfound-form-actions">
-          <button
-            type="button"
-            onClick={() => setConfirmAction(null)}
-            className="lostfound-btn lostfound-btn-soft"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={executeConfirmAction}
-            className="lostfound-btn lostfound-btn-primary"
-            style={{
-              backgroundColor: confirmAction?.type === 'delete' ? '#ef4444' : '#10b981',
-              color: '#ffffff',
-            }}
-          >
-            Confirm
-          </button>
-        </div>
       </Modal>
     </div>
   );

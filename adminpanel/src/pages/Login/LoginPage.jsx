@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { authAPI } from '../../api';
-import { GraduationCap, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
+import { GraduationCap, Eye, EyeOff, ArrowRight, AlertCircle, Info, Globe, Mail, ShieldCheck } from 'lucide-react';
+import { Modal } from '../../components/common/Modal';
 import './LoginPage.css';
 
 export function LoginPage() {
@@ -11,6 +12,8 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+
   const navigate = useNavigate();
   const { login, user, isAuthenticated, loading: authLoading } = useAuth();
 
@@ -150,18 +153,69 @@ export function LoginPage() {
           </button>
         </form>
 
-        <div className="login-footer">
-          Powered by{' '}
-          <a
-            href="https://avenra.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="login-footer-link"
+        <div className="login-footer flex items-center justify-center gap-1.5 mt-6 text-xs text-[#52607D]">
+          <span>Powered by</span>
+          <button
+            type="button"
+            onClick={() => setShowAboutModal(true)}
+            className="font-bold text-[#2F6F5E] hover:underline cursor-pointer flex items-center gap-1"
           >
-            Avenra
-          </a>
+            Avenra <Info size={13} className="text-[#2F6F5E]" />
+          </button>
         </div>
       </div>
+
+      {/* About Avenra Modal */}
+      {showAboutModal && (
+        <Modal isOpen={true} onClose={() => setShowAboutModal(false)} title="About Avenra Platform">
+          <div className="space-y-4 text-xs">
+            <div className="flex items-center gap-3 p-3 bg-[#EAF3F0] rounded-[8px] border border-[#D3E6E0]">
+              <div className="w-10 h-10 rounded-[8px] bg-[#2F6F5E] text-white flex items-center justify-center font-bold text-lg">
+                A
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-[#14213D]">Avenra Enterprise Systems</h4>
+                <p className="text-[#52607D]">School Management System & Administration Console</p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 divide-y divide-[#EDEAE1] pt-1">
+              <div className="flex items-center justify-between py-1.5">
+                <span className="font-semibold text-[#52607D]">Engineering & Publisher</span>
+                <span className="font-bold text-[#14213D]">Avenra</span>
+              </div>
+              <div className="flex items-center justify-between py-1.5">
+                <span className="font-semibold text-[#52607D]">Build Version</span>
+                <span className="font-mono text-[#2F6F5E] font-semibold">v1.0.0 (Production)</span>
+              </div>
+              <div className="flex items-center justify-between py-1.5">
+                <span className="font-semibold text-[#52607D]">Official Portal</span>
+                <a
+                  href="https://avenra.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-[#2F6F5E] hover:underline flex items-center gap-1"
+                >
+                  <Globe size={13} /> avenra.org
+                </a>
+              </div>
+              <div className="flex items-center justify-between py-1.5">
+                <span className="font-semibold text-[#52607D]">Technical Support Desk</span>
+                <a
+                  href="mailto:founders@avenra.org"
+                  className="font-medium text-[#2F6F5E] hover:underline flex items-center gap-1 font-mono"
+                >
+                  <Mail size={13} /> founders@avenra.org
+                </a>
+              </div>
+              <div className="flex items-center justify-between py-1.5">
+                <span className="font-semibold text-[#52607D]">Copyright</span>
+                <span className="text-[#8C97AB]">&copy; {new Date().getFullYear()} Avenra. All rights reserved.</span>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

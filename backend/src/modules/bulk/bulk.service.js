@@ -90,7 +90,7 @@ export const bulkCreateDataService = async ({
         {
           user_id: user.id,
           school_id,
-          employee_id: `EMP-${username}`,
+          employee_id: username,
           joining_date: new Date(),
           approval_status: "pending",
           is_active: true,

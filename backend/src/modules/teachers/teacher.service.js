@@ -28,21 +28,24 @@ export const createTeacherService = async ({
       transaction: t,
     });
 
-    const serial = count + 1;
-    const username = `TCH-${school_id}-${String(serial).padStart(3, "0")}`;
-    const password = `${username}@123`;
+    let serial = count + 1;
+    let username = "";
+    let isUnique = false;
 
-    /**
-     * 2️⃣ Safety check (extremely unlikely, but correct)
-     */
-    const exists = await User.findOne({
-      where: { school_id, username },
-      transaction: t,
-    });
-
-    if (exists) {
-      throw new AppError("Generated teacher username already exists", 409);
+    while (!isUnique) {
+      username = `T${String(serial).padStart(5, "0")}`;
+      const exists = await User.findOne({
+        where: { school_id, username },
+        transaction: t,
+      });
+      if (!exists) {
+        isUnique = true;
+      } else {
+        serial++;
+      }
     }
+
+    const password = `${username}@123`;
 
     /**
      * 3️⃣ Create user
@@ -69,7 +72,7 @@ export const createTeacherService = async ({
       {
         user_id: user.id,
         school_id,
-        employee_id: `EMP-${username}`,
+        employee_id: username,
         gender: gender || null,
         designation: designation || null,
         qualification: qualification || null,
