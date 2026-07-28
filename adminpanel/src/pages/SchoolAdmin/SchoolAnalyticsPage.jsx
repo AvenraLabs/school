@@ -538,6 +538,32 @@ export function SchoolAnalyticsPage() {
           )}
         </div>
 
+        {/* Section Subject Attendance Breakdown */}
+        {selectedSection && (data.subject_attendance_breakdown || []).length > 0 && (
+          <div style={{ ...S.panel, gridColumn: 'span 1' }} className="lg:col-span-2">
+            <h3 style={S.sectionTitle}>
+              <Calendar style={{ width: '18px', height: '18px', color: '#10b981' }} />
+              Section Subject Attendance & Conducted Classes
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
+              {data.subject_attendance_breakdown.map((sub) => (
+                <div key={sub.subject_id} style={{ padding: '14px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', marginBottom: '4px' }}>{sub.subject_name}</div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
+                    Total Classes Conducted: <strong style={{ color: '#0f172a' }}>{sub.conducted}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>Section Avg Attended</span>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: sub.percentage >= 75 ? '#15803d' : '#be123c', background: sub.percentage >= 75 ? '#f0fdf4' : '#fff1f2', padding: '2px 8px', borderRadius: '6px' }}>
+                      {sub.percentage}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Bottom Panel: At-Risk Breakdown (Count by class OR individual student cards) */}
         <div style={{ ...S.panel, gridColumn: 'span 1' }} className="lg:col-span-2">
           {selectedClass ? (

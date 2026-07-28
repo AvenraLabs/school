@@ -77,6 +77,38 @@ export default function AttendanceSummary({ summary }) {
           </Box>
         </Grid>
       </Grid>
+
+      {/* Subject-wise Classes Attended vs Conducted */}
+      {summary.subject_stats && summary.subject_stats.length > 0 && (
+        <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+          <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1, color: 'rgba(255,255,255,0.95)' }}>
+            Subject Classes Breakdown
+          </Typography>
+          <Grid container spacing={1}>
+            {summary.subject_stats.map((st) => (
+              <Grid item xs={6} key={st.subject_id}>
+                <Box
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.15)',
+                    borderRadius: 2,
+                    p: 1.2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.2,
+                  }}
+                >
+                  <Typography variant="caption" fontWeight="bold" sx={{ color: 'white' }}>
+                    {st.subject_name}
+                  </Typography>
+                  <Typography variant="body2" fontWeight="800" sx={{ color: 'white' }}>
+                    {st.attended} / {st.conducted} <span style={{ fontSize: '0.72rem', opacity: 0.85 }}>({st.percentage}%)</span>
+                  </Typography>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      )}
     </Paper>
   );
 }

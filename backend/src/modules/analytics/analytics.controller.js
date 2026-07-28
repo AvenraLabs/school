@@ -11,6 +11,7 @@ import Section from "../sections/section.model.js";
 import Class from "../classes/classes.model.js";
 import School from "../schools/school.model.js";
 import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
+import { calculateSubjectAttendanceService } from "../attendance/attendance.analytics.service.js";
 import { Op } from "sequelize";
 
 /**
@@ -539,6 +540,16 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
       ? Math.round((totalPresentDays / totalAttendanceDays) * 100)
       : 100;
 
+  let subjectAttendanceBreakdown = [];
+  if (class_id && section_id) {
+    subjectAttendanceBreakdown = await calculateSubjectAttendanceService({
+      school_id,
+      class_id: Number(class_id),
+      section_id: Number(section_id),
+      academic_year_id: academicYearId,
+    });
+  }
+
   res.json({
     success: true,
     data: {
@@ -550,6 +561,7 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
       at_risk: atRisk,
       top_performers: topPerformers,
       subject_averages: subjectAverages,
+      subject_attendance_breakdown: subjectAttendanceBreakdown,
       hardest_subject: hardestSubject,
       distributions,
     },

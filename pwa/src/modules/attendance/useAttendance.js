@@ -62,8 +62,9 @@ export function useAttendance(filters = {}) {
 
       if (user.role === "student") {
         const res = await getStudentAttendanceSummary(params);
-        const items = res.data?.items || [];
-        setSummary(buildSummary(items));
+        const items = res.data?.items || res.data?.rows || [];
+        const subjectStats = res.data?.subject_stats || [];
+        setSummary({ ...buildSummary(items), subject_stats: subjectStats });
         setDetails(items);
         return;
       }

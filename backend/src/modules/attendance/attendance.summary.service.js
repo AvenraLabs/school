@@ -9,6 +9,7 @@ import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.j
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
+import { calculateSubjectAttendanceService } from "./attendance.analytics.service.js";
 
 /* Helper to check if a user is authorized to mark or view attendance */
 async function checkAttendancePermission({ user, school_id, class_id, section_id }) {
@@ -265,10 +266,27 @@ export const getStudentAttendanceSummaryService = async ({
     if (to_date) where.date[Op.lte] = to_date;
   }
 
-  return Attendance.findAndCountAll({
+  const result = await Attendance.findAndCountAll({
     where,
     limit,
     offset,
     order: [["date", "DESC"]],
   });
+
+  let subjectStats = [];
+  if (student.class_id && student.section_id) {
+    subjectStats = await calculateSubjectAttendanceService({
+      school_id: student.school_id,
+      class_id: student.class_id,
+      section_id: student.section_id,
+      student_id: student.id,
+      academic_year_id: academicYearId,
+    });
+  }
+
+  return {
+    count: result.count,
+    rows: result.rows,
+    subject_stats: subjectStats,
+  };
 };

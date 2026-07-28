@@ -13,6 +13,7 @@ import ExamSubject from "../report-cards/exam-subject.model.js";
 import Subject from "../subjects/subject.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
+import { calculateSubjectAttendanceService } from "../attendance/attendance.analytics.service.js";
 
 // 1. Optimized Main Init Endpoint (Structure & Teachers list only)
 export const getSchoolDirectory = asyncHandler(async (req, res) => {
@@ -291,6 +292,16 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
     attendanceMap.percentage = total ? Number(((present / total) * 100).toFixed(2)) : 0;
 
     attendanceMap.subject_stats = {};
+    const studentObj = await Student.findByPk(studentId, { attributes: ["class_id", "section_id"] });
+    if (studentObj && studentObj.class_id && studentObj.section_id) {
+      attendanceMap.subject_stats = await calculateSubjectAttendanceService({
+        school_id,
+        class_id: studentObj.class_id,
+        section_id: studentObj.section_id,
+        student_id: studentId,
+        academic_year_id: academicYearId,
+      });
+    }
   }
 
   const marks = await ExamMark.findAll({

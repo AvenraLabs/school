@@ -489,44 +489,59 @@ export function SchoolRegistry() {
               {/* Subject-wise Attendance Breakdown */}
               <div className="sr-drawer-section">
                 <h4 className="sr-drawer-section__title">Subject Attendance Breakdown</h4>
-                {(!selectedStudent.attendance?.subject_stats || Object.keys(selectedStudent.attendance.subject_stats).length === 0) ? (
-                  <p className="sr-empty" style={{ padding: '16px 0' }}>No subject attendance logs recorded yet.</p>
-                ) : (
-                  <div className="sr-subject-stats-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-                    {Object.entries(selectedStudent.attendance.subject_stats).map(([subjectName, stats]) => {
-                      const percentage = stats.total ? Math.round((stats.present / stats.total) * 100) : 0;
-                      return (
-                        <div key={subjectName} className="sr-subject-stat-card" style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '12px 16px',
-                          background: 'var(--sr-slate-50)',
-                          border: '1px solid var(--sr-slate-100)',
-                          borderRadius: 'var(--sr-radius-md)'
-                        }}>
-                          <div>
-                            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--sr-slate-800)' }}>{subjectName}</span>
-                            <span style={{ display: 'block', fontSize: '11px', color: 'var(--sr-slate-500)', marginTop: '2px' }}>
-                              Attended {stats.present} of {stats.total} sessions
+                {(() => {
+                  const statsRaw = selectedStudent.attendance?.subject_stats;
+                  const statsList = Array.isArray(statsRaw)
+                    ? statsRaw
+                    : typeof statsRaw === 'object' && statsRaw !== null
+                    ? Object.entries(statsRaw).map(([subjectName, s]) => ({
+                        subject_name: subjectName,
+                        conducted: s.total || s.conducted || 0,
+                        attended: s.present || s.attended || 0,
+                        percentage: s.total ? Math.round(((s.present || s.attended || 0) / s.total) * 100) : (s.percentage || 0),
+                      }))
+                    : [];
+
+                  if (statsList.length === 0) {
+                    return <p className="sr-empty" style={{ padding: '16px 0' }}>No subject attendance logs recorded yet.</p>;
+                  }
+
+                  return (
+                    <div className="sr-subject-stats-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                      {statsList.map((st, idx) => {
+                        const pct = st.percentage ?? (st.conducted ? Math.round((st.attended / st.conducted) * 100) : 0);
+                        return (
+                          <div key={st.subject_id || st.subject_name || idx} className="sr-subject-stat-card" style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '12px 16px',
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '12px'
+                          }}>
+                            <div>
+                              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{st.subject_name}</span>
+                              <span style={{ display: 'block', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                Attended <strong>{st.attended}</strong> of <strong>{st.conducted}</strong> classes
+                              </span>
+                            </div>
+                            <span style={{
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              padding: '4px 10px',
+                              borderRadius: '8px',
+                              background: pct >= 75 ? '#f0fdf4' : '#fff1f2',
+                              color: pct >= 75 ? '#15803d' : '#be123c',
+                            }}>
+                              {pct}%
                             </span>
                           </div>
-                          <span style={{
-                            fontSize: '12px',
-                            fontWeight: '800',
-                            padding: '4px 8px',
-                            borderRadius: '6px',
-                            background: percentage >= 75 ? 'var(--sr-emerald-faint)' : '#fff1f2',
-                            color: percentage >= 75 ? 'var(--sr-emerald)' : 'var(--sr-rose)',
-                            border: `1px solid ${percentage >= 75 ? 'var(--sr-emerald-border)' : '#fecdd3'}`
-                          }}>
-                            {percentage}%
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Historical Grades Timeline */}

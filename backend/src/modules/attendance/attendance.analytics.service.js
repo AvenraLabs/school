@@ -3,7 +3,11 @@ import Attendance from "./attendance.model.js";
 import AppError from "../../shared/appError.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import Class from "../classes/classes.model.js";
+import Timetable from "../timetables/timetable.model.js";
+import Subject from "../subjects/subject.model.js";
 import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
+
+const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
 /* =========================
    TEACHER: ANALYTICS
@@ -80,5 +84,152 @@ export const getTeacherAttendanceAnalyticsService = async ({
         : 0,
     };
   });
+};
+
+/* =========================
+   SUBJECT-WISE ATTENDANCE CALCULATOR
+========================= */
+export const calculateSubjectAttendanceService = async ({
+  school_id,
+  class_id,
+  section_id,
+  student_id = null,
+  academic_year_id = null,
+}) => {
+  if (!class_id || !section_id) return [];
+
+  const academicYearId = academic_year_id || (await getCurrentAcademicYearId(school_id));
+
+  // 1. Fetch section timetable (non-break entries)
+  const timetableEntries = await Timetable.findAll({
+    where: { school_id, class_id, section_id, academic_year_id: academicYearId, is_break: false },
+    include: [
+      {
+        model: TeacherAssignment,
+        required: true,
+        include: [{ model: Subject, attributes: ["id", "name"] }],
+      },
+    ],
+  });
+
+  if (!timetableEntries || timetableEntries.length === 0) {
+    return [];
+  }
+
+  // 2. Map day_of_week -> { subject_id: { count, subject_name } }
+  const dayScheduleMap = {};
+  const subjectsMap = {};
+
+  timetableEntries.forEach((entry) => {
+    const day = (entry.day_of_week || "").toLowerCase();
+    const subjectId = entry.teacher_assignment?.subject_id;
+    const subjectName = entry.teacher_assignment?.subject?.name || `Subject #${subjectId}`;
+
+    if (!subjectId) return;
+
+    subjectsMap[subjectId] = subjectName;
+
+    if (!dayScheduleMap[day]) dayScheduleMap[day] = {};
+    if (!dayScheduleMap[day][subjectId]) {
+      dayScheduleMap[day][subjectId] = { count: 0, name: subjectName };
+    }
+    dayScheduleMap[day][subjectId].count += 1;
+  });
+
+  const subjectIds = Object.keys(subjectsMap).map(Number);
+  if (subjectIds.length === 0) return [];
+
+  const subjectStatsMap = {};
+  subjectIds.forEach((subId) => {
+    subjectStatsMap[subId] = {
+      subject_id: subId,
+      subject_name: subjectsMap[subId],
+      conducted: 0,
+      attended: 0,
+    };
+  });
+
+  if (student_id) {
+    // Single student query
+    const studentRecords = await Attendance.findAll({
+      where: { school_id, class_id, section_id, student_id, academic_year_id: academicYearId },
+      attributes: ["date", "status"],
+    });
+
+    studentRecords.forEach((rec) => {
+      const dayName = DAY_NAMES[new Date(rec.date).getDay()];
+      const daySubjects = dayScheduleMap[dayName];
+      if (!daySubjects) return;
+
+      const isAttended = rec.status === "present" || rec.status === "on_duty";
+
+      Object.keys(daySubjects).forEach((subIdStr) => {
+        const subId = Number(subIdStr);
+        const periodCount = daySubjects[subIdStr].count;
+
+        if (subjectStatsMap[subId]) {
+          subjectStatsMap[subId].conducted += periodCount;
+          if (isAttended) {
+            subjectStatsMap[subId].attended += periodCount;
+          }
+        }
+      });
+    });
+  } else {
+    // Section-wide query: get all conducted dates for this class/section
+    const conductedDates = await Attendance.findAll({
+      where: { school_id, class_id, section_id, academic_year_id: academicYearId },
+      attributes: [[fn("DISTINCT", col("date")), "date"]],
+      raw: true,
+    });
+
+    conductedDates.forEach((rec) => {
+      const dayName = DAY_NAMES[new Date(rec.date).getDay()];
+      const daySubjects = dayScheduleMap[dayName];
+      if (!daySubjects) return;
+
+      Object.keys(daySubjects).forEach((subIdStr) => {
+        const subId = Number(subIdStr);
+        const periodCount = daySubjects[subIdStr].count;
+        if (subjectStatsMap[subId]) {
+          subjectStatsMap[subId].conducted += periodCount;
+        }
+      });
+    });
+
+    // Section-wide attendance records
+    const allAttendanceRecords = await Attendance.findAll({
+      where: { school_id, class_id, section_id, academic_year_id: academicYearId },
+      attributes: ["student_id", "date", "status"],
+      raw: true,
+    });
+
+    const studentCountInAttendance = new Set(allAttendanceRecords.map((r) => r.student_id)).size || 1;
+
+    allAttendanceRecords.forEach((rec) => {
+      if (rec.status === "present" || rec.status === "on_duty") {
+        const dayName = DAY_NAMES[new Date(rec.date).getDay()];
+        const daySubjects = dayScheduleMap[dayName];
+        if (!daySubjects) return;
+
+        Object.keys(daySubjects).forEach((subIdStr) => {
+          const subId = Number(subIdStr);
+          const periodCount = daySubjects[subIdStr].count;
+          if (subjectStatsMap[subId]) {
+            subjectStatsMap[subId].attended += periodCount;
+          }
+        });
+      }
+    });
+
+    Object.values(subjectStatsMap).forEach((st) => {
+      st.attended = Math.round(st.attended / studentCountInAttendance);
+    });
+  }
+
+  return Object.values(subjectStatsMap).map((st) => ({
+    ...st,
+    percentage: st.conducted > 0 ? Math.round((st.attended / st.conducted) * 100) : 0,
+  }));
 };
 
