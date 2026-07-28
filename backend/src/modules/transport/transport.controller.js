@@ -308,7 +308,7 @@ export const getStudentTransportDetails = asyncHandler(async (req, res) => {
   const school = await School.findByPk(req.user.school_id, { attributes: ["google_maps_enabled"] });
   res.json({
     success: true,
-    data: result ? { ...result.toJSON(), google_maps_enabled: school?.google_maps_enabled || false } : null,
+    data: result ? { ...(typeof result.toJSON === "function" ? result.toJSON() : result), google_maps_enabled: school?.google_maps_enabled || false } : null,
   });
 });
 
