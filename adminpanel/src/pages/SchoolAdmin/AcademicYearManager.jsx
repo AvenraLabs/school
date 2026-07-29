@@ -127,7 +127,8 @@ export function AcademicYearManager() {
 
     try {
       const res = await classesAPI.list();
-      setClasses(res.items || []);
+      const rawClasses = res.items || res.data || (Array.isArray(res) ? res : []);
+      setClasses(rawClasses);
     } catch (e) {
       toast.error('Failed to load classes');
     }
@@ -445,7 +446,9 @@ export function AcademicYearManager() {
                 >
                   <option value="">Select Class...</option>
                   {classes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.class_name}</option>
+                    <option key={c.id} value={c.id}>
+                      {c.class_name || c.name || `Class ${c.id}`}
+                    </option>
                   ))}
                 </Select>
                 <Select
@@ -454,8 +457,10 @@ export function AcademicYearManager() {
                   disabled={!selectedClassId}
                 >
                   <option value="">Select Section...</option>
-                  {(classes.find((c) => c.id === Number(selectedClassId))?.sections || []).map((sec) => (
-                    <option key={sec.id} value={sec.id}>Section {sec.name}</option>
+                  {(classes.find((c) => String(c.id) === String(selectedClassId))?.sections || []).map((sec) => (
+                    <option key={sec.id} value={sec.id}>
+                      Section {sec.section_name || sec.name || sec.sectionName || sec.id}
+                    </option>
                   ))}
                 </Select>
               </div>
