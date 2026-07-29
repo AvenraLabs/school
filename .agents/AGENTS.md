@@ -14,3 +14,13 @@
 - **NO Unnecessary Text Badges**: Do NOT add superfluous UI label pills like "Counter Mode · Auto Focus Enabled". Keep card headers clean and focused.
 - **NO dead code or inline `style={{ ... }}` objects**. Always use Tailwind token utilities.
 - **Use shared primitives**: `Button`, `Card`, `Input`, `Select`, `Textarea`, `Table`, `StatusBadge`, `EmptyState`, `Modal`, `ConfirmDialog`, `StatsCard`.
+
+## 2. Mandatory Documentation Sync Rule
+- **Root Documentation Files**: The workspace maintains three core architectural blueprints in the root folder:
+  1. [`ER_DIAGRAM.md`](file:///c:/Users/nessi/Desktop/schooliq/ER_DIAGRAM.md) — Complete database schema, tables, fields, data types, indexes, and entity relationships.
+  2. [`SYSTEM_ARCHITECTURE.md`](file:///c:/Users/nessi/Desktop/schooliq/SYSTEM_ARCHITECTURE.md) — High-level system architecture, multi-tenancy, authentication, WebSockets, RAG engine, and subsystem designs.
+  3. [`API_DOCUMENTATION.md`](file:///c:/Users/nessi/Desktop/schooliq/API_DOCUMENTATION.md) — Comprehensive API endpoint specifications, route parameters, payload schemas, and RBAC rules.
+- **Mandatory Update Trigger**: Whenever you introduce a new module, add/modify/remove a database model, change table schemas, add/update API endpoints, or modify system architecture:
+  - You MUST immediately update `ER_DIAGRAM.md`, `SYSTEM_ARCHITECTURE.md`, and `API_DOCUMENTATION.md` to keep them fully synchronized with the codebase.
+  - Never leave documentation stale or out of sync.
+

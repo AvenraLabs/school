@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import { Op } from "sequelize";
 import asyncHandler from "../../shared/asyncHandler.js";
 import AppError from "../../shared/appError.js";
 import User from "../users/user.model.js";
@@ -8,22 +7,21 @@ import School from "../schools/school.model.js";
 export const login = asyncHandler(async (req, res) => {
   const { username, password } = req.body; // already validated by Zod
 
-  const user = await User.findOne({ 
-    where: { username } 
-  });
+  // ── 1. Find user ────────────────────────────────────────────────
+  const user = await User.findOne({ where: { username } });
   if (!user) {
     throw new AppError("Username or Mobile Number not found", 401);
   }
 
   if (!user.is_active) {
-    throw new AppError("User account disabled", 403);
+    throw new AppError("Your account has been disabled. Please contact your school admin.", 403);
   }
 
   if (password !== user.password) {
     throw new AppError("Password is wrong", 401);
   }
 
-  // school check (except super admin)
+  // ── 2. School check (except super_admin) ─────────────────────────
   let schoolBoard = null;
   if (user.role !== "super_admin") {
     const school = await School.findByPk(user.school_id);
@@ -33,49 +31,109 @@ export const login = asyncHandler(async (req, res) => {
     schoolBoard = school.board || null;
   }
 
-  // For students/drivers, fetch additional profile info
+  // ── 3. Role-specific profile status checks ────────────────────────
+  //    We must verify that the profile (teacher/student/driver) is still
+  //    active — a dismissed teacher or dropped student must not get a token.
   let additionalClaims = {};
-  if (user.role === "student") {
 
+  if (user.role === "teacher") {
+    const Teacher = (await import("../teachers/teacher.model.js")).default;
+    const teacher = await Teacher.findOne({ where: { user_id: user.id } });
+
+    if (!teacher) {
+      throw new AppError("Teacher profile not found. Contact your school admin.", 403);
+    }
+    if (!teacher.is_active || teacher.status !== "ACTIVE") {
+      const statusMsg = {
+        RESIGNED:   "Your account has been marked as resigned.",
+        RETIRED:    "Your account has been marked as retired.",
+        TERMINATED: "Your account has been terminated.",
+      };
+      throw new AppError(
+        statusMsg[teacher.status] || "Your teacher profile is no longer active.",
+        403
+      );
+    }
+
+    additionalClaims.teacher_id = teacher.id;
+
+  } else if (user.role === "student") {
     const Student = (await import("../students/student.model.js")).default;
     const student = await Student.findOne({ where: { user_id: user.id } });
 
-    if (student) {
-      additionalClaims = {
-        class_id: student.class_id,
-        section_id: student.section_id,
-        student_id: student.id
-      };
+    if (!student) {
+      throw new AppError("Student profile not found. Contact your school admin.", 403);
     }
+    if (!student.is_active || student.status !== "ACTIVE") {
+      const statusMsg = {
+        TRANSFERRED: "Your account has been marked as transferred.",
+        DROPPED:     "Your account has been marked as dropped.",
+        GRADUATED:   "Your account has been graduated out of the system.",
+      };
+      throw new AppError(
+        statusMsg[student.status] || "Your student profile is no longer active.",
+        403
+      );
+    }
+
+    additionalClaims = {
+      class_id:   student.class_id,
+      section_id: student.section_id,
+      student_id: student.id,
+    };
+
   } else if (user.role === "driver") {
     const Driver = (await import("../transport/driver.model.js")).default;
     const driver = await Driver.findOne({ where: { user_id: user.id } });
 
-    if (driver) {
-      additionalClaims = {
-        driver_id: driver.id
-      };
+    if (!driver) {
+      throw new AppError("Driver profile not found. Contact your school admin.", 403);
     }
+
+    additionalClaims.driver_id = driver.id;
   }
 
+  // ── 4. Issue token ────────────────────────────────────────────────
   const token = jwt.sign(
     {
-      id: user.id,
-      role: user.role,
-      school_id: user.school_id,
-      school_board: schoolBoard, // board from schools table — no extra API call needed
-      name: user.name,
-      username: user.username,
-      phone: user.phone,
-      ...additionalClaims
+      id:           user.id,
+      role:         user.role,
+      school_id:    user.school_id,
+      school_board: schoolBoard,
+      name:         user.name,
+      username:     user.username,
+      phone:        user.phone,
+      ...additionalClaims,
     },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    { expiresIn: process.env.JWT_EXPIRES_IN || "365d" }
   );
+
+  // ── 5. Update last_login ──────────────────────────────────────────
+  user.last_login = new Date();
+  await user.save();
 
   res.json({ token });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Logout — records the event; client must clear its own storage
+// ─────────────────────────────────────────────────────────────────────────────
+export const logout = asyncHandler(async (req, res) => {
+  // req.user is populated by the protect middleware
+  if (req.user?.id) {
+    // Clear any stored refresh_token so old sessions are fully revoked
+    await User.update(
+      { refresh_token: null },
+      { where: { id: req.user.id } }
+    );
+  }
+  res.json({ message: "Logged out successfully" });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Change password
+// ─────────────────────────────────────────────────────────────────────────────
 export const changePassword = asyncHandler(async (req, res) => {
   const { old_password, new_password } = req.body;
 
@@ -89,17 +147,17 @@ export const changePassword = asyncHandler(async (req, res) => {
   }
 
   user.password = new_password;
+  // Invalidate any stored refresh_token on password change for security
+  user.refresh_token = null;
   await user.save();
 
-  res.json({
-    message: "Password updated successfully",
-  });
+  res.json({ message: "Password updated successfully" });
 });
 
-
-
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin: reset another user's password
+// ─────────────────────────────────────────────────────────────────────────────
 export const adminResetUserPassword = asyncHandler(async (req, res) => {
-  // Only school admins (and super admins) can reset passwords for their users
   if (req.user.role !== "school_admin" && req.user.role !== "super_admin") {
     throw new AppError("Forbidden", 403);
   }
@@ -116,23 +174,26 @@ export const adminResetUserPassword = asyncHandler(async (req, res) => {
     throw new AppError("User not found", 404);
   }
 
-  // Ensure school admin can only reset their own school's users
   if (req.user.role === "school_admin" && targetUser.school_id !== req.user.school_id) {
     throw new AppError("Forbidden: Cannot reset password for a user from another school", 403);
   }
 
-  // Cannot reset another admin's password through this endpoint
   if (targetUser.role === "school_admin" || targetUser.role === "super_admin") {
     throw new AppError("Forbidden: Cannot reset admin password using this endpoint", 403);
   }
 
   targetUser.password = new_password;
-  targetUser.first_login = true; // force them to go through profile completion/password change if needed
+  targetUser.first_login = true;
+  // Invalidate any active sessions for the target user
+  targetUser.refresh_token = null;
   await targetUser.save();
 
   res.json({ message: "Password reset successfully" });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Update own profile
+// ─────────────────────────────────────────────────────────────────────────────
 export const updateProfile = asyncHandler(async (req, res) => {
   const { name, avatar_url } = req.body;
   const user = await User.findByPk(req.user.id);
@@ -140,7 +201,6 @@ export const updateProfile = asyncHandler(async (req, res) => {
     throw new AppError("User not found", 404);
   }
 
-  // Clean up old avatar if changed
   if (avatar_url !== undefined && avatar_url !== user.avatar_url) {
     if (user.avatar_url) {
       try {

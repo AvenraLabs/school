@@ -547,7 +547,7 @@ export const getClassAnalytics = asyncHandler(async (req, res) => {
       school_id,
       class_id: Number(class_id),
       section_id: Number(section_id),
-      academic_year_id: academicYearId,
+      academic_year_id,
     });
   }
 

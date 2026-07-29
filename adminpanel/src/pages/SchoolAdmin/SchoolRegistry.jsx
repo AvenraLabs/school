@@ -25,6 +25,30 @@ function getFirstDayOfMonth(year, month) {
   return new Date(year, month, 1).getDay();
 }
 
+function UserAvatar({ src, name, fallbackChar = 'U', size = 'w-7 h-7' }) {
+  const [imgError, setImgError] = useState(false);
+  const initial = name ? name[0].toUpperCase() : fallbackChar;
+
+  if (!src || imgError) {
+    return (
+      <div className={`${size} rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-xs border border-[#D3E6E0] overflow-hidden shrink-0`}>
+        {initial}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${size} rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-xs border border-[#D3E6E0] overflow-hidden shrink-0`}>
+      <img
+        src={getApiAssetUrl(src)}
+        alt={name || 'Avatar'}
+        className="w-full h-full object-cover"
+        onError={() => setImgError(true)}
+      />
+    </div>
+  );
+}
+
 export function SchoolRegistry() {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
@@ -228,13 +252,7 @@ export function SchoolRegistry() {
                         <td className="px-4 py-2.5 font-mono font-bold">{s.roll_no || '—'}</td>
                         <td className="px-4 py-2.5 font-semibold text-[#14213D] flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-xs border border-[#D3E6E0] overflow-hidden shrink-0">
-                              {s.user?.avatar_url ? (
-                                <img src={getApiAssetUrl(s.user.avatar_url)} alt={s.user?.name} className="w-full h-full object-cover" />
-                              ) : (
-                                s.user?.name ? s.user.name[0] : 'S'
-                              )}
-                            </div>
+                            <UserAvatar src={s.user?.avatar_url} name={s.user?.name} fallbackChar="S" />
                             <span>{s.user?.name || '—'}</span>
                           </div>
                           <span className="text-[10px] text-[#2F6F5E] underline">View</span>
@@ -276,13 +294,7 @@ export function SchoolRegistry() {
                     <td className="px-4 py-2.5 font-mono font-bold">{formatEmployeeId(t.employee_id)}</td>
                     <td className="px-4 py-2.5 font-semibold flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-xs border border-[#D3E6E0] overflow-hidden shrink-0">
-                          {t.user?.avatar_url ? (
-                            <img src={getApiAssetUrl(t.user.avatar_url)} alt={t.user?.name} className="w-full h-full object-cover" />
-                          ) : (
-                            t.user?.name ? t.user.name[0] : 'T'
-                          )}
-                        </div>
+                        <UserAvatar src={t.user?.avatar_url} name={t.user?.name} fallbackChar="T" />
                         <span>{t.user?.name || '—'}</span>
                       </div>
                       <span className="text-[10px] text-[#2F6F5E] underline">View</span>
@@ -317,13 +329,7 @@ export function SchoolRegistry() {
             <div className="p-5 space-y-6 text-xs flex-1">
               {/* Student Avatar & Basic Handle */}
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-lg border border-[#D3E6E0] overflow-hidden shrink-0">
-                  {selectedStudent.user?.avatar_url ? (
-                    <img src={getApiAssetUrl(selectedStudent.user.avatar_url)} alt={selectedStudent.user?.name} className="w-full h-full object-cover" />
-                  ) : (
-                    selectedStudent.user?.name ? selectedStudent.user.name[0] : 'S'
-                  )}
-                </div>
+                <UserAvatar src={selectedStudent.user?.avatar_url} name={selectedStudent.user?.name} fallbackChar="S" size="w-12 h-12" />
                 <div>
                   <h4 className="font-display font-bold text-base text-[#14213D]">{selectedStudent.user?.name || 'Student Name'}</h4>
                   <p className="text-xs font-mono text-[#2F6F5E]">@{selectedStudent.user?.username || selectedStudent.student_code || `S${String(selectedStudent.id).padStart(5, '0')}`}</p>
@@ -522,13 +528,7 @@ export function SchoolRegistry() {
             <div className="p-5 space-y-6 text-xs flex-1">
               {/* Avatar & Username Header */}
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-lg border border-[#D3E6E0] overflow-hidden shrink-0">
-                  {selectedTeacher.user?.avatar_url ? (
-                    <img src={getApiAssetUrl(selectedTeacher.user.avatar_url)} alt={selectedTeacher.user?.name} className="w-full h-full object-cover" />
-                  ) : (
-                    selectedTeacher.user?.name ? selectedTeacher.user.name[0] : 'T'
-                  )}
-                </div>
+                <UserAvatar src={selectedTeacher.user?.avatar_url} name={selectedTeacher.user?.name} fallbackChar="T" size="w-12 h-12" />
                 <div>
                   <h4 className="font-display font-bold text-base text-[#14213D]">{selectedTeacher.user?.name || 'Faculty Member'}</h4>
                   <p className="text-xs font-mono text-[#2F6F5E]">@{selectedTeacher.user?.username || selectedTeacher.employee_id}</p>

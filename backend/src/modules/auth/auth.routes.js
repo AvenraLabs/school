@@ -1,5 +1,5 @@
 import express from "express";
-import { login, changePassword, adminResetUserPassword, updateProfile } from "./auth.controller.js";
+import { login, logout, changePassword, adminResetUserPassword, updateProfile } from "./auth.controller.js";
 import { loginSchema, changePasswordSchema } from "./auth.schema.js";
 import { validate } from "../../shared/middlewares/validate.js";
 import { protect } from "../../shared/middlewares/auth.js";
@@ -7,6 +7,7 @@ import { protect } from "../../shared/middlewares/auth.js";
 const router = express.Router();
 
 router.post("/login", validate(loginSchema), login);
+router.post("/logout", protect, logout);
 router.post(
   "/change-password",
   protect,

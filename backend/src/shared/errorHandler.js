@@ -3,7 +3,15 @@ export default function errorHandler(err, req, res, next) {
   let statusCode = err.statusCode || 500;
   let message = err.message || "Internal Server Error";
 
-  if (err?.name === "SequelizeUniqueConstraintError") {
+  // JWT errors → 401 (so frontend interceptors can redirect to login)
+  if (
+    err?.name === "TokenExpiredError" ||
+    err?.name === "JsonWebTokenError" ||
+    err?.name === "NotBeforeError"
+  ) {
+    statusCode = 401;
+    message = "Session expired. Please log in again.";
+  } else if (err?.name === "SequelizeUniqueConstraintError") {
     statusCode = 400;
     const field = err?.errors?.[0]?.path;
     message = field ? `${field} already in use` : "Unique constraint violation";
@@ -17,8 +25,8 @@ export default function errorHandler(err, req, res, next) {
     message = "Database is currently busy. Please try again in a moment.";
   }
 
-  // log unexpected errors
-  if (!err.isOperational && statusCode !== 503) {
+  // log unexpected errors (not operational, not 503, not JWT)
+  if (!err.isOperational && statusCode !== 503 && statusCode !== 401) {
     console.error("UNEXPECTED ERROR", err);
   }
 

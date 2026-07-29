@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
+import axiosInstance from '../api/axios';
 
 export const AuthContext = createContext();
 
@@ -27,7 +28,13 @@ export function AuthProvider({ children }) {
     setError(null);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Tell the backend first (fire-and-forget — don't block on network failures)
+    try {
+      await axiosInstance.post('/auth/logout');
+    } catch {
+      // Ignore — we always clear local state regardless
+    }
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');

@@ -189,11 +189,13 @@ export function getProfileCompletionEndpoint(role) {
   }
 }
 
-// Logout API (for future use if backend implements it)
+// Logout — notifies backend to clear session data
 export async function logoutApi() {
   try {
+    await api.post("/auth/logout", {}, { withCredentials: true });
     return { success: true };
   } catch (error) {
+    // Always succeed client-side even if network call fails
     console.warn("Logout API call failed:", error);
     return { success: true };
   }

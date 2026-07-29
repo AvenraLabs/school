@@ -170,33 +170,29 @@ import libraryRoutes from "./src/modules/library/library.routes.js";
 
 
 
-// auth
+// inject socket instance into every request
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
+// auth
 app.use("/api/auth", authRoutes);
-app.use("/api", authRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api", transportRoutes);
 
-// attendance (MOVED UP to prevent teacherRoutes masking)
+// attendance (mounted at /api — routes define full sub-paths like /teachers/attendance/*)
 app.use("/api", attendanceSummaryRoutes);
 app.use("/api", attendanceAnalyticsRoutes);
-// backward-compatible prefix for attendance routes
-app.use("/api/attendance", attendanceSummaryRoutes);
-app.use("/api/attendance", attendanceAnalyticsRoutes);
 
 // core
-  app.use("/api/schools", schoolRoutes);
-  app.use("/api/students", studentDashboardRoutes);
-  app.use("/api/students", studentRoutes);
-  app.use("/api/teachers", teacherDashboardRoutes);
-  app.use("/api/teachers", teacherRoutes);
-  app.use("/api/lost-found", lostFoundRoutes);
-  app.use("/api/feedback", feedbackRoutes);
-
+app.use("/api/schools", schoolRoutes);
+app.use("/api/students", studentDashboardRoutes);
+app.use("/api/students", studentRoutes);
+app.use("/api/teachers", teacherDashboardRoutes);
+app.use("/api/teachers", teacherRoutes);
+app.use("/api/lost-found", lostFoundRoutes);
+app.use("/api/feedback", feedbackRoutes);
 app.use("/api/sections", sectionRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/classes", classRoutes);
@@ -210,22 +206,15 @@ app.use("/api/fees", feeRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/library", libraryRoutes);
 
-
-
 // approvals
 app.use("/api", approvalRoutes);
 app.use("/api", teacherApprovalRoutes);
 app.use("/api", studentApprovalRoutes);
-
 app.use("/api", auditRoutes);
 
 // bulk
-
 app.use("/api", teacherBulkRoutes);
 app.use("/api", studentBulkRoutes);
-
-
-// mount admin bulk endpoints (for admin panel)
 app.use("/api/bulk", bulkRoutes);
 
 // tokens (super admin)
