@@ -227,7 +227,7 @@ export function ExamsManager() {
     try {
       await examsAPI.lock(exam.id, !exam.is_locked);
       toast.success(`Exam ${!exam.is_locked ? 'locked' : 'unlocked'}`);
-      await loadExams();
+      await loadExams(selectedClass);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to update exam lock');
     }
@@ -237,7 +237,7 @@ export function ExamsManager() {
     try {
       await examsAPI.removeSubject(exam.id, slot.subject_id);
       toast.success('Subject schedule removed');
-      await loadExams();
+      await loadExams(selectedClass);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to remove subject');
     }
@@ -254,19 +254,20 @@ export function ExamsManager() {
       const todayStr = new Date().toISOString().split('T')[0];
       for (const sub of subjects) {
         try {
-          await examsAPI.scheduleTest({
-            exam_id: Number(examId),
-            class_id: Number(classId),
-            subject_id: Number(sub.id),
-            exam_date: todayStr,
-            syllabus: 'Full Syllabus',
-          });
+          await examsAPI.upsertSubject(
+            Number(examId),
+            Number(sub.id),
+            todayStr,
+            'Full Syllabus'
+          );
           count++;
-        } catch { /* ignore duplicates */ }
+        } catch (e) {
+          console.error('Failed adding subject slot:', sub.name, e);
+        }
       }
       toast.success(`Auto-populated ${count} subject exam slots!`);
       loadExams(classId);
-    } catch {
+    } catch (e) {
       toast.error('Failed to auto-populate exam schedule');
     } finally {
       setSaving(false);

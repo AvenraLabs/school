@@ -33,8 +33,10 @@ import {
   ChevronRight,
   MoreVertical,
   User,
-  ShieldAlert,
+  Sliders,
   Sparkles,
+  Database,
+  ShieldAlert,
 } from 'lucide-react';
 
 import { authAPI, uploadAPI } from '../../api';
@@ -66,6 +68,18 @@ const schoolAdminLinks = [
   { to: '/admin/academic-year', icon: Calendar, label: 'Academic Year' },
   { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },
   { to: '/admin/feedback', icon: MessageSquare, label: 'Feedback' },
+];
+
+const superAdminLinks = [
+  { section: 'Platform Operations' },
+  { to: '/super-admin', icon: LayoutDashboard, label: 'SuperAdmin Desk' },
+  { to: '/super-admin/settings', icon: Sliders, label: 'School Settings' },
+  { to: '/super-admin/billing', icon: IndianRupee, label: 'Billing & Telemetry' },
+  { to: '/super-admin/feedback', icon: MessageSquare, label: 'Support & Feedback' },
+
+  { section: 'System Management' },
+  { to: '/super-admin/classes', icon: BookOpen, label: 'Classes & Sections' },
+  { to: '/super-admin/seeder', icon: Database, label: 'Seeder' },
 ];
 
 export function Sidebar({ isOpen, onClose, isCollapsed, setIsCollapsed }) {
@@ -118,12 +132,11 @@ export function Sidebar({ isOpen, onClose, isCollapsed, setIsCollapsed }) {
     try {
       setErrorMsg('');
       setIsUploading(true);
-      const formData = new FormData();
-      formData.append('avatar', file);
-      const response = await uploadAPI.uploadAvatar(formData);
+      const response = await uploadAPI.uploadAvatar(file);
+      const uploadedUrl = response?.url || response?.data?.url;
 
-      if (response.data?.url) {
-        setAvatarUrl(response.data.url);
+      if (uploadedUrl) {
+        setAvatarUrl(uploadedUrl);
         setSuccessMsg('Photo uploaded. Click Save to update profile.');
       } else {
         setErrorMsg('Upload response missing image URL.');
@@ -153,7 +166,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, setIsCollapsed }) {
         avatar_url: avatarUrl,
       });
 
-      const updatedUser = response.data?.user || {
+      const updatedUser = response?.user || response?.data?.user || {
         ...user,
         name: profileName.trim(),
         avatar_url: avatarUrl,
@@ -219,7 +232,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, setIsCollapsed }) {
 
           {/* Nav links list */}
           <nav className="flex-1 overflow-y-auto p-2.5 space-y-1">
-            {schoolAdminLinks.map((item, idx) => {
+            {(user?.role === 'super_admin' ? superAdminLinks : schoolAdminLinks).map((item, idx) => {
               if (item.section) {
                 if (isCollapsed) return <div key={idx} className="my-2 border-t border-[#EDEAE1]" />;
                 return (
@@ -237,6 +250,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, setIsCollapsed }) {
                 <NavLink
                   key={item.to}
                   to={item.to}
+                  end={item.to === '/super-admin'}
                   onClick={onClose}
                   className={({ isActive }) =>
                     `flex items-center gap-2.5 px-2.5 py-2 rounded-[6px] text-xs font-medium transition-all relative group ${

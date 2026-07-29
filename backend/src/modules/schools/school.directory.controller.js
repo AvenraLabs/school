@@ -78,6 +78,8 @@ export const getSchoolDirectory = asyncHandler(async (req, res) => {
       },
       {
         model: TeacherAssignment,
+        where: { is_active: true },
+        required: false,
         include: [
           {
             model: Subject,
@@ -247,7 +249,7 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
   const { studentId } = req.params;
 
   const student = await Student.findOne({
-    where: { school_id, id: studentId, approval_status: "approved" },
+    where: { school_id, id: studentId },
     include: [
       {
         model: User,

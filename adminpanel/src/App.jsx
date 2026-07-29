@@ -5,8 +5,12 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { DashboardLayout } from './components/Layout/DashboardLayout';
 import { LoginPage } from './pages/Login/LoginPage';
 
-// Super Admin — single unified page
+// Super Admin Pages
 import { SuperAdminPage } from './pages/SuperAdmin/SuperAdminPage';
+import { SuperAdminSchoolSettings } from './pages/SuperAdmin/SuperAdminSchoolSettings';
+import { SuperAdminBillingLogs } from './pages/SuperAdmin/SuperAdminBillingLogs';
+import { SuperAdminAiAnalytics } from './pages/SuperAdmin/SuperAdminAiAnalytics';
+import { FeedbackManager } from './pages/SuperAdmin/FeedbackManager';
 
 // School Admin Pages
 import { SchoolAdminDashboard } from './pages/SchoolAdmin/Dashboard';
@@ -50,15 +54,22 @@ function App() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsConditions />} />
 
-            {/* Super Admin — single unified page, no DashboardLayout (has its own top bar) */}
+            {/* Super Admin */}
             <Route
-              path="/super-admin"
               element={
                 <ProtectedRoute allowedRoles={['super_admin']}>
-                  <SuperAdminPage />
+                  <DashboardLayout />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route path="/super-admin" element={<SuperAdminPage />} />
+              <Route path="/super-admin/settings" element={<SuperAdminSchoolSettings />} />
+              <Route path="/super-admin/billing" element={<SuperAdminBillingLogs />} />
+              <Route path="/super-admin/feedback" element={<FeedbackManager />} />
+              <Route path="/super-admin/ai-analytics" element={<SuperAdminAiAnalytics />} />
+              <Route path="/super-admin/classes" element={<ClassesManager />} />
+              <Route path="/super-admin/seeder" element={<BulkSeeder />} />
+            </Route>
             {/* Redirect any old bookmarked sub-routes */}
             <Route path="/super-admin/*" element={<Navigate to="/super-admin" replace />} />
 

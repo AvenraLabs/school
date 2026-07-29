@@ -5,6 +5,7 @@ import { validate } from "../../shared/middlewares/validate.js";
 
 import {
   getActiveSchool,
+  getAllSchools,
   getSchoolStats,
   updateSchoolStatus,
   updateSchoolAdminStatus,
@@ -43,6 +44,7 @@ router.patch("/my-settings", protect, allowRoles("school_admin"), updateSchoolSe
 
 router.use(protect, allowRoles("super_admin"));
 
+router.get("/all", getAllSchools);
 router.get("/", getActiveSchool);
 router.get("/:id/stats", getSchoolStats);
 router.patch("/:id/status", validate(updateSchoolStatusSchema), updateSchoolStatus);

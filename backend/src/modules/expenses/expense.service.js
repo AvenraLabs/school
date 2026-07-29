@@ -7,32 +7,6 @@ import { getPagination } from "../../shared/utils/pagination.js";
 import { Op } from "sequelize";
 import db from "../../config/db.js";
 
-const DEFAULT_CATEGORIES = [
-  "Salary",
-  "Electricity",
-  "Stationery",
-  "Maintenance",
-  "Transport",
-  "Internet",
-  "Office Expenses",
-  "Event Expenses",
-  "Miscellaneous",
-];
-
-// Helper: Ensure default categories exist for school
-export const ensureDefaultExpenseCategories = async (school_id) => {
-  const count = await ExpenseCategory.count({ where: { school_id } });
-  if (count === 0) {
-    const catsToCreate = DEFAULT_CATEGORIES.map((cat) => ({
-      school_id,
-      name: cat,
-      code: cat.toUpperCase().replace(/\s+/g, "_"),
-      is_active: true,
-    }));
-    await ExpenseCategory.bulkCreate(catsToCreate);
-  }
-};
-
 // Helper: Get Current Academic Year
 const getCurrentAcademicYear = async (school_id, transaction = null) => {
   const currentYear = await AcademicYear.findOne({
@@ -52,7 +26,6 @@ const formatVoucherNo = (num, yearName = "") => {
 
 /* Categories */
 export const listExpenseCategoriesService = async (school_id) => {
-  await ensureDefaultExpenseCategories(school_id);
   return await ExpenseCategory.findAll({
     where: { school_id, is_active: true },
     order: [["name", "ASC"]],

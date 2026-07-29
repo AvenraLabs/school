@@ -7,6 +7,7 @@ import { Select, Input } from '../../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Search, BookOpen, RotateCcw, AlertTriangle, GraduationCap, UserCheck } from 'lucide-react';
+import { BorrowerSearchInput } from '../../../components/common/BorrowerSearchInput';
 
 export function LibraryReturn() {
   const [borrowerType, setBorrowerType] = useState('student');
@@ -22,28 +23,40 @@ export function LibraryReturn() {
   const [results, setResults] = useState([]);
 
   useEffect(() => {
-    if (borrowerType === 'student') {
-      classesAPI.list().then((d) => setClasses(Array.isArray(d) ? d : d?.rows || d?.items || []));
-    }
-  }, [borrowerType]);
+    classesAPI
+      .list()
+      .then((d) => {
+        const raw = d?.items || d?.rows || d?.data || (Array.isArray(d) ? d : []);
+        setClasses(Array.isArray(raw) ? raw : []);
+      })
+      .catch(() => setClasses([]));
+  }, []);
 
   const searchBorrower = useCallback(async () => {
-    if (!term.trim() && !classId && borrowerType === 'student') return;
+    if (!term.trim() && !classId) {
+      setResults([]);
+      return;
+    }
     try {
       if (borrowerType === 'teacher') {
-        const res = await teachersAPI.list(20, 0, 'active', 'approved');
-        const items = res?.rows || res?.items || res || [];
-        const filtered = term.trim()
-          ? items.filter((t) => (t.user?.name || '').toLowerCase().includes(term.toLowerCase()))
-          : items;
-        setResults(filtered);
+        const res = await teachersAPI.list({
+          limit: 50,
+          search: term.trim() || undefined,
+          status: 'active',
+          approval_status: 'approved',
+        });
+        const items = res?.rows || res?.items || (Array.isArray(res) ? res : []);
+        setResults(Array.isArray(items) ? items : []);
       } else {
-        const res = await studentsAPI.list(15, 0, classId || undefined, undefined, undefined, 'approved');
-        const items = res?.rows || res?.items || res || [];
-        const filtered = term.trim()
-          ? items.filter((s) => (s.user?.name || '').toLowerCase().includes(term.toLowerCase()))
-          : items;
-        setResults(filtered);
+        const res = await studentsAPI.list({
+          limit: 50,
+          search: term.trim() || undefined,
+          class_id: classId || undefined,
+          status: 'ACTIVE',
+          approval_status: 'approved',
+        });
+        const items = res?.rows || res?.items || (Array.isArray(res) ? res : []);
+        setResults(Array.isArray(items) ? items : []);
       }
     } catch {
       setResults([]);
@@ -59,7 +72,8 @@ export function LibraryReturn() {
     setLoadingBooks(true);
     try {
       const res = await libraryAPI.getIssuedBooks({ user_id: userId, status: 'issued' });
-      setBorrowedBooks(res?.items || []);
+      const rawIssues = res?.issues || res?.items || res?.rows || res?.data || (Array.isArray(res) ? res : []);
+      setBorrowedBooks(Array.isArray(rawIssues) ? rawIssues : []);
     } catch {
       toast.error('Failed to load active loans');
     } finally {
@@ -96,56 +110,15 @@ export function LibraryReturn() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 space-y-4">
-          <div className="flex items-center gap-2">
-            <Button
-              variant={borrowerType === 'student' ? 'primary' : 'outline'}
-              size="sm"
-              icon={GraduationCap}
-              onClick={() => { setBorrowerType('student'); setSelectedBorrower(null); setBorrowedBooks([]); }}
-            >
-              Student Borrower
-            </Button>
-            <Button
-              variant={borrowerType === 'teacher' ? 'primary' : 'outline'}
-              size="sm"
-              icon={UserCheck}
-              onClick={() => { setBorrowerType('teacher'); setSelectedBorrower(null); setBorrowedBooks([]); }}
-            >
-              Teacher Borrower
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Input
-              icon={Search}
-              placeholder="Search borrower by name..."
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-            />
-            {borrowerType === 'student' && (
-              <Select value={classId} onChange={(e) => setClassId(e.target.value)}>
-                <option value="">All Classes</option>
-                {classes.map((c) => (
-                  <option key={c.id} value={c.id}>Class {c.class_name}</option>
-                ))}
-              </Select>
-            )}
-          </div>
-
-          {results.length > 0 && !selectedBorrower && (
-            <div className="border border-[#E4E1D8] rounded-[8px] overflow-hidden divide-y divide-[#EDEAE1]">
-              {results.map((b) => (
-                <div
-                  key={b.id}
-                  onClick={() => handleSelectBorrower(b)}
-                  className="p-3 hover:bg-[#EAF3F0] cursor-pointer flex items-center justify-between"
-                >
-                  <span className="font-semibold text-[#14213D]">{b.user?.name || b.name}</span>
-                  <span className="text-[10px] text-[#8C97AB] font-mono">{b.admission_no || b.employee_id || 'ID'}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          {/* Borrower Search Component */}
+          <BorrowerSearchInput
+            borrowerType={borrowerType}
+            onBorrowerTypeChange={(type) => { setBorrowerType(type); setSelectedBorrower(null); setBorrowedBooks([]); }}
+            selectedBorrower={selectedBorrower}
+            onSelectBorrower={(b) => handleSelectBorrower(b)}
+            onClearBorrower={() => { setSelectedBorrower(null); setBorrowedBooks([]); }}
+            showTypeToggle={true}
+          />
 
           {selectedBorrower && (
             <div className="space-y-3">

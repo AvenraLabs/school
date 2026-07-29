@@ -18,7 +18,7 @@ export const authAPI = {
   },
 
   resetUserPassword: async (userId, newPassword) => {
-    const response = await axiosInstance.patch(`/admin/users/${userId}/reset-password`, {
+    const response = await axiosInstance.patch(`/auth/admin/users/${userId}/reset-password`, {
       new_password: newPassword,
     });
     return response.data;
@@ -37,8 +37,8 @@ export const schoolAPI = {
     return response.data;
   },
 
-  list: async (limit = 10, offset = 0) => {
-    const response = await axiosInstance.get('/schools', {
+  list: async (limit = 100, offset = 0) => {
+    const response = await axiosInstance.get('/schools/all', {
       params: { limit, offset },
     });
     return response.data;
@@ -46,6 +46,16 @@ export const schoolAPI = {
 
   getStats: async (schoolId, params = {}) => {
     const response = await axiosInstance.get(`/schools/${schoolId}/stats`, { params });
+    return response.data;
+  },
+
+  update: async (schoolId, schoolData) => {
+    const response = await axiosInstance.patch(`/schools/${schoolId}`, schoolData);
+    return response.data;
+  },
+
+  updateStatus: async (schoolId, status) => {
+    const response = await axiosInstance.patch(`/schools/${schoolId}/status`, { status });
     return response.data;
   },
 
@@ -78,6 +88,11 @@ export const schoolAPI = {
     if (classId) params.class_id = classId;
     if (sectionId) params.section_id = sectionId;
     const response = await axiosInstance.get('/analytics/school', { params });
+    return response.data;
+  },
+
+  updateMySettings: async (settingsData) => {
+    const response = await axiosInstance.patch('/schools/my-settings', settingsData);
     return response.data;
   },
 
@@ -226,10 +241,16 @@ export const teachersAPI = {
     return response.data;
   },
 
-  list: async (limit = 10, offset = 0, status, approvalStatus) => {
-    const params = { limit, offset };
-    if (status) params.status = status;
-    if (approvalStatus) params.approval_status = approvalStatus;
+  list: async (limit = 10, offset = 0, status, approvalStatus, search) => {
+    let params = {};
+    if (typeof limit === "object" && limit !== null) {
+      params = { ...limit };
+    } else {
+      params = { limit, offset };
+      if (status) params.status = status;
+      if (approvalStatus) params.approval_status = approvalStatus;
+      if (search) params.search = search;
+    }
     const response = await axiosInstance.get('/teachers', { params });
     return response.data;
   },
@@ -822,8 +843,16 @@ export const transportAPI = {
     const response = await axiosInstance.get('/admin/transport/assignments', { params });
     return response.data;
   },
-  assignStudent: async (student_id, vehicle_id, pickup_point) => {
-    const response = await axiosInstance.post('/admin/transport/assignments', { student_id, vehicle_id, pickup_point });
+  assignStudent: async (dataOrStudentId, vehicle_id, pickup_point, pickup_time) => {
+    const payload = typeof dataOrStudentId === 'object'
+      ? {
+          student_id: dataOrStudentId.student_id,
+          vehicle_id: dataOrStudentId.vehicle_id,
+          pickup_point: dataOrStudentId.stop_name || dataOrStudentId.pickup_point,
+          pickup_time: dataOrStudentId.pickup_time
+        }
+      : { student_id: dataOrStudentId, vehicle_id, pickup_point, pickup_time };
+    const response = await axiosInstance.post('/admin/transport/assignments', payload);
     return response.data;
   },
   unassignStudent: async (student_id) => {
@@ -904,9 +933,14 @@ export const feedbackAPI = {
 };
 
 export const uploadAPI = {
-  uploadAnnouncement: async (file) => {
-    const formData = new FormData();
-    formData.append('announcement', file);
+  uploadAnnouncement: async (fileOrFormData) => {
+    let formData;
+    if (fileOrFormData instanceof FormData) {
+      formData = fileOrFormData;
+    } else {
+      formData = new FormData();
+      formData.append('announcement', fileOrFormData);
+    }
     const response = await axiosInstance.post('/upload/announcement', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -914,9 +948,14 @@ export const uploadAPI = {
     });
     return response.data;
   },
-  uploadAvatar: async (file) => {
-    const formData = new FormData();
-    formData.append('avatar', file);
+  uploadAvatar: async (fileOrFormData) => {
+    let formData;
+    if (fileOrFormData instanceof FormData) {
+      formData = fileOrFormData;
+    } else {
+      formData = new FormData();
+      formData.append('avatar', fileOrFormData);
+    }
     const response = await axiosInstance.post('/upload/avatar', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -924,9 +963,14 @@ export const uploadAPI = {
     });
     return response.data;
   },
-  uploadBookImage: async (file) => {
-    const formData = new FormData();
-    formData.append('book', file);
+  uploadBookImage: async (fileOrFormData) => {
+    let formData;
+    if (fileOrFormData instanceof FormData) {
+      formData = fileOrFormData;
+    } else {
+      formData = new FormData();
+      formData.append('book', fileOrFormData);
+    }
     const response = await axiosInstance.post('/upload/book', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

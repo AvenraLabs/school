@@ -45,16 +45,50 @@ export function SchoolAdminDashboard() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const firstName = (user?.name || user?.username || 'Admin').split(' ')[0];
 
-  const attendanceRatio = analytics?.attendance?.avgAttendancePercentage || 94;
-  const totalDays = analytics?.attendance?.totalDays || 180;
-  const totalAbsences = analytics?.attendance?.totalAbsences || 12;
+  const attendanceRatio = analytics?.attendance?.avgAttendancePercentage ?? 0;
+  const totalDays = analytics?.attendance?.totalDays ?? 0;
+  const totalAbsences = analytics?.attendance?.totalAbsences ?? 0;
 
-  const collectionRate = analytics?.finance?.collectionRate || 88;
-  const totalCollected = analytics?.finance?.totalCollected || 1245000;
-  const totalPendingDues = analytics?.finance?.totalPending || 48500;
+  const collectionRate = analytics?.finance?.collectionRate ?? 0;
+  const totalCollected = analytics?.finance?.totalCollected ?? 0;
+  const totalPendingDues = analytics?.finance?.totalPending ?? 0;
 
-  const totalStudents = analytics?.overview?.totalStudents || 120;
-  const defaultersCount = analytics?.academics?.defaultersCount || 0;
+  const totalStudents = analytics?.overview?.totalStudents ?? 0;
+  const defaultersCount = analytics?.academics?.defaultersCount ?? 0;
+
+  if (loading) {
+    return (
+      <div className="space-y-4 text-xs animate-pulse">
+        <Card className="p-4 bg-white border border-[#E4E1D8]">
+          <div className="h-4 bg-[#EDEAE1] rounded w-1/3 mb-2"></div>
+          <div className="h-3 bg-[#EDEAE1] rounded w-1/4"></div>
+        </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-3.5 bg-white border border-[#E4E1D8]">
+              <div className="h-3 bg-[#EDEAE1] rounded w-1/2 mb-3"></div>
+              <div className="h-6 bg-[#EDEAE1] rounded w-3/4 mb-2"></div>
+              <div className="h-2 bg-[#EDEAE1] rounded w-2/3"></div>
+            </Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="p-4 bg-white border border-[#E4E1D8] h-56 space-y-3">
+            <div className="h-4 bg-[#EDEAE1] rounded w-1/3"></div>
+            <div className="h-3 bg-[#EDEAE1] rounded w-full"></div>
+            <div className="h-3 bg-[#EDEAE1] rounded w-full"></div>
+            <div className="h-3 bg-[#EDEAE1] rounded w-full"></div>
+          </Card>
+          <Card className="p-4 bg-white border border-[#E4E1D8] h-56 space-y-3">
+            <div className="h-4 bg-[#EDEAE1] rounded w-1/3"></div>
+            <div className="h-3 bg-[#EDEAE1] rounded w-full"></div>
+            <div className="h-3 bg-[#EDEAE1] rounded w-full"></div>
+            <div className="h-3 bg-[#EDEAE1] rounded w-full"></div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 text-xs">

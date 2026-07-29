@@ -13,7 +13,18 @@ import {
 import { getPagination } from "../../shared/utils/pagination.js";
 
 export const getTokenPolicies = asyncHandler(async (req, res) => {
-  const policies = await TokenPolicy.findAll({ order: [["role", "ASC"]] });
+  let policies = [];
+  try {
+    policies = await TokenPolicy.findAll({ order: [["role", "ASC"]] });
+  } catch (err) {
+    if (err.message?.includes("annual_video_seconds")) {
+      const db = (await import("../../config/db.js")).default;
+      await db.query(`ALTER TABLE token_policies ADD COLUMN IF NOT EXISTS annual_video_seconds INTEGER DEFAULT 0;`).catch(() => {});
+      policies = await TokenPolicy.findAll({ order: [["role", "ASC"]] });
+    } else {
+      throw err;
+    }
+  }
   res.json({ success: true, items: policies });
 });
 

@@ -1,9 +1,11 @@
+import { Op } from "sequelize";
 import db from "../../config/db.js";
 import User from "../users/user.model.js";
 import Teacher from "./teacher.model.js";
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import { cleanTo10Digits } from "../../shared/utils/phoneUtils.js";
+import { buildTeacherSearchWhere } from "../../shared/utils/searchHelpers.js";
 
 /* =========================
    ADMIN: CREATE TEACHER
@@ -116,10 +118,17 @@ export const listTeachersService = async ({ school_id, query }) => {
     where.approval_status = "approved";
   }
 
+  const searchCond = buildTeacherSearchWhere(query?.search);
+  if (searchCond) {
+    where[Op.or] = searchCond;
+  }
+
   return Teacher.findAndCountAll({
     where,
     limit,
     offset,
+    distinct: true,
+    subQuery: false,
     include: [
       {
         model: User,

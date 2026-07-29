@@ -59,26 +59,26 @@ export function FeeReports() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Total Collection"
-          value={`₹${Number(summary.total || 0).toLocaleString('en-IN')}`}
+          value={`₹${Number(summary.total ?? summary.total_collected ?? 0).toLocaleString('en-IN')}`}
           icon={IndianRupee}
           active={true}
-          subtext={`${summary.count || 0} receipt transactions`}
+          subtext={`${summary.count || payments.length || 0} receipt transactions`}
         />
         <StatsCard
           title="Cash Collection"
-          value={`₹${Number(summary.cash || 0).toLocaleString('en-IN')}`}
+          value={`₹${Number(summary.cash ?? summary.cash_total ?? 0).toLocaleString('en-IN')}`}
           icon={Banknote}
           subtext="Direct desk cash"
         />
         <StatsCard
           title="UPI / Digital"
-          value={`₹${Number(summary.upi || 0).toLocaleString('en-IN')}`}
+          value={`₹${Number(summary.upi ?? summary.upi_total ?? 0).toLocaleString('en-IN')}`}
           icon={Smartphone}
           subtext="Online & QR payments"
         />
         <StatsCard
           title="Bank & Cheque"
-          value={`₹${Number(summary.bank || 0).toLocaleString('en-IN')}`}
+          value={`₹${Number(summary.bank ?? summary.bank_total ?? 0).toLocaleString('en-IN')}`}
           icon={Building2}
           subtext="Direct bank transfers"
         />
@@ -140,8 +140,8 @@ export function FeeReports() {
                   <tr key={p.id} className="hover:bg-[#FAFAF8]">
                     <td className="px-4 py-2.5 font-mono font-bold">#{p.receipt_no}</td>
                     <td className="px-4 py-2.5 font-mono text-[#52607D]">{formatDateTime(p.paid_at)}</td>
-                    <td className="px-4 py-2.5 font-semibold">{p.student?.name || '—'}</td>
-                    <td className="px-4 py-2.5 text-[#52607D]">Class {p.student?.class_name} {p.student?.section_name}</td>
+                    <td className="px-4 py-2.5 font-semibold">{p.student_name || p.student?.name || p.student?.User?.name || '—'}</td>
+                    <td className="px-4 py-2.5 text-[#52607D]">{p.class_name ? `Class ${p.class_name}` : (p.student?.class_name ? `Class ${p.student.class_name}` : '—')}</td>
                     <td className="px-4 py-2.5 uppercase font-mono font-semibold text-[#2F6F5E]">{p.mode}</td>
                     <td className="px-4 py-2.5 text-right font-mono font-bold text-[#14213D]">₹{Number(p.amount).toLocaleString('en-IN')}</td>
                   </tr>

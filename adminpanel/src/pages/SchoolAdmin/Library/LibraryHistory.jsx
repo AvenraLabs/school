@@ -28,8 +28,9 @@ export function LibraryHistory() {
         limit: LIMIT,
         offset,
       });
-      setIssues(res?.items || []);
-      setTotal(res?.total || 0);
+      const rawIssues = res?.issues || res?.items || res?.rows || res?.data || (Array.isArray(res) ? res : []);
+      setIssues(Array.isArray(rawIssues) ? rawIssues : []);
+      setTotal(res?.total ?? res?.count ?? (Array.isArray(rawIssues) ? rawIssues.length : 0));
     } catch {
       toast.error('Failed to load history');
     } finally {
@@ -92,8 +93,16 @@ export function LibraryHistory() {
               ) : (
                 issues.map((row) => (
                   <tr key={row.id} className="hover:bg-[#FAFAF8]">
-                    <td className="px-4 py-2.5 font-semibold">{row.book?.book_name || row.book_name}</td>
-                    <td className="px-4 py-2.5">{row.user?.name || row.user_name || '—'}</td>
+                    <td className="px-4 py-2.5 font-semibold">
+                      {row.Book?.book_name || row.book?.book_name || row.book_name || '—'}
+                      {(row.Book?.book_no || row.book?.book_no) && <span className="block text-[10px] text-[#8C97AB] font-mono">No: {row.Book?.book_no || row.book?.book_no}</span>}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className="font-semibold">{row.Student?.User?.name || row.Student?.user?.name || row.Teacher?.User?.name || row.Teacher?.user?.name || row.user?.name || row.user_name || '—'}</span>
+                      {(row.Student?.User?.username || row.Student?.user?.username || row.Teacher?.User?.username || row.Teacher?.user?.username || row.user?.username) && (
+                        <span className="block text-[10px] text-[#8C97AB] font-mono">@{row.Student?.User?.username || row.Student?.user?.username || row.Teacher?.User?.username || row.Teacher?.user?.username || row.user?.username}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5 font-mono text-[#52607D]">{formatDate(row.issue_date)}</td>
                     <td className="px-4 py-2.5 font-mono text-[#52607D]">{formatDate(row.due_date)}</td>
                     <td className="px-4 py-2.5 text-center">

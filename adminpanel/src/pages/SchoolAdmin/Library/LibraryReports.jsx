@@ -29,20 +29,24 @@ export function LibraryReports() {
     try {
       if (activeTab === 'books') {
         const res = await libraryAPI.reportBooks({ status: statusFilter || undefined, limit: LIMIT, offset });
-        setData(res.books || []);
-        setTotal(res.total || 0);
+        const list = res?.books || res?.items || res?.rows || res?.data || (Array.isArray(res) ? res : []);
+        setData(Array.isArray(list) ? list : []);
+        setTotal(res?.total ?? res?.count ?? (Array.isArray(list) ? list.length : 0));
       } else if (activeTab === 'issued') {
         const res = await libraryAPI.reportIssued({ status: statusFilter || 'issued', limit: LIMIT, offset });
-        setData(res.issues || []);
-        setTotal(res.total || 0);
+        const list = res?.issues || res?.items || res?.rows || res?.data || (Array.isArray(res) ? res : []);
+        setData(Array.isArray(list) ? list : []);
+        setTotal(res?.total ?? res?.count ?? (Array.isArray(list) ? list.length : 0));
       } else if (activeTab === 'overdue') {
         const res = await libraryAPI.reportOverdue({ limit: LIMIT, offset });
-        setData(res.overdue || []);
-        setTotal(res.total || 0);
+        const list = res?.overdue || res?.issues || res?.items || res?.rows || res?.data || (Array.isArray(res) ? res : []);
+        setData(Array.isArray(list) ? list : []);
+        setTotal(res?.total ?? res?.count ?? (Array.isArray(list) ? list.length : 0));
       } else if (activeTab === 'lost') {
         const res = await libraryAPI.reportLost({ limit: LIMIT, offset });
-        setData(res.lost || []);
-        setTotal(res.total || 0);
+        const list = res?.lost || res?.issues || res?.items || res?.rows || res?.data || (Array.isArray(res) ? res : []);
+        setData(Array.isArray(list) ? list : []);
+        setTotal(res?.total ?? res?.count ?? (Array.isArray(list) ? list.length : 0));
       }
     } catch {
       setData([]);

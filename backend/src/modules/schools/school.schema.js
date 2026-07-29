@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 export const updateSchoolStatusSchema = z.object({
-  status: z.enum(["pending", "active", "suspended", "expired"]),
+  status: z.string().transform((val) => {
+    const lower = String(val || "").toLowerCase();
+    if (lower === "inactive") return "suspended";
+    return lower;
+  }).pipe(z.enum(["pending", "active", "suspended", "expired"])),
 });
 
 export const updateSchoolAdminStatusSchema = z.object({

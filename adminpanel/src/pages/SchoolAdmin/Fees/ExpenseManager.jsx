@@ -297,6 +297,21 @@ export function ExpenseManager() {
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </Select>
+            {categories.length === 0 && (
+              <p className="text-[11px] text-[#B0403A] mt-1">
+                No expense categories found.{" "}
+                <button
+                  type="button"
+                  className="underline font-bold text-[#2F6F5E]"
+                  onClick={() => {
+                    setShowAddExpenseModal(false);
+                    setShowAddCatModal(true);
+                  }}
+                >
+                  Create category first
+                </button>
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

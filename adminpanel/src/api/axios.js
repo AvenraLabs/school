@@ -13,6 +13,9 @@ export const getApiAssetUrl = (path) => {
   if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
 
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  if (cleanPath.startsWith('/uploads/')) {
+    return `${API_ORIGIN_URL}${cleanPath}`;
+  }
   return cleanPath.startsWith('/api')
     ? `${API_ORIGIN_URL}${cleanPath}`
     : `${API_BASE_URL}${cleanPath}`;

@@ -390,8 +390,43 @@ export const listIssueHistoryService = async (school_id, query = {}) => {
   const { limit, offset } = getPagination(query);
   const where = { school_id };
 
-  if (query.status) where.status = query.status;
-  if (query.student_id) where.student_id = query.student_id;
+  if (query.status && query.status.trim()) {
+    where.status = query.status.trim();
+  }
+  if (query.student_id) where.student_id = Number(query.student_id);
+  if (query.teacher_id) where.teacher_id = Number(query.teacher_id);
+
+  if (query.user_id) {
+    const uid = Number(query.user_id);
+    const student = await Student.findOne({ where: { user_id: uid, school_id }, attributes: ["id"] });
+    const teacher = await Teacher.findOne({ where: { user_id: uid, school_id }, attributes: ["id"] });
+    const userOr = [];
+    if (student) userOr.push({ student_id: student.id });
+    if (teacher) userOr.push({ teacher_id: teacher.id });
+    if (userOr.length > 0) {
+      where[Op.or] = userOr;
+    } else {
+      return { total: 0, issues: [] };
+    }
+  }
+
+  if (query.search && query.search.trim()) {
+    const s = `%${query.search.trim()}%`;
+    const searchCond = [
+      { "$Book.book_name$": { [Op.iLike]: s } },
+      { "$Book.book_no$": { [Op.iLike]: s } },
+      { "$Student.user.name$": { [Op.iLike]: s } },
+      { "$Student.user.username$": { [Op.iLike]: s } },
+      { "$Teacher.user.name$": { [Op.iLike]: s } },
+      { "$Teacher.user.username$": { [Op.iLike]: s } },
+    ];
+    if (where[Op.or]) {
+      where[Op.and] = [{ [Op.or]: where[Op.or] }, { [Op.or]: searchCond }];
+      delete where[Op.or];
+    } else {
+      where[Op.or] = searchCond;
+    }
+  }
 
   if (query.from_date && query.to_date) {
     where.issue_date = { [Op.between]: [query.from_date, query.to_date] };
@@ -403,15 +438,15 @@ export const listIssueHistoryService = async (school_id, query = {}) => {
       {
         model: Student,
         as: "Student",
-        include: [{ model: User, attributes: ["name"] }],
+        include: [{ model: User, attributes: ["id", "name", "username"] }],
         attributes: ["id", "roll_no", "admission_no"],
         required: false,
       },
       {
         model: Teacher,
         as: "Teacher",
-        include: [{ model: User, attributes: ["name", "phone"] }],
-        attributes: ["id"],
+        include: [{ model: User, attributes: ["id", "name", "username", "phone"] }],
+        attributes: ["id", "employee_id"],
         required: false,
       },
       { model: Book, as: "Book", attributes: ["id", "book_no", "book_name", "image_url"] },
@@ -421,6 +456,7 @@ export const listIssueHistoryService = async (school_id, query = {}) => {
     order: [["created_at", "DESC"]],
     limit,
     offset,
+    subQuery: false,
   });
 
   return { total: count, issues: rows };

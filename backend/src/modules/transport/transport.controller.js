@@ -203,15 +203,6 @@ export const startTrip = asyncHandler(async (req, res) => {
     io: req.io,
   });
 
-  // Call WhatsApp service in the background if enabled
-  const School = (await import("../schools/school.model.js")).default;
-  const school = await School.findByPk(req.user.school_id);
-  if (school && school.whatsapp_bus_start_enabled) {
-    whatsappService.sendBusTripStarted(req.body.vehicle_id).catch((err) =>
-      console.error("WhatsApp bus trip started alert background error:", err)
-    );
-  }
-
   res.json({
     success: true,
     data: result,
@@ -225,15 +216,6 @@ export const stopTrip = asyncHandler(async (req, res) => {
     id: Number(req.params.id),
     io: req.io,
   });
-
-  // Call WhatsApp service in the background if enabled
-  const School = (await import("../schools/school.model.js")).default;
-  const school = await School.findByPk(req.user.school_id);
-  if (school && school.whatsapp_bus_end_enabled && result && result.vehicle_id) {
-    whatsappService.sendBusTripEnded(result.vehicle_id).catch((err) =>
-      console.error("WhatsApp bus trip ended alert background error:", err)
-    );
-  }
 
   res.json({
     success: true,

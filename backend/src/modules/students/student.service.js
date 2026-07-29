@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import User from "../users/user.model.js";
 import Student from "./student.model.js";
 import Class from "../classes/classes.model.js";
@@ -7,6 +8,7 @@ import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import db from "../../config/db.js";
 import { cleanTo10Digits } from "../../shared/utils/phoneUtils.js";
+import { buildStudentSearchWhere } from "../../shared/utils/searchHelpers.js";
 
 /* =========================
    ADMIN:  CREATE STDUENT
@@ -170,22 +172,17 @@ export const listStudentsService = async ({ school_id, query }) => {
     where.approval_status = "approved";
   }
 
-  if (query?.search && query.search.trim()) {
-    const searchVal = `%${query.search.trim()}%`;
-    where[Op.or] = [
-      { admission_no: { [Op.iLike]: searchVal } },
-      { roll_no: { [Op.iLike]: searchVal } },
-      { emergency_contact: { [Op.iLike]: searchVal } },
-      { "$user.name$": { [Op.iLike]: searchVal } },
-      { "$user.phone$": { [Op.iLike]: searchVal } },
-      { "$user.username$": { [Op.iLike]: searchVal } },
-    ];
+  const searchCond = buildStudentSearchWhere(query?.search);
+  if (searchCond) {
+    where[Op.or] = searchCond;
   }
 
   return Student.findAndCountAll({
     where,
     limit,
     offset,
+    distinct: true,
+    subQuery: false,
     include: [
       { model: User, attributes: ["id", "username", "name", "phone", "is_active"] },
       { model: Class, attributes: ["id", "class_name"] },

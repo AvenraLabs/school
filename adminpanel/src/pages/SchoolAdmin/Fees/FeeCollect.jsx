@@ -272,7 +272,7 @@ export function FeeCollect() {
             </div>
 
             {results.length > 0 && (
-              <div className="border border-[#E4E1D8] rounded-[8px] overflow-hidden divide-y divide-[#EDEAE1]">
+              <div className="border border-[#E4E1D8] rounded-[8px] overflow-hidden divide-y divide-[#EDEAE1] max-h-60 overflow-y-auto">
                 {results.map((st) => (
                   <button
                     key={st.id}
@@ -286,12 +286,24 @@ export function FeeCollect() {
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-[#14213D] truncate">{st.user?.name || st.name}</p>
                       <p className="text-[10px] text-[#8C97AB] font-mono">
-                        Adm: {st.admission_no || '—'} · Class {st.class?.class_name} {st.section?.name}
+                        Adm: {st.admission_no || '—'} {st.user?.username ? `· @${st.user.username}` : ''} · Class {st.class?.class_name || ''} {st.section?.name ? `(${st.section.name})` : ''}
                       </p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-[#8C97AB] shrink-0" />
                   </button>
                 ))}
+              </div>
+            )}
+
+            {results.length === 0 && (search.trim() || filterClass) && (
+              <div className="p-4 text-center border border-dashed border-[#E4E1D8] rounded-[8px] text-[#8C97AB]">
+                No active students found matching your search.
+              </div>
+            )}
+
+            {results.length === 0 && !search.trim() && !filterClass && (
+              <div className="p-3 text-center border border-dashed border-[#E4E1D8] rounded-[8px] text-[#8C97AB]">
+                Type a name, admission number, roll number, or phone number to search student.
               </div>
             )}
           </CardContent>

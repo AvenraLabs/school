@@ -64,8 +64,9 @@ export function LibraryBooks() {
         limit: LIMIT,
         offset: page * LIMIT,
       });
-      setBooks(res?.items || []);
-      setTotalCount(res?.total || 0);
+      const rawBooks = res?.books || res?.items || res?.rows || res?.data || (Array.isArray(res) ? res : []);
+      setBooks(Array.isArray(rawBooks) ? rawBooks : []);
+      setTotalCount(res?.total ?? res?.count ?? (Array.isArray(rawBooks) ? rawBooks.length : 0));
     } catch {
       toast.error('Failed to load library catalog');
     } finally {

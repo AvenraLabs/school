@@ -25,6 +25,12 @@ const titleMap = {
   '/admin/login-roster': 'Portal Credentials Roster',
   '/admin/audit-logs': 'System Security Audit Logs',
   '/admin/feedback': 'Feedback & Helpdesk',
+  '/super-admin': 'SuperAdmin Desk & Operations',
+  '/super-admin/settings': 'School Profile & Feature Settings',
+  '/super-admin/billing': 'Billing, API Audit & Telemetry',
+  '/super-admin/feedback': 'Support & Feedback Helpdesk',
+  '/super-admin/classes': 'Classes & Sections Master Catalog',
+  '/super-admin/seeder': 'System Data Seeder',
 };
 
 export function DashboardLayout() {

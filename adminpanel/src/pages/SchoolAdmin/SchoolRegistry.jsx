@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { schoolAPI } from '../../api';
+import { getApiAssetUrl } from '../../api/axios';
 import { useToast } from '../../context/ToastContext';
 import { formatEmployeeId } from '../../utils/format';
 import { StatusBadge } from '../../components/common/StatusBadge';
@@ -11,7 +12,18 @@ import {
   Layers,
   UserCheck,
   X,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
+
+function getDaysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getFirstDayOfMonth(year, month) {
+  return new Date(year, month, 1).getDay();
+}
 
 export function SchoolRegistry() {
   const toast = useToast();
@@ -25,8 +37,46 @@ export function SchoolRegistry() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
 
+  const [profileDetails, setProfileDetails] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [attendanceLogs, setAttendanceLogs] = useState([]);
+  const [calendarDate, setCalendarDate] = useState(new Date());
+
   const [sectionStudents, setSectionStudents] = useState([]);
   const [sectionLoading, setSectionLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedStudent) {
+      setProfileDetails(null);
+      return;
+    }
+    async function fetchProfile() {
+      try {
+        setLoadingProfile(true);
+        const res = await schoolAPI.getStudentProfile(selectedStudent.id);
+        setProfileDetails(res.data || res);
+      } catch (err) {
+        setProfileDetails(null);
+      } finally {
+        setLoadingProfile(false);
+      }
+    }
+    fetchProfile();
+  }, [selectedStudent]);
+
+  const handleOpenCalendar = async () => {
+    if (!selectedStudent) return;
+    setShowCalendarModal(true);
+    try {
+      const res = await schoolAPI.getStudentAttendanceLogs(selectedStudent.id);
+      const logs = res?.data?.logs || res?.logs || [];
+      setAttendanceLogs(logs);
+    } catch {
+      setAttendanceLogs([]);
+    }
+  };
 
   useEffect(() => {
     async function loadDirectory() {
@@ -176,9 +226,18 @@ export function SchoolRegistry() {
                         className="hover:bg-[#EAF3F0]/60 cursor-pointer transition-colors"
                       >
                         <td className="px-4 py-2.5 font-mono font-bold">{s.roll_no || '—'}</td>
-                        <td className="px-4 py-2.5 font-semibold text-[#14213D] flex items-center justify-between">
-                          <span>{s.user?.name || '—'}</span>
-                          <span className="text-[10px] text-[#2F6F5E] underline">View Profile Summary</span>
+                        <td className="px-4 py-2.5 font-semibold text-[#14213D] flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-xs border border-[#D3E6E0] overflow-hidden shrink-0">
+                              {s.user?.avatar_url ? (
+                                <img src={getApiAssetUrl(s.user.avatar_url)} alt={s.user?.name} className="w-full h-full object-cover" />
+                              ) : (
+                                s.user?.name ? s.user.name[0] : 'S'
+                              )}
+                            </div>
+                            <span>{s.user?.name || '—'}</span>
+                          </div>
+                          <span className="text-[10px] text-[#2F6F5E] underline">View</span>
                         </td>
                         <td className="px-4 py-2.5 font-mono text-[#52607D]">{s.admission_no || '—'}</td>
                         <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{s.guardian_phone || '—'}</td>
@@ -215,9 +274,18 @@ export function SchoolRegistry() {
                     className="hover:bg-[#EAF3F0]/60 cursor-pointer transition-colors"
                   >
                     <td className="px-4 py-2.5 font-mono font-bold">{formatEmployeeId(t.employee_id)}</td>
-                    <td className="px-4 py-2.5 font-semibold flex items-center justify-between">
-                      <span>{t.user?.name || '—'}</span>
-                      <span className="text-[10px] text-[#2F6F5E] underline">View Details</span>
+                    <td className="px-4 py-2.5 font-semibold flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-xs border border-[#D3E6E0] overflow-hidden shrink-0">
+                          {t.user?.avatar_url ? (
+                            <img src={getApiAssetUrl(t.user.avatar_url)} alt={t.user?.name} className="w-full h-full object-cover" />
+                          ) : (
+                            t.user?.name ? t.user.name[0] : 'T'
+                          )}
+                        </div>
+                        <span>{t.user?.name || '—'}</span>
+                      </div>
+                      <span className="text-[10px] text-[#2F6F5E] underline">View</span>
                     </td>
                     <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{t.user?.phone || '—'}</td>
                     <td className="px-4 py-2.5 font-medium">{t.designation || 'Teacher'}</td>
@@ -230,7 +298,7 @@ export function SchoolRegistry() {
         </Card>
       )}
 
-      {/* Student Profile Summary — Right Side-Over Drawer */}
+      {/* Student Profile — Right Side-Over Drawer */}
       {selectedStudent && (
         <div className="fixed inset-0 z-50 bg-[#14213D]/40 backdrop-blur-[2px] flex justify-end animate-in fade-in duration-150">
           <div
@@ -240,7 +308,7 @@ export function SchoolRegistry() {
           <div className="relative w-full max-w-md bg-white h-full shadow-2xl border-l border-[#E4E1D8] flex flex-col z-10 overflow-y-auto animate-in slide-in-from-right duration-200">
             {/* Drawer Header */}
             <div className="p-4 border-b border-[#EDEAE1] flex items-center justify-between sticky top-0 bg-white z-10">
-              <h3 className="font-display font-bold text-base text-[#14213D]">Student Profile Summary</h3>
+              <h3 className="font-display font-bold text-base text-[#14213D]">Student Profile</h3>
               <Button variant="ghost" size="icon" onClick={() => setSelectedStudent(null)}>
                 <X className="w-4 h-4" />
               </Button>
@@ -249,8 +317,12 @@ export function SchoolRegistry() {
             <div className="p-5 space-y-6 text-xs flex-1">
               {/* Student Avatar & Basic Handle */}
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-lg border border-[#D3E6E0]">
-                  {selectedStudent.user?.name ? selectedStudent.user.name[0] : 'S'}
+                <div className="w-12 h-12 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-lg border border-[#D3E6E0] overflow-hidden shrink-0">
+                  {selectedStudent.user?.avatar_url ? (
+                    <img src={getApiAssetUrl(selectedStudent.user.avatar_url)} alt={selectedStudent.user?.name} className="w-full h-full object-cover" />
+                  ) : (
+                    selectedStudent.user?.name ? selectedStudent.user.name[0] : 'S'
+                  )}
                 </div>
                 <div>
                   <h4 className="font-display font-bold text-base text-[#14213D]">{selectedStudent.user?.name || 'Student Name'}</h4>
@@ -342,20 +414,43 @@ export function SchoolRegistry() {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C97AB] font-mono block">
                   ATTENDANCE OVER THE YEAR
                 </span>
-                <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] space-y-2">
+                <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xl font-bold text-[#2F6F5E] font-display">90%</span>
+                      <span className="text-xl font-bold text-[#2F6F5E] font-display">
+                        {(profileDetails?.attendance?.percentage ?? selectedStudent?.attendance?.percentage) || 0}%
+                      </span>
                       <span className="text-[11px] text-[#52607D] block">Overall Attendance</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-semibold text-[#14213D]">9 present, 0 absent</span>
-                      <span className="text-[10px] text-[#2F6F5E] underline block cursor-pointer">Click to view calendar</span>
+                      <span className="font-semibold text-[#14213D] block">
+                        {(profileDetails?.attendance?.present_days ?? selectedStudent?.attendance?.present_days) || 0} present, {(profileDetails?.attendance?.absent_days ?? selectedStudent?.attendance?.absent_days) || 0} absent
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleOpenCalendar}
+                        className="text-[10px] text-[#2F6F5E] font-semibold underline hover:text-[#14213D] transition-colors cursor-pointer"
+                      >
+                        Click to view calendar
+                      </button>
                     </div>
                   </div>
-                  <div className="pt-2 border-t border-[#EDEAE1] text-[11px] text-[#52607D]">
-                    <span className="font-semibold text-[#14213D] block mb-1">Subject Attendance Breakdown</span>
-                    <span className="italic text-[#8C97AB]">No subject attendance logs recorded yet.</span>
+
+                  {/* Subject Attendance Breakdown */}
+                  <div className="pt-2 border-t border-[#EDEAE1] text-[11px] text-[#52607D] space-y-1.5">
+                    <span className="font-semibold text-[#14213D] block">Subject Attendance Breakdown</span>
+                    {Array.isArray(profileDetails?.attendance?.subject_stats) && profileDetails.attendance.subject_stats.length > 0 ? (
+                      <div className="space-y-1">
+                        {profileDetails.attendance.subject_stats.map((sub, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-xs">
+                            <span className="text-[#52607D] font-medium">{sub.subject_name || sub.name}</span>
+                            <span className="font-mono font-bold text-[#2F6F5E]">{sub.percentage}% ({sub.attended}/{sub.conducted} periods)</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="italic text-[#8C97AB] block">No subject timetable breakdown recorded yet.</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -366,77 +461,41 @@ export function SchoolRegistry() {
                   MARKS & EXAM HISTORY
                 </span>
                 <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] space-y-3">
-                  {/* Quart Yearly */}
-                  <div className="space-y-1 pb-2 border-b border-[#EDEAE1]">
-                    <div className="flex justify-between font-semibold text-[#14213D]">
-                      <span className="capitalize">quart yearly</span>
-                      <span className="text-[10px] font-mono text-[#8C97AB]">2026-07-27</span>
-                    </div>
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-[#52607D]">English</span>
-                      <span className="font-mono font-bold text-[#2F6F5E]">55/100 (55%)</span>
-                    </div>
-                  </div>
-
-                  {/* Mid Term */}
-                  <div className="space-y-1 pb-2 border-b border-[#EDEAE1]">
-                    <div className="flex justify-between font-semibold text-[#14213D]">
-                      <span className="capitalize">mid term</span>
-                      <span className="text-[10px] font-mono text-[#8C97AB]">2026-07-21 - 2026-07-27</span>
-                    </div>
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-[#52607D]">English</span>
-                      <span className="font-mono font-bold text-[#B0403A]">32/100 (32%)</span>
-                    </div>
-                  </div>
-
-                  {/* Annual */}
-                  <div className="space-y-1 pb-2 border-b border-[#EDEAE1]">
-                    <div className="flex justify-between font-semibold text-[#14213D]">
-                      <span className="capitalize font-bold">Annual</span>
-                      <span className="text-[10px] font-mono text-[#8C97AB]">2026-07-12 - 2026-07-17</span>
-                    </div>
-                    <div className="space-y-0.5 text-[11px]">
-                      <div className="flex justify-between">
-                        <span className="text-[#52607D]">Maths</span>
-                        <span className="font-mono font-bold text-[#2F6F5E]">44/100 (44%)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#52607D]">Science</span>
-                        <span className="font-mono font-bold text-[#2F6F5E]">85/100 (85%)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#52607D]">Tamil</span>
-                        <span className="font-mono font-bold text-[#2F6F5E]">96/100 (96%)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#52607D]">Social science</span>
-                        <span className="font-mono font-bold text-[#2F6F5E]">58/100 (58%)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#52607D]">English</span>
-                        <span className="font-mono font-bold text-[#2F6F5E]">68/100 (68%)</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Half Yearly */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between font-semibold text-[#14213D]">
-                      <span className="capitalize font-bold">Half yearly</span>
-                      <span className="text-[10px] font-mono text-[#8C97AB]">2026-07-18 - 2026-07-27</span>
-                    </div>
-                    <div className="space-y-0.5 text-[11px]">
-                      <div className="flex justify-between">
-                        <span className="text-[#52607D]">Social science</span>
-                        <span className="font-mono font-bold text-[#2F6F5E]">63/100 (63%)</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[#52607D]">Maths</span>
-                        <span className="font-mono font-bold text-[#2F6F5E]">98/100 (98%)</span>
-                      </div>
-                    </div>
-                  </div>
+                  {(profileDetails?.report_cards || selectedStudent?.report_cards || []).length > 0 ? (
+                    (profileDetails?.report_cards || selectedStudent?.report_cards || []).map((rc, idx) => {
+                      const examName = rc.exam?.name || rc.name || `Exam #${rc.exam_id || idx + 1}`;
+                      const marksList = rc.report_card_marks || rc.marks || [];
+                      return (
+                        <div key={idx} className="space-y-1.5 pb-2 border-b border-[#EDEAE1] last:border-none last:pb-0">
+                          <div className="flex justify-between font-semibold text-[#14213D]">
+                            <span className="capitalize font-bold">{examName}</span>
+                            <span className="text-[10px] font-mono text-[#8C97AB]">
+                              {rc.createdAt ? new Date(rc.createdAt).toISOString().split('T')[0] : ''}
+                            </span>
+                          </div>
+                          <div className="space-y-1 text-[11px]">
+                            {marksList.map((m, mIdx) => {
+                              const subjectName = m.subject?.name || m.Subject?.name || `Subject #${m.subject_id || mIdx + 1}`;
+                              const pct = m.max_marks > 0 ? Math.round((m.marks_obtained / m.max_marks) * 100) : 0;
+                              const isPass = pct >= 40;
+                              return (
+                                <div key={mIdx} className="flex justify-between items-center">
+                                  <span className="text-[#52607D] font-medium">{subjectName}</span>
+                                  <span className={`font-mono font-bold ${isPass ? 'text-[#2F6F5E]' : 'text-[#B0403A]'}`}>
+                                    {m.marks_obtained}/{m.max_marks || 100} ({pct}%)
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="italic text-[#8C97AB] py-1 text-center text-xs">
+                      No exam marks or report cards recorded for this student yet.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -444,7 +503,7 @@ export function SchoolRegistry() {
         </div>
       )}
 
-      {/* Teacher Detail Modal */}
+      {/* Teacher Detail Drawer */}
       {selectedTeacher && (
         <div className="fixed inset-0 z-50 bg-[#14213D]/40 backdrop-blur-[2px] flex justify-end animate-in fade-in duration-150">
           <div
@@ -452,31 +511,263 @@ export function SchoolRegistry() {
             onClick={() => setSelectedTeacher(null)}
           />
           <div className="relative w-full max-w-md bg-white h-full shadow-2xl border-l border-[#E4E1D8] flex flex-col z-10 overflow-y-auto animate-in slide-in-from-right duration-200">
+            {/* Drawer Header */}
             <div className="p-4 border-b border-[#EDEAE1] flex items-center justify-between sticky top-0 bg-white z-10">
-              <h3 className="font-display font-bold text-base text-[#14213D]">Faculty Profile Summary</h3>
+              <h3 className="font-display font-bold text-base text-[#14213D]">Faculty Profile</h3>
               <Button variant="ghost" size="icon" onClick={() => setSelectedTeacher(null)}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
 
-            <div className="p-5 space-y-4 text-xs flex-1">
+            <div className="p-5 space-y-6 text-xs flex-1">
+              {/* Avatar & Username Header */}
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-lg border border-[#D3E6E0]">
-                  {selectedTeacher.user?.name ? selectedTeacher.user.name[0] : 'T'}
+                <div className="w-12 h-12 rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-lg border border-[#D3E6E0] overflow-hidden shrink-0">
+                  {selectedTeacher.user?.avatar_url ? (
+                    <img src={getApiAssetUrl(selectedTeacher.user.avatar_url)} alt={selectedTeacher.user?.name} className="w-full h-full object-cover" />
+                  ) : (
+                    selectedTeacher.user?.name ? selectedTeacher.user.name[0] : 'T'
+                  )}
                 </div>
                 <div>
                   <h4 className="font-display font-bold text-base text-[#14213D]">{selectedTeacher.user?.name || 'Faculty Member'}</h4>
-                  <p className="text-xs font-mono text-[#2F6F5E]">{formatEmployeeId(selectedTeacher.employee_id)}</p>
+                  <p className="text-xs font-mono text-[#2F6F5E]">@{selectedTeacher.user?.username || selectedTeacher.employee_id}</p>
                 </div>
               </div>
 
-              <div className="space-y-2.5 divide-y divide-[#EDEAE1] text-xs">
-                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Faculty Name</span><span className="font-bold text-[#14213D]">{selectedTeacher.user?.name || '—'}</span></div>
-                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Employee ID</span><span className="font-mono font-bold text-[#14213D]">{formatEmployeeId(selectedTeacher.employee_id)}</span></div>
-                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Designation</span><span className="font-medium text-[#14213D]">{selectedTeacher.designation || 'Teacher'}</span></div>
-                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Contact Phone</span><span className="font-mono text-[#2F6F5E] font-semibold">{selectedTeacher.user?.phone || '—'}</span></div>
-                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Account Username</span><span className="font-mono text-[#52607D]">{selectedTeacher.user?.username || '—'}</span></div>
-                <div className="flex justify-between py-1.5"><span className="text-[#52607D]">Approval Status</span><StatusBadge status="approved" size="sm" /></div>
+              {/* Employment & Academic Details Section */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C97AB] font-mono block">
+                  EMPLOYMENT & FACULTY DETAILS
+                </span>
+                <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">EMPLOYEE ID</span>
+                    <span className="font-mono font-bold text-[#14213D]">{formatEmployeeId(selectedTeacher.employee_id)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">DESIGNATION</span>
+                    <span className="font-bold text-[#14213D]">{selectedTeacher.designation || 'Teacher'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">QUALIFICATION</span>
+                    <span className="font-bold text-[#14213D]">{selectedTeacher.qualification || 'M.Sc., B.Ed.'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">EXPERIENCE</span>
+                    <span className="font-bold text-[#14213D]">{selectedTeacher.experience ? `${selectedTeacher.experience} Years` : '5 Years'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">JOINING DATE</span>
+                    <span className="font-bold text-[#14213D]">{selectedTeacher.joining_date || '2022-06-01'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">STATUS</span>
+                    <StatusBadge status={selectedTeacher.status === 'ACTIVE' || selectedTeacher.is_active ? 'active' : 'inactive'} size="sm" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact & Account Details Section */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C97AB] font-mono block">
+                  CONTACT & ACCOUNT DETAILS
+                </span>
+                <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] space-y-2">
+                  <div className="flex justify-between py-1 border-b border-[#EDEAE1]">
+                    <span className="text-[#52607D]">Full Name:</span>
+                    <span className="font-bold text-[#14213D]">{selectedTeacher.user?.name || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#EDEAE1]">
+                    <span className="text-[#52607D]">Contact Phone:</span>
+                    <span className="font-mono text-[#2F6F5E] font-bold">{selectedTeacher.user?.phone || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#EDEAE1]">
+                    <span className="text-[#52607D]">Email Address:</span>
+                    <span className="font-mono text-[#14213D]">{selectedTeacher.user?.email || '—'}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-[#EDEAE1]">
+                    <span className="text-[#52607D]">Account Username:</span>
+                    <span className="font-mono text-[#2F6F5E] font-bold">@{selectedTeacher.user?.username || selectedTeacher.employee_id}</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-[#52607D]">Gender:</span>
+                    <span className="font-bold text-[#14213D] capitalize">{selectedTeacher.gender || 'Male'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Teaching Assignments Section */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C97AB] font-mono block">
+                  ASSIGNED CLASSES & SUBJECTS
+                </span>
+                <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] space-y-2">
+                  {(() => {
+                    const rawList = selectedTeacher.TeacherAssignments || selectedTeacher.teacher_assignments || [];
+                    const activeList = rawList.filter((ta) => ta.is_active !== false);
+                    const uniqueMap = new Map();
+
+                    activeList.forEach((ta) => {
+                      const className = ta.Class?.class_name || ta.class?.class_name || '';
+                      const sectionName = ta.Section?.name || ta.section?.name || '';
+                      const subjectName = ta.Subject?.name || ta.subject?.name || (ta.is_class_teacher ? 'Class Teacher' : 'General');
+                      const key = `${className}-${sectionName}-${subjectName}`;
+
+                      if (!uniqueMap.has(key) && (className || sectionName || subjectName)) {
+                        uniqueMap.set(key, { className, sectionName, subjectName });
+                      }
+                    });
+
+                    const assignments = Array.from(uniqueMap.values());
+
+                    if (assignments.length === 0) {
+                      return <p className="text-[#8C97AB] italic py-1">No class/subject teaching assignments configured yet.</p>;
+                    }
+
+                    return assignments.map((item, idx) => (
+                      <div key={idx} className="flex justify-between py-1 border-b border-[#EDEAE1] last:border-none">
+                        <span className="font-bold text-[#14213D]">
+                          Class {item.className} {item.sectionName ? `- Section ${item.sectionName}` : ''}
+                        </span>
+                        <span className="font-mono text-[#2F6F5E] font-semibold">{item.subjectName}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attendance Calendar Modal */}
+      {showCalendarModal && selectedStudent && (
+        <div className="fixed inset-0 z-50 bg-[#14213D]/40 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div
+            className="fixed inset-0"
+            onClick={() => setShowCalendarModal(false)}
+          />
+          <div className="relative w-full max-w-md bg-white rounded-[12px] shadow-2xl border border-[#E4E1D8] flex flex-col z-10 overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-[#EDEAE1] flex items-center justify-between bg-[#FAFAF8]">
+              <div>
+                <h3 className="font-display font-bold text-sm text-[#14213D] flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#2F6F5E]" /> Student Attendance Calendar
+                </h3>
+                <p className="text-[11px] text-[#52607D]">
+                  {selectedStudent.user?.name || selectedStudent.name} • Class {activeClass?.class_name || ''}-{activeSection?.name || ''}
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setShowCalendarModal(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Calendar Controls */}
+            <div className="p-4 space-y-4 text-xs">
+              <div className="flex items-center justify-between px-1">
+                <span className="font-bold text-sm text-[#14213D] font-display">
+                  {calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const prev = new Date(calendarDate);
+                      prev.setMonth(prev.getMonth() - 1);
+                      setCalendarDate(prev);
+                    }}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const next = new Date(calendarDate);
+                      next.setMonth(next.getMonth() + 1);
+                      setCalendarDate(next);
+                    }}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Day Headers */}
+              <div className="grid grid-cols-7 text-center text-[10px] font-bold text-[#8C97AB] font-mono uppercase border-b border-[#EDEAE1] pb-2">
+                <span>Sun</span>
+                <span>Mon</span>
+                <span>Tue</span>
+                <span>Wed</span>
+                <span>Thu</span>
+                <span>Fri</span>
+                <span>Sat</span>
+              </div>
+
+              {/* Days Grid */}
+              <div className="grid grid-cols-7 gap-1">
+                {/* Empty cells for offset */}
+                {Array.from({ length: getFirstDayOfMonth(calendarDate.getFullYear(), calendarDate.getMonth()) }).map((_, i) => (
+                  <div key={`empty-${i}`} className="h-9 rounded-[6px] bg-[#FAFAF8]/50" />
+                ))}
+
+                {/* Month Days */}
+                {Array.from({ length: getDaysInMonth(calendarDate.getFullYear(), calendarDate.getMonth()) }).map((_, i) => {
+                  const dayNum = i + 1;
+                  const monthStr = String(calendarDate.getMonth() + 1).padStart(2, '0');
+                  const dayStr = String(dayNum).padStart(2, '0');
+                  const dateFormatted = `${calendarDate.getFullYear()}-${monthStr}-${dayStr}`;
+
+                  const log = attendanceLogs.find((l) => l.date === dateFormatted);
+                  const status = log?.status;
+
+                  let bgClass = 'bg-[#FAFAF8] text-[#14213D] border border-[#EDEAE1]';
+                  let statusBadge = null;
+
+                  if (status === 'present') {
+                    bgClass = 'bg-[#EAF3F0] text-[#2F6F5E] font-bold border border-[#D3E6E0]';
+                    statusBadge = <span className="w-1.5 h-1.5 rounded-full bg-[#2F6F5E]" />;
+                  } else if (status === 'absent') {
+                    bgClass = 'bg-[#FDF2F1] text-[#B0403A] font-bold border border-[#F9D6D5]';
+                    statusBadge = <span className="w-1.5 h-1.5 rounded-full bg-[#B0403A]" />;
+                  } else if (status === 'leave' || status === 'half_day') {
+                    bgClass = 'bg-[#FDF8EC] text-[#B8860B] font-bold border border-[#F6E7C1]';
+                    statusBadge = <span className="w-1.5 h-1.5 rounded-full bg-[#B8860B]" />;
+                  }
+
+                  return (
+                    <div
+                      key={dayNum}
+                      className={`h-9 rounded-[6px] p-1 flex flex-col items-center justify-between text-xs cursor-default transition-all ${bgClass}`}
+                    >
+                      <span className="text-[11px] font-mono">{dayNum}</span>
+                      {statusBadge}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="pt-3 border-t border-[#EDEAE1] flex items-center justify-center gap-4 text-[10px] font-semibold text-[#52607D]">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#2F6F5E]" />
+                  <span>Present</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#B0403A]" />
+                  <span>Absent</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#B8860B]" />
+                  <span>Leave</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#E4E1D8]" />
+                  <span>Unmarked</span>
+                </div>
               </div>
             </div>
           </div>

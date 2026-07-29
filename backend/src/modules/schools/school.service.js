@@ -46,6 +46,34 @@ export const getActiveSchoolService = async () => {
 };
 
 /* =========================
+   SUPER ADMIN: GET ALL SCHOOLS LIST
+========================= */
+export const getAllSchoolsService = async () => {
+  const schools = await School.findAll({
+    include: [
+      {
+        model: User,
+        where: { role: "school_admin" },
+        required: false,
+        attributes: ["id", "username", "is_active", "first_login"],
+      },
+    ],
+    order: [["id", "ASC"]],
+  });
+
+  for (const s of schools) {
+    const [studentsCount, teachersCount] = await Promise.all([
+      User.count({ where: { school_id: s.id, role: "student" } }),
+      User.count({ where: { school_id: s.id, role: "teacher" } }),
+    ]);
+    s.setDataValue("studentsCount", studentsCount);
+    s.setDataValue("teachersCount", teachersCount);
+  }
+
+  return schools;
+};
+
+/* =========================
    SUPER ADMIN: UPDATE SCHOOL STATUS
 ========================= */
 export const updateSchoolStatusService = async ({ school_id, status }) => {

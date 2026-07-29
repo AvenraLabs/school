@@ -170,8 +170,8 @@ export function BulkSeeder() {
                 onChange={(e) => setTeacherCount(e.target.value)}
                 className="w-36 text-xs font-mono"
               />
-              <Button variant="primary" icon={Database} loading={loading} onClick={handleSubmit}>
-                Seed Roster Data
+              <Button variant="primary" icon={Database} loading={loading} onClick={handleSubmit} className="whitespace-nowrap shrink-0">
+                Seed Data
               </Button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import asyncHandler from "../../shared/asyncHandler.js";
 import {
   getActiveSchoolService,
+  getAllSchoolsService,
   updateSchoolStatusService,
   updateSchoolAdminStatusService,
   resetSchoolAdminPasswordService,
@@ -16,6 +17,17 @@ export const getActiveSchool = asyncHandler(async (req, res) => {
     success: true,
     total: school ? 1 : 0,
     items: school ? [school] : [],
+  });
+});
+
+/* GET ALL SCHOOLS FOR SUPER ADMIN */
+export const getAllSchools = asyncHandler(async (req, res) => {
+  const schools = await getAllSchoolsService();
+  res.json({
+    success: true,
+    total: schools.length,
+    data: schools,
+    items: schools,
   });
 });
 

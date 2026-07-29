@@ -10,6 +10,7 @@ import Attendance from "../attendance/attendance.model.js";
 import Section from "../sections/section.model.js";
 import Class from "../classes/classes.model.js";
 import School from "../schools/school.model.js";
+import StudentFee from "../fees/student-fee.model.js";
 import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 import { calculateSubjectAttendanceService } from "../attendance/attendance.analytics.service.js";
 import { Op } from "sequelize";
@@ -615,6 +616,22 @@ export const getSchoolAnalytics = asyncHandler(async (req, res) => {
     return res.json({
       success: true,
       data: {
+        attendance: {
+          avgAttendancePercentage: 0,
+          totalDays: 0,
+          totalAbsences: 0,
+        },
+        finance: {
+          collectionRate: 0,
+          totalCollected: 0,
+          totalPending: 0,
+        },
+        overview: {
+          totalStudents: 0,
+        },
+        academics: {
+          defaultersCount: 0,
+        },
         section_comparison: [],
         student_comparison: class_id && section_id ? [] : null,
         subject_difficulty: [],
@@ -802,9 +819,73 @@ export const getSchoolAnalytics = asyncHandler(async (req, res) => {
       }).sort((a, b) => b.average - a.average)
     : null;
 
+  // Attendance Summary Metrics
+  const totalDays = await Attendance.count({
+    distinct: true,
+    col: "date",
+    where: { school_id, ...(academic_year_id ? { academic_year_id } : {}) },
+  });
+  const totalAttendanceLogs = allAttendance.length;
+  const totalPresentLogs = allAttendance.filter((a) => a.status === "present").length;
+  const totalAbsences = allAttendance.filter((a) => a.status === "absent").length;
+  const avgAttendancePercentage =
+    totalAttendanceLogs > 0
+      ? Math.round((totalPresentLogs / totalAttendanceLogs) * 100)
+      : 100;
+
+  // Finance Summary Metrics
+  const feeWhere = { school_id };
+  if (academic_year_id) feeWhere.academic_year_id = academic_year_id;
+  const studentFees = await StudentFee.findAll({
+    where: feeWhere,
+    attributes: ["paid_amount", "balance_amount", "total_amount"],
+  });
+  let totalCollected = 0;
+  let totalPending = 0;
+  studentFees.forEach((fee) => {
+    totalCollected += Number(fee.paid_amount || 0);
+    totalPending += Number(fee.balance_amount || 0);
+  });
+  const totalTarget = totalCollected + totalPending;
+  const collectionRate =
+    totalTarget > 0 ? Math.round((totalCollected / totalTarget) * 100) : 0;
+
+  // Academic Defaulters Summary Metric (<40% marks or <75% attendance)
+  let defaultersCount = 0;
+  students.forEach((s) => {
+    const sid = Number(s.id);
+    const marks = studentTotals[sid];
+    const att = attendanceBySid[sid];
+    const marksPct = marks && marks.max > 0 ? (marks.obtained / marks.max) * 100 : null;
+    const attPct = att && att.total > 0 ? (att.present / att.total) * 100 : null;
+
+    if (
+      (marksPct !== null && marksPct < acadCutoff) ||
+      (attPct !== null && attPct < attCutoff)
+    ) {
+      defaultersCount++;
+    }
+  });
+
   res.json({
     success: true,
     data: {
+      attendance: {
+        avgAttendancePercentage,
+        totalDays,
+        totalAbsences,
+      },
+      finance: {
+        collectionRate,
+        totalCollected,
+        totalPending,
+      },
+      overview: {
+        totalStudents: students.length,
+      },
+      academics: {
+        defaultersCount,
+      },
       section_comparison: sectionComparison,
       student_comparison: studentComparison,
       subject_difficulty: subjectDifficulty,

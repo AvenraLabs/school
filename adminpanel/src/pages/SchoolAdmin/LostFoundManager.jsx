@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
-import { lostFoundAPI } from '../../api';
+import { lostFoundAPI, uploadAPI } from '../../api';
+import { getApiAssetUrl } from '../../api/axios';
 import { Modal } from '../../components/common/Modal';
-import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Button } from '../../components/ui/Button';
 import { Select, Input, Textarea } from '../../components/ui/Input';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { Card, CardContent } from '../../components/ui/Card';
 import {
   Search,
   Plus,
@@ -16,12 +16,10 @@ import {
   CheckCircle2,
   Image as ImageIcon,
   X,
-  Sparkles,
-  Megaphone,
-  Clock3,
   ChevronLeft,
   ChevronRight,
-  HelpCircle
+  HelpCircle,
+  Maximize2
 } from 'lucide-react';
 import { formatDate } from '../../utils/date';
 
@@ -45,7 +43,8 @@ export function LostFoundManager() {
   const [photos, setPhotos] = useState([]);
   const [imageUrl, setImageUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
     setPage(0);
@@ -81,7 +80,7 @@ export function LostFoundManager() {
       setItems(res.data || []);
       setTotalCount(res.total || 0);
     } catch (err) {
-      toast.error('Failed to load items');
+      toast.error('Failed to load items catalog');
     } finally {
       setLoading(false);
     }
@@ -89,16 +88,20 @@ export function LostFoundManager() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (!title.trim()) {
+      toast.error('Item title is required');
+      return;
+    }
     setSubmitting(true);
     try {
       await lostFoundAPI.create({
-        title,
+        title: title.trim(),
         type,
         date,
-        description,
+        description: description.trim(),
         photos: imageUrl ? [imageUrl] : photos,
       });
-      toast.success('Report posted successfully');
+      toast.success('Lost & Found article reported successfully');
       setShowCreate(false);
       setTitle('');
       setDescription('');
@@ -106,7 +109,7 @@ export function LostFoundManager() {
       setImageUrl('');
       loadItems();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create item');
+      toast.error(err.response?.data?.message || 'Failed to create report');
     } finally {
       setSubmitting(false);
     }
@@ -114,25 +117,25 @@ export function LostFoundManager() {
 
   const handleCloseItem = async (id) => {
     try {
-      await lostFoundAPI.update(id, { status: 'CLOSED' });
-      toast.success('Item marked resolved');
+      await lostFoundAPI.close(id);
+      toast.success('Item marked resolved / returned');
       loadItems();
     } catch (err) {
-      toast.error('Failed to update item');
+      toast.error('Failed to update item status');
     }
   };
 
   const handleDeleteItem = async (id) => {
     try {
       await lostFoundAPI.delete(id);
-      toast.success('Item deleted');
+      toast.success('Report deleted');
       loadItems();
     } catch (err) {
       toast.error('Failed to delete item');
     }
   };
 
-  const totalPages = Math.ceil(totalCount / LIMIT);
+  const totalPages = Math.ceil(totalCount / LIMIT) || 1;
 
   return (
     <div className="space-y-6">
@@ -148,7 +151,7 @@ export function LostFoundManager() {
 
       {/* Tabs Row & Filters */}
       <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1 border-b border-transparent">
+        <div className="flex items-center gap-1">
           {[
             { id: 'open', label: 'Active Reports' },
             { id: 'my', label: 'My Submissions' },
@@ -197,30 +200,61 @@ export function LostFoundManager() {
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {items.map((item) => (
-                <div key={item.id} className="p-3 bg-[#FAFAF8] border border-[#E4E1D8] rounded-[8px] space-y-2 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <StatusBadge status={item.type === 'lost' ? 'danger' : 'active'} label={item.type.toUpperCase()} size="sm" />
-                      <span className="text-[10px] font-mono text-[#8C97AB]">{formatDate(item.date)}</span>
-                    </div>
-                    <h4 className="font-display font-bold text-xs text-[#14213D] truncate">{item.title}</h4>
-                    <p className="text-[11px] text-[#52607D] line-clamp-2">{item.description || 'No description provided.'}</p>
-                  </div>
+              {items.map((item) => {
+                const itemPhoto = Array.isArray(item.photos) && item.photos.length > 0
+                  ? item.photos[0]
+                  : typeof item.photos === 'string'
+                    ? item.photos
+                    : item.photo_url || null;
 
-                  <div className="pt-2 border-t border-[#EDEAE1] flex items-center justify-between gap-1">
-                    <span className="text-[10px] text-[#8C97AB] truncate">By {item.user?.name || 'Anonymous'}</span>
-                    {item.status === 'OPEN' && (
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" icon={CheckCircle2} className="h-6 px-2 text-[10px]" onClick={() => handleCloseItem(item.id)}>
-                          Resolve
-                        </Button>
-                        <Button variant="ghost" size="sm" icon={Trash2} className="h-6 px-1 text-[#B0403A]" onClick={() => handleDeleteItem(item.id)} />
+                return (
+                  <div key={item.id} className="p-3 bg-[#FAFAF8] border border-[#E4E1D8] rounded-[8px] space-y-2 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <StatusBadge status={item.type === 'lost' ? 'danger' : 'active'} label={item.type.toUpperCase()} size="sm" />
+                        <span className="text-[10px] font-mono text-[#8C97AB]">{formatDate(item.date)}</span>
                       </div>
-                    )}
+
+                      {/* Item Image Display */}
+                      {itemPhoto ? (
+                        <div
+                          onClick={() => setPreviewImage(getApiAssetUrl(itemPhoto))}
+                          className="w-full h-36 rounded-[6px] overflow-hidden bg-slate-100 border border-[#EDEAE1] relative group cursor-pointer"
+                        >
+                          <img
+                            src={getApiAssetUrl(itemPhoto)}
+                            alt={item.title}
+                            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                            <Maximize2 className="w-4 h-4" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full h-24 rounded-[6px] bg-[#EDEAE1]/40 border border-dashed border-[#E4E1D8] flex flex-col items-center justify-center text-[#8C97AB] gap-1">
+                          <ImageIcon className="w-5 h-5" />
+                          <span className="text-[10px]">No photo attached</span>
+                        </div>
+                      )}
+
+                      <h4 className="font-display font-bold text-xs text-[#14213D] truncate">{item.title}</h4>
+                      <p className="text-[11px] text-[#52607D] line-clamp-2">{item.description || 'No description provided.'}</p>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#EDEAE1] flex items-center justify-between gap-1">
+                      <span className="text-[10px] text-[#8C97AB] truncate">By {item.user?.name || item.creator?.name || 'Anonymous'}</span>
+                      {item.status === 'OPEN' && (
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" icon={CheckCircle2} className="h-6 px-2 text-[10px]" onClick={() => handleCloseItem(item.id)}>
+                            Resolve
+                          </Button>
+                          <Button variant="ghost" size="sm" icon={Trash2} className="h-6 px-1 text-[#B0403A]" onClick={() => handleDeleteItem(item.id)} />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -259,26 +293,53 @@ export function LostFoundManager() {
           </div>
 
           <div>
+            <label className="block font-semibold text-[#14213D] mb-1">Detailed Description</label>
+            <Textarea
+              rows={3}
+              placeholder="Provide specific features, brand, color, location found or lost..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+
+          <div>
             <label className="block font-semibold text-[#14213D] mb-1">Item Photo / Image (Optional)</label>
             <Input
               type="file"
               accept="image/*"
+              disabled={uploadingImage}
               onChange={async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 try {
+                  setUploadingImage(true);
                   const res = await uploadAPI.uploadAnnouncement(file);
-                  if (res.url || res.data?.url) {
-                    setImageUrl(res.url || res.data?.url);
-                    toast.success('Image uploaded');
+                  const uploadedUrl = res.url || res.data?.url;
+                  if (uploadedUrl) {
+                    setImageUrl(uploadedUrl);
+                    toast.success('Photo uploaded successfully');
                   }
                 } catch {
                   toast.error('Failed to upload image');
+                } finally {
+                  setUploadingImage(false);
                 }
               }}
             />
             {imageUrl && (
-              <p className="mt-1 text-[11px] text-[#2F6F5E] font-medium">Image attached ✓</p>
+              <div className="mt-2 space-y-1">
+                <span className="text-[11px] text-[#2F6F5E] font-medium block">Photo attached ✓</span>
+                <div className="w-24 h-24 rounded-[6px] overflow-hidden border border-[#D3E6E0] relative group">
+                  <img src={getApiAssetUrl(imageUrl)} alt="Uploaded preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl('')}
+                    className="absolute top-1 right-1 p-0.5 rounded-full bg-black/60 text-white hover:bg-black"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
             )}
           </div>
 
@@ -288,6 +349,21 @@ export function LostFoundManager() {
           </div>
         </form>
       </Modal>
+
+      {/* Modal: Full Size Image Preview */}
+      {previewImage && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setPreviewImage(null)}>
+          <div className="relative max-w-2xl max-h-[85vh] bg-white rounded-[12px] overflow-hidden p-2 shadow-2xl">
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-3 right-3 p-1 rounded-full bg-black/50 text-white hover:bg-black z-10 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <img src={previewImage} alt="Full view" className="max-w-full max-h-[80vh] object-contain rounded-[8px]" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

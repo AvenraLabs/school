@@ -561,10 +561,14 @@ export const getDailyCollectionReportService = async (school_id, query = {}) => 
       total_pages: Math.ceil(count / limit),
     },
     summary: {
-      cash_total: cashTotal,
-      upi_total: upiTotal,
-      bank_total: bankTotal,
+      total: totalCollected,
       total_collected: totalCollected,
+      cash: cashTotal,
+      cash_total: cashTotal,
+      upi: upiTotal,
+      upi_total: upiTotal,
+      bank: bankTotal,
+      bank_total: bankTotal,
       count,
     },
     payments: payments.map((p) => {

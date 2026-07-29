@@ -8,19 +8,7 @@ import { Card } from '../../components/ui/Card';
 import { useToast } from '../../context/ToastContext';
 import { UserCheck, CheckCircle, XCircle, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 
-const getAssetUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
-  }
-  let cleanPath = path;
-  if (path.startsWith('/uploads')) {
-    cleanPath = `/api${path}`;
-  }
-  const baseUrl = import.meta.env.VITE_API_URL || '';
-  const host = baseUrl.replace(/\/api$/, '');
-  return `${host}${cleanPath}`;
-};
+import { getApiAssetUrl } from '../../api/axios';
 
 export function Approvals() {
   const [teachers, setTeachers] = useState([]);
@@ -181,7 +169,7 @@ export function Approvals() {
         <div className="flex items-center gap-4 pb-4 border-b border-[#EDEAE1]">
           <div className="w-14 h-14 rounded-full bg-[#EAF3F0] border border-[#D3E6E0] flex items-center justify-center overflow-hidden shrink-0">
             {user.avatar_url ? (
-              <img src={getAssetUrl(user.avatar_url)} alt={user.name} className="w-full h-full object-cover" />
+              <img src={getApiAssetUrl(user.avatar_url)} alt={user.name} className="w-full h-full object-cover" />
             ) : (
               <span className="font-display font-bold text-lg text-[#2F6F5E]">
                 {(user.name || 'P')[0].toUpperCase()}
