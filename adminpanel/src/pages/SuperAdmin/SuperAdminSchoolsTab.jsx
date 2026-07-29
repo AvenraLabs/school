@@ -252,7 +252,7 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={s.status === 'ACTIVE' || s.is_active ? 'active' : 'inactive'} size="sm" />
+                      <StatusBadge status={String(s.status || '').toLowerCase() === 'active' || s.is_active ? 'active' : 'inactive'} size="sm" />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">

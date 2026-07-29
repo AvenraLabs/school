@@ -133,7 +133,7 @@ export function SuperAdminAnalyticsTab({ schools = [] }) {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <StatusBadge status={s.status === 'ACTIVE' || s.is_active ? 'active' : 'inactive'} size="sm" />
+                          <StatusBadge status={String(s.status || '').toLowerCase() === 'active' || s.is_active ? 'active' : 'inactive'} size="sm" />
                         </td>
                       </tr>
                     );

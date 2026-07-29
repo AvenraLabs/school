@@ -44,7 +44,7 @@ export function SuperAdminSchoolSettings() {
     setLoading(true);
     try {
       const res = await schoolAPI.list();
-      const rawList = res.items || res.data || (Array.isArray(res) ? res : [res]);
+      const rawList = res.items || (Array.isArray(res) ? res : [res]);
       if (rawList.length > 0) {
         const s = rawList[0];
         setSchool(s);

@@ -398,13 +398,16 @@ export async function getBillingSummaryService({ school_id = null }) {
     // Cost: ₹0.05 per 1,000 tokens
     const estAiCost = Number(((aiTokens / 1000) * 0.05).toFixed(2));
 
-    // 2. AI Video seconds usage
+    // 2. AI Video seconds usage (Only count successful renders)
     const videoStats = await VideoGeneration.findAll({
       attributes: [
         [fn("COUNT", col("id")), "total_videos"],
         [fn("SUM", col("duration")), "total_seconds"],
       ],
-      where: { school_id: sid },
+      where: {
+        school_id: sid,
+        status: ["completed", "success"],
+      },
       raw: true,
     });
 
@@ -413,9 +416,17 @@ export async function getBillingSummaryService({ school_id = null }) {
     // Cost: ₹2.00 per video minute (60s)
     const estVideoCost = Number(((videoSecs / 60) * 2.0).toFixed(2));
 
-    // 3. WhatsApp messages usage
+    // 3. WhatsApp messages usage (Only count successfully sent messages)
     const whatsappLimit = sch.whatsapp_annual_limit ?? 10000;
-    const whatsappSent = sch.whatsapp_sent_count ?? 0;
+    const waCountResult = await WhatsappLog.findAll({
+      attributes: [[fn("COUNT", col("id")), "sent_count"]],
+      where: {
+        school_id: sid,
+        status: ["sent", "success", "delivered"],
+      },
+      raw: true,
+    });
+    const whatsappSent = Number(waCountResult[0]?.sent_count || 0);
     // Cost: ₹0.75 per message
     const estWhatsappCost = Number((whatsappSent * 0.75).toFixed(2));
 

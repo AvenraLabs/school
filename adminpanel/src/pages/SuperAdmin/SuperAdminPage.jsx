@@ -40,10 +40,10 @@ export function SuperAdminPage() {
         tokenPoliciesAPI.list(),
       ]);
 
-      const schoolsData = schoolsRes.items || schoolsRes.data || (Array.isArray(schoolsRes) ? schoolsRes : [schoolsRes]);
+      const schoolsData = schoolsRes.items || (Array.isArray(schoolsRes) ? schoolsRes : [schoolsRes]);
       setSchools(Array.isArray(schoolsData) ? schoolsData : []);
 
-      const policiesData = policiesRes.items || policiesRes.data || (Array.isArray(policiesRes) ? policiesRes : []);
+      const policiesData = policiesRes.items || (Array.isArray(policiesRes) ? policiesRes : []);
       setPolicies(Array.isArray(policiesData) ? policiesData : []);
     } catch (err) {
       console.error('Failed to load SuperAdmin details:', err);

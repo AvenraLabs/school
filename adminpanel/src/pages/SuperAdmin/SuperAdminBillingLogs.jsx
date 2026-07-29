@@ -73,10 +73,10 @@ export function SuperAdminBillingLogs() {
       ]);
 
       setBillingSummary(summaryRes?.data || summaryRes);
-      setApiLogs(logsRes?.data || logsRes?.items || (Array.isArray(logsRes) ? logsRes : []));
+      setApiLogs(logsRes?.items || (Array.isArray(logsRes) ? logsRes : []));
       setAiSchoolData(aiRes?.data || aiRes);
-      setAiUserData(userRes?.data || userRes?.items || (Array.isArray(userRes) ? userRes : []));
-      setAiClassData(classRes?.data || classRes?.items || (Array.isArray(classRes) ? classRes : []));
+      setAiUserData(userRes?.items || (Array.isArray(userRes) ? userRes : []));
+      setAiClassData(classRes?.items || (Array.isArray(classRes) ? classRes : []));
     } catch (err) {
       console.error('Failed loading telemetry logs data:', err);
     } finally {
@@ -179,28 +179,6 @@ export function SuperAdminBillingLogs() {
 
       {/* Billable API Services Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* WhatsApp Outbound Messages */}
-        <Card
-          onClick={() => setServiceTab('whatsapp')}
-          className={`p-4 space-y-2 cursor-pointer transition-all ${
-            serviceTab === 'whatsapp' ? 'border-[#2F6F5E] bg-[#EAF3F0]/40 shadow-xs' : 'hover:border-[#D3E6E0]'
-          }`}
-        >
-          <div className="flex items-center justify-between text-[#52607D]">
-            <span className="font-bold text-xs text-[#14213D] flex items-center gap-1.5">
-              <MessageSquare className="w-4 h-4 text-[#2F6F5E]" /> WhatsApp Messages
-            </span>
-            <span className="text-[10px] font-mono text-[#8C97AB]">₹{rates.whatsappRate.toFixed(2)} / msg</span>
-          </div>
-          <div className="font-display font-bold text-xl text-[#14213D]">
-            ₹{whatsappCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div className="text-[11px] text-[#52607D] font-mono flex items-center justify-between">
-            <span>Messages Sent:</span>
-            <span className="font-bold text-[#14213D]">{whatsappSent.toLocaleString()}</span>
-          </div>
-        </Card>
-
         {/* Gemini AI Chat Tokens */}
         <Card
           onClick={() => setServiceTab('ai')}
@@ -212,7 +190,9 @@ export function SuperAdminBillingLogs() {
             <span className="font-bold text-xs text-[#14213D] flex items-center gap-1.5">
               <Coins className="w-4 h-4 text-[#2F6F5E]" /> Gemini AI Tokens
             </span>
-            <span className="text-[10px] font-mono text-[#8C97AB]">₹{rates.aiTokenRate.toFixed(2)} / 1k</span>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#EAF3F0] text-[#2F6F5E] font-bold">
+              Active (Billable)
+            </span>
           </div>
           <div className="font-display font-bold text-xl text-[#14213D]">
             ₹{aiCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -220,28 +200,6 @@ export function SuperAdminBillingLogs() {
           <div className="text-[11px] text-[#52607D] font-mono flex items-center justify-between">
             <span>Tokens Consumed:</span>
             <span className="font-bold text-[#14213D]">{tokensUsed.toLocaleString()}</span>
-          </div>
-        </Card>
-
-        {/* Kling AI Video Generation */}
-        <Card
-          onClick={() => setServiceTab('video')}
-          className={`p-4 space-y-2 cursor-pointer transition-all ${
-            serviceTab === 'video' ? 'border-[#2F6F5E] bg-[#EAF3F0]/40 shadow-xs' : 'hover:border-[#D3E6E0]'
-          }`}
-        >
-          <div className="flex items-center justify-between text-[#52607D]">
-            <span className="font-bold text-xs text-[#14213D] flex items-center gap-1.5">
-              <Video className="w-4 h-4 text-[#2F6F5E]" /> AI Video Gen (Kling)
-            </span>
-            <span className="text-[10px] font-mono text-[#8C97AB]">₹{rates.aiVideoRate.toFixed(2)} / min</span>
-          </div>
-          <div className="font-display font-bold text-xl text-[#14213D]">
-            ₹{videoCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div className="text-[11px] text-[#52607D] font-mono flex items-center justify-between">
-            <span>Video Time:</span>
-            <span className="font-bold text-[#14213D]">{Math.round(videoSeconds / 60)} mins ({videoSeconds}s)</span>
           </div>
         </Card>
 
@@ -256,7 +214,9 @@ export function SuperAdminBillingLogs() {
             <span className="font-bold text-xs text-[#14213D] flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-[#2F6F5E]" /> Google Maps API
             </span>
-            <span className="text-[10px] font-mono text-[#8C97AB]">₹{rates.mapsRate.toFixed(2)} / 1k</span>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#EAF3F0] text-[#2F6F5E] font-bold">
+              Active (Free Tier)
+            </span>
           </div>
           <div className="font-display font-bold text-xl text-[#14213D]">
             ₹{mapsCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -264,6 +224,54 @@ export function SuperAdminBillingLogs() {
           <div className="text-[11px] text-[#52607D] font-mono flex items-center justify-between">
             <span>Tile / Geocode Requests:</span>
             <span className="font-bold text-[#14213D]">{mapsRequests.toLocaleString()}</span>
+          </div>
+        </Card>
+
+        {/* WhatsApp Outbound Messages */}
+        <Card
+          onClick={() => setServiceTab('whatsapp')}
+          className={`p-4 space-y-2 cursor-pointer transition-all ${
+            serviceTab === 'whatsapp' ? 'border-[#2F6F5E] bg-[#EAF3F0]/40 shadow-xs' : 'hover:border-[#D3E6E0]'
+          }`}
+        >
+          <div className="flex items-center justify-between text-[#52607D]">
+            <span className="font-bold text-xs text-[#14213D] flex items-center gap-1.5">
+              <MessageSquare className="w-4 h-4 text-[#2F6F5E]" /> WhatsApp Messages
+            </span>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#FAFAF8] text-[#8C97AB] font-bold border border-[#E4E1D8]">
+              Disabled
+            </span>
+          </div>
+          <div className="font-display font-bold text-xl text-[#14213D]">
+            ₹{whatsappCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="text-[11px] text-[#52607D] font-mono flex items-center justify-between">
+            <span>Successful Messages:</span>
+            <span className="font-bold text-[#14213D]">{whatsappSent.toLocaleString()}</span>
+          </div>
+        </Card>
+
+        {/* Kling AI Video Generation */}
+        <Card
+          onClick={() => setServiceTab('video')}
+          className={`p-4 space-y-2 cursor-pointer transition-all ${
+            serviceTab === 'video' ? 'border-[#2F6F5E] bg-[#EAF3F0]/40 shadow-xs' : 'hover:border-[#D3E6E0]'
+          }`}
+        >
+          <div className="flex items-center justify-between text-[#52607D]">
+            <span className="font-bold text-xs text-[#14213D] flex items-center gap-1.5">
+              <Video className="w-4 h-4 text-[#2F6F5E]" /> AI Video Gen (Kling)
+            </span>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#FAFAF8] text-[#8C97AB] font-bold border border-[#E4E1D8]">
+              Disabled
+            </span>
+          </div>
+          <div className="font-display font-bold text-xl text-[#14213D]">
+            ₹{videoCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="text-[11px] text-[#52607D] font-mono flex items-center justify-between">
+            <span>Video Time:</span>
+            <span className="font-bold text-[#14213D]">{Math.round(videoSeconds / 60)} mins ({videoSeconds}s)</span>
           </div>
         </Card>
       </div>

@@ -26,7 +26,6 @@ export const getAllSchools = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     total: schools.length,
-    data: schools,
     items: schools,
   });
 });
