@@ -13,6 +13,7 @@ import "./src/models/initModels.js";
 import uploadRoutes from "./src/modules/upload/upload.routes.js";
 import { startLibraryCron } from "./src/modules/library/library.cron.js";
 import { startFeeCron } from "./src/modules/fees/fee.cron.js";
+import { runPendingMigrations } from "./src/config/runMigrations.js";
 
 // socket
 import { createServer } from "http";
@@ -253,6 +254,9 @@ app.use(errorHandler);
 try {
   await db.authenticate();
   console.log("DB connected");
+
+  // Run pending schema migrations from backend/migrations directory
+  await runPendingMigrations();
 
   await db.sync({ force: false });
 

@@ -24,3 +24,7 @@
   - You MUST immediately update `ER_DIAGRAM.md`, `SYSTEM_ARCHITECTURE.md`, and `API_DOCUMENTATION.md` to keep them fully synchronized with the codebase.
   - Never leave documentation stale or out of sync.
 
+## 3. Database Schema & Migration Rule
+- **NO Raw DDL SQL Queries in `server.js`**: NEVER write inline `db.query("ALTER TABLE...")` or raw DDL schema mutations inside `server.js` or application controllers.
+- **Use Migration Scripts in `backend/migrations/`**: All database schema changes, new columns, table alterations, indexes, or custom DDL scripts MUST be placed in individual, timestamped `.cjs` migration files inside `backend/migrations/` (e.g., `20260807000000-add-wamid-to-whatsapp-logs.cjs`).
+- **Automated Boot Runner**: The system automatically executes pending migrations in `backend/migrations/` on server boot via `runPendingMigrations()`.
