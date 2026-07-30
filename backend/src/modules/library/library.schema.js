@@ -31,7 +31,7 @@ export const issueBookSchema = z.object({
 export const returnBookSchema = z.object({
   status: z.enum(["returned", "lost", "damaged"], {
     errorMap: () => ({ message: "Status must be 'returned', 'lost', or 'damaged'" }),
-  }),
+  }).default("returned"),
   fine_amount: z.coerce.number().min(0).optional().nullable(),
   remarks: z.string().trim().max(500).optional().nullable(),
 });

@@ -274,7 +274,7 @@ export const issueBookService = async (
    RETURN BOOK
    ============================================================================ */
 
-export const returnBookService = async (issueId, school_id, returned_by, { status, fine_amount, remarks }) => {
+export const returnBookService = async (issueId, school_id, returned_by, { status = "returned", fine_amount, remarks } = {}) => {
   const t = await db.transaction();
   try {
     const issue = await BookIssue.findOne({
@@ -291,12 +291,39 @@ export const returnBookService = async (issueId, school_id, returned_by, { statu
     });
     if (!book) throw new AppError("Book not found", 404);
 
+    const today = todayStr();
+    let finalFine = fine_amount;
+
+    // Auto-calculate fine if not explicitly provided
+    if (finalFine === undefined || finalFine === null) {
+      if (issue.due_date && issue.due_date < today) {
+        const school = await School.findByPk(school_id, {
+          attributes: ["library_overdue_fine_per_day"],
+          transaction: t,
+        });
+        const finePerDay = Number(school?.library_overdue_fine_per_day || 0);
+        const dueMs = new Date(issue.due_date).getTime();
+        const todayMs = new Date(today).getTime();
+        const diffDays = Math.max(0, Math.ceil((todayMs - dueMs) / (1000 * 60 * 60 * 24)));
+
+        if (diffDays > 0 && finePerDay > 0) {
+          finalFine = Math.round(diffDays * finePerDay * 100) / 100;
+        } else {
+          finalFine = 0;
+        }
+      } else {
+        finalFine = 0;
+      }
+    } else {
+      finalFine = Number(finalFine) || 0;
+    }
+
     const updates = {
-      status,
-      returned_date: todayStr(),
+      status: status || "returned",
+      returned_date: today,
       returned_by,
       remarks: remarks || null,
-      fine_amount: fine_amount || null,
+      fine_amount: finalFine,
     };
 
     await issue.update(updates, { transaction: t });

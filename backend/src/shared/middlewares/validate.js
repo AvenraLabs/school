@@ -23,7 +23,7 @@ export const validate = (schema) => (req, res, next) => {
 
     next();
   } catch (err) {
-    const message = err.errors?.[0]?.message || "Invalid request";
+    const message = err.errors?.[0]?.message || err.issues?.[0]?.message || "Invalid request";
     next(new AppError(message, 400));
   }
 };
