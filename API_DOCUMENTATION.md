@@ -9,10 +9,11 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/login` | Public | Authenticates user (username/phone + password). Returns JWT token. Enforces active profile status checks. |
+| POST | `/login` | Public | Authenticates user (username/phone + password). Returns access token & refresh token. Enforces active profile status checks. |
+| POST | `/refresh-token` | Public | Exchanges a valid, non-revoked refresh token for a new access token & rotated refresh token (`/refresh` alias). |
 | POST | `/logout` | Authenticated | Revokes session, clears server-side refresh records. |
-| POST | `/change-password` | Authenticated | Changes current user password. |
-| PATCH | `/admin/users/:userId/reset-password` | Admin | Resets a target user's password. |
+| POST | `/change-password` | Authenticated | Changes current user password and revokes active refresh tokens. |
+| PATCH | `/admin/users/:userId/reset-password` | Admin | Resets a target user's password and revokes active refresh tokens. |
 | PATCH | `/profile` | Authenticated | Updates name and avatar URL. |
 
 ---

@@ -20,10 +20,13 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  const login = (userData, authToken) => {
+  const login = (userData, authToken, refreshToken = null) => {
     setUser(userData);
     setToken(authToken);
     localStorage.setItem('token', authToken);
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
     localStorage.setItem('user', JSON.stringify(userData));
     setError(null);
   };
@@ -38,6 +41,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     setError(null);
   };

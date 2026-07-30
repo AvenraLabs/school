@@ -93,8 +93,115 @@ export const login = asyncHandler(async (req, res) => {
     additionalClaims.driver_id = driver.id;
   }
 
-  // ── 4. Issue token ────────────────────────────────────────────────
-  const token = jwt.sign(
+  // ── 4. Issue tokens (Access + Refresh) ─────────────────────────────
+  const tokenPayload = {
+    id:           user.id,
+    role:         user.role,
+    school_id:    user.school_id,
+    school_board: schoolBoard,
+    name:         user.name,
+    username:     user.username,
+    phone:        user.phone,
+    ...additionalClaims,
+  };
+
+  const accessToken = jwt.sign(
+    tokenPayload,
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || "15m" }
+  );
+
+  const refreshToken = jwt.sign(
+    { id: user.id, token_type: "refresh" },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" }
+  );
+
+  // ── 5. Save refresh token & update last_login ─────────────────────
+  user.refresh_token = refreshToken;
+  user.last_login = new Date();
+  await user.save();
+
+  res.json({
+    token: accessToken,
+    accessToken,
+    refreshToken,
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Refresh Token Endpoint — issues new Access Token & rotates Refresh Token
+// ─────────────────────────────────────────────────────────────────────────────
+export const refreshToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.body?.refreshToken || req.body?.refresh_token;
+
+  if (!incomingRefreshToken) {
+    throw new AppError("Refresh token is required", 400);
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(incomingRefreshToken, process.env.JWT_SECRET);
+  } catch (err) {
+    throw new AppError("Invalid or expired refresh token", 401);
+  }
+
+  if (decoded.token_type !== "refresh") {
+    throw new AppError("Invalid token type", 401);
+  }
+
+  const user = await User.findByPk(decoded.id);
+  if (!user || !user.is_active) {
+    throw new AppError("User account disabled or not found", 401);
+  }
+
+  // Verify incoming refresh token matches stored token (revocation check)
+  if (!user.refresh_token || user.refresh_token !== incomingRefreshToken) {
+    throw new AppError("Refresh token revoked or invalid", 401);
+  }
+
+  // Check school status if applicable
+  let schoolBoard = null;
+  if (user.role !== "super_admin") {
+    const school = await School.findByPk(user.school_id);
+    if (!school || school.status !== "active") {
+      throw new AppError("School is inactive", 403);
+    }
+    schoolBoard = school.board || null;
+  }
+
+  // Re-build role-specific additional claims
+  let additionalClaims = {};
+  if (user.role === "teacher") {
+    const Teacher = (await import("../teachers/teacher.model.js")).default;
+    const teacher = await Teacher.findOne({ where: { user_id: user.id } });
+    if (!teacher || !teacher.is_active || teacher.status !== "ACTIVE") {
+      throw new AppError("Teacher profile is inactive", 403);
+    }
+    additionalClaims.teacher_id = teacher.id;
+
+  } else if (user.role === "student") {
+    const Student = (await import("../students/student.model.js")).default;
+    const student = await Student.findOne({ where: { user_id: user.id } });
+    if (!student || !student.is_active || student.status !== "ACTIVE") {
+      throw new AppError("Student profile is inactive", 403);
+    }
+    additionalClaims = {
+      class_id:   student.class_id,
+      section_id: student.section_id,
+      student_id: student.id,
+    };
+
+  } else if (user.role === "driver") {
+    const Driver = (await import("../transport/driver.model.js")).default;
+    const driver = await Driver.findOne({ where: { user_id: user.id } });
+    if (driver) {
+      additionalClaims.driver_id = driver.id;
+    }
+  }
+
+  // Generate new Access Token
+  const newAccessToken = jwt.sign(
     {
       id:           user.id,
       role:         user.role,
@@ -106,14 +213,24 @@ export const login = asyncHandler(async (req, res) => {
       ...additionalClaims,
     },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || "365d" }
+    { expiresIn: process.env.JWT_EXPIRES_IN || "15m" }
   );
 
-  // ── 5. Update last_login ──────────────────────────────────────────
-  user.last_login = new Date();
+  // Rotate Refresh Token
+  const newRefreshToken = jwt.sign(
+    { id: user.id, token_type: "refresh" },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" }
+  );
+
+  user.refresh_token = newRefreshToken;
   await user.save();
 
-  res.json({ token });
+  res.json({
+    token: newAccessToken,
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

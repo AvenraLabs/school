@@ -57,7 +57,7 @@ export function LoginPage() {
         atob(base64).split('').map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
       );
       const decoded = JSON.parse(jsonPayload);
-      login(decoded, response.token);
+      login(decoded, response.token, response.refreshToken);
       if (decoded.role === 'super_admin') navigate('/super-admin');
       else if (decoded.role === 'school_admin') navigate('/admin/dashboard');
       else setError('Access denied. Only admins can log in here.');

@@ -246,7 +246,7 @@ export function AuthProvider({ children }) {
   }, [token, user]);
 
   // ---------- actions ----------
-  function login(jwt) {
+  function login(jwt, refreshToken = null) {
     try {
       setError(null);
 
@@ -260,10 +260,13 @@ export function AuthProvider({ children }) {
 
       // Save to accounts list
       const accs = getSavedAccounts();
-      accs[decoded.id] = { token: jwt, user: decoded };
+      accs[decoded.id] = { token: jwt, refreshToken, user: decoded };
       saveAccounts(accs);
 
       localStorage.setItem("token", jwt);
+      if (refreshToken) {
+        localStorage.setItem("refreshToken", refreshToken);
+      }
       localStorage.setItem("activeUserId", decoded.id);
       setToken(jwt);
       setUser(decoded);
@@ -294,6 +297,11 @@ export function AuthProvider({ children }) {
         const nextId = remainingIds[0];
         const nextAcc = accs[nextId];
         localStorage.setItem("token", nextAcc.token);
+        if (nextAcc.refreshToken) {
+          localStorage.setItem("refreshToken", nextAcc.refreshToken);
+        } else {
+          localStorage.removeItem("refreshToken");
+        }
         localStorage.setItem("activeUserId", nextAcc.user.id);
         setToken(nextAcc.token);
         setUser(nextAcc.user || decodeToken(nextAcc.token));
@@ -301,6 +309,7 @@ export function AuthProvider({ children }) {
       } else {
         disconnectSharedSocket();
         localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
         localStorage.removeItem("accounts");
         localStorage.removeItem("activeUserId");
         setToken(null);

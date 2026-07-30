@@ -1,6 +1,8 @@
 import api from "./axios";
+import axios from "axios";
 import { jwtDecode } from "jwt-decode";
-import { getRetryDelay, shouldRetry, isAuthError } from "../utils/apiErrorHandler";
+import { getRetryDelay, shouldRetry } from "../utils/apiErrorHandler";
+import { API_BASE_URL } from "./config";
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -35,11 +37,6 @@ export function setupAxiosInterceptors({ onLogout, onTokenRefresh }) {
       const token = localStorage.getItem("token");
 
       if (token) {
-        // Check if token is expired before making request
-        if (isTokenExpired(token)) {
-          onLogout();
-          return Promise.reject(new Error("Token expired"));
-        }
         config.headers.Authorization = `Bearer ${token}`;
       }
 
@@ -58,7 +55,7 @@ export function setupAxiosInterceptors({ onLogout, onTokenRefresh }) {
     async (error) => {
       const originalRequest = error.config;
 
-      // Handle retry logic for network and server errors
+      // Handle retry logic for network and server errors (except 401/403)
       if (shouldRetry(error, originalRequest.retryCount, originalRequest.maxRetries)) {
         originalRequest.retryCount += 1;
         const delayTime = getRetryDelay(originalRequest.retryCount);
@@ -71,27 +68,70 @@ export function setupAxiosInterceptors({ onLogout, onTokenRefresh }) {
         return api(originalRequest);
       }
 
-      // Handle 401 errors (unauthorized)
-      if (error.response?.status === 401) {
-        // If we get a 401, it means the token is invalid or expired
-        // Since we don't have a reliable refresh token flow yet, we just logout
-        // BUT do not logout if it's the login request itself!
+      // Handle 401 errors (unauthorized / token expired)
+      if (error.response?.status === 401 && !originalRequest._retry) {
         const isLoginRequest = originalRequest?.url && originalRequest.url.includes("/auth/login");
-        if (!isLoginRequest) {
-          onLogout();
+        const isRefreshRequest = originalRequest?.url && originalRequest.url.includes("/auth/refresh");
+
+        if (isLoginRequest || isRefreshRequest) {
+          return Promise.reject(error);
         }
-        return Promise.reject(error);
+
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          onLogout();
+          return Promise.reject(error);
+        }
+
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          })
+            .then((newToken) => {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              return api(originalRequest);
+            })
+            .catch((err) => Promise.reject(err));
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        try {
+          const refreshRes = await axios.post(`${API_BASE_URL}/auth/refresh-token`, { refreshToken });
+          const newToken = refreshRes.data.accessToken || refreshRes.data.token;
+          const newRefreshToken = refreshRes.data.refreshToken;
+
+          localStorage.setItem("token", newToken);
+          if (newRefreshToken) {
+            localStorage.setItem("refreshToken", newRefreshToken);
+          }
+
+          api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
+          if (onTokenRefresh) {
+            onTokenRefresh(newToken);
+          }
+
+          processQueue(null, newToken);
+          return api(originalRequest);
+        } catch (refreshErr) {
+          processQueue(refreshErr, null);
+          onLogout();
+          return Promise.reject(refreshErr);
+        } finally {
+          isRefreshing = false;
+        }
       }
 
-      // Handle 403 errors (forbidden) - could be profile completion required
+      // Handle 403 errors (forbidden)
       if (error.response?.status === 403) {
         const errorMessage = error.response.data?.message || "Access forbidden";
 
         if (errorMessage.includes("Profile completion required")) {
-          // Let the app handle profile completion redirect
           console.log("Profile completion required");
         } else if (errorMessage.includes("approval")) {
-          // User needs approval - show appropriate message
           console.log("User approval required");
         }
       }
