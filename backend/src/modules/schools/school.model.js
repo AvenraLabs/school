@@ -63,16 +63,6 @@ const School = db.define(
       defaultValue: "pending",
     },
 
-    whatsapp_bus_start_enabled: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-
-    whatsapp_bus_end_enabled: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-
     whatsapp_annual_limit: {
       type: DataTypes.INTEGER,
       defaultValue: 10000,

@@ -11,6 +11,7 @@ import {
 
 import {
   markAttendance,
+  sendAbsentWhatsApp,
   getDailyAttendance,
   getTeacherAttendanceSummary,
   getStudentAttendanceSummary,
@@ -27,6 +28,13 @@ router.post(
   allowRoles("teacher", "school_admin"),
   validate(markAttendanceSchema),
   markAttendance
+);
+
+router.post(
+  "/teachers/attendance/send-absent-whatsapp",
+  protect,
+  allowRoles("teacher", "school_admin"),
+  sendAbsentWhatsApp
 );
 
 router.get(

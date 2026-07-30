@@ -69,7 +69,6 @@ Central multi-tenant organizational entity.
 - `contact_phone` (STRING), `email` (STRING, Unique)
 - `logo_url` (TEXT)
 - `status` (ENUM: 'pending', 'active', 'suspended', 'expired')
-- `whatsapp_bus_start_enabled` (BOOLEAN), `whatsapp_bus_end_enabled` (BOOLEAN)
 - `whatsapp_annual_limit` (INTEGER), `whatsapp_sent_count` (INTEGER)
 - `google_maps_enabled` (BOOLEAN), `promotion_wizard_enabled` (BOOLEAN)
 - `risk_attendance_cutoff` (INT), `risk_academic_cutoff` (INT), `risk_grade_drop_margin` (INT)

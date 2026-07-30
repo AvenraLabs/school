@@ -290,3 +290,76 @@ export const getStudentAttendanceSummaryService = async ({
     subject_stats: subjectStats,
   };
 };
+
+/* =========================
+   TEACHER/ADMIN: MANUAL ABSENT WHATSAPP ALERTS
+========================= */
+export const sendAbsentWhatsAppService = async ({
+  school_id,
+  class_id,
+  section_id,
+  date,
+  user,
+}) => {
+  const isAuthorized = await checkAttendancePermission({ user, school_id, class_id, section_id });
+  if (!isAuthorized) {
+    throw new AppError("FORBIDDEN", 403);
+  }
+
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  if (date !== todayStr) {
+    throw new AppError("WhatsApp absent alerts can only be sent for today's attendance.", 400);
+  }
+
+  const { sendAbsentAlert } = await import("../whatsapp/whatsapp.service.js");
+  const WhatsappLog = (await import("../whatsapp/whatsapp-log.model.js")).default;
+
+  const absentRecords = await Attendance.findAll({
+    where: { school_id, class_id, section_id, date, status: "absent" },
+    include: [
+      {
+        model: Student,
+        include: [{ model: User, attributes: ["name", "phone"] }],
+      },
+    ],
+  });
+
+  if (absentRecords.length === 0) {
+    return { total_absent: 0, sent_count: 0, message: "No absent students found for today." };
+  }
+
+  let sentCount = 0;
+  for (const record of absentRecords) {
+    const student = record.student;
+    if (!student) continue;
+
+    const phone = student.user?.phone || student.emergency_contact;
+    if (!phone) continue;
+
+    const alreadySent = await WhatsappLog.findOne({
+      where: {
+        school_id,
+        status: "success",
+        message: { [Op.like]: `%${student.user?.name || "Student"}%` },
+        created_at: {
+          [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)),
+        },
+      },
+    });
+
+    if (!alreadySent) {
+      await sendAbsentAlert({
+        id: student.id,
+        date,
+      });
+      sentCount++;
+    }
+  }
+
+  return {
+    total_absent: absentRecords.length,
+    sent_count: sentCount,
+    message: `Sent WhatsApp absent alerts to ${sentCount} parent(s).`,
+  };
+};

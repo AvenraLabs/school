@@ -73,6 +73,7 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
 
 ### Attendance (`/api/teachers/attendance`, `/api/students/attendance`)
 - `POST /teachers/attendance` — Mark daily class attendance.
+- `POST /teachers/attendance/send-absent-whatsapp` — Manually dispatch WhatsApp absent alerts to parents of students marked absent today.
 - `GET /teachers/attendance/daily` — Get attendance list for a given date, class, section.
 - `GET /teachers/attendance/summary` — Class-level monthly/annual summary.
 - `GET /students/attendance/summary` — Individual student attendance percentage & history.

@@ -365,8 +365,6 @@ export async function getBillingSummaryService({ school_id = null }) {
       "whatsapp_annual_limit",
       "whatsapp_sent_count",
       "google_maps_enabled",
-      "whatsapp_bus_start_enabled",
-      "whatsapp_bus_end_enabled",
     ],
     order: [["id", "ASC"]],
   });

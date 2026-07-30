@@ -16,6 +16,10 @@ import {
   Divider,
   Grid,
   Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   CheckCircle,
@@ -25,17 +29,27 @@ import {
   Save,
   AccessTime,
   CalendarMonth,
+  Message,
 } from "@mui/icons-material";
 import { useAuth } from "../../auth/AuthProvider";
 import { getMyTeacherAssignments } from "../teacher-timetable/teacherTimetable.api";
 import {
   getDailyAttendance,
   markAttendance,
+  sendAbsentWhatsApp,
   listAllClasses,
   listSectionsForClass,
 } from "./attendance.api";
 import { useSearchParams } from "react-router-dom";
 import { getAssetUrl } from "../../utils/asset";
+
+const getTodayDateString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 export default function TeacherAttendancePage() {
   const { user } = useAuth();
@@ -46,7 +60,7 @@ export default function TeacherAttendancePage() {
   const [selectedClassSectionKey, setSelectedClassSectionKey] = useState("");
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => getTodayDateString());
 
   // Data / Loading States
   const [assignments, setAssignments] = useState([]);
@@ -279,6 +293,49 @@ export default function TeacherAttendancePage() {
       setOpenSnackbar(true);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // 8️⃣ Manual WhatsApp Absent Alerts
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [openConfirmModal, setOpenConfirmModal] = useState(false);
+
+  const absentStudentsCount = useMemo(() => {
+    return students.filter((s) => s.status === "absent").length;
+  }, [students]);
+
+  const isToday = useMemo(() => {
+    return date === getTodayDateString();
+  }, [date]);
+
+  const handleSendAbsentWhatsApp = async () => {
+    if (!selectedClassId || !selectedSectionId || !date || !isToday) return;
+
+    try {
+      setSendingWhatsApp(true);
+      setOpenConfirmModal(false);
+
+      const res = await sendAbsentWhatsApp({
+        class_id: selectedClassId,
+        section_id: selectedSectionId,
+        date,
+      });
+
+      const data = res?.data?.data || res?.data || res;
+      setAlertMsg({
+        text: data.message || `Sent WhatsApp alerts to ${data.sent_count || 0} parent(s).`,
+        type: "success",
+      });
+      setOpenSnackbar(true);
+    } catch (err) {
+      console.error("Failed to send WhatsApp absent alerts", err);
+      setAlertMsg({
+        text: err.response?.data?.message || "Failed to send WhatsApp alerts. Please try again.",
+        type: "error",
+      });
+      setOpenSnackbar(true);
+    } finally {
+      setSendingWhatsApp(false);
     }
   };
 
@@ -598,7 +655,7 @@ export default function TeacherAttendancePage() {
         )}
       </Stack>
 
-      {/* Sticky Bottom Save Button */}
+      {/* Sticky Bottom Action Bar */}
       {students.length > 0 && (
         <Box
           sx={{
@@ -608,33 +665,95 @@ export default function TeacherAttendancePage() {
             right: 0,
             p: 2,
             bgcolor: "background.default",
-            boxShadow: "0 -8px 24px rgba(0,0,0,0.04)",
+            boxShadow: "0 -8px 24px rgba(0,0,0,0.06)",
             zIndex: 1000,
             display: "flex",
             justifyContent: "center",
           }}
         >
           <Container maxWidth="sm" sx={{ p: "0 !important" }}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSaveAttendance}
-              fullWidth
-              disabled={saving}
-              startIcon={saving ? <CircularProgress size={18} /> : <Save />}
-              sx={{
-                py: 1.4,
-                borderRadius: "14px",
-                fontWeight: 800,
-                fontSize: "0.95rem",
-                boxShadow: "0 8px 16px rgba(79, 70, 229, 0.25)",
-              }}
-            >
-              {saving ? "Saving..." : "Save Attendance"}
-            </Button>
+            <Stack spacing={1.5}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSaveAttendance}
+                fullWidth
+                disabled={saving}
+                startIcon={saving ? <CircularProgress size={18} /> : <Save />}
+                sx={{
+                  py: 1.3,
+                  borderRadius: "14px",
+                  fontWeight: 800,
+                  fontSize: "0.95rem",
+                  boxShadow: "0 8px 16px rgba(79, 70, 229, 0.25)",
+                }}
+              >
+                {saving ? "Saving..." : "Save Attendance"}
+              </Button>
+
+              {/* Manual WhatsApp Alert Button for Absent Students */}
+              {isToday && absentStudentsCount > 0 && (
+                <Button
+                  variant="outlined"
+                  color="success"
+                  onClick={() => setOpenConfirmModal(true)}
+                  fullWidth
+                  disabled={sendingWhatsApp}
+                  startIcon={sendingWhatsApp ? <CircularProgress size={18} /> : <Message />}
+                  sx={{
+                    py: 1.1,
+                    borderRadius: "14px",
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    borderColor: "#25D366",
+                    color: "#128C7E",
+                    "&:hover": {
+                      borderColor: "#128C7E",
+                      bgcolor: "rgba(37, 211, 102, 0.08)",
+                    },
+                  }}
+                >
+                  {sendingWhatsApp
+                    ? "Sending Alerts..."
+                    : `Send WhatsApp Alert (${absentStudentsCount} Absent ${absentStudentsCount === 1 ? "Parent" : "Parents"})`}
+                </Button>
+              )}
+            </Stack>
           </Container>
         </Box>
       )}
+
+      {/* Confirmation Dialog for WhatsApp Alerts */}
+      <Dialog
+        open={openConfirmModal}
+        onClose={() => setOpenConfirmModal(false)}
+        PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, textTransform: "capitalize" }}>
+          Send Absent WhatsApp Alerts
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Are you sure you want to dispatch WhatsApp absent notifications to parents of the{" "}
+            <strong>{absentStudentsCount}</strong> student(s) marked absent today?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setOpenConfirmModal(false)} color="inherit" sx={{ fontWeight: 700 }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSendAbsentWhatsApp}
+            variant="contained"
+            color="success"
+            disabled={sendingWhatsApp}
+            startIcon={sendingWhatsApp ? <CircularProgress size={16} /> : <Message />}
+            sx={{ fontWeight: 800, borderRadius: "10px", bgcolor: "#128C7E", "&:hover": { bgcolor: "#075E54" } }}
+          >
+            {sendingWhatsApp ? "Sending..." : "Confirm & Send"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Feedback Toast */}
       <Snackbar

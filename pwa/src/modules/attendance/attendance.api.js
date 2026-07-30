@@ -15,6 +15,9 @@ export const getDailyAttendance = (params = {}) =>
 export const markAttendance = (data) =>
   api.post("/teachers/attendance", data);
 
+export const sendAbsentWhatsApp = (data) =>
+  api.post("/teachers/attendance/send-absent-whatsapp", data);
+
 export const getTeacherAttendanceAnalytics = (params = {}) =>
   api.get("/teachers/attendance/analytics", { params });
 

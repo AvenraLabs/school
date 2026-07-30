@@ -35,7 +35,7 @@ SchoolIQ is a multi-tenant, enterprise-grade AI-powered School Management ERP sy
 |  [HTTP Controllers]     [Socket.io Realtime Engine]   [Cron Schedulers]  |
 |  - Multi-tenant Scoping  - Live Transport Tracking     - Library Overdue |
 |  - Role Middleware       - Group Chat Messaging        - Fee Collection  |
-|  - Zod Validation        - Multiplayer Quiz Games      - Token Resets    |
+|  - Zod Validation        - Multiplayer Quiz Games      - Annual AI Quotas|
 |                          - Push Alerts Notification                   |
 +-----------------------------------||----------------------------------+
                                     ||
@@ -87,6 +87,6 @@ Powered by `socket.io` with distinct namespace handlers:
 
 1. **Finance Subsystem**: Fee definitions, class/individual student fees, concessions, partial payments, receipt counter, void tracking, and expense vouchers.
 2. **Academic & Examination Subsystem**: Academic years, term promotion wizard, Exam Master templates, Exam scheduling, subject marks entry, grading scale mapping, report card generators.
-3. **Library Subsystem**: Cataloging, multi-copy availability, loan issuing, automated overdue fine calculation and WhatsApp reminder cron jobs.
+3. **Library Subsystem**: Cataloging, multi-copy availability, loan issuing, automated overdue fine calculation and in-app notification reminder cron jobs.
 4. **Transport Subsystem**: Drivers, vehicles, student transport allocations, live trip sessions, high-frequency GPS logging, change request approvals.
 5. **Approval Workflow Subsystem**: Teacher & student registration approvals, profile update requests, audit logging.

@@ -656,12 +656,11 @@ export const reportLostService = async (school_id, query = {}) => {
    ============================================================================ */
 
 export const sendOverdueRemindersService = async () => {
-  const { sendTextMessage } = await import("../whatsapp/whatsapp.service.js");
+  const Notification = (await import("../notifications/notification.model.js")).default;
   const today = todayStr();
 
-  // Find all schools with WhatsApp overdue reminders enabled
+  // Find all active schools
   const schools = await School.findAll({
-    where: { library_overdue_whatsapp_enabled: true },
     attributes: ["id", "school_name", "library_overdue_reminder_days"],
   });
 
@@ -684,28 +683,60 @@ export const sendOverdueRemindersService = async () => {
         {
           model: Student,
           as: "Student",
-          include: [{ model: User, attributes: ["name", "phone"] }],
-          attributes: ["id"],
+          include: [{ model: User, attributes: ["id", "name"] }],
+          attributes: ["id", "user_id", "class_id", "section_id"],
         },
-        { model: Book, as: "Book", attributes: ["book_name", "book_no"] },
+        {
+          model: Teacher,
+          as: "Teacher",
+          include: [{ model: User, attributes: ["id", "name"] }],
+          attributes: ["id", "user_id"],
+        },
+        { model: Book, as: "Book", attributes: ["id", "book_name", "book_no"] },
       ],
     });
 
     for (const issue of issues) {
-      const phone = issue.Student?.user?.phone;
-      const studentName = issue.Student?.user?.name || "Student";
-      const bookName = issue.Book?.book_name || "the book";
+      const isStudent = issue.borrower_type === "student";
+      const targetUser = isStudent ? issue.Student?.user : issue.Teacher?.user;
+      const targetUserId = targetUser?.id || (isStudent ? issue.Student?.user_id : issue.Teacher?.user_id);
+
+      if (!targetUserId) continue;
+
+      const userName = targetUser?.name || (isStudent ? "Student" : "Teacher");
+      const bookName = issue.Book?.book_name || "Library Book";
       const dueDate = issue.due_date;
-
-      if (!phone) continue;
-
       const isOverdue = dueDate < today;
-      const message = isOverdue
-        ? `Dear ${studentName}, the library book "${bookName}" (Due: ${dueDate}) is overdue. Please return it at the earliest. — ${school.school_name}`
-        : `Dear ${studentName}, reminder: the library book "${bookName}" is due on ${dueDate}. Please return it on time. — ${school.school_name}`;
 
-      await sendTextMessage(phone, message, school.id);
-      totalSent++;
+      const title = isOverdue ? "Library Book Overdue Notice" : "Library Book Due Reminder";
+      const message = isOverdue
+        ? `Reminder: The library book "${bookName}" (Due: ${dueDate}) is overdue. Please return it to the library to avoid additional fines.`
+        : `Reminder: The library book "${bookName}" is due on ${dueDate}. Please return it to the library on time.`;
+
+      // Check if duplicate notification already created today for this user and book
+      const existing = await Notification.findOne({
+        where: {
+          school_id: school.id,
+          target_user_id: targetUserId,
+          title,
+          message: { [Op.like]: `%${bookName}%` },
+        },
+      });
+
+      if (!existing) {
+        await Notification.create({
+          school_id: school.id,
+          sender_user_id: targetUserId,
+          sender_role: "school_admin",
+          title,
+          message,
+          target_role: isStudent ? "student" : "teacher",
+          class_id: isStudent ? issue.Student?.class_id || null : null,
+          section_id: isStudent ? issue.Student?.section_id || null : null,
+          target_user_id: targetUserId,
+        });
+        totalSent++;
+      }
     }
   }
 

@@ -1,6 +1,5 @@
 import asyncHandler from "../../shared/asyncHandler.js";
 import * as service from "./transport.service.js";
-import * as whatsappService from "../whatsapp/whatsapp.service.js";
 
 /* ==========================================
    1️⃣ ADMIN ONLY
