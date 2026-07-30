@@ -132,6 +132,7 @@ CRUD for the school-wide subject catalog.
 - `GET /students` — Query student fee status (pending/partial/paid/overdue).
 - `POST /payments` — Record fee payment receipt.
 - `POST /payments/:id/void` — Void payment receipt.
+- `GET /daily-report` — Fee collection audit report register. Accepts `date` (YYYY-MM-DD; if omitted, returns all-time collection records), `mode`, `search`, `page`, `limit`.
 
 ### Expenses (`/api/expenses`)
 - `GET /categories` | `POST /categories` — Expense categories.

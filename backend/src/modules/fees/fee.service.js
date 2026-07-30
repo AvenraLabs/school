@@ -506,11 +506,17 @@ export const getDailyCollectionReportService = async (school_id, query = {}) => 
     is_void: false,
   };
 
-  if (query.date && query.date !== 'all') {
-    const targetDate = new Date(query.date);
-    const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(new Date(query.date).setHours(23, 59, 59, 999));
-    where.paid_at = { [Op.between]: [startOfDay, endOfDay] };
+  const rawDate = query.date ? String(query.date).trim() : '';
+  if (rawDate && rawDate !== 'all' && rawDate !== 'null' && rawDate !== 'undefined') {
+    const targetDate = new Date(rawDate);
+    if (!isNaN(targetDate.getTime())) {
+      const year = targetDate.getFullYear();
+      const month = targetDate.getMonth();
+      const day = targetDate.getDate();
+      const startOfDay = new Date(year, month, day, 0, 0, 0, 0);
+      const endOfDay = new Date(year, month, day, 23, 59, 59, 999);
+      where.paid_at = { [Op.between]: [startOfDay, endOfDay] };
+    }
   }
 
   if (query.mode && query.mode !== 'all') {
@@ -536,32 +542,38 @@ export const getDailyCollectionReportService = async (school_id, query = {}) => 
   const bankTotal = allMatchingPayments.filter((p) => p.mode === "bank_transfer" || p.mode === "cheque").reduce((acc, p) => acc + Number(p.amount), 0);
   const totalCollected = allMatchingPayments.reduce((acc, p) => acc + Number(p.amount), 0);
 
-  // Fetch paginated payment rows
+  // Fetch paginated payment rows with left joins (required: false)
   const { count, rows: payments } = await FeePayment.findAndCountAll({
     where,
     limit,
     offset,
+    distinct: true,
     include: [
       {
         model: Student,
         attributes: ["id", "admission_no", "roll_no"],
+        required: false,
         include: [
-          { model: User, attributes: ["name"] },
-          { model: Class, attributes: ["class_name"] },
+          { model: User, attributes: ["name"], required: false },
+          { model: Class, attributes: ["class_name"], required: false },
         ],
       },
-      { model: StudentFee, include: [{ model: FeeDefinition, attributes: ["title"] }] },
+      {
+        model: StudentFee,
+        required: false,
+        include: [{ model: FeeDefinition, attributes: ["title"], required: false }],
+      },
     ],
     order: [["paid_at", "DESC"]],
   });
 
   return {
-    date: query.date || "all",
+    date: rawDate || "all",
     pagination: {
       total: count,
       page,
       limit,
-      total_pages: Math.ceil(count / limit),
+      total_pages: Math.ceil(count / limit) || 1,
     },
     summary: {
       total: totalCollected,
@@ -584,7 +596,7 @@ export const getDailyCollectionReportService = async (school_id, query = {}) => 
       return {
         id: p.id,
         receipt_no: p.receipt_no,
-        student_name: userObj?.name || studentObj?.name || 'N/A',
+        student_name: userObj?.name || studentObj?.name || p.paid_by || 'N/A',
         class_name: classObj?.class_name || 'N/A',
         fee_title: feeDefObj?.title || 'Fee Payment',
         amount: Number(p.amount),
@@ -764,14 +776,22 @@ export const getUnifiedFinanceDashboardService = async (school_id) => {
   });
   const monthCollection = monthPayments.reduce((sum, p) => sum + Number(p.amount), 0);
 
-  // All Time / Academic Year Collection
+  // Active Academic Year Collection
+  const ayStart = currentYear.start_date ? new Date(`${currentYear.start_date}T00:00:00.000Z`) : null;
+  const ayEnd = currentYear.end_date ? new Date(`${currentYear.end_date}T23:59:59.999Z`) : null;
+
+  const yearPaymentsWhere = { school_id, is_void: false };
+  if (ayStart && ayEnd) {
+    yearPaymentsWhere.paid_at = { [Op.between]: [ayStart, ayEnd] };
+  }
+
   const yearPayments = await FeePayment.findAll({
-    where: { school_id, is_void: false },
+    where: yearPaymentsWhere,
     attributes: ["amount"],
   });
   const totalFeesCollected = yearPayments.reduce((sum, p) => sum + Number(p.amount), 0);
 
-  // Pending Fees & Count
+  // Pending Fees & Count for Active Academic Year
   const studentFees = await StudentFee.findAll({
     where: { school_id, academic_year_id: currentYear.id },
     attributes: ["balance_amount", "status", "student_id"],
@@ -782,7 +802,7 @@ export const getUnifiedFinanceDashboardService = async (school_id) => {
     studentFees.filter((f) => Number(f.balance_amount) > 0).map((f) => f.student_id)
   );
 
-  // Total Expenses (All time & Month)
+  // Total Expenses (This Month & Academic Year)
   const monthExpenses = await Expense.findAll({
     where: {
       school_id,
@@ -793,48 +813,58 @@ export const getUnifiedFinanceDashboardService = async (school_id) => {
   });
   const thisMonthExpenses = monthExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
+  const yearExpensesWhere = { school_id, is_cancelled: false, academic_year_id: currentYear.id };
   const allExpenses = await Expense.findAll({
-    where: { school_id, is_cancelled: false },
+    where: yearExpensesWhere,
     attributes: ["amount"],
   });
   const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
   const netCash = monthCollection - thisMonthExpenses;
 
-  // Monthly trends (Last 6 Months)
+  // Monthly trends across active Academic Year (e.g. Jun 2026 -> Mar 2027)
   const monthlyTrends = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const mStart = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0);
-    const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
-    const monthLabel = d.toLocaleString("default", { month: "short" });
+  if (currentYear.start_date && currentYear.end_date) {
+    const sDate = new Date(`${currentYear.start_date}T00:00:00`);
+    const eDate = new Date(`${currentYear.end_date}T23:59:59`);
+    let curr = new Date(sDate.getFullYear(), sDate.getMonth(), 1);
 
-    const mPay = await FeePayment.findAll({
-      where: { school_id, is_void: false, paid_at: { [Op.between]: [mStart, mEnd] } },
-      attributes: ["amount"],
-    });
-    const mColl = mPay.reduce((acc, p) => acc + Number(p.amount), 0);
+    while (curr <= eDate) {
+      const mStart = new Date(curr.getFullYear(), curr.getMonth(), 1, 0, 0, 0);
+      const mEnd = new Date(curr.getFullYear(), curr.getMonth() + 1, 0, 23, 59, 59);
+      const monthLabel = curr.toLocaleString("default", { month: "short" });
+      const yearLabel = String(curr.getFullYear()).slice(-2);
+      const label = `${monthLabel} '${yearLabel}`;
 
-    const mExp = await Expense.findAll({
-      where: {
-        school_id,
-        is_cancelled: false,
-        expense_date: { [Op.between]: [mStart.toISOString().split("T")[0], mEnd.toISOString().split("T")[0]] },
-      },
-      attributes: ["amount"],
-    });
-    const mExpTot = mExp.reduce((acc, e) => acc + Number(e.amount), 0);
+      const mPay = await FeePayment.findAll({
+        where: { school_id, is_void: false, paid_at: { [Op.between]: [mStart, mEnd] } },
+        attributes: ["amount"],
+      });
+      const mColl = mPay.reduce((acc, p) => acc + Number(p.amount), 0);
 
-    monthlyTrends.push({
-      month: monthLabel,
-      collection: mColl,
-      expense: mExpTot,
-    });
+      const mExp = await Expense.findAll({
+        where: {
+          school_id,
+          is_cancelled: false,
+          expense_date: { [Op.between]: [mStart.toISOString().split("T")[0], mEnd.toISOString().split("T")[0]] },
+        },
+        attributes: ["amount"],
+      });
+      const mExpTot = mExp.reduce((acc, e) => acc + Number(e.amount), 0);
+
+      monthlyTrends.push({
+        month: label,
+        collection: mColl,
+        expense: mExpTot,
+      });
+
+      curr.setMonth(curr.getMonth() + 1);
+    }
   }
 
   // Expense Category Breakdown for Charts
   const expCategories = await Expense.findAll({
-    where: { school_id, is_cancelled: false },
+    where: { school_id, is_cancelled: false, academic_year_id: currentYear.id },
     attributes: ["category_id", [db.fn("SUM", db.col("amount")), "total"]],
     include: [{ model: ExpenseCategory, as: "category", attributes: ["name"] }],
     group: ["expense.category_id", "category.id", "category.name"],
@@ -857,5 +887,11 @@ export const getUnifiedFinanceDashboardService = async (school_id) => {
     net_cash: netCash,
     monthly_trends: monthlyTrends,
     expense_distribution: expenseDistribution,
+    academic_year: {
+      id: currentYear.id,
+      name: currentYear.name,
+      start_date: currentYear.start_date,
+      end_date: currentYear.end_date,
+    },
   };
 };

@@ -24,6 +24,7 @@ export default function AttendanceCalendar({
   details = [],
   month,
   onMonthChange,
+  academicYear,
 }) {
   const theme = useTheme();
   const currentMonth = month ? dayjs(month).startOf("month") : dayjs().startOf("month");
@@ -41,21 +42,27 @@ export default function AttendanceCalendar({
     return acc;
   }, {});
 
-  const currentYear = dayjs().year();
   const months = useMemo(() => {
     const list = [];
-    // Previous year (all 12 months)
-    for (let m = 0; m < 12; m++) {
-      list.push(dayjs().year(currentYear - 1).month(m).startOf("month"));
-    }
-    // Current year (up to current month)
-    const currentMonthIdx = dayjs().month();
-    for (let m = 0; m <= currentMonthIdx; m++) {
-      list.push(dayjs().year(currentYear).month(m).startOf("month"));
+    if (academicYear && academicYear.start_date && academicYear.end_date) {
+      let curr = dayjs(academicYear.start_date).startOf("month");
+      const end = dayjs(academicYear.end_date).startOf("month");
+
+      while (curr.isBefore(end) || curr.isSame(end, "month")) {
+        list.push(curr);
+        curr = curr.add(1, "month");
+      }
+    } else {
+      let curr = dayjs().subtract(11, "month").startOf("month");
+      const now = dayjs().startOf("month");
+      while (curr.isBefore(now) || curr.isSame(now, "month")) {
+        list.push(curr);
+        curr = curr.add(1, "month");
+      }
     }
     // Sort descending (newest first)
     return list.sort((a, b) => b.valueOf() - a.valueOf());
-  }, [currentYear]);
+  }, [academicYear]);
 
   return (
     <Stack spacing={2}>

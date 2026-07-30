@@ -8,7 +8,7 @@ import Section from "../sections/section.model.js";
 import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.js";
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
-import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
+import { getCurrentAcademicYear, getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 import { calculateSubjectAttendanceService } from "./attendance.analytics.service.js";
 
 /* Helper to check if a user is authorized to mark or view attendance */
@@ -280,7 +280,8 @@ export const getStudentAttendanceSummaryService = async ({
   const student = await Student.findOne({ where: { user_id: student_user_id } });
   if (!student) throw new AppError("Student profile not found", 404);
 
-  const academicYearId = await getCurrentAcademicYearId(student.school_id);
+  const academicYear = await getCurrentAcademicYear(student.school_id);
+  const academicYearId = academicYear.id;
   const where = { student_id: student.id, academic_year_id: academicYearId };
 
   if (from_date || to_date) {
@@ -311,6 +312,12 @@ export const getStudentAttendanceSummaryService = async ({
     count: result.count,
     rows: result.rows,
     subject_stats: subjectStats,
+    academic_year: {
+      id: academicYear.id,
+      name: academicYear.name,
+      start_date: academicYear.start_date,
+      end_date: academicYear.end_date,
+    },
   };
 };
 

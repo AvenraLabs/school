@@ -49,7 +49,7 @@ export default function AttendancePage() {
           details={details}
           month={selectedMonth}
           onMonthChange={setSelectedMonth}
-          monthsBack={6}
+          academicYear={summary?.academic_year}
         />
       </Stack>
     </Container>

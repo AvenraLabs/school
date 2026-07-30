@@ -4,13 +4,12 @@ import { useToast } from '../../../context/ToastContext';
 import { formatDate, formatDateTime } from '../../../utils/date';
 import { Button } from '../../../components/ui/Button';
 import { Select, Input } from '../../../components/ui/Input';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
+import { Card, CardHeader, CardTitle } from '../../../components/ui/Card';
 import { StatsCard } from '../../../components/common/StatsCard';
-import { StatusBadge } from '../../../components/common/StatusBadge';
 import { EmptyState } from '../../../components/common/EmptyState';
 import {
   CalendarDays, Banknote, Smartphone, Building2,
-  IndianRupee, Search, ChevronLeft, ChevronRight, Filter, X
+  IndianRupee, Search, ChevronLeft, ChevronRight, X, RefreshCw
 } from 'lucide-react';
 
 export function FeeReports() {
@@ -52,6 +51,7 @@ export function FeeReports() {
 
   const totalItems = pagination.total ?? payments.length;
   const totalPages = pagination.total_pages || Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const isFilteredByDate = Boolean(reportDate);
 
   return (
     <div className="space-y-4">
@@ -62,7 +62,7 @@ export function FeeReports() {
           value={`₹${Number(summary.total ?? summary.total_collected ?? 0).toLocaleString('en-IN')}`}
           icon={IndianRupee}
           active={true}
-          subtext={`${summary.count || payments.length || 0} receipt transactions`}
+          subtext={`${summary.count || payments.length || 0} receipts (${isFilteredByDate ? formatDate(reportDate) : 'All Time'})`}
         />
         <StatsCard
           title="Cash Collection"
@@ -86,37 +86,72 @@ export function FeeReports() {
 
       {/* Filter Bar */}
       <Card className="p-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            type="date"
-            className="w-40 text-xs"
-            value={reportDate}
-            onChange={(e) => { setReportDate(e.target.value); setCurrentPage(1); }}
-          />
-          <Select
-            className="w-36 text-xs"
-            value={mode}
-            onChange={(e) => { setMode(e.target.value); setCurrentPage(1); }}
-          >
-            <option value="all">All Modes</option>
-            <option value="cash">Cash</option>
-            <option value="upi">UPI</option>
-            <option value="bank_transfer">Bank</option>
-          </Select>
-          <Input
-            icon={Search}
-            placeholder="Search student or receipt..."
-            className="w-56 text-xs"
-            value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-          />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <Input
+                type="date"
+                className="w-40 text-xs"
+                value={reportDate}
+                onChange={(e) => { setReportDate(e.target.value); setCurrentPage(1); }}
+              />
+              {reportDate && (
+                <button
+                  type="button"
+                  onClick={() => { setReportDate(''); setCurrentPage(1); }}
+                  className="p-1.5 text-[#8C97AB] hover:text-[#14213D] hover:bg-[#FAFAF8] rounded-md transition-colors cursor-pointer"
+                  title="Clear date filter (Show All Time)"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <Select
+              className="w-36 text-xs"
+              value={mode}
+              onChange={(e) => { setMode(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="all">All Modes</option>
+              <option value="cash">Cash</option>
+              <option value="upi">UPI</option>
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="cheque">Cheque</option>
+            </Select>
+            <Input
+              icon={Search}
+              placeholder="Search student or receipt..."
+              className="w-56 text-xs"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!reportDate && (
+              <span className="text-xs font-medium text-[#2F6F5E] bg-[#EAF3F0] px-2.5 py-1 rounded-full border border-[#2F6F5E]/20">
+                All-Time Records
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              icon={RefreshCw}
+              onClick={loadReport}
+              loading={loading}
+            >
+              Refresh
+            </Button>
+          </div>
         </div>
       </Card>
 
       {/* Audit Log Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Daily Collection Audit Receipts ({totalItems})</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle>
+            {isFilteredByDate ? `Collection Audit Receipts (${formatDate(reportDate)})` : 'All-Time Collection Audit Receipts'}
+            <span className="ml-2 text-xs font-normal text-[#52607D]">({totalItems} total)</span>
+          </CardTitle>
         </CardHeader>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
@@ -126,15 +161,24 @@ export function FeeReports() {
                 <th className="px-4 py-3">Timestamp</th>
                 <th className="px-4 py-3">Student Name</th>
                 <th className="px-4 py-3">Class & Section</th>
+                <th className="px-4 py-3">Fee Title</th>
                 <th className="px-4 py-3">Mode</th>
                 <th className="px-4 py-3 text-right">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
               {loading ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-[#8C97AB]">Loading receipts report...</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-[#8C97AB]">Loading receipts report...</td></tr>
               ) : payments.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-12 text-center"><EmptyState icon={CalendarDays} title="No collection receipts" description="No collection entries match your filters." /></td></tr>
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center">
+                    <EmptyState
+                      icon={CalendarDays}
+                      title="No collection receipts found"
+                      description={isFilteredByDate ? "No collection entries match the selected date." : "No collection entries match your filters."}
+                    />
+                  </td>
+                </tr>
               ) : (
                 payments.map((p) => (
                   <tr key={p.id} className="hover:bg-[#FAFAF8]">
@@ -142,6 +186,7 @@ export function FeeReports() {
                     <td className="px-4 py-2.5 font-mono text-[#52607D]">{formatDateTime(p.paid_at)}</td>
                     <td className="px-4 py-2.5 font-semibold">{p.student_name || p.student?.name || p.student?.User?.name || '—'}</td>
                     <td className="px-4 py-2.5 text-[#52607D]">{p.class_name ? `Class ${p.class_name}` : (p.student?.class_name ? `Class ${p.student.class_name}` : '—')}</td>
+                    <td className="px-4 py-2.5 text-[#52607D]">{p.fee_title || 'Fee Payment'}</td>
                     <td className="px-4 py-2.5 uppercase font-mono font-semibold text-[#2F6F5E]">{p.mode}</td>
                     <td className="px-4 py-2.5 text-right font-mono font-bold text-[#14213D]">₹{Number(p.amount).toLocaleString('en-IN')}</td>
                   </tr>
@@ -164,3 +209,4 @@ export function FeeReports() {
     </div>
   );
 }
+

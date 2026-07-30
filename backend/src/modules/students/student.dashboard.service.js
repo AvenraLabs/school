@@ -12,7 +12,7 @@ import ExamMark from "../report-cards/exam-mark.model.js";
 import Exam from "../report-cards/exam.model.js";
 import ExamSubject from "../report-cards/exam-subject.model.js";
 import Subject from "../subjects/subject.model.js";
-import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
+import { getCurrentAcademicYear, getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 
 const toYmd = (date) => {
     const value = new Date(date);
@@ -159,16 +159,22 @@ export const getStudentDashboardService = async ({ student_user_id }) => {
         throw new AppError("Student profile not found", 404);
     }
 
-    const academicYearId = await getCurrentAcademicYearId(student.school_id);
+    const academicYear = await getCurrentAcademicYear(student.school_id);
+    const academicYearId = academicYear.id;
 
-    // 1. Attendance Percentage
+    // 1. Attendance Percentage (bounded by active Academic Year date range)
+    const dateBoundWhere = {
+        student_id: student.id,
+        academic_year_id: academicYearId,
+        date: { [Op.between]: [academicYear.start_date, academicYear.end_date] },
+    };
+
     const totalDays = await Attendance.count({
-        where: { student_id: student.id, academic_year_id: academicYearId },
+        where: dateBoundWhere,
     });
     const presentDays = await Attendance.count({
         where: {
-            student_id: student.id,
-            academic_year_id: academicYearId,
+            ...dateBoundWhere,
             status: 'present'
         },
     });

@@ -143,7 +143,7 @@ export function FinanceDashboard() {
           title="Total Fee Collection (Year)"
           value={formatINR(total_fees_collected)}
           icon={CreditCard}
-          subtext="Cumulative academic term receipts"
+          subtext={data?.academic_year?.name ? `Cumulative receipts (${data.academic_year.name})` : "Cumulative academic session receipts"}
         />
       </div>
 
@@ -156,7 +156,7 @@ export function FinanceDashboard() {
               <CardTitle className="text-sm font-bold text-[#14213D]">
                 Collection vs Expense Trend
               </CardTitle>
-              <p className="text-[11px] text-[#52607D]">Monthly comparison over last 6 months</p>
+              <p className="text-[11px] text-[#52607D]">Monthly comparison for {data?.academic_year?.name ? `Academic Session ${data.academic_year.name}` : 'Active Academic Session'}</p>
             </div>
             <div className="flex items-center gap-3 text-xs font-semibold">
               <div className="flex items-center gap-1.5">
