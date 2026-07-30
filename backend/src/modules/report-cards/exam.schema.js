@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const createExamSchema = z.object({
   class_id: z.coerce.number().int().positive(),
+  section_id: z.coerce.number().int().positive().optional().nullable(),
   name: z.string().min(1),
   subjects: z
     .array(

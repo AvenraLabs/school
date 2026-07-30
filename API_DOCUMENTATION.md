@@ -24,6 +24,7 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
 - `POST /` (Super Admin): Create new school instance.
 - `GET /:id` (Admin): Get school details and configuration settings.
 - `PATCH /:id` (Admin): Update school settings, logo, risk thresholds, library rules.
+- `PATCH /:id/modules` (Super Admin): Update `enabled_modules` JSON payload (7 core module toggles).
 
 ### Academic Years (`/api/academic-years`)
 - `GET /` | `POST /` | `PATCH /:id/set-current` | `DELETE /:id`
@@ -33,6 +34,24 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
 - `GET /api/sections` | `POST /api/sections` | `PATCH /api/sections/:id` | `DELETE /api/sections/:id`
 
 ### Subjects (`/api/subjects`)
+
+CRUD for the school-wide subject catalog.
+
+- `GET /` (Admin, Teacher): List all school subjects.
+- `POST /` (Admin): Create a new subject.
+- `PATCH /:id` (Admin): Update a subject.
+- `DELETE /:id` (Admin): Delete a subject.
+
+### Class Subject Mapping
+- `GET /class/:class_id` (Admin, Teacher): Get the default subject pool for a class.
+- `PUT /class/:class_id` (Admin): Replace the default subjects for a class. Body: `{ subject_ids: number[] }`.
+
+### Section-Level Resolved Subjects
+- `GET /section/:class_id/:section_id` (Admin, Teacher): **Smart endpoint** — returns the resolved subject list for a specific section (class default + section overrides applied). Used by timetables, exams, and homework dropdowns.
+
+### Section Subject Overrides
+- `GET /section/:class_id/:section_id/overrides` (Admin): Get raw override rows for a section (for the override editor UI).
+- `PUT /section/:class_id/:section_id/overrides` (Admin): Replace override rows for a section. Body: `{ overrides: [{subject_id, is_included}] }`. Only store delta rows — `is_included=false` excludes a class default subject; `is_included=true` adds a subject not in class default.
 - `GET /` | `POST /` | `PATCH /:id` | `DELETE /:id`
 
 ---
@@ -92,8 +111,10 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
 
 ### Exams & Exam Masters (`/api/exams`, `/api/exam-masters`)
 - `GET /api/exam-masters` | `POST /api/exam-masters` — Exam master templates.
-- `GET /api/exams` | `POST /api/exams` | `PATCH /api/exams/:id/lock` — Schedule & lock exams.
-- `POST /api/exams/:id/subjects` — Assign subjects, max marks, and syllabus to exam.
+- `GET /api/exams` (Admin, Teacher, Student): List exams for a class. Optional query param `section_id` to include stream-specific exams alongside class-wide exams.
+- `POST /api/exams` (Admin, Teacher): Create exam. Body: `{ class_id, section_id?, name, subjects? }`. Optional `section_id` scopes exam to a specific section stream (e.g. 12-A Science vs 12-B Commerce).
+- `POST /api/exams/:id/lock` — Lock/unlock exam.
+- `PUT /api/exams/:id/subjects` — Assign subjects, max marks, and syllabus to exam.
 
 ### Report Cards & Marks Entry (`/api/report-cards`)
 - `GET /marks` | `POST /marks/batch` — Bulk marks entry for an exam subject.
@@ -153,6 +174,7 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
 - `GET /tokens/policy` | `PATCH /tokens/policy` (Super Admin) — Role token quotas.
 - `GET /tokens/account` — User token balance check.
 - `GET /ai-analytics` — Usage & prompt audit logs.
+- `GET /api/analytics/ai/integration-logs` (Super Admin) — Query live JSON integration logs (Gemini, Kling, WhatsApp, Maps).
 
 ### Gamification & Quizzes (`/api/quiz`, `/api/quizzes`, `/api/game`)
 - `GET /api/quizzes` | `POST /api/quizzes` — Teacher assigned quizzes.

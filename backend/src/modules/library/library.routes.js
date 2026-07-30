@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../../shared/middlewares/auth.js";
 import { allowRoles } from "../../shared/middlewares/role.js";
+import { requireModuleEnabled } from "../../shared/middlewares/requireModule.js";
 import { validate } from "../../shared/middlewares/validate.js";
 
 import {
@@ -37,6 +38,7 @@ import {
 const router = express.Router();
 
 router.use(protect);
+router.use(requireModuleEnabled("library"));
 
 /* ── Student / Teacher PWA route ── */
 router.get("/my-library", allowRoles("student", "parent", "teacher"), getMyLibrary);

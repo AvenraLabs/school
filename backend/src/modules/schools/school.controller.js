@@ -8,6 +8,7 @@ import {
   getSchoolStatsService,
   updateSchoolService,
   updateSchoolSettingsService,
+  updateSchoolModulesService,
 } from "./school.service.js";
 
 /* GET ACTIVE SINGLE SCHOOL */
@@ -76,6 +77,14 @@ export const updateSchool = asyncHandler(async (req, res) => {
 export const updateSchoolSettings = asyncHandler(async (req, res) => {
   const result = await updateSchoolSettingsService(req.user.school_id, req.body);
   res.json({ success: true, message: "School settings updated successfully", data: result });
+});
+
+/* UPDATE SCHOOL MODULES (SUPER ADMIN ONLY) */
+export const updateSchoolModules = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { enabled_modules } = req.body;
+  const school = await updateSchoolModulesService(id, enabled_modules);
+  res.json({ success: true, message: "School modules updated successfully", data: school });
 });
 
 /* DELETE SINGLE STUDENT */

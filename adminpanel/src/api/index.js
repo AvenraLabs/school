@@ -136,6 +136,11 @@ export const schoolAPI = {
     const response = await axiosInstance.patch('/schools/my-settings', settingsData);
     return response.data;
   },
+
+  updateModules: async (schoolId, enabledModules) => {
+    const response = await axiosInstance.patch(`/schools/${schoolId}/modules`, { enabled_modules: enabledModules });
+    return response.data;
+  },
 };
 
 // Classes API
@@ -230,6 +235,35 @@ export const subjectsAPI = {
 
   delete: async (id) => {
     const response = await axiosInstance.delete(`/subjects/${id}`);
+    return response.data;
+  },
+
+  // Class-level subject mapping (default pool per class)
+  getClassSubjects: async (classId) => {
+    const response = await axiosInstance.get(`/subjects/class/${classId}`);
+    return response.data;
+  },
+
+  setClassSubjects: async (classId, subjectIds) => {
+    const response = await axiosInstance.put(`/subjects/class/${classId}`, { subject_ids: subjectIds });
+    return response.data;
+  },
+
+  // Resolved subjects for a section (class default + overrides applied)
+  // Used by timetables, exams, etc. to get the "effective" subject list
+  getSubjectsForSection: async (classId, sectionId) => {
+    const response = await axiosInstance.get(`/subjects/section/${classId}/${sectionId}`);
+    return response.data;
+  },
+
+  // Raw override rows for a section (for the section override editor UI)
+  getSectionOverrides: async (classId, sectionId) => {
+    const response = await axiosInstance.get(`/subjects/section/${classId}/${sectionId}/overrides`);
+    return response.data;
+  },
+
+  setSectionOverrides: async (classId, sectionId, overrides) => {
+    const response = await axiosInstance.put(`/subjects/section/${classId}/${sectionId}/overrides`, { overrides });
     return response.data;
   },
 };
@@ -558,19 +592,20 @@ export const notificationsAPI = {
 
 // Exams API
 export const examsAPI = {
-  create: async (classId, name, subjects = []) => {
+  create: async (classId, name, subjects = [], sectionId = null) => {
     const response = await axiosInstance.post('/exams', {
       class_id: classId,
+      section_id: sectionId || null,
       name,
       subjects,
     });
     return response.data;
   },
 
-  list: async (classId) => {
-    const response = await axiosInstance.get('/exams', {
-      params: { class_id: classId },
-    });
+  list: async (classId, sectionId = null) => {
+    const params = { class_id: classId };
+    if (sectionId) params.section_id = sectionId;
+    const response = await axiosInstance.get('/exams', { params });
     return response.data;
   },
 
@@ -773,6 +808,11 @@ export const analyticsAPI = {
 
   getAIClassData: async () => {
     const response = await axiosInstance.get('/analytics/ai/school/classes');
+    return response.data;
+  },
+
+  getIntegrationLogs: async (params = {}) => {
+    const response = await axiosInstance.get('/analytics/ai/integration-logs', { params });
     return response.data;
   },
 };

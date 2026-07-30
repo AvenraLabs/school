@@ -8,10 +8,12 @@ import { Select, Input } from '../../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Modal } from '../../../components/common/Modal';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import {
   Search, IndianRupee, CheckCircle2, ChevronRight, Printer,
   MessageCircle, X, Calendar, Ban, Tag, User, ArrowLeft,
-  Clock, Banknote, Smartphone, Building2, CreditCard, Repeat
+  Clock, Banknote, Smartphone, Building2, CreditCard, Repeat, Download
 } from 'lucide-react';
 
 const MODE_LABELS = {
@@ -224,6 +226,54 @@ export function FeeCollect() {
       <div class="footer">Computer generated official receipt</div>
     </div></body></html>`);
     win.document.close(); win.print();
+  };
+
+  const handleDownloadPdf = async () => {
+    const ModeIcon = MODE_LABELS[receipt?.mode]?.label || receipt?.mode?.toUpperCase() || '';
+    const amtWords = numberToWordsINR(receipt?.amount || receipt?.paid_amount || 0);
+
+    const container = document.createElement("div");
+    container.style.position = "absolute";
+    container.style.left = "-9999px";
+    container.style.top = "-9999px";
+    container.innerHTML = `
+      <div style="font-family:'Inter',system-ui,sans-serif;background:#fff;border:1.5px solid #E4E1D8;border-radius:12px;padding:28px 32px;width:440px;color:#14213D;">
+        <div style="font-size:18px;font-weight:800;color:#14213D;text-align:center;">${schoolName.toUpperCase()}</div>
+        <div style="font-size:11px;color:#2F6F5E;font-weight:700;text-align:center;text-transform:uppercase;margin-top:3px;">Official Fee Payment Receipt</div>
+        <hr style="border:none;border-top:1.5px dashed #E4E1D8;margin:16px 0;"/>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:#52607D;font-weight:600;">Receipt No</span><span style="color:#14213D;font-weight:700;">${receipt?.receipt_no || '—'}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:#52607D;font-weight:600;">Date & Time</span><span style="color:#14213D;font-weight:700;">${formatDateTime(receipt?.paid_at)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:#52607D;font-weight:600;">Student Name</span><span style="color:#14213D;font-weight:700;">${receipt?.student?.name || '—'}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:#52607D;font-weight:600;">Admission No</span><span style="color:#14213D;font-weight:700;">${receipt?.student?.admission_no || '—'}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:#52607D;font-weight:600;">Class & Section</span><span style="color:#14213D;font-weight:700;">Class ${receipt?.student?.class_name || ''} ${receipt?.student?.section_name ? '— ' + receipt.student.section_name : ''}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:#52607D;font-weight:600;">Fee Description</span><span style="color:#14213D;font-weight:700;">${receipt?.fee_title || '—'}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:#52607D;font-weight:600;">Payment Mode</span><span style="color:#14213D;font-weight:700;">${ModeIcon}</span></div>
+        <div style="background:#EAF3F0;border:1.5px solid #D3E6E0;border-radius:10px;padding:16px;text-align:center;margin:16px 0;">
+          <div style="font-size:10px;font-weight:800;color:#2F6F5E;text-transform:uppercase;">Amount Collected</div>
+          <div style="font-size:30px;font-weight:900;color:#2F6F5E;">₹${Number(receipt?.amount || 0).toLocaleString('en-IN')}</div>
+          <div style="font-size:11px;font-weight:700;color:#2F6F5E;margin-top:4px;font-style:italic;">${amtWords}</div>
+        </div>
+        ${Number(receipt?.remaining_balance) > 0 ? `<div style="display:flex;justify-content:space-between;background:#FDF8EC;border:1px solid #F7E7C4;border-radius:8px;padding:10px 14px;font-size:13px;"><span style="color:#B8860B;font-weight:700;">Remaining Balance</span><span style="color:#B8860B;font-weight:800;">₹${Number(receipt.remaining_balance).toLocaleString('en-IN')}</span></div>` : `<div style="display:flex;justify-content:space-between;background:#EAF3F0;border:1px solid #D3E6E0;border-radius:8px;padding:10px 14px;font-size:13px;"><span style="color:#2F6F5E;font-weight:700;">✓ Fully Paid</span></div>`}
+        <div style="text-align:center;font-size:9px;color:#8C97AB;margin-top:16px;font-weight:500;">Computer-generated payment receipt. No signature required.</div>
+      </div>
+    `;
+
+    document.body.appendChild(container);
+    try {
+      const canvas = await html2canvas(container, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 190;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
+      pdf.save(`Receipt_${receipt?.receipt_no || 'Fee'}.pdf`);
+      toast.success("Receipt PDF downloaded!");
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      toast.error("Failed to generate PDF file");
+    } finally {
+      document.body.removeChild(container);
+    }
   };
 
   const handleWhatsApp = async () => {
@@ -499,6 +549,7 @@ export function FeeCollect() {
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" icon={MessageCircle} onClick={handleWhatsApp} loading={sendingWA}>WhatsApp</Button>
+              <Button variant="outline" icon={Download} onClick={handleDownloadPdf}>Download PDF</Button>
               <Button variant="primary" icon={Printer} onClick={handlePrintReceipt}>Print Receipt</Button>
             </div>
           </div>

@@ -1,0 +1,59 @@
+================================================================================
+SCHOOLIQ - STRUCTURED INTEGRATION LOGS & SUPER ADMIN AUDIT GUIDE
+================================================================================
+
+This document details how integration logs (Gemini AI, Kling AI, WhatsApp Cloud API, 
+Google Maps) are captured, stored, and queried in SchoolIQ.
+
+--------------------------------------------------------------------------------
+1. PERSISTENT LOG FILE LOCATIONS
+--------------------------------------------------------------------------------
+All external API calls automatically generate structured JSON log entries:
+
+- Daily Integrations Log: backend/storage/logs/integrations-YYYY-MM-DD.log
+- Daily Application Log:  backend/storage/logs/app-YYYY-MM-DD.log
+
+Log JSON Structure:
+{
+  "timestamp": "2026-07-30T09:30:00.000Z",
+  "level": "INFO | ERROR",
+  "type": "integration_call",
+  "integration": "gemini | kling | whatsapp | maps",
+  "action": "send_template:absent_alert | submit_video_task | rag_answer",
+  "status": "success | failure | skipped | limit_exceeded",
+  "duration_ms": 312,
+  "error": null,
+  "meta": { ... }
+}
+
+--------------------------------------------------------------------------------
+2. SUPER ADMIN PANEL API ENDPOINT
+--------------------------------------------------------------------------------
+Super Admins can query integration logs directly via API:
+
+Endpoint: GET /api/analytics/ai/integration-logs
+Authorization: Bearer <Super_Admin_JWT>
+
+Query Parameters:
+- date: YYYY-MM-DD (Defaults to today's date)
+- integration: gemini | kling | whatsapp | maps (Optional filter)
+- status: success | failure (Optional filter)
+
+Example Query (All failed Kling AI jobs today):
+GET /api/analytics/ai/integration-logs?integration=kling&status=failure
+
+--------------------------------------------------------------------------------
+3. DATABASE TABLES FOR AUDITING & REPORTING
+--------------------------------------------------------------------------------
+1. WhatsApp Dispatches: "whatsapp_logs" table (wamid, phone, status, response, error).
+2. AI Video Generation Jobs: "video_generations" table (kling_job_id, status, error_message).
+3. Gemini AI Usage: "ai_chat_logs" table (user_id, tokens_used, model_used).
+
+--------------------------------------------------------------------------------
+4. COMMAND-LINE QUERY EXAMPLES
+--------------------------------------------------------------------------------
+Find all failed integration calls today:
+grep '"status":"failure"' storage/logs/integrations-2026-07-30.log
+
+Find all Kling AI submissions:
+grep '"integration":"kling"' storage/logs/integrations-2026-07-30.log

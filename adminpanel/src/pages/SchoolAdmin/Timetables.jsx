@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Select, Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck, AlertTriangle, Check, Printer, Copy } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck, AlertTriangle, Check, Printer, Copy, Clock, Wand2 } from 'lucide-react';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -18,6 +18,7 @@ export function Timetables() {
   const [timetable, setTimetable] = useState({});
   const [assignments, setAssignments] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [sectionSubjects, setSectionSubjects] = useState([]); // resolved subjects for selected class+section
   const [loading, setLoading] = useState(false);
   const [editDay, setEditDay] = useState(null);
   const [entries, setEntries] = useState([]);
@@ -33,6 +34,9 @@ export function Timetables() {
     if (selectedClass && selectedSection) {
       loadTimetable();
       loadAssignments();
+      loadSectionSubjects();
+    } else {
+      setSectionSubjects([]);
     }
   }, [selectedClass, selectedSection]);
 
@@ -48,6 +52,16 @@ export function Timetables() {
       const res = await subjectsAPI.list();
       setSubjects(res.items || []);
     } catch { /* ignore */ }
+  };
+
+  const loadSectionSubjects = async () => {
+    if (!selectedClass || !selectedSection) return;
+    try {
+      const res = await subjectsAPI.getSubjectsForSection(Number(selectedClass), Number(selectedSection));
+      setSectionSubjects(res.items || []);
+    } catch {
+      setSectionSubjects([]); // fallback: show all subjects
+    }
   };
 
   const loadTimetable = async () => {
@@ -181,8 +195,8 @@ export function Timetables() {
       }
       toast.success(`Copied ${sourceDay}'s schedule to all other days!`);
       loadTimetable();
-    } catch {
-      toast.error('Failed to copy schedule across week');
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to copy schedule across week');
     } finally {
       setSaving(false);
     }
@@ -190,6 +204,46 @@ export function Timetables() {
 
   const selectedClassName = classes.find((c) => String(c.id) === String(selectedClass))?.class_name || '';
   const selectedSectionName = selectedSections.find((s) => String(s.id) === String(selectedSection))?.name || '';
+
+  const handlePrefillStandardPeriods = () => {
+    setEntries([
+      { start_time: '09:00', end_time: '09:45', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
+      { start_time: '09:45', end_time: '10:30', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
+      { start_time: '10:30', end_time: '10:45', teacher_assignment_id: undefined, subject_id: undefined, title: 'Tea Break', is_break: true },
+      { start_time: '10:45', end_time: '11:30', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
+      { start_time: '11:30', end_time: '12:15', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
+      { start_time: '12:15', end_time: '13:00', teacher_assignment_id: undefined, subject_id: undefined, title: 'Lunch Break', is_break: true },
+      { start_time: '13:00', end_time: '13:45', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
+      { start_time: '13:45', end_time: '14:30', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
+    ]);
+    toast.success('Standard 8-period schedule pre-filled!');
+  };
+
+  /**
+   * Fills all non-break period slots with the section's resolved subjects, in order.
+   * Existing time slots are preserved; only subject_id and teacher_assignment_id are updated.
+   * If there are more periods than subjects, remaining slots stay blank.
+   */
+  const handlePrefillSubjects = () => {
+    if (sectionSubjects.length === 0) return;
+    let subjectCursor = 0;
+    const updated = entries.map((entry) => {
+      if (entry.is_break || subjectCursor >= sectionSubjects.length) return entry;
+      const sub = sectionSubjects[subjectCursor++];
+      const matched = subjectAssignmentMap[sub.id] || null;
+      return {
+        ...entry,
+        subject_id: sub.id,
+        teacher_assignment_id: matched ? matched.id : undefined,
+        _assignedTeacherName: matched
+          ? (matched.teacher?.user?.name || matched.teacher?.User?.name || matched.teacher?.employee_id || `Teacher #${matched.teacher_id}`)
+          : null,
+        _hasAssignment: !!matched,
+      };
+    });
+    setEntries(updated);
+    toast.success(`Pre-filled ${Math.min(sectionSubjects.length, entries.filter((e) => !e.is_break).length)} period(s) with section subjects!`);
+  };
 
   return (
     <div className="space-y-4 text-xs">
@@ -284,9 +338,19 @@ export function Timetables() {
                 Editing {editDay.toUpperCase()} Schedule — Class {selectedClassName} ({selectedSectionName})
               </CardTitle>
             </div>
-            <Button variant="primary" size="sm" icon={Save} disabled={saving} onClick={handleSaveDay}>
-              {saving ? 'Saving...' : 'Save Schedule'}
-            </Button>
+            <div className="flex items-center gap-2">
+              {sectionSubjects.length > 0 && (
+                <Button variant="outline" size="sm" icon={Wand2} onClick={handlePrefillSubjects}>
+                  Prefill All Subjects
+                </Button>
+              )}
+              <Button variant="outline" size="sm" icon={Clock} onClick={handlePrefillStandardPeriods}>
+                Pre-fill Standard Periods
+              </Button>
+              <Button variant="primary" size="sm" icon={Save} disabled={saving} onClick={handleSaveDay}>
+                {saving ? 'Saving...' : 'Save Schedule'}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
             {entries.map((entry, idx) => (
@@ -338,13 +402,15 @@ export function Timetables() {
                     </div>
                   ) : (
                     <div className="sm:col-span-2">
-                      <label className="block text-[10px] text-[#8C97AB] mb-1">Subject</label>
+                      <label className="block text-[10px] text-[#8C97AB] mb-1">
+                        Subject {sectionSubjects.length > 0 && <span className="text-[#2F6F5E]">(section-filtered)</span>}
+                      </label>
                       <Select
                         value={entry.subject_id || ''}
                         onChange={(e) => updateEntry(idx, 'subject_id', e.target.value)}
                       >
                         <option value="">Select Subject...</option>
-                        {subjects.map((sub) => (
+                        {(sectionSubjects.length > 0 ? sectionSubjects : subjects).map((sub) => (
                           <option key={sub.id} value={sub.id}>
                             {sub.name}
                           </option>

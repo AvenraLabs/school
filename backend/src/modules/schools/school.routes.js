@@ -12,6 +12,7 @@ import {
   resetSchoolAdminPassword,
   updateSchool,
   updateSchoolSettings,
+  updateSchoolModules,
   deleteStudent,
   deleteSectionStudents,
 } from "./school.controller.js";
@@ -48,6 +49,7 @@ router.get("/all", getAllSchools);
 router.get("/", getActiveSchool);
 router.get("/:id/stats", getSchoolStats);
 router.patch("/:id/status", validate(updateSchoolStatusSchema), updateSchoolStatus);
+router.patch("/:id/modules", updateSchoolModules);
 router.patch(
   "/:id/admin-status",
   validate(updateSchoolAdminStatusSchema),

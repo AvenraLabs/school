@@ -309,3 +309,23 @@ export const updateSchoolSettingsService = async (school_id, { board, risk_atten
   await school.save();
   return school;
 };
+
+/* =========================
+   SUPER ADMIN: UPDATE SCHOOL MODULE TOGGLES
+   ========================= */
+export const updateSchoolModulesService = async (school_id, enabled_modules) => {
+  const school = await School.findByPk(school_id);
+  if (!school) {
+    throw new AppError("School not found", 404);
+  }
+
+  const currentModules = school.enabled_modules || {};
+  const updatedModules = {
+    ...currentModules,
+    ...enabled_modules,
+  };
+
+  school.enabled_modules = updatedModules;
+  await school.save();
+  return school;
+};

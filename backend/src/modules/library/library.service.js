@@ -695,6 +695,12 @@ export const sendOverdueRemindersService = async () => {
       ],
     });
 
+    const adminUser = await User.findOne({
+      where: { school_id: school.id, role: "school_admin" },
+      attributes: ["id"],
+    });
+    const adminUserId = adminUser?.id || (await User.findOne({ where: { school_id: school.id }, attributes: ["id"] }))?.id || 1;
+
     for (const issue of issues) {
       const isStudent = issue.borrower_type === "student";
       const targetUser = isStudent ? issue.Student?.user : issue.Teacher?.user;
@@ -725,7 +731,7 @@ export const sendOverdueRemindersService = async () => {
       if (!existing) {
         await Notification.create({
           school_id: school.id,
-          sender_user_id: targetUserId,
+          sender_user_id: adminUserId,
           sender_role: "school_admin",
           title,
           message,

@@ -7,22 +7,46 @@ import User from "../users/user.model.js";
 import db from "../../config/db.js";
 import AppError from "../../shared/appError.js";
 
-/**
- * Auto-resolve the next class name
- */
-const getNextClassName = (currentName) => {
-  const nameLower = currentName.toLowerCase().trim();
-  if (nameLower.includes("lkg")) return currentName.replace(/lkg/i, "UKG");
-  if (nameLower.includes("ukg")) return currentName.replace(/ukg/i, "Class 1");
-  if (nameLower.includes("nursery")) return currentName.replace(/nursery/i, "LKG");
+const ROMAN_MAP = {
+  i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12
+};
+const NUM_TO_ROMAN = {
+  1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X", 11: "XI", 12: "XII"
+};
 
-  const match = currentName.match(/\d+/);
-  if (match) {
-    const num = parseInt(match[0], 10);
-    if (num === 12) return "Graduated";
+/**
+ * Auto-resolve the next class name with Roman Numeral & Digits support
+ */
+export const getNextClassName = (currentName) => {
+  if (!currentName) return null;
+  const nameTrimmed = currentName.trim();
+  const nameLower = nameTrimmed.toLowerCase();
+
+  if (nameLower.includes("nursery")) return nameTrimmed.replace(/nursery/i, "LKG");
+  if (nameLower.includes("lkg")) return nameTrimmed.replace(/lkg/i, "UKG");
+  if (nameLower.includes("ukg")) return nameTrimmed.replace(/ukg/i, "Class 1");
+
+  // Check digits first (e.g., "Class 10" -> "Class 11", "12" -> "Graduated")
+  const digitMatch = nameTrimmed.match(/\d+/);
+  if (digitMatch) {
+    const num = parseInt(digitMatch[0], 10);
+    if (num >= 12) return "Graduated";
     const nextNum = num + 1;
-    return currentName.replace(String(num), String(nextNum));
+    return nameTrimmed.replace(String(num), String(nextNum));
   }
+
+  // Check Roman numerals (e.g., "Std X" -> "Std XI", "Class XII" -> "Graduated")
+  const romanMatch = nameTrimmed.match(/\b(xii|xi|x|ix|viii|vii|vi|v|iv|iii|ii|i)\b/i);
+  if (romanMatch) {
+    const roman = romanMatch[0].toLowerCase();
+    const num = ROMAN_MAP[roman];
+    if (num) {
+      if (num >= 12) return "Graduated";
+      const nextRoman = NUM_TO_ROMAN[num + 1];
+      return nameTrimmed.replace(new RegExp(`\\b${romanMatch[0]}\\b`, "i"), nextRoman);
+    }
+  }
+
   return null;
 };
 
@@ -75,13 +99,11 @@ export const setCurrentAcademicYearService = async (school_id, academic_year_id)
     });
     if (!target) throw new AppError("Academic year not found", 404);
 
-    // Set all others to false
     await AcademicYear.update(
       { is_current: false },
       { where: { school_id }, transaction: t }
     );
 
-    // Set target to true
     target.is_current = true;
     await target.save({ transaction: t });
 
@@ -92,14 +114,12 @@ export const setCurrentAcademicYearService = async (school_id, academic_year_id)
 /**
  * GET PROMOTION PREVIEW / REPORT
  */
-export const getPromotionPreviewService = async (school_id, { repeat_student_ids = [] }) => {
-  // 1. Get active academic year
+export const getPromotionPreviewService = async (school_id, { repeat_student_ids = [], custom_overrides = {} } = {}) => {
   const currentYear = await AcademicYear.findOne({
     where: { school_id, is_current: true },
   });
   if (!currentYear) throw new AppError("Current academic year is not configured", 400);
 
-  // 2. Fetch all active, approved students
   const students = await Student.findAll({
     where: { school_id, status: "ACTIVE", approval_status: "approved" },
     include: [
@@ -109,7 +129,6 @@ export const getPromotionPreviewService = async (school_id, { repeat_student_ids
     ],
   });
 
-  // 3. Fetch all classes and sections in school for target matching lookup
   const allClasses = await Class.findAll({
     where: { school_id, is_active: true },
     include: [{ model: Section, where: { is_active: true }, required: false }],
@@ -117,27 +136,22 @@ export const getPromotionPreviewService = async (school_id, { repeat_student_ids
 
   const repeatSet = new Set(repeat_student_ids.map(String));
 
-  // Totals Counters
   let totalActive = students.length;
   let totalPromoted = 0;
   let totalGraduating = 0;
   let totalRepeating = 0;
 
-  // We also track transferred, dropped count of school
   const [transferredCount, droppedCount] = await Promise.all([
     Student.count({ where: { school_id, status: "TRANSFERRED" } }),
     Student.count({ where: { school_id, status: "DROPPED" } }),
   ]);
 
-  const transitions = {}; // Key: "Class X -> Class Y", Value: { count, hasError, targetClassId, targetSectionId }
+  const transitions = {};
   const errors = [];
 
   for (const student of students) {
-    const classId = student.class_id;
-    const sectionId = student.section_id;
     const currentClassName = student.class?.class_name || "Unknown";
     const currentSectionName = student.section?.name || "A";
-
     const isRepeating = repeatSet.has(String(student.id));
 
     if (isRepeating) {
@@ -158,7 +172,9 @@ export const getPromotionPreviewService = async (school_id, { repeat_student_ids
       continue;
     }
 
-    const nextClassName = getNextClassName(currentClassName);
+    // Check if admin passed a manual class/section override for this student
+    const override = custom_overrides[student.id] || custom_overrides[String(student.id)];
+    let nextClassName = override?.toClass || getNextClassName(currentClassName);
 
     if (nextClassName === "Graduated") {
       totalGraduating++;
@@ -176,27 +192,26 @@ export const getPromotionPreviewService = async (school_id, { repeat_student_ids
       }
       transitions[key].count++;
     } else if (nextClassName) {
-      // Find matching target class and section
       const targetClass = allClasses.find(
         (c) => c.class_name.toLowerCase().trim() === nextClassName.toLowerCase().trim()
       );
-      const targetSection = targetClass?.sections?.find(
-        (s) => s.name.toLowerCase().trim() === currentSectionName.toLowerCase().trim()
-      );
+      const targetSection = override?.toSection
+        ? targetClass?.sections?.find((s) => s.name.toLowerCase().trim() === override.toSection.toLowerCase().trim())
+        : targetClass?.sections?.find((s) => s.name.toLowerCase().trim() === currentSectionName.toLowerCase().trim());
 
       const hasError = !targetClass || !targetSection;
       if (hasError) {
-        errors.push(`Target section mapping missing for ${currentClassName} ${currentSectionName} &rarr; ${nextClassName} ${currentSectionName}`);
+        errors.push(`Target section mapping missing for ${currentClassName} ${currentSectionName} → ${nextClassName} ${override?.toSection || currentSectionName}`);
       }
 
       totalPromoted++;
-      const key = `${currentClassName}-${currentSectionName} → ${nextClassName}-${currentSectionName}`;
+      const key = `${currentClassName}-${currentSectionName} → ${nextClassName}-${targetSection?.name || currentSectionName}`;
       if (!transitions[key]) {
         transitions[key] = {
           fromClass: currentClassName,
           fromSection: currentSectionName,
           toClass: nextClassName,
-          toSection: currentSectionName,
+          toSection: targetSection?.name || currentSectionName,
           count: 0,
           hasError,
           errorMsg: hasError ? "Section mapping missing" : null,
@@ -204,7 +219,7 @@ export const getPromotionPreviewService = async (school_id, { repeat_student_ids
       }
       transitions[key].count++;
     } else {
-      errors.push(`Could not determine next class for ${currentClassName}`);
+      errors.push(`Could not determine next class for student ${student.user?.name || student.id} in class '${currentClassName}'. Please set manual target class.`);
     }
   }
 
@@ -229,7 +244,7 @@ export const getPromotionPreviewService = async (school_id, { repeat_student_ids
  */
 export const promoteAcademicYearService = async (
   school_id,
-  { next_year_name, start_date, end_date, repeat_student_ids = [] }
+  { next_year_name, start_date, end_date, repeat_student_ids = [], custom_overrides = {} }
 ) => {
   return db.transaction(async (t) => {
     // 1. Validate that the new academic year name does not already exist
@@ -252,6 +267,7 @@ export const promoteAcademicYearService = async (
       include: [
         { model: Class, attributes: ["id", "class_name"] },
         { model: Section, attributes: ["id", "name"] },
+        { model: User, attributes: ["name"] },
       ],
       transaction: t,
     });
@@ -265,29 +281,50 @@ export const promoteAcademicYearService = async (
 
     const repeatSet = new Set(repeat_student_ids.map(String));
 
-    // Validate mappings first (No auto-creation allowed)
+    // Validate all student promotions before executing writes
     for (const student of students) {
       const isRepeating = repeatSet.has(String(student.id));
-      if (isRepeating) continue; // repeating stays in same class
+      if (isRepeating) continue;
 
       const currentClassName = student.class?.class_name;
       const currentSectionName = student.section?.name || "A";
-      const nextClassName = getNextClassName(currentClassName);
 
-      if (nextClassName && nextClassName !== "Graduated") {
-        const targetClass = allClasses.find(
-          (c) => c.class_name.toLowerCase().trim() === nextClassName.toLowerCase().trim()
+      const override = custom_overrides[student.id] || custom_overrides[String(student.id)];
+      const nextClassName = override?.toClass || getNextClassName(currentClassName);
+
+      if (!nextClassName) {
+        throw new AppError(
+          `Could not determine next class for student ${student.user?.name || student.id} (Class: '${currentClassName}'). Please assign a manual target class before promoting.`,
+          400
         );
-        const targetSection = targetClass?.sections?.find(
-          (s) => s.name.toLowerCase().trim() === currentSectionName.toLowerCase().trim()
-        );
+      }
+
+      if (nextClassName !== "Graduated") {
+        let targetClass = null;
+        let targetSection = null;
+
+        if (override?.target_class_id && override?.target_section_id) {
+          targetClass = allClasses.find((c) => String(c.id) === String(override.target_class_id));
+          targetSection = targetClass?.sections?.find((s) => String(s.id) === String(override.target_section_id));
+        } else {
+          targetClass = allClasses.find(
+            (c) => c.class_name.toLowerCase().trim() === nextClassName.toLowerCase().trim()
+          );
+          targetSection = targetClass?.sections?.find(
+            (s) => s.name.toLowerCase().trim() === (override?.toSection || currentSectionName).toLowerCase().trim()
+          );
+        }
 
         if (!targetClass || !targetSection) {
           throw new AppError(
-            `Section mapping missing for ${currentClassName} ${currentSectionName} &rarr; ${nextClassName} ${currentSectionName}. Please configure before continuing.`,
+            `Target section mapping missing for student ${student.user?.name || student.id} (${currentClassName} ${currentSectionName} → ${nextClassName} ${override?.toSection || currentSectionName}). Please configure class/section before continuing.`,
             400
           );
         }
+
+        // Cache target IDs on student object for execution step
+        student._resolvedTargetClassId = targetClass.id;
+        student._resolvedTargetSectionId = targetSection.id;
       }
     }
 
@@ -298,7 +335,7 @@ export const promoteAcademicYearService = async (
         name: next_year_name,
         start_date,
         end_date,
-        is_current: false, // will toggle at the end
+        is_current: false,
       },
       { transaction: t }
     );
@@ -308,25 +345,22 @@ export const promoteAcademicYearService = async (
       const isRepeating = repeatSet.has(String(student.id));
 
       if (isRepeating) {
-        // Create placement record in new academic year for current class
         await StudentEnrollment.create(
           {
             student_id: student.id,
             academic_year_id: nextYear.id,
             class_id: student.class_id,
             section_id: student.section_id,
-            roll_no: student.roll_no, // preserved
+            roll_no: student.roll_no,
           },
           { transaction: t }
         );
-        // Student class & section remain unchanged
       } else {
         const currentClassName = student.class?.class_name;
-        const currentSectionName = student.section?.name || "A";
-        const nextClassName = getNextClassName(currentClassName);
+        const override = custom_overrides[student.id] || custom_overrides[String(student.id)];
+        const nextClassName = override?.toClass || getNextClassName(currentClassName);
 
         if (nextClassName === "Graduated") {
-          // Graduate the student in Student table (does not get enrollment placement in nextYear)
           await student.update(
             {
               status: "GRADUATED",
@@ -335,35 +369,29 @@ export const promoteAcademicYearService = async (
             { transaction: t }
           );
 
-          // Update user account too so they cannot login
           await User.update(
             { is_active: false },
             { where: { id: student.user_id }, transaction: t }
           );
 
-          // Deactivate student transport
           if (db.models.student_transport) {
             await db.models.student_transport.update(
               { is_active: false },
               { where: { student_id: student.id, school_id }, transaction: t }
             );
           }
-        } else if (nextClassName) {
-          const targetClass = allClasses.find(
-            (c) => c.class_name.toLowerCase().trim() === nextClassName.toLowerCase().trim()
-          );
-          const targetSection = targetClass?.sections?.find(
-            (s) => s.name.toLowerCase().trim() === currentSectionName.toLowerCase().trim()
-          );
+        } else {
+          const targetClassId = student._resolvedTargetClassId;
+          const targetSectionId = student._resolvedTargetSectionId;
 
           // Create placement record in the next academic year
           await StudentEnrollment.create(
             {
               student_id: student.id,
               academic_year_id: nextYear.id,
-              class_id: targetClass.id,
-              section_id: targetSection.id,
-              roll_no: student.roll_no, // preserved
+              class_id: targetClassId,
+              section_id: targetSectionId,
+              roll_no: student.roll_no,
             },
             { transaction: t }
           );
@@ -371,8 +399,8 @@ export const promoteAcademicYearService = async (
           // Update Student model pointer to new class & section
           await student.update(
             {
-              class_id: targetClass.id,
-              section_id: targetSection.id,
+              class_id: targetClassId,
+              section_id: targetSectionId,
             },
             { transaction: t }
           );

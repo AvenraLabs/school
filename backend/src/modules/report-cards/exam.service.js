@@ -1,8 +1,10 @@
+import { Op } from "sequelize";
 import Exam from "./exam.model.js";
 import ExamMaster from "./exam-master.model.js";
 import ExamSubject from "./exam-subject.model.js";
 import Subject from "../subjects/subject.model.js";
 import Class from "../classes/classes.model.js";
+import Section from "../sections/section.model.js";
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import db from "../../config/db.js";
@@ -10,11 +12,12 @@ import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper
 
 /* =========================
    CREATE EXAM with subjects
-   Body: { class_id, name, subjects?: [{ subject_id, exam_date, syllabus }] }
+   Body: { class_id, section_id?, name, subjects?: [{ subject_id, exam_date, syllabus }] }
 ========================= */
 export const createExamService = async ({
   school_id,
   class_id,
+  section_id = null,
   name,
   subjects = [],
 }) => {
@@ -26,12 +29,13 @@ export const createExamService = async ({
   });
   if (!cls) throw new AppError("CLASS_NOT_FOUND", 404);
 
+  const secId = section_id ? Number(section_id) : null;
   const academicYearId = await getCurrentAcademicYearId(school_id);
 
   return db.transaction(async (t) => {
     const [exam, created] = await Exam.findOrCreate({
-      where: { school_id, class_id, name: normalizedName, academic_year_id: academicYearId },
-      defaults: { school_id, class_id, name: normalizedName, academic_year_id: academicYearId },
+      where: { school_id, class_id, section_id: secId, name: normalizedName, academic_year_id: academicYearId },
+      defaults: { school_id, class_id, section_id: secId, name: normalizedName, academic_year_id: academicYearId },
       transaction: t,
     });
 
@@ -121,21 +125,31 @@ export const lockExamService = async ({ exam_id, school_id, is_locked }) => {
 };
 
 /* =========================
-   LIST EXAMS BY CLASS
+   LIST EXAMS BY CLASS & OPTIONAL SECTION
 ========================= */
 export const listExamsByClassService = async ({
   school_id,
   class_id,
+  section_id = null,
   query,
 }) => {
   const { limit, offset } = getPagination(query || {});
-
   const academicYearId = await getCurrentAcademicYearId(school_id);
 
+  const whereClause = { school_id, class_id, academic_year_id: academicYearId };
+  if (section_id) {
+    // Show exams created for this specific section OR general class exams (section_id is null)
+    whereClause[Op.or] = [
+      { section_id: Number(section_id) },
+      { section_id: null },
+    ];
+  }
+
   return Exam.findAndCountAll({
-    where: { school_id, class_id, academic_year_id: academicYearId },
+    where: whereClause,
     include: [
       { model: ExamMaster, as: "master", attributes: ["id", "name"] },
+      { model: Section, as: "section", attributes: ["id", "name"] },
       {
         model: ExamSubject,
         as: "exam_subjects",
@@ -155,6 +169,7 @@ const getExamById = (id, transaction) => {
   return Exam.findByPk(id, {
     include: [
       { model: ExamMaster, as: "master", attributes: ["id", "name"] },
+      { model: Section, as: "section", attributes: ["id", "name"] },
       {
         model: ExamSubject,
         as: "exam_subjects",

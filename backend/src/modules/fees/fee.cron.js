@@ -3,6 +3,7 @@ import StudentFee from './student-fee.model.js';
 import FeeDefinition from './fee-definition.model.js';
 import Student from '../students/student.model.js';
 import Notification from '../notifications/notification.model.js';
+import User from '../users/user.model.js';
 
 let cronStarted = false;
 
@@ -36,6 +37,26 @@ export const processFeeReminders = async () => {
     });
 
     let sentCount = 0;
+    const adminUserCache = {};
+
+    const getSchoolAdminUserId = async (schoolId) => {
+      if (!adminUserCache[schoolId]) {
+        const admin = await User.findOne({
+          where: { school_id: schoolId, role: 'school_admin' },
+          attributes: ['id'],
+        });
+        if (admin) {
+          adminUserCache[schoolId] = admin.id;
+        } else {
+          const fallback = await User.findOne({
+            where: { school_id: schoolId },
+            attributes: ['id'],
+          });
+          adminUserCache[schoolId] = fallback ? fallback.id : 1;
+        }
+      }
+      return adminUserCache[schoolId];
+    };
 
     for (const sf of studentFees) {
       const student = sf.student;
@@ -44,8 +65,6 @@ export const processFeeReminders = async () => {
       if (!student || !student.user_id || !feeDef || !feeDef.due_date) continue;
 
       const isToday = feeDef.due_date === todayStr;
-      const is3DaysLeft = feeDef.due_date === target3DaysStr;
-
       const title = isToday ? 'Fee Due Today' : 'Fee Due Reminder (3 Days Left)';
       const feeTitle = feeDef.title || 'School Fee';
       const balance = Number(sf.balance_amount).toLocaleString('en-IN');
@@ -65,9 +84,11 @@ export const processFeeReminders = async () => {
       });
 
       if (!existing) {
+        const senderUserId = await getSchoolAdminUserId(student.school_id);
+
         await Notification.create({
           school_id: student.school_id,
-          sender_user_id: 1,
+          sender_user_id: senderUserId,
           sender_role: 'school_admin',
           title,
           message,

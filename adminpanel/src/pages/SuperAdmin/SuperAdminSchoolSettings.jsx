@@ -14,7 +14,14 @@ import {
   CheckCircle2,
   Phone,
   Mail,
-  Sliders
+  Sliders,
+  Layers,
+  Video,
+  BookOpen,
+  DollarSign,
+  Bus,
+  Bot,
+  Wand2
 } from 'lucide-react';
 
 export function SuperAdminSchoolSettings() {
@@ -35,6 +42,26 @@ export function SuperAdminSchoolSettings() {
     google_maps_enabled: false,
     promotion_wizard_enabled: false,
   });
+
+  const [modules, setModules] = useState({
+    transport: true,
+    library: true,
+    finance: true,
+    ai_tutor: true,
+    ai_tools: true,
+    ai_video: true,
+    whatsapp: true,
+  });
+
+  const moduleDefinitions = [
+    { key: 'transport', label: 'Transport & Bus GPS Tracking', icon: Bus, desc: 'Bus routes, vehicles, driver profiles, student allocations, live GPS tracking.' },
+    { key: 'library', label: 'Library Management System', icon: BookOpen, desc: 'Book cataloging, issue/return loans, overdue tracking, fine rules.' },
+    { key: 'finance', label: 'Fees & Expense Management', icon: DollarSign, desc: 'Fee structures, student ledgers, concessions, receipts, expense vouchers.' },
+    { key: 'ai_tutor', label: 'Student AI Tutor Chat', icon: Bot, desc: 'Student RAG AI tutor assistant and textbook chapter context search.' },
+    { key: 'ai_tools', label: 'Teacher AI Tools & Quizzes', icon: Wand2, desc: 'AI Question Paper Generator, Lesson Planner, Homework Quizzes, Kahoot games.' },
+    { key: 'ai_video', label: 'Kling AI Video Generation (Paid API)', icon: Video, desc: '3D Educational video generation using paid Kling AI service.' },
+    { key: 'whatsapp', label: 'WhatsApp Cloud API Alerts (Paid API)', icon: MessageSquare, desc: 'Meta WhatsApp absentee alerts and fee receipts dispatches.' },
+  ];
 
   useEffect(() => {
     loadSchoolData();
@@ -60,6 +87,10 @@ export function SuperAdminSchoolSettings() {
           google_maps_enabled: Boolean(s.google_maps_enabled),
           promotion_wizard_enabled: Boolean(s.promotion_wizard_enabled),
         });
+
+        if (s.enabled_modules) {
+          setModules((prev) => ({ ...prev, ...s.enabled_modules }));
+        }
       }
     } catch (err) {
       toast.error('Failed to load school settings');
@@ -77,6 +108,19 @@ export function SuperAdminSchoolSettings() {
     } catch (err) {
       toast.error(err.response?.data?.message || `Failed to update ${label}`);
       setForm((prev) => ({ ...prev, [field]: !value }));
+    }
+  };
+
+  const handleToggleModule = async (moduleKey, value, label) => {
+    const updatedModules = { ...modules, [moduleKey]: value };
+    setModules(updatedModules);
+    if (!school) return;
+    try {
+      await schoolAPI.updateModules(school.id, updatedModules);
+      toast.success(`Module '${label}' ${value ? 'enabled' : 'disabled'} for this school.`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || `Failed to update module '${label}'`);
+      setModules((prev) => ({ ...prev, [moduleKey]: !value }));
     }
   };
 
@@ -110,10 +154,10 @@ export function SuperAdminSchoolSettings() {
         <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-4 shadow-xs flex items-center justify-between gap-4">
           <div>
             <h2 className="font-display font-bold text-base text-[#14213D] flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-[#2F6F5E]" /> School System Configuration & Toggles
+              <Sliders className="w-4 h-4 text-[#2F6F5E]" /> School System Configuration & Feature Toggles
             </h2>
             <p className="text-xs text-[#52607D]">
-              Configure board affiliation, automated WhatsApp bus alerts, map engines (Google Maps vs Leaflet), and feature wizard licenses.
+              Configure board affiliation, licensed feature modules, third-party API services, and system preferences.
             </p>
           </div>
 
@@ -211,17 +255,56 @@ export function SuperAdminSchoolSettings() {
             </CardContent>
           </Card>
 
-          {/* Automated Feature Toggles */}
+          {/* Licensed Feature Modules Checklist */}
           <div className="space-y-6">
-
-            {/* Map Configuration Settings */}
             <Card>
               <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
                 <CardTitle className="text-sm font-bold text-[#14213D] flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#2F6F5E]" /> Map Configuration Settings
+                  <Layers className="w-4 h-4 text-[#2F6F5E]" /> Licensed Feature Modules Checklist
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 text-xs">
+              <CardContent className="p-4 text-xs space-y-3">
+                {moduleDefinitions.map((mod) => {
+                  const IconComp = mod.icon;
+                  const isChecked = modules[mod.key] !== false;
+                  return (
+                    <label
+                      key={mod.key}
+                      className={`flex items-start gap-3 p-3 rounded-[8px] border transition-colors cursor-pointer ${
+                        isChecked
+                          ? 'bg-[#EAF3F0] border-[#D3E6E0]'
+                          : 'bg-[#FAFAF8] border-[#E4E1D8] opacity-75 hover:opacity-100'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 mt-0.5 rounded text-[#2F6F5E] accent-[#2F6F5E] focus:ring-[#2F6F5E] border-[#E4E1D8] cursor-pointer"
+                        checked={isChecked}
+                        onChange={(e) => handleToggleModule(mod.key, e.target.checked, mod.label)}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1.5 font-bold text-[#14213D]">
+                          <IconComp className="w-3.5 h-3.5 text-[#2F6F5E]" />
+                          <span>{mod.label}</span>
+                        </div>
+                        <span className="text-[11px] text-[#52607D] block mt-0.5">
+                          {mod.desc}
+                        </span>
+                      </div>
+                    </label>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            {/* Map & License Settings */}
+            <Card>
+              <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
+                <CardTitle className="text-sm font-bold text-[#14213D] flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[#2F6F5E]" /> Map & System Preferences
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 text-xs space-y-3">
                 <label className="flex items-start gap-3 p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] cursor-pointer hover:bg-[#EAF3F0] transition-colors">
                   <input
                     type="checkbox"
@@ -238,17 +321,7 @@ export function SuperAdminSchoolSettings() {
                     </span>
                   </div>
                 </label>
-              </CardContent>
-            </Card>
 
-            {/* License & Wizard Settings */}
-            <Card>
-              <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
-                <CardTitle className="text-sm font-bold text-[#14213D] flex items-center gap-2">
-                  <GraduationCap className="w-4 h-4 text-[#2F6F5E]" /> License & Wizard Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 text-xs">
                 <label className="flex items-start gap-3 p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] cursor-pointer hover:bg-[#EAF3F0] transition-colors">
                   <input
                     type="checkbox"

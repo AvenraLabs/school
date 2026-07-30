@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../../shared/middlewares/auth.js";
 import { allowRoles } from "../../shared/middlewares/role.js";
+import { requireModuleEnabled } from "../../shared/middlewares/requireModule.js";
 
 import {
   createFeeCategory,
@@ -25,6 +26,7 @@ import {
 const router = express.Router();
 
 router.use(protect);
+router.use(requireModuleEnabled("finance"));
 
 /* Student & Parent App Route */
 router.get("/my-ledger", allowRoles("student", "parent", "school_admin", "super_admin"), getMyFeeLedger);

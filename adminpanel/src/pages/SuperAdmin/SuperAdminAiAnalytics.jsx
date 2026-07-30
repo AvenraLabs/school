@@ -14,21 +14,38 @@ import {
   UserCog,
   RefreshCw,
   Layers,
-  Activity
+  Activity,
+  Terminal,
+  Filter,
+  CheckCircle2,
+  XCircle,
+  Clock
 } from 'lucide-react';
 
 export function SuperAdminAiAnalytics() {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('role'); // 'role' | 'user' | 'class'
+  const [activeTab, setActiveTab] = useState('role'); // 'role' | 'user' | 'class' | 'integrations'
 
   const [schoolData, setSchoolData] = useState(null);
   const [userData, setUserData] = useState([]);
   const [classData, setClassData] = useState([]);
 
+  // Integration Logs state
+  const [integrationLogs, setIntegrationLogs] = useState([]);
+  const [intFilterIntegration, setIntFilterIntegration] = useState('');
+  const [intFilterStatus, setIntFilterStatus] = useState('');
+  const [intLoading, setIntLoading] = useState(false);
+
   useEffect(() => {
     loadAnalytics();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'integrations') {
+      loadIntegrationLogs();
+    }
+  }, [activeTab, intFilterIntegration, intFilterStatus]);
 
   const loadAnalytics = async () => {
     setLoading(true);
@@ -46,6 +63,22 @@ export function SuperAdminAiAnalytics() {
       console.error('Failed loading AI analytics:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadIntegrationLogs = async () => {
+    setIntLoading(true);
+    try {
+      const params = {};
+      if (intFilterIntegration) params.integration = intFilterIntegration;
+      if (intFilterStatus) params.status = intFilterStatus;
+
+      const res = await analyticsAPI.getIntegrationLogs(params);
+      setIntegrationLogs(res?.logs || []);
+    } catch (err) {
+      console.error('Failed loading integration logs:', err);
+    } finally {
+      setIntLoading(false);
     }
   };
 
@@ -84,7 +117,7 @@ export function SuperAdminAiAnalytics() {
       <Card>
         <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8] flex flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-sm font-bold text-[#14213D] flex items-center gap-2">
-            <Activity className="w-4 h-4 text-[#2F6F5E]" /> AI Consumption Breakdown Telemetry
+            <Activity className="w-4 h-4 text-[#2F6F5E]" /> AI Consumption & Integration Telemetry
           </CardTitle>
 
           <div className="flex items-center gap-1 bg-white p-1 rounded-[8px] border border-[#E4E1D8]">
@@ -92,6 +125,7 @@ export function SuperAdminAiAnalytics() {
               { id: 'role', label: 'By Role' },
               { id: 'user', label: 'By User' },
               { id: 'class', label: 'By Class' },
+              { id: 'integrations', label: 'Live Integration Logs' },
             ].map((t) => (
               <button
                 key={t.id}
@@ -216,6 +250,117 @@ export function SuperAdminAiAnalytics() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {activeTab === 'integrations' && (
+            <div className="p-4 space-y-4">
+              {/* Integration Filter Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-[#FAFAF8] p-3 rounded-[8px] border border-[#E4E1D8]">
+                <div className="flex items-center gap-2 text-xs text-[#14213D] font-semibold">
+                  <Filter className="w-4 h-4 text-[#2F6F5E]" /> Filters:
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <select
+                    value={intFilterIntegration}
+                    onChange={(e) => setIntFilterIntegration(e.target.value)}
+                    className="bg-white border border-[#E4E1D8] text-[#14213D] rounded-[6px] px-2.5 py-1.5 font-medium outline-none focus:border-[#2F6F5E]"
+                  >
+                    <option value="">All Services (Gemini, Kling, WhatsApp, Maps)</option>
+                    <option value="gemini">Gemini AI</option>
+                    <option value="kling">Kling AI Video</option>
+                    <option value="whatsapp">WhatsApp Cloud API</option>
+                    <option value="maps">Google Maps</option>
+                  </select>
+
+                  <select
+                    value={intFilterStatus}
+                    onChange={(e) => setIntFilterStatus(e.target.value)}
+                    className="bg-white border border-[#E4E1D8] text-[#14213D] rounded-[6px] px-2.5 py-1.5 font-medium outline-none focus:border-[#2F6F5E]"
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="success">Success</option>
+                    <option value="failure">Failure / Failed</option>
+                  </select>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadIntegrationLogs}
+                    disabled={intLoading}
+                    className="h-8 text-xs font-semibold gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${intLoading ? 'animate-spin' : ''}`} /> Refresh Logs
+                  </Button>
+                </div>
+              </div>
+
+              {/* Integration Logs Table */}
+              <div className="overflow-x-auto border border-[#E4E1D8] rounded-[8px]">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
+                    <tr>
+                      <th className="px-4 py-3">Timestamp</th>
+                      <th className="px-4 py-3">Integration Service</th>
+                      <th className="px-4 py-3">Action</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Duration</th>
+                      <th className="px-4 py-3">Details / Error</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
+                    {intLoading ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-[#8C97AB] font-medium">
+                          Loading structured integration logs...
+                        </td>
+                      </tr>
+                    ) : integrationLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-[#8C97AB]">
+                          No integration call logs registered matching selected filters.
+                        </td>
+                      </tr>
+                    ) : (
+                      integrationLogs.map((l, idx) => {
+                        const isErr = l.status === 'failure' || l.status === 'failed';
+                        return (
+                          <tr key={idx} className="hover:bg-[#FAFAF8] transition-colors font-mono">
+                            <td className="px-4 py-3 text-[#52607D] whitespace-nowrap">
+                              {l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : 'N/A'}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#EAF3F0] text-[#2F6F5E] border border-[#D3E6E0]">
+                                {l.integration}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-[#14213D]">{l.action}</td>
+                            <td className="px-4 py-3">
+                              {isErr ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-50 text-red-700 border border-red-200">
+                                  <XCircle className="w-3 h-3 text-red-600" /> {l.status}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" /> {l.status}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-[#52607D]">
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-[#8C97AB]" /> {l.duration_ms || 0}ms
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 max-w-md truncate text-red-600 font-sans text-[11px]">
+                              {l.error ? String(l.error) : l.meta ? JSON.stringify(l.meta) : '-'}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </CardContent>

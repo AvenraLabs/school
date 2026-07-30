@@ -175,14 +175,19 @@ export function AcademicYearManager() {
     loadSectionStudents();
   }, [selectedClassId, selectedSectionId, showWizard, wizardStep]);
 
-  const fetchPreviewReport = async () => {
+  const [customOverrides, setCustomOverrides] = useState({});
+
+  const fetchPreviewReport = async (overrideData = customOverrides) => {
     setPreviewLoading(true);
     setWizardStep(3);
     try {
-      const res = await academicYearsAPI.getPreview({ repeat_student_ids: repeatStudentIds });
+      const res = await academicYearsAPI.getPreview({
+        repeat_student_ids: repeatStudentIds,
+        custom_overrides: overrideData,
+      });
       setPreviewReport(res);
     } catch (e) {
-      toast.error('Failed to generate promotion preview');
+      toast.error(e.response?.data?.message || 'Failed to generate promotion preview');
       setWizardStep(2);
     } finally {
       setPreviewLoading(false);
@@ -207,6 +212,7 @@ export function AcademicYearManager() {
         start_date,
         end_date,
         repeat_student_ids: repeatStudentIds,
+        custom_overrides: customOverrides,
       });
       toast.success('Promotion completed transactionally!');
       setShowWizard(false);
@@ -512,10 +518,81 @@ export function AcademicYearManager() {
                 <div className="p-8 text-center text-[#8C97AB]">Generating promotion report preview...</div>
               ) : previewReport ? (
                 <>
-                  <div className="p-3 bg-[#EAF3F0] border border-[#D3E6E0] rounded-[8px] text-[#2F6F5E]">
-                    <p className="font-semibold">Target Section Verification Clean</p>
-                    <p className="text-[11px]">Ready to process transactional academic promotion.</p>
+                  {previewReport.errors && previewReport.errors.length > 0 ? (
+                    <div className="p-3 bg-[#FDF2F1] border border-[#F8D7D5] rounded-[8px] text-[#B0403A] text-xs space-y-1">
+                      <p className="font-bold flex items-center gap-1">
+                        <AlertTriangle className="w-4 h-4" /> Section Mapping Warnings Found ({previewReport.errors.length})
+                      </p>
+                      <ul className="list-disc list-inside space-y-0.5 font-mono text-[11px]">
+                        {previewReport.errors.map((err, idx) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-[#EAF3F0] border border-[#D3E6E0] rounded-[8px] text-[#2F6F5E]">
+                      <p className="font-semibold flex items-center gap-1.5">
+                        <CheckCircle className="w-4 h-4" /> All Target Class & Section Mappings Verified Clean
+                      </p>
+                      <p className="text-[11px]">Ready to process transactional academic promotion for {previewReport.totals?.promoted || 0} students.</p>
+                    </div>
+                  )}
+
+                  {/* Summary Badges */}
+                  <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                    <div className="p-2 bg-[#EAF3F0] border border-[#D3E6E0] rounded-[8px]">
+                      <div className="text-[#8C97AB] font-mono text-[10px] uppercase font-semibold">Promoted</div>
+                      <div className="text-base font-black text-[#2F6F5E]">{previewReport.totals?.promoted || 0}</div>
+                    </div>
+                    <div className="p-2 bg-[#FDF8EC] border border-[#F7E7C4] rounded-[8px]">
+                      <div className="text-[#8C97AB] font-mono text-[10px] uppercase font-semibold">Graduating</div>
+                      <div className="text-base font-black text-[#B8860B]">{previewReport.totals?.graduating || 0}</div>
+                    </div>
+                    <div className="p-2 bg-[#F3F4F6] border border-[#E5E7EB] rounded-[8px]">
+                      <div className="text-[#8C97AB] font-mono text-[10px] uppercase font-semibold">Repeating</div>
+                      <div className="text-base font-black text-[#4B5563]">{previewReport.totals?.repeating || 0}</div>
+                    </div>
+                    <div className="p-2 bg-[#FAFAF8] border border-[#E4E1D8] rounded-[8px]">
+                      <div className="text-[#8C97AB] font-mono text-[10px] uppercase font-semibold">Active Total</div>
+                      <div className="text-base font-black text-[#14213D]">{previewReport.totals?.total_active || 0}</div>
+                    </div>
                   </div>
+
+                  {/* Transitions Breakdown */}
+                  {previewReport.transitions && previewReport.transitions.length > 0 && (
+                    <div className="border border-[#E4E1D8] rounded-[8px] overflow-hidden max-h-52 overflow-y-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold">
+                          <tr>
+                            <th className="px-3 py-2">Current Class</th>
+                            <th className="px-3 py-2">Target Grade Placement</th>
+                            <th className="px-3 py-2 text-right">Student Count</th>
+                            <th className="px-3 py-2">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#EDEAE1]">
+                          {previewReport.transitions.map((t, idx) => (
+                            <tr key={idx} className="hover:bg-[#FAFAF8]">
+                              <td className="px-3 py-2 font-semibold text-[#14213D]">
+                                {t.fromClass} — Sec {t.fromSection}
+                              </td>
+                              <td className="px-3 py-2 font-bold text-[#2F6F5E]">
+                                {t.toClass} {t.toSection !== '—' ? `— Sec ${t.toSection}` : ''}
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono font-bold">{t.count}</td>
+                              <td className="px-3 py-2">
+                                {t.hasError ? (
+                                  <span className="text-[#B0403A] font-semibold text-[10px] uppercase">Missing Mapping</span>
+                                ) : (
+                                  <span className="text-[#2F6F5E] font-semibold text-[10px] uppercase">Clean</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
                   <label className="flex items-center gap-2 cursor-pointer pt-2">
                     <input
@@ -533,7 +610,7 @@ export function AcademicYearManager() {
                     <Button variant="outline" onClick={() => setWizardStep(2)}>Back</Button>
                     <Button
                       variant="primary"
-                      disabled={!confirmCheckbox}
+                      disabled={!confirmCheckbox || (previewReport.errors && previewReport.errors.length > 0)}
                       loading={promoting}
                       onClick={handleExecutePromotion}
                     >

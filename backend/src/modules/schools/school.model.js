@@ -119,6 +119,21 @@ const School = db.define(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
+
+    /* ── Module Feature Toggles ── */
+    enabled_modules: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: {
+        transport: true,
+        library: true,
+        finance: true,
+        ai_tutor: true,
+        ai_tools: true,
+        ai_video: true,
+        whatsapp: true,
+      },
+    },
   },
   {
     tableName: "schools",

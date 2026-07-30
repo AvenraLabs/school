@@ -7,9 +7,18 @@ import {
   schoolClassUsage,
   teacherAiAnalytics,
   studentAiAnalytics,
+  getIntegrationLogs,
 } from "./ai-analytics.controller.js";
 
 const router = express.Router();
+
+// super admin: integration logs (Gemini, Kling, WhatsApp, Maps)
+router.get(
+  "/analytics/ai/integration-logs",
+  protect,
+  allowRoles("super_admin"),
+  getIntegrationLogs
+);
 
 // school admin / super admin
 router.get(

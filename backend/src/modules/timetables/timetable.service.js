@@ -119,6 +119,50 @@ export const saveTimetableService = async ({
         if (!assignment) {
           throw new AppError("INVALID_TEACHER_ASSIGNMENT", 400);
         }
+
+        // 3.5 Teacher Collision Detection across other sections
+        const teacherId = assignment.teacher_id;
+        const overlapping = await Timetable.findAll({
+          where: {
+            school_id,
+            academic_year_id: academicYearId,
+            day_of_week,
+            [Op.or]: [
+              { class_id: { [Op.ne]: class_id } },
+              { section_id: { [Op.ne]: section_id } },
+            ],
+            start_time: { [Op.lt]: e.end_time },
+            end_time: { [Op.gt]: e.start_time },
+          },
+          include: [
+            {
+              model: TeacherAssignment,
+              where: { teacher_id: teacherId },
+              required: true,
+              include: [
+                {
+                  model: Teacher,
+                  include: [{ model: User, attributes: ["name"] }],
+                },
+              ],
+            },
+            { model: Class, attributes: ["class_name"] },
+            { model: Section, attributes: ["name"] },
+          ],
+          transaction: t,
+        });
+
+        if (overlapping.length > 0) {
+          const conflict = overlapping[0];
+          const teacherName = conflict.teacher_assignment?.teacher?.user?.name || "Teacher";
+          const conflictClass = conflict.class?.class_name || `Class #${conflict.class_id}`;
+          const conflictSec = conflict.section?.name || `Section #${conflict.section_id}`;
+          const slot = `${conflict.start_time} - ${conflict.end_time}`;
+          throw new AppError(
+            `Teacher Schedule Conflict: ${teacherName} is already scheduled in Class ${conflictClass} (Section ${conflictSec}) at ${slot} on ${day_of_week.toUpperCase()}.`,
+            400
+          );
+        }
       }
 
       await Timetable.create(

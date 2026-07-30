@@ -1,4 +1,5 @@
 import { getAiClient, getGeminiModel } from "../shared/aiClient.js";
+import logger from "../../../shared/logger.js";
 
 function sanitizeAiOutput(rawText) {
   if (!rawText) return "";
@@ -17,11 +18,12 @@ function sanitizeAiOutput(rawText) {
 }
 
 /**
- * Invokes Gemini model to generate answer.
+ * Invokes Gemini model to generate answer with structured integration logging.
  */
 export async function generateAnswer(prompt) {
   const ai = getAiClient();
   const GEMINI_MODEL = getGeminiModel();
+  const startTime = Date.now();
 
   try {
     const result = await ai.models.generateContent({
@@ -29,6 +31,7 @@ export async function generateAnswer(prompt) {
       contents: prompt,
     });
 
+    const duration_ms = Date.now() - startTime;
     const usage = result.usageMetadata || {};
     const tokensUsed = usage.totalTokenCount || 0;
     const rawText =
@@ -38,12 +41,29 @@ export async function generateAnswer(prompt) {
 
     const text = sanitizeAiOutput(rawText);
 
+    logger.integration({
+      integration: "gemini",
+      action: "rag_answer",
+      status: "success",
+      duration_ms,
+      meta: { modelUsed: GEMINI_MODEL, tokensUsed },
+    });
+
     return {
       text,
       tokensUsed,
       modelUsed: GEMINI_MODEL,
     };
   } catch (e) {
+    const duration_ms = Date.now() - startTime;
+    logger.integration({
+      integration: "gemini",
+      action: "rag_answer",
+      status: "failure",
+      duration_ms,
+      error: e.message,
+      meta: { modelUsed: GEMINI_MODEL },
+    });
     console.error("[generateAnswer] Gemini API invocation error:", e.message);
     throw e;
   }

@@ -91,3 +91,4 @@ Powered by `socket.io` with distinct namespace handlers:
 4. **Transport Subsystem**: Drivers, vehicles, student transport allocations, live trip sessions, high-frequency GPS logging, change request approvals.
 5. **Approval Workflow Subsystem**: Teacher & student registration approvals, profile update requests, audit logging.
 6. **WhatsApp Cloud API Integration**: Meta Graph API `v21.0` business-initiated message templates (`absent_alert`, `general_announcement`, `fee_receipt`), quota limits, and live Webhook status callback handling (`wamid` tracking for `sent`, `delivered`, `read`, `failed`).
+7. **Multi-Tenant Module Feature Toggles**: Dynamic per-school feature suite locking (`schools.enabled_modules` JSONB column) enforced via `requireModuleEnabled(moduleKey)` route middleware and dynamic UI filtering across 7 core modules (`transport`, `library`, `finance`, `ai_tutor`, `ai_tools`, `ai_video`, `whatsapp`).

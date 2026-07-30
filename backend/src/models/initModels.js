@@ -151,6 +151,7 @@ const initAssociations = () => {
 
   Exam.belongsTo(School, { foreignKey: "school_id" });
   Exam.belongsTo(Class, { foreignKey: "class_id" });
+  Exam.belongsTo(Section, { foreignKey: "section_id", as: "section" });
   Exam.belongsTo(ExamMaster, { foreignKey: "exam_master_id", as: "master" });
 
   ExamMaster.hasMany(Exam, { foreignKey: "exam_master_id" });

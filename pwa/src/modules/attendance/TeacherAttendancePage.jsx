@@ -351,17 +351,17 @@ export default function TeacherAttendancePage() {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 3, pb: isToday && absentStudentsCount > 0 ? 28 : 20 }}>
-      <Stack spacing={3}>
+    <Container maxWidth="sm" sx={{ mt: 2, pb: isToday && absentStudentsCount > 0 ? 20 : 14 }}>
+      <Stack spacing={1.5}>
         {/* Page Title */}
         <Typography variant="h5" fontWeight="bold">
           Daily Attendance
         </Typography>
 
         {/* Filters Card */}
-        <Card sx={{ borderRadius: 4, border: "1px solid rgba(0,0,0,0.05)", boxShadow: "none" }}>
-          <CardContent sx={{ p: 2.5 }}>
-            <Stack spacing={2}>
+        <Card sx={{ borderRadius: 3, border: "1px solid rgba(0,0,0,0.05)", boxShadow: "none" }}>
+          <CardContent sx={{ p: 2 }}>
+            <Stack spacing={1.5}>
               <TextField
                 select
                 label="Class & Section"
@@ -660,7 +660,7 @@ export default function TeacherAttendancePage() {
 
       {/* Spacer to prevent bottom fixed action bar overlap */}
       {students.length > 0 && (
-        <Box sx={{ height: isToday && absentStudentsCount > 0 ? 140 : 80 }} />
+        <Box sx={{ height: isToday && absentStudentsCount > 0 ? 110 : 64 }} />
       )}
 
       {/* Sticky Bottom Action Bar */}
@@ -668,10 +668,10 @@ export default function TeacherAttendancePage() {
         <Box
           sx={{
             position: "fixed",
-            bottom: 64, // Keep space for bottom navigation
+            bottom: 64,
             left: 0,
             right: 0,
-            p: 2,
+            p: 1.5,
             bgcolor: "background.default",
             boxShadow: "0 -8px 24px rgba(0,0,0,0.06)",
             zIndex: 1000,
@@ -680,7 +680,7 @@ export default function TeacherAttendancePage() {
           }}
         >
           <Container maxWidth="sm" sx={{ p: "0 !important" }}>
-            <Stack spacing={1.5}>
+            <Stack spacing={1}>
               <Button
                 variant="contained"
                 color="primary"
@@ -689,11 +689,11 @@ export default function TeacherAttendancePage() {
                 disabled={saving}
                 startIcon={saving ? <CircularProgress size={18} /> : <Save />}
                 sx={{
-                  py: 1.3,
-                  borderRadius: "14px",
+                  py: 1.1,
+                  borderRadius: "10px",
                   fontWeight: 800,
                   fontSize: "0.95rem",
-                  boxShadow: "0 8px 16px rgba(79, 70, 229, 0.25)",
+                  boxShadow: "0 4px 12px rgba(79, 70, 229, 0.2)",
                 }}
               >
                 {saving ? "Saving..." : "Save Attendance"}
@@ -717,8 +717,8 @@ export default function TeacherAttendancePage() {
                     )
                   }
                   sx={{
-                    py: 1.1,
-                    borderRadius: "14px",
+                    py: 1,
+                    borderRadius: "10px",
                     fontWeight: 700,
                     fontSize: "0.85rem",
                     borderColor: whatsappSentToday ? "transparent" : "#25D366",
@@ -736,10 +736,10 @@ export default function TeacherAttendancePage() {
                   }}
                 >
                   {sendingWhatsApp
-                    ? "Sending Alerts..."
+                    ? "Sending..."
                     : whatsappSentToday
-                    ? "WhatsApp Alert Already Sent Today"
-                    : `Send WhatsApp Alert (${absentStudentsCount} Absent ${absentStudentsCount === 1 ? "Parent" : "Parents"})`}
+                    ? "WhatsApp Alert Sent"
+                    : "Send WhatsApp Alert"}
                 </Button>
               )}
             </Stack>
@@ -751,7 +751,7 @@ export default function TeacherAttendancePage() {
       <Dialog
         open={openConfirmModal}
         onClose={() => setOpenConfirmModal(false)}
-        PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
+        PaperProps={{ sx: { borderRadius: 2.5, p: 0.5 } }}
       >
         <DialogTitle sx={{ fontWeight: 800, textTransform: "capitalize" }}>
           Send Absent WhatsApp Alerts
@@ -772,7 +772,7 @@ export default function TeacherAttendancePage() {
             color="success"
             disabled={sendingWhatsApp}
             startIcon={sendingWhatsApp ? <CircularProgress size={16} /> : <Message />}
-            sx={{ fontWeight: 800, borderRadius: "10px", bgcolor: "#128C7E", "&:hover": { bgcolor: "#075E54" } }}
+            sx={{ fontWeight: 800, borderRadius: "8px", bgcolor: "#128C7E", "&:hover": { bgcolor: "#075E54" } }}
           >
             {sendingWhatsApp ? "Sending..." : "Confirm & Send"}
           </Button>

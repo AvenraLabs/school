@@ -42,13 +42,15 @@ export const lockExam = asyncHandler(async (req, res) => {
 export const listExamsByClass = asyncHandler(async (req, res) => {
   const school_id = req.user.school_id;
   let class_id = req.query.class_id ? Number(req.query.class_id) : null;
+  let section_id = req.query.section_id ? Number(req.query.section_id) : null;
 
   if (!class_id && req.user.role === "student") {
     const student = await Student.findOne({
       where: { user_id: req.user.id, school_id },
-      attributes: ["class_id"],
+      attributes: ["class_id", "section_id"],
     });
     class_id = student?.class_id || null;
+    if (!section_id) section_id = student?.section_id || null;
   }
 
   if (!class_id) {
@@ -58,6 +60,7 @@ export const listExamsByClass = asyncHandler(async (req, res) => {
   const result = await listExamsByClassService({
     school_id,
     class_id,
+    section_id,
     query: req.query,
   });
 

@@ -29,14 +29,16 @@ const getSubjectName = (slot) => slot?.subject?.name || slot?.Subject?.name || `
 
 export function ExamsManager() {
   const [classes, setClasses] = useState([]);
-  const [subjects, setSubjects] = useState([]);
+  const [subjects, setSubjects] = useState([]); // full school catalog (fallback)
+  const [classSubjects, setClassSubjects] = useState([]); // subjects filtered for selected class/section
   const [exams, setExams] = useState([]);
   const [scheduleExams, setScheduleExams] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCreateExam, setShowCreateExam] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
-  const [createForm, setCreateForm] = useState({ class_id: '', name: '' });
+  const [createForm, setCreateForm] = useState({ class_id: '', section_id: '', name: '' });
   const [scheduleForm, setScheduleForm] = useState({
     class_id: '',
     exam_id: '',
@@ -60,24 +62,30 @@ export function ExamsManager() {
 
   useEffect(() => {
     if (selectedClass) {
-      loadExams(selectedClass);
+      loadExams(selectedClass, selectedSection);
+      loadClassSubjects(selectedClass, selectedSection);
     } else {
       setExams([]);
+      setClassSubjects([]);
     }
-  }, [selectedClass]);
+  }, [selectedClass, selectedSection]);
 
   useEffect(() => {
     if (scheduleForm.class_id) {
       loadScheduleExams(scheduleForm.class_id);
+      loadClassSubjects(scheduleForm.class_id, selectedSection);
     } else {
       setScheduleExams([]);
     }
   }, [scheduleForm.class_id]);
 
-  const selectedClassName = useMemo(
-    () => classes.find((item) => String(item.id) === String(selectedClass))?.class_name || '',
+  const selectedClassObj = useMemo(
+    () => classes.find((item) => String(item.id) === String(selectedClass)),
     [classes, selectedClass]
   );
+  const selectedClassName = selectedClassObj?.class_name || '';
+  const availableSections = selectedClassObj?.sections || [];
+  const selectedSectionName = availableSections.find((s) => String(s.id) === String(selectedSection))?.name || '';
 
   const loadClasses = async () => {
     try {
@@ -97,11 +105,26 @@ export function ExamsManager() {
     }
   };
 
-  const loadExams = async (classId = selectedClass) => {
+  const loadClassSubjects = async (classId, sectionId = '') => {
+    if (!classId) { setClassSubjects([]); return; }
+    try {
+      if (sectionId) {
+        const res = await subjectsAPI.getSubjectsForSection(Number(classId), Number(sectionId));
+        setClassSubjects(res.items || []);
+      } else {
+        const res = await subjectsAPI.getClassSubjects(Number(classId));
+        setClassSubjects(res.items || []);
+      }
+    } catch {
+      setClassSubjects([]); // fallback to full catalog
+    }
+  };
+
+  const loadExams = async (classId = selectedClass, sectionId = selectedSection) => {
     if (!classId) return;
     setLoading(true);
     try {
-      const res = await examsAPI.list(Number(classId));
+      const res = await examsAPI.list(Number(classId), sectionId ? Number(sectionId) : null);
       setExams(res.items || []);
     } catch (e) {
       toast.error('Failed to load exams');
@@ -112,7 +135,7 @@ export function ExamsManager() {
 
   const loadScheduleExams = async (classId) => {
     try {
-      const res = await examsAPI.list(Number(classId));
+      const res = await examsAPI.list(Number(classId), selectedSection ? Number(selectedSection) : null);
       setScheduleExams(res.items || []);
       if (scheduleForm.exam_id && !(res.items || []).some((exam) => String(exam.id) === String(scheduleForm.exam_id))) {
         setScheduleForm((prev) => ({ ...prev, exam_id: '' }));
@@ -172,7 +195,7 @@ export function ExamsManager() {
   };
 
   const openCreateExam = () => {
-    setCreateForm({ class_id: selectedClass || '', name: '' });
+    setCreateForm({ class_id: selectedClass || '', section_id: selectedSection || '', name: '' });
     setShowCreateExam(true);
   };
 
@@ -191,10 +214,15 @@ export function ExamsManager() {
     event.preventDefault();
     setSaving(true);
     try {
-      await examsAPI.create(Number(createForm.class_id), createForm.name.trim());
+      await examsAPI.create(
+        Number(createForm.class_id),
+        createForm.name.trim(),
+        [],
+        createForm.section_id ? Number(createForm.section_id) : null
+      );
       toast.success('Exam created');
       setShowCreateExam(false);
-      if (String(createForm.class_id) === String(selectedClass)) await loadExams(createForm.class_id);
+      if (String(createForm.class_id) === String(selectedClass)) await loadExams(createForm.class_id, selectedSection);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to create exam');
     } finally {
@@ -243,16 +271,30 @@ export function ExamsManager() {
     }
   };
 
-  const handleAutoPopulateSubjects = async (examId, classId) => {
-    if (!examId || !classId || subjects.length === 0) {
-      toast.error('No subjects available to auto-populate');
+  const handleAutoPopulateSubjects = async (examObj) => {
+    const examId = typeof examObj === 'object' ? examObj.id : examObj;
+    const targetExam = typeof examObj === 'object' ? examObj : exams.find((e) => e.id === examId);
+    const classId = targetExam?.class_id || selectedClass;
+    const sectionId = targetExam?.section_id || selectedSection;
+
+    let subjectPool = classSubjects;
+    if (sectionId) {
+      try {
+        const res = await subjectsAPI.getSubjectsForSection(Number(classId), Number(sectionId));
+        subjectPool = res.items || [];
+      } catch { /* fallback */ }
+    }
+    if (subjectPool.length === 0) subjectPool = subjects;
+
+    if (!examId || !classId || subjectPool.length === 0) {
+      toast.error('No subjects available to auto-populate. Set up subjects in the Subjects manager first.');
       return;
     }
     setSaving(true);
     try {
       let count = 0;
       const todayStr = new Date().toISOString().split('T')[0];
-      for (const sub of subjects) {
+      for (const sub of subjectPool) {
         try {
           await examsAPI.upsertSubject(
             Number(examId),
@@ -266,7 +308,7 @@ export function ExamsManager() {
         }
       }
       toast.success(`Auto-populated ${count} subject exam slots!`);
-      loadExams(classId);
+      loadExams(classId, selectedSection);
     } catch (e) {
       toast.error('Failed to auto-populate exam schedule');
     } finally {
@@ -347,25 +389,46 @@ export function ExamsManager() {
         </div>
       )}
 
-      {/* Class Selector Bar */}
-      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-3 shadow-xs flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-[#52607D]">Class:</span>
-          <Select
-            className="w-48"
-            value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
-          >
-            <option value="">Select class...</option>
-            {classes.map((item) => (
-              <option key={item.id} value={item.id}>{item.class_name}</option>
-            ))}
-          </Select>
+      {/* Class & Section Selector Bar */}
+      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-3 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-[#52607D]">Class:</span>
+            <Select
+              className="w-40"
+              value={selectedClass}
+              onChange={(e) => {
+                setSelectedClass(e.target.value);
+                setSelectedSection('');
+              }}
+            >
+              <option value="">Select class...</option>
+              {classes.map((item) => (
+                <option key={item.id} value={item.id}>Class {item.class_name}</option>
+              ))}
+            </Select>
+          </div>
+
+          {selectedClass && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#52607D]">Section:</span>
+              <Select
+                className="w-44"
+                value={selectedSection}
+                onChange={(e) => setSelectedSection(e.target.value)}
+              >
+                <option value="">All Sections (Default)</option>
+                {availableSections.map((sec) => (
+                  <option key={sec.id} value={sec.id}>Section {sec.name}</option>
+                ))}
+              </Select>
+            </div>
+          )}
         </div>
 
         {selectedClassName && (
           <span className="text-xs font-semibold text-[#2F6F5E] bg-[#EAF3F0] px-3 py-1 rounded-full border border-[#D3E6E0]">
-            Viewing exams for {selectedClassName}
+            Viewing exams for Class {selectedClassName} {selectedSectionName ? `- Sec ${selectedSectionName}` : '(All Sections)'}
           </span>
         )}
       </div>
@@ -401,9 +464,20 @@ export function ExamsManager() {
               <Card key={exam.id} className="flex flex-col justify-between">
                 <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
                   <div>
-                    <CardTitle className="text-sm font-bold text-[#14213D]">
-                      {getExamName(exam)}
-                    </CardTitle>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <CardTitle className="text-sm font-bold text-[#14213D]">
+                        {getExamName(exam)}
+                      </CardTitle>
+                      {exam.section ? (
+                        <span className="text-[10px] font-bold text-[#2F6F5E] bg-[#EAF3F0] px-2 py-0.5 rounded border border-[#D3E6E0]">
+                          Sec {exam.section.name}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium text-[#52607D] bg-[#F0EDE6] px-2 py-0.5 rounded border border-[#E4E1D8]">
+                          All Sections
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-[#8C97AB] mt-0.5">
                       {slots.length} subject test{slots.length === 1 ? '' : 's'} scheduled
                     </p>
@@ -470,8 +544,8 @@ export function ExamsManager() {
                       variant="outline"
                       size="sm"
                       disabled={exam.is_locked || saving}
-                      onClick={() => handleAutoPopulateSubjects(exam.id, selectedClass)}
-                      title="Auto-fill all class subjects into this exam"
+                      onClick={() => handleAutoPopulateSubjects(exam)}
+                      title="Auto-fill all class/section subjects into this exam"
                     >
                       Auto-Fill Subjects
                     </Button>
@@ -506,24 +580,41 @@ export function ExamsManager() {
       {/* Modal: Create Exam */}
       <Modal isOpen={showCreateExam} onClose={() => setShowCreateExam(false)} title="Create New Exam">
         <form onSubmit={handleCreateExam} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-[#14213D] mb-1">Target Class *</label>
-            <Select
-              required
-              value={createForm.class_id}
-              onChange={(e) => setCreateForm({ ...createForm, class_id: e.target.value })}
-            >
-              <option value="">Select class</option>
-              {classes.map((item) => (
-                <option key={item.id} value={item.id}>{item.class_name}</option>
-              ))}
-            </Select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#14213D] mb-1">Target Class *</label>
+              <Select
+                required
+                value={createForm.class_id}
+                onChange={(e) => setCreateForm({ ...createForm, class_id: e.target.value, section_id: '' })}
+              >
+                <option value="">Select class</option>
+                {classes.map((item) => (
+                  <option key={item.id} value={item.id}>Class {item.class_name}</option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#14213D] mb-1">Section Scope (Optional)</label>
+              <Select
+                value={createForm.section_id}
+                onChange={(e) => setCreateForm({ ...createForm, section_id: e.target.value })}
+                disabled={!createForm.class_id}
+              >
+                <option value="">All Sections (Entire Grade)</option>
+                {(classes.find((c) => String(c.id) === String(createForm.class_id))?.sections || []).map((sec) => (
+                  <option key={sec.id} value={sec.id}>Section {sec.name}</option>
+                ))}
+              </Select>
+            </div>
           </div>
+
           <div>
             <label className="block text-xs font-semibold text-[#14213D] mb-1">Exam Name *</label>
             <Input
               required
-              placeholder="e.g. Unit Test 1, Midterm Exam"
+              placeholder="e.g. Unit Test 1, Midterm Exam, Science Stream Assessment"
               value={createForm.name}
               onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
             />
@@ -570,14 +661,16 @@ export function ExamsManager() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#14213D] mb-1">Subject *</label>
+              <label className="block text-xs font-semibold text-[#14213D] mb-1">
+                Subject * {classSubjects.length > 0 && <span className="text-[10px] text-[#2F6F5E] font-normal">(class-filtered)</span>}
+              </label>
               <Select
                 required
                 value={scheduleForm.subject_id}
                 onChange={(e) => setScheduleForm({ ...scheduleForm, subject_id: e.target.value })}
               >
                 <option value="">Select subject</option>
-                {subjects.map((subject) => (
+                {(classSubjects.length > 0 ? classSubjects : subjects).map((subject) => (
                   <option key={subject.id} value={subject.id}>{subject.name}</option>
                 ))}
               </Select>

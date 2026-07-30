@@ -28,6 +28,12 @@ const Exam = db.define(
       references: { model: "classes", key: "id" },
     },
 
+    section_id: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+      references: { model: "sections", key: "id" },
+    },
+
     name: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -49,10 +55,9 @@ const Exam = db.define(
     underscored: true,
     timestamps: true,
     indexes: [
-      { fields: ["school_id"] },
-      { fields: ["class_id"] },
-      { unique: true, fields: ["school_id", "class_id", "name"] },
-      { unique: true, fields: ["school_id", "class_id", "exam_master_id"] },
+      { name: "idx_exams_school_id", fields: ["school_id"] },
+      { name: "idx_exams_class_id", fields: ["class_id"] },
+      { name: "idx_exams_section_id", fields: ["section_id"] },
     ],
   }
 );

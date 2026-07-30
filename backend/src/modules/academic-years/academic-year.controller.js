@@ -40,8 +40,8 @@ export const setCurrentAcademicYear = asyncHandler(async (req, res) => {
  */
 export const getPromotionPreview = asyncHandler(async (req, res) => {
   const school_id = req.user.school_id;
-  const repeat_student_ids = req.body.repeat_student_ids || [];
-  const preview = await getPromotionPreviewService(school_id, { repeat_student_ids });
+  const { repeat_student_ids = [], custom_overrides = {} } = req.body || {};
+  const preview = await getPromotionPreviewService(school_id, { repeat_student_ids, custom_overrides });
   res.json(preview);
 });
 

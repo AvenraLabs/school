@@ -12,6 +12,11 @@ erDiagram
     SCHOOLS ||--o{ ACADEMIC_YEARS : "defines"
     SCHOOLS ||--o{ CLASSES : "has"
     SCHOOLS ||--o{ SUBJECTS : "teaches"
+    SUBJECTS ||--o{ CLASS_SUBJECTS : "mapped to"
+    CLASSES ||--o{ CLASS_SUBJECTS : "default pool"
+    SUBJECTS ||--o{ SECTION_SUBJECT_OVERRIDES : "overridden in"
+    CLASSES ||--o{ SECTION_SUBJECT_OVERRIDES : "for class"
+    SECTIONS ||--o{ SECTION_SUBJECT_OVERRIDES : "per section"
 
     USERS ||--o| TEACHERS : "profile"
     USERS ||--o| STUDENTS : "profile"
@@ -74,6 +79,7 @@ Central multi-tenant organizational entity.
 - `risk_attendance_cutoff` (INT), `risk_academic_cutoff` (INT), `risk_grade_drop_margin` (INT)
 - `library_loan_period_days` (INT), `library_overdue_fine_per_day` (DECIMAL(10,2))
 - `fee_receipt_counter` (INT)
+- `enabled_modules` (JSONB, Non-Null, Default: `{"transport":true,"library":true,"finance":true,"ai_tutor":true,"ai_tools":true,"ai_video":true,"whatsapp":true}`)
 
 #### `users`
 System-wide credential and auth profile entity.
@@ -122,6 +128,26 @@ System-wide credential and auth profile entity.
 - `school_id` (BIGINT, FK -> `schools.id`)
 - `name` (STRING), `code` (STRING)
 - `category` (ENUM: 'theory', 'practical', 'both')
+
+#### `class_subjects` ⬅ NEW
+Default subject pool for a class. All sections in the class study these subjects unless a `section_subject_overrides` row says otherwise.
+- `id` (BIGINT, PK)
+- `school_id` (BIGINT, FK -> `schools.id`, CASCADE)
+- `class_id` (BIGINT, FK -> `classes.id`, CASCADE)
+- `subject_id` (BIGINT, FK -> `subjects.id`, CASCADE)
+- `is_active` (BOOLEAN, Default: true)
+- Unique: `(school_id, class_id, subject_id)`
+
+#### `section_subject_overrides` ⬅ NEW
+Per-section subject overrides — only populated for sections that differ from the class default (e.g. stream splits). Empty = section uses class default.
+- `id` (BIGINT, PK)
+- `school_id` (BIGINT, FK -> `schools.id`, CASCADE)
+- `class_id` (BIGINT, FK -> `classes.id`, CASCADE)
+- `section_id` (BIGINT, FK -> `sections.id`, CASCADE)
+- `subject_id` (BIGINT, FK -> `subjects.id`, CASCADE)
+- `is_included` (BOOLEAN, Non-Null) — `true` = force include; `false` = force exclude from class default
+- Unique: `(school_id, class_id, section_id, subject_id)`
+- **Resolution**: `getSubjectsForSection(school_id, class_id, section_id)` applies overrides over class default
 
 #### `teachers`
 - `id` (BIGINT, PK)
@@ -197,8 +223,8 @@ Maps teachers to specific Class + Section + Subject combinations.
 ### Exams, Marks & Fees
 
 #### `exam_masters`, `exams`, `exam_subjects`, `exam_marks`, `grading_scales`
-- `exam_masters`: Templates for exam series (e.g. "Midterm 2026").
-- `exams`: Specific exam instances per school & class.
+- `exam_masters`: Institution-wide standardized exam templates.
+- `exams`: Specific exam term instances for a class (and optional section stream). Columns: `id`, `school_id`, `academic_year_id`, `class_id`, `section_id` (Nullable FK -> `sections.id`), `name`, `exam_master_id`, `is_locked`.
 - `exam_subjects`: Max marks & syllabus for each subject in an exam.
 - `exam_marks`: Score per student, subject, and exam. Unique `[exam_id, subject_id, student_id]`.
 - `grading_scales`: Grade boundaries (e.g. 'A+', min percentage: 90, color_code).

@@ -1,6 +1,7 @@
 import express from "express";
 import { protect } from "../../shared/middlewares/auth.js";
 import { allowRoles } from "../../shared/middlewares/role.js";
+import { requireModuleEnabled } from "../../shared/middlewares/requireModule.js";
 import { validate } from "../../shared/middlewares/validate.js";
 import * as schema from "./transport.schema.js";
 import * as controller from "./transport.controller.js";
@@ -8,6 +9,7 @@ import * as controller from "./transport.controller.js";
 const router = express.Router();
 
 router.use(protect);
+router.use(requireModuleEnabled("transport"));
 
 /* ==========================================
    1️⃣ ADMIN ONLY: DRIVERS & VEHICLES CRUD

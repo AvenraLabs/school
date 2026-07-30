@@ -6,6 +6,7 @@ import Class from "../classes/classes.model.js";
 import Section from "../sections/section.model.js";
 import Teacher from "../teachers/teacher.model.js";
 import School from "../schools/school.model.js";
+import logger from "../../shared/logger.js";
 
 /**
  * Validates a phone number.
@@ -100,6 +101,7 @@ export const sendTemplateMessage = async ({
     return { success: false, status: "failed", error: errorMsg };
   }
 
+  const startTime = Date.now();
   try {
     const url = `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
     const payload = {
@@ -122,6 +124,15 @@ export const sendTemplateMessage = async ({
     });
 
     const wamid = response.data?.messages?.[0]?.id || null;
+    const duration_ms = Date.now() - startTime;
+
+    logger.integration({
+      integration: "whatsapp",
+      action: `send_template:${templateName}`,
+      status: "success",
+      duration_ms,
+      meta: { phone: cleanedPhone, schoolId, wamid },
+    });
 
     await WhatsappLog.create({
       wamid,
@@ -142,8 +153,16 @@ export const sendTemplateMessage = async ({
   } catch (error) {
     const errorData = error.response ? error.response.data : error.message;
     const errorString = typeof errorData === "object" ? JSON.stringify(errorData) : String(errorData);
+    const duration_ms = Date.now() - startTime;
 
-    console.error(`[WhatsApp] Failed to send template message to ${cleanedPhone}:`, errorData);
+    logger.integration({
+      integration: "whatsapp",
+      action: `send_template:${templateName}`,
+      status: "failure",
+      duration_ms,
+      error: errorString,
+      meta: { phone: cleanedPhone, schoolId },
+    });
 
     await WhatsappLog.create({
       status: "failed",
