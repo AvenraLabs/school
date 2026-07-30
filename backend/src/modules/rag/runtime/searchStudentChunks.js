@@ -4,20 +4,26 @@ import { getOrGetCollection } from "../ingest/storeChunks.js";
 export async function searchStudentChunks({ question, board, grade, subject, limit = 5 }) {
   if (!question) return { chunks: [], metadatas: [] };
 
-  const collection = await getOrGetCollection();
-  const ai = getAiClient();
-  const EMBEDDING_MODEL = getEmbeddingModel();
+  let queryVector = [];
+  try {
+    const collection = await getOrGetCollection();
+    const ai = getAiClient();
+    const EMBEDDING_MODEL = getEmbeddingModel();
 
-  const embRes = await ai.models.embedContent({
-    model: EMBEDDING_MODEL,
-    contents: question,
-  });
+    const embRes = await ai.models.embedContent({
+      model: EMBEDDING_MODEL,
+      contents: question,
+    });
 
-  const queryVector =
-    embRes.embedding?.values ||
-    embRes.embeddings?.[0]?.values ||
-    embRes.values ||
-    [];
+    queryVector =
+      embRes.embedding?.values ||
+      embRes.embeddings?.[0]?.values ||
+      embRes.values ||
+      [];
+  } catch (embErr) {
+    console.warn("[searchStudentChunks] Embedding API call failed:", embErr.message || embErr);
+    return { chunks: [], metadatas: [] };
+  }
 
   if (!queryVector || queryVector.length === 0) {
     return { chunks: [], metadatas: [] };

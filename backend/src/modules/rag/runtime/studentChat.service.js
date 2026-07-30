@@ -102,58 +102,65 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
   let tokensUsed = 0;
   let sourceType = "rag";
 
-  if (isGreeting) {
-    // Direct Greeting Response - no RAG search or disclaimers
-    sourceType = "greeting";
-    answer = `Hello! I am your AI Study Assistant for Grade ${grade}. How can I help you with your studies today?`;
-    tokensUsed = 0;
-  } else if (isLanguage) {
-    // Language direct explanation route
-    sourceType = "direct_language";
-    const prompt = buildLanguageDirectPrompt({ question, grade, subject });
-    const res = await generateAnswer(prompt);
-    answer = res.text;
-    tokensUsed = res.tokensUsed;
-  } else {
-    // Core Subject RAG Route: Always search RAG chunks matching student's class and board
-    const { chunks, metadatas } = await searchStudentChunks({
-      question,
-      board,
-      grade,
-      subject,
-      limit: 5,
-    });
-
-    if (chunks && chunks.length > 0) {
-      sourceType = "rag";
-      const contextText = chunks.join("\n\n");
-      const prompt = buildStudentRagPrompt({
+  try {
+    if (isGreeting) {
+      // Direct Greeting Response - no RAG search or disclaimers
+      sourceType = "greeting";
+      answer = `Hello! I am your AI Study Assistant for Grade ${grade}. How can I help you with your studies today?`;
+      tokensUsed = 0;
+    } else if (isLanguage) {
+      // Language direct explanation route
+      sourceType = "direct_language";
+      const prompt = buildLanguageDirectPrompt({ question, grade, subject });
+      const res = await generateAnswer(prompt);
+      answer = res.text;
+      tokensUsed = res.tokensUsed;
+    } else {
+      // Core Subject RAG Route: Always search RAG chunks matching student's class and board
+      const { chunks, metadatas } = await searchStudentChunks({
         question,
-        contextText,
-        metadatas,
+        board,
         grade,
         subject,
+        limit: 5,
       });
 
-      const res = await generateAnswer(prompt);
-      answer = res.text;
-      tokensUsed = res.tokensUsed;
+      if (chunks && chunks.length > 0) {
+        sourceType = "rag";
+        const contextText = chunks.join("\n\n");
+        const prompt = buildStudentRagPrompt({
+          question,
+          contextText,
+          metadatas,
+          grade,
+          subject,
+        });
 
-      sources = Array.from(
-        new Set(
-          metadatas.map(
-            (m) => `${m.chapterTitle || "Chapter " + m.chapter} (Pages ${m.pageStart || 1}-${m.pageEnd || 1})`
+        const res = await generateAnswer(prompt);
+        answer = res.text;
+        tokensUsed = res.tokensUsed;
+
+        sources = Array.from(
+          new Set(
+            metadatas.map(
+              (m) => `${m.chapterTitle || "Chapter " + m.chapter} (Pages ${m.pageStart || 1}-${m.pageEnd || 1})`
+            )
           )
-        )
-      );
-    } else {
-      // Fallback directly to Gemini if vector matching finds no textbook chunks
-      sourceType = "direct_curriculum_fallback";
-      const prompt = buildGeneralCurriculumPrompt({ question, grade, subject, board });
-      const res = await generateAnswer(prompt);
-      answer = res.text;
-      tokensUsed = res.tokensUsed;
+        );
+      } else {
+        // Fallback directly to Gemini if vector matching finds no textbook chunks
+        sourceType = "direct_curriculum_fallback";
+        const prompt = buildGeneralCurriculumPrompt({ question, grade, subject, board });
+        const res = await generateAnswer(prompt);
+        answer = res.text;
+        tokensUsed = res.tokensUsed;
+      }
     }
+  } catch (aiErr) {
+    console.error("[processStudentChatMessage] AI generation error:", aiErr.message || aiErr);
+    answer = "I'm sorry, I encountered a temporary connection issue while answering your question. Please try again in a few moments!";
+    sourceType = "direct_curriculum_fallback";
+    tokensUsed = 0;
   }
 
   // Record assistant response message in database
