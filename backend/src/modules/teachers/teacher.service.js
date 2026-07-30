@@ -132,7 +132,7 @@ export const listTeachersService = async ({ school_id, query }) => {
     include: [
       {
         model: User,
-        attributes: ["id", "username", "name", "is_active"],
+        attributes: ["id", "username", "name", "avatar_url", "is_active"],
       },
     ],
     order: [["created_at", "DESC"]],
@@ -148,7 +148,7 @@ export const listTeacherOptionsService = async ({ school_id }) => {
     include: [
       {
         model: User,
-        attributes: ["id", "username", "name", "is_active"],
+        attributes: ["id", "username", "name", "avatar_url", "is_active"],
       },
     ],
     attributes: ["id", "user_id", "employee_id", "approval_status", "is_active"],

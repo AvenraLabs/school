@@ -184,7 +184,7 @@ export const listStudentsService = async ({ school_id, query }) => {
     distinct: true,
     subQuery: false,
     include: [
-      { model: User, attributes: ["id", "username", "name", "phone", "is_active"] },
+      { model: User, attributes: ["id", "username", "name", "phone", "avatar_url", "is_active"] },
       { model: Class, attributes: ["id", "class_name"] },
       { model: Section, attributes: ["id", "name"] },
     ],
@@ -216,7 +216,7 @@ export const listStudentOptionsService = async ({ school_id, query }) => {
   return Student.findAll({
     where,
     include: [
-      { model: User, attributes: ["id", "username", "name", "is_active"] },
+      { model: User, attributes: ["id", "username", "name", "avatar_url", "is_active"] },
       { model: Class, attributes: ["id", "class_name"] },
       { model: Section, attributes: ["id", "name"] },
     ],
@@ -249,7 +249,7 @@ export const listStudentsForTeacherSectionService = async ({ user, query }) => {
   const students = await Student.findAll({
     where,
     include: [
-      { model: User, attributes: ["id", "username", "name"] },
+      { model: User, attributes: ["id", "username", "name", "avatar_url"] },
       { model: Class, attributes: ["id", "class_name"] },
       { model: Section, attributes: ["id", "name"] },
     ],

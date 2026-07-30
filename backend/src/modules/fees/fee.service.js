@@ -294,6 +294,8 @@ export const getStudentFeesService = async (school_id, student_id) => {
   const totalPaid = studentFees.reduce((acc, f) => acc + Number(f.paid_amount), 0);
   const totalBalance = studentFees.reduce((acc, f) => acc + Number(f.balance_amount), 0);
 
+  const school = await School.findByPk(school_id, { attributes: ["school_name"] });
+
   return {
     student: {
       id: student.id,
@@ -307,6 +309,7 @@ export const getStudentFeesService = async (school_id, student_id) => {
       class_id: student.class_id,
       class_name: student.class?.class_name,
       section_name: student.section?.name,
+      school_name: school?.school_name,
     },
     summary: {
       total_fee: totalFee,

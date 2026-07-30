@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { studentsAPI, teachersAPI, classesAPI } from '../../api';
 import { Input, Select } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { UserAvatar } from './UserAvatar';
 import { Search, UserCheck, GraduationCap, X } from 'lucide-react';
 
 export function BorrowerSearchInput({
@@ -77,9 +78,12 @@ export function BorrowerSearchInput({
 
     return (
       <div className={`p-3 bg-[#EAF3F0] border border-[#D3E6E0] rounded-[8px] flex items-center justify-between ${className}`}>
-        <div>
-          <span className="font-bold text-xs text-[#2F6F5E] block">{borrowerName}</span>
-          <span className="text-[10px] text-[#52607D] font-mono">{borrowerMeta}</span>
+        <div className="flex items-center gap-2.5">
+          <UserAvatar src={selectedBorrower.user?.avatar_url || selectedBorrower.avatar_url} name={borrowerName} fallbackChar={borrowerType === 'teacher' ? 'T' : 'S'} size="w-8 h-8" />
+          <div>
+            <span className="font-bold text-xs text-[#2F6F5E] block">{borrowerName}</span>
+            <span className="text-[10px] text-[#52607D] font-mono">{borrowerMeta}</span>
+          </div>
         </div>
         {onClearBorrower && (
           <Button variant="ghost" size="sm" icon={X} onClick={onClearBorrower}>
@@ -148,11 +152,14 @@ export function BorrowerSearchInput({
               onClick={() => onSelectBorrower && onSelectBorrower(b)}
               className="p-3 hover:bg-[#EAF3F0] cursor-pointer flex items-center justify-between transition-colors"
             >
-              <div>
-                <span className="font-semibold text-xs text-[#14213D] block">{b.user?.name || b.name}</span>
-                {b.user?.username && (
-                  <span className="text-[10px] text-[#2F6F5E] font-mono font-bold">@{b.user.username}</span>
-                )}
+              <div className="flex items-center gap-2.5">
+                <UserAvatar src={b.user?.avatar_url || b.avatar_url} name={b.user?.name || b.name} fallbackChar={borrowerType === 'teacher' ? 'T' : 'S'} size="w-7 h-7" />
+                <div>
+                  <span className="font-semibold text-xs text-[#14213D] block">{b.user?.name || b.name}</span>
+                  {b.user?.username && (
+                    <span className="text-[10px] text-[#2F6F5E] font-mono font-bold">@{b.user.username}</span>
+                  )}
+                </div>
               </div>
               <span className="text-[10px] text-[#8C97AB] font-mono">
                 {b.admission_no || b.employee_id || (b.roll_no ? `Roll: ${b.roll_no}` : `ID: ${b.id}`)}

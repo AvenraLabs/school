@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import { formatEmployeeId } from '../../utils/format';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { EmptyState } from '../../components/common/EmptyState';
+import { UserAvatar } from '../../components/common/UserAvatar';
 import { Button } from '../../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import {
@@ -16,38 +17,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-
-function getDaysInMonth(year, month) {
-  return new Date(year, month + 1, 0).getDate();
-}
-
-function getFirstDayOfMonth(year, month) {
-  return new Date(year, month, 1).getDay();
-}
-
-function UserAvatar({ src, name, fallbackChar = 'U', size = 'w-7 h-7' }) {
-  const [imgError, setImgError] = useState(false);
-  const initial = name ? name[0].toUpperCase() : fallbackChar;
-
-  if (!src || imgError) {
-    return (
-      <div className={`${size} rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-xs border border-[#D3E6E0] overflow-hidden shrink-0`}>
-        {initial}
-      </div>
-    );
-  }
-
-  return (
-    <div className={`${size} rounded-full bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-xs border border-[#D3E6E0] overflow-hidden shrink-0`}>
-      <img
-        src={getApiAssetUrl(src)}
-        alt={name || 'Avatar'}
-        className="w-full h-full object-cover"
-        onError={() => setImgError(true)}
-      />
-    </div>
-  );
-}
 
 export function SchoolRegistry() {
   const toast = useToast();

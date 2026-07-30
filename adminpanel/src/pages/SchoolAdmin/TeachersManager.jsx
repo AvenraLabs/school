@@ -3,6 +3,7 @@ import { teachersAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { EmptyState } from '../../components/common/EmptyState';
+import { UserAvatar } from '../../components/common/UserAvatar';
 import { Button } from '../../components/ui/Button';
 import { Textarea } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
@@ -208,7 +209,12 @@ export function TeachersManager() {
                   <tr key={t.id} className="hover:bg-[#FAFAF8] transition-colors">
                     <td className="px-4 py-2.5 font-mono font-semibold">{t.employee_id || '—'}</td>
                     <td className="px-4 py-2.5 font-mono text-[#52607D]">{t.user?.username || '—'}</td>
-                    <td className="px-4 py-2.5 font-medium">{t.user?.name || '—'}</td>
+                    <td className="px-4 py-2.5 font-medium">
+                      <div className="flex items-center gap-2">
+                        <UserAvatar src={t.user?.avatar_url} name={t.user?.name} fallbackChar="T" />
+                        <span>{t.user?.name || '—'}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-2.5">
                       <StatusBadge status={t.approval_status || 'pending'} size="sm" />
                     </td>

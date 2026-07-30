@@ -3,6 +3,7 @@ import { studentsAPI, classesAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { EmptyState } from '../../components/common/EmptyState';
+import { UserAvatar } from '../../components/common/UserAvatar';
 import { Button } from '../../components/ui/Button';
 import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
@@ -300,7 +301,12 @@ export function StudentsManager() {
                     <td className="px-4 py-2.5 font-mono font-semibold">{s.roll_no || '—'}</td>
                     <td className="px-4 py-2.5 font-mono text-[#52607D]">{s.admission_no || '—'}</td>
                     <td className="px-4 py-2.5 font-mono">{s.user?.username || '—'}</td>
-                    <td className="px-4 py-2.5 font-medium">{s.user?.name || '—'}</td>
+                    <td className="px-4 py-2.5 font-medium">
+                      <div className="flex items-center gap-2">
+                        <UserAvatar src={s.user?.avatar_url} name={s.user?.name} fallbackChar="S" />
+                        <span>{s.user?.name || '—'}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-2.5">
                       {s.class?.class_name ? `${s.class.class_name} - ${s.section?.name || ''}` : '—'}
                     </td>

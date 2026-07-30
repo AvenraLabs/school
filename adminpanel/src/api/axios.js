@@ -12,9 +12,9 @@ export const getApiAssetUrl = (path) => {
   if (!path) return '';
   if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
 
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  let cleanPath = path.startsWith('/') ? path : `/${path}`;
   if (cleanPath.startsWith('/uploads/')) {
-    return `${API_ORIGIN_URL}${cleanPath}`;
+    cleanPath = `/api${cleanPath}`;
   }
   return cleanPath.startsWith('/api')
     ? `${API_ORIGIN_URL}${cleanPath}`

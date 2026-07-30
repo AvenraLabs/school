@@ -63,21 +63,36 @@ export const updateLibrarySettingsService = async (school_id, payload) => {
    BOOKS
    ============================================================================ */
 
+/** Helper to construct book status and availability WHERE condition */
+const buildBookStatusWhere = (status) => {
+  if (status === "available") {
+    return { status: "active", available_copies: { [Op.gt]: 0 } };
+  }
+  if (status === "issued") {
+    return { status: "active", available_copies: { [Op.lt]: db.col("total_copies") } };
+  }
+  if (status === "archived") {
+    return { status: "archived" };
+  }
+  if (status === "all") {
+    return {};
+  }
+  if (status === "active" || !status) {
+    return { status: "active" };
+  }
+  return { status };
+};
+
 export const listBooksService = async (school_id, query = {}) => {
   const { limit, offset } = getPagination(query);
-  const where = { school_id };
+  const statusCond = buildBookStatusWhere(query.status);
+  const where = { school_id, ...statusCond };
 
   if (query.search) {
     where[Op.or] = [
       { book_name: { [Op.iLike]: `%${query.search}%` } },
       { book_no: { [Op.iLike]: `%${query.search}%` } },
     ];
-  }
-  if (query.status) {
-    where.status = query.status;
-  } else {
-    // By default only show active books
-    where.status = "active";
   }
 
   const { count, rows } = await Book.findAndCountAll({
@@ -549,8 +564,8 @@ export const getStudentIssueSummaryService = async (school_id, student_id) => {
 
 export const reportBooksService = async (school_id, query = {}) => {
   const { limit, offset } = getPagination(query);
-  const where = { school_id };
-  if (query.status) where.status = query.status;
+  const statusCond = buildBookStatusWhere(query.status);
+  const where = { school_id, ...statusCond };
 
   const { count, rows } = await Book.findAndCountAll({
     where,
