@@ -88,6 +88,28 @@ export const getDailyAttendanceService = async ({
     }
   }
 
+  // 4. Check if WhatsApp absent alerts were already sent for any student in this class today
+  const WhatsappLog = (await import("../whatsapp/whatsapp-log.model.js")).default;
+  const studentPhones = students
+    .map((s) => s.user?.phone || s.emergency_contact)
+    .filter(Boolean)
+    .map((p) => "91" + String(p).replace(/\D/g, "").slice(-10));
+
+  let whatsappSentToday = false;
+  if (studentPhones.length > 0) {
+    const sentLog = await WhatsappLog.findOne({
+      where: {
+        school_id,
+        status: "success",
+        phone: { [Op.in]: studentPhones },
+        created_at: {
+          [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)),
+        },
+      },
+    });
+    whatsappSentToday = !!sentLog;
+  }
+
   return {
     students: students.map((s) => {
       const record = records.find((r) => String(r.student_id) === String(s.id));
@@ -102,6 +124,7 @@ export const getDailyAttendanceService = async ({
     last_updated_by: lastUpdatedBy,
     last_updated_at: lastUpdatedAt,
     exists: records.length > 0,
+    whatsapp_sent_today: whatsappSentToday,
   };
 };
 
@@ -360,6 +383,7 @@ export const sendAbsentWhatsAppService = async ({
   return {
     total_absent: absentRecords.length,
     sent_count: sentCount,
+    whatsapp_sent_today: true,
     message: `Sent WhatsApp absent alerts to ${sentCount} parent(s).`,
   };
 };

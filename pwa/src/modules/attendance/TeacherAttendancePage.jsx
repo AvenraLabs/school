@@ -199,6 +199,7 @@ export default function TeacherAttendancePage() {
 
         const data = res?.data || res;
         setStudents(data.students || []);
+        setWhatsappSentToday(Boolean(data.whatsapp_sent_today));
         setAuditInfo({
           lastUpdatedBy: data.last_updated_by || "",
           lastUpdatedAt: data.last_updated_at ? new Date(data.last_updated_at).toLocaleString() : "",
@@ -298,6 +299,7 @@ export default function TeacherAttendancePage() {
 
   // 8️⃣ Manual WhatsApp Absent Alerts
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [whatsappSentToday, setWhatsappSentToday] = useState(false);
   const [openConfirmModal, setOpenConfirmModal] = useState(false);
 
   const absentStudentsCount = useMemo(() => {
@@ -309,7 +311,7 @@ export default function TeacherAttendancePage() {
   }, [date]);
 
   const handleSendAbsentWhatsApp = async () => {
-    if (!selectedClassId || !selectedSectionId || !date || !isToday) return;
+    if (!selectedClassId || !selectedSectionId || !date || !isToday || whatsappSentToday) return;
 
     try {
       setSendingWhatsApp(true);
@@ -322,6 +324,7 @@ export default function TeacherAttendancePage() {
       });
 
       const data = res?.data?.data || res?.data || res;
+      setWhatsappSentToday(true);
       setAlertMsg({
         text: data.message || `Sent WhatsApp alerts to ${data.sent_count || 0} parent(s).`,
         type: "success",
@@ -348,7 +351,7 @@ export default function TeacherAttendancePage() {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 3, pb: 12 }}>
+    <Container maxWidth="sm" sx={{ mt: 3, pb: isToday && absentStudentsCount > 0 ? 28 : 20 }}>
       <Stack spacing={3}>
         {/* Page Title */}
         <Typography variant="h5" fontWeight="bold">
@@ -655,6 +658,11 @@ export default function TeacherAttendancePage() {
         )}
       </Stack>
 
+      {/* Spacer to prevent bottom fixed action bar overlap */}
+      {students.length > 0 && (
+        <Box sx={{ height: isToday && absentStudentsCount > 0 ? 140 : 80 }} />
+      )}
+
       {/* Sticky Bottom Action Bar */}
       {students.length > 0 && (
         <Box
@@ -694,27 +702,43 @@ export default function TeacherAttendancePage() {
               {/* Manual WhatsApp Alert Button for Absent Students */}
               {isToday && absentStudentsCount > 0 && (
                 <Button
-                  variant="outlined"
+                  variant={whatsappSentToday ? "contained" : "outlined"}
                   color="success"
                   onClick={() => setOpenConfirmModal(true)}
                   fullWidth
-                  disabled={sendingWhatsApp}
-                  startIcon={sendingWhatsApp ? <CircularProgress size={18} /> : <Message />}
+                  disabled={sendingWhatsApp || whatsappSentToday}
+                  startIcon={
+                    sendingWhatsApp ? (
+                      <CircularProgress size={18} />
+                    ) : whatsappSentToday ? (
+                      <CheckCircle />
+                    ) : (
+                      <Message />
+                    )
+                  }
                   sx={{
                     py: 1.1,
                     borderRadius: "14px",
                     fontWeight: 700,
                     fontSize: "0.85rem",
-                    borderColor: "#25D366",
-                    color: "#128C7E",
+                    borderColor: whatsappSentToday ? "transparent" : "#25D366",
+                    color: whatsappSentToday ? "#0f5132" : "#128C7E",
+                    bgcolor: whatsappSentToday ? "#d1e7dd !important" : "transparent",
                     "&:hover": {
                       borderColor: "#128C7E",
                       bgcolor: "rgba(37, 211, 102, 0.08)",
+                    },
+                    "&.Mui-disabled": {
+                      color: "#0f5132",
+                      bgcolor: "#d1e7dd !important",
+                      borderColor: "transparent",
                     },
                   }}
                 >
                   {sendingWhatsApp
                     ? "Sending Alerts..."
+                    : whatsappSentToday
+                    ? "WhatsApp Alert Already Sent Today"
                     : `Send WhatsApp Alert (${absentStudentsCount} Absent ${absentStudentsCount === 1 ? "Parent" : "Parents"})`}
                 </Button>
               )}

@@ -30,23 +30,29 @@ export default function AiChatPage() {
       sx={{
         display: "flex",
         flexDirection: "column",
-        flex: 1,
+        height: "calc(100dvh - 116px)",
+        maxHeight: "-webkit-fill-available",
         minHeight: 0,
         bgcolor: "#F5EDE3", // Brand cream background
         overflow: "hidden",
+        position: "relative",
       }}
     >
-      {/* Header */}
+      {/* Sticky Top Header */}
       <Box
         sx={{
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+          flexShrink: 0,
           px: 2.5,
-          py: 2,
+          py: 1.8,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           borderBottom: "1px solid rgba(0,0,0,0.06)",
           bgcolor: "background.paper",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.03)",
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
@@ -171,6 +177,7 @@ export default function AiChatPage() {
       {/* Input container */}
       <Box
         sx={{
+          flexShrink: 0,
           p: 2,
           bgcolor: "#F5EDE3",
           borderTop: "1px solid rgba(0,0,0,0.04)",
