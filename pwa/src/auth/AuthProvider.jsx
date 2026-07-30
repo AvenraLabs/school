@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { jwtDecode } from "jwt-decode";
 import { setupAxiosInterceptors } from "../api/axios.interceptors";
 import api from "../api/axios";
@@ -15,6 +15,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [accounts, setAccounts] = useState(() => getSavedAccounts());
+  // Stable ref so interceptor always calls the latest logout without stale closure
+  const logoutRef = useRef(null);
 
   // ---------- helpers ----------
   function decodeToken(jwt) {
@@ -50,14 +52,17 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const accs = getSavedAccounts();
     const activeId = localStorage.getItem("activeUserId");
-    
+
     const cleanedAccs = {};
     let activeAccount = null;
 
     Object.keys(accs).forEach((key) => {
       const acc = accs[key];
       const decoded = decodeToken(acc.token);
-      if (decoded && !isTokenExpired(decoded) && validateToken(acc.token)) {
+      // Keep account if access token is valid OR if there's a refresh token to restore the session
+      const hasValidAccess = decoded && !isTokenExpired(decoded) && validateToken(acc.token);
+      const hasRefreshToken = Boolean(acc.refreshToken || localStorage.getItem("refreshToken"));
+      if (hasValidAccess || hasRefreshToken) {
         cleanedAccs[key] = acc;
         if (String(key) === String(activeId)) {
           activeAccount = acc;
@@ -68,23 +73,47 @@ export function AuthProvider({ children }) {
     saveAccounts(cleanedAccs);
 
     if (activeAccount) {
-      setToken(activeAccount.token);
-      setUser(activeAccount.user || decodeToken(activeAccount.token));
-      localStorage.setItem("token", activeAccount.token);
-      localStorage.setItem("activeUserId", activeAccount.user.id);
+      // If access token still valid, restore immediately
+      const decoded = decodeToken(activeAccount.token);
+      if (decoded && !isTokenExpired(decoded)) {
+        setToken(activeAccount.token);
+        setUser(activeAccount.user || decoded);
+        localStorage.setItem("token", activeAccount.token);
+        localStorage.setItem("activeUserId", activeAccount.user?.id || decoded.id);
+        if (activeAccount.refreshToken) {
+          localStorage.setItem("refreshToken", activeAccount.refreshToken);
+        }
+      } else {
+        // Access token expired but refresh token exists — keep user state so interceptor can silently refresh
+        const userDecoded = activeAccount.user || decoded;
+        if (userDecoded) {
+          setUser(userDecoded);
+          setToken(activeAccount.token); // stale but interceptor will replace it on first 401
+          localStorage.setItem("token", activeAccount.token);
+          localStorage.setItem("activeUserId", userDecoded.id);
+          if (activeAccount.refreshToken) {
+            localStorage.setItem("refreshToken", activeAccount.refreshToken);
+          }
+        }
+      }
     } else {
       const remainingIds = Object.keys(cleanedAccs);
       if (remainingIds.length > 0) {
         const firstId = remainingIds[0];
         const acc = cleanedAccs[firstId];
+        const decoded = decodeToken(acc.token);
         setToken(acc.token);
-        setUser(acc.user || decodeToken(acc.token));
+        setUser(acc.user || decoded);
         localStorage.setItem("token", acc.token);
-        localStorage.setItem("activeUserId", acc.user.id);
+        localStorage.setItem("activeUserId", acc.user?.id || decoded?.id);
+        if (acc.refreshToken) {
+          localStorage.setItem("refreshToken", acc.refreshToken);
+        }
       } else {
         localStorage.removeItem("token");
         localStorage.removeItem("activeUserId");
         localStorage.removeItem("accounts");
+        localStorage.removeItem("refreshToken");
         setToken(null);
         setUser(null);
       }
@@ -92,26 +121,36 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  // ---------- axios interceptors (ONCE) ----------
+  // ---------- axios interceptors (ONCE, stable ref avoids stale closure) ----------
+  // Keep logoutRef current so interceptor always calls the latest logout
+
   useEffect(() => {
     setupAxiosInterceptors({
-      onLogout: logout,
-      onTokenRefresh: (newToken) => {
+      onLogout: () => logoutRef.current?.(),
+      onTokenRefresh: (newToken, newRefreshToken) => {
         if (newToken && validateToken(newToken)) {
           const decoded = decodeToken(newToken);
           if (decoded && !isTokenExpired(decoded)) {
             const accs = getSavedAccounts();
-            accs[decoded.id] = { token: newToken, user: decoded };
+            accs[decoded.id] = {
+              ...accs[decoded.id],
+              token: newToken,
+              ...(newRefreshToken ? { refreshToken: newRefreshToken } : {}),
+              user: decoded,
+            };
             saveAccounts(accs);
             localStorage.setItem("token", newToken);
             localStorage.setItem("activeUserId", decoded.id);
+            if (newRefreshToken) {
+              localStorage.setItem("refreshToken", newRefreshToken);
+            }
             setToken(newToken);
             setUser(decoded);
           }
         }
       },
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- hydrate user profile (name/avatar) ----------
   useEffect(() => {
@@ -279,6 +318,7 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
+    logoutRef.current = logout; // keep ref current
     try {
       setError(null);
       await logoutApi();

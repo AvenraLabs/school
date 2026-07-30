@@ -111,7 +111,7 @@ export function setupAxiosInterceptors({ onLogout, onTokenRefresh }) {
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
 
           if (onTokenRefresh) {
-            onTokenRefresh(newToken);
+            onTokenRefresh(newToken, newRefreshToken);
           }
 
           processQueue(null, newToken);
