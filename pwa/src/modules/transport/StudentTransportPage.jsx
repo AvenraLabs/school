@@ -81,7 +81,7 @@ export default function StudentTransportPage() {
   // Bus change request
   const [vehiclesList, setVehiclesList] = useState([]);
   const [showRequestModal, setShowRequestModal] = useState(false);
-  const [requestForm, setRequestForm] = useState({ requested_vehicle_id: "", pickup_point: "" });
+  const [requestForm, setRequestForm] = useState({ requested_vehicle_id: "" });
   const [requestLoading, setRequestLoading] = useState(false);
   const [requestSuccess, setRequestSuccess] = useState(false);
 
@@ -499,7 +499,7 @@ export default function StudentTransportPage() {
   const openRequestModal = async () => {
     setShowRequestModal(true);
     setRequestSuccess(false);
-    setRequestForm({ requested_vehicle_id: "", pickup_point: "" });
+    setRequestForm({ requested_vehicle_id: "" });
     try {
       const res = await api.get("/student/transport/vehicles");
       if (res.data?.success) setVehiclesList(res.data.data || []);
@@ -512,8 +512,7 @@ export default function StudentTransportPage() {
     try {
       const res = await api.post("/student/transport/requests", {
         student_id: studentId,
-        requested_vehicle_id: Number(requestForm.requested_vehicle_id),
-        pickup_point: requestForm.pickup_point
+        requested_vehicle_id: Number(requestForm.requested_vehicle_id)
       });
       if (res.data?.success) {
         setRequestSuccess(true);
@@ -601,17 +600,7 @@ export default function StudentTransportPage() {
               )}
             </Box>
 
-            {transportInfo.pickup_point && (
-              <>
-                <Divider sx={{ my: 2 }} />
-                <Box>
-                  <Typography variant="caption" color="textSecondary" fontWeight="bold">MY PICKUP POINT</Typography>
-                  <Typography variant="body2" fontWeight="bold" color="textPrimary">
-                    {transportInfo.pickup_point}
-                  </Typography>
-                </Box>
-              </>
-            )}
+
           </Card>
 
           {/* Live Trip Card */}
@@ -830,15 +819,7 @@ export default function StudentTransportPage() {
                   </Select>
                 </FormControl>
 
-                <TextField
-                  label="Pickup Point"
-                  required
-                  fullWidth
-                  size="small"
-                  value={requestForm.pickup_point}
-                  onChange={(e) => setRequestForm({ ...requestForm, pickup_point: e.target.value })}
-                  placeholder="e.g. Lakshmi Mills Junction"
-                />
+
 
                 <DialogActions sx={{ px: 0, pb: 0 }}>
                   <Button onClick={() => setShowRequestModal(false)} disabled={requestLoading}>Cancel</Button>

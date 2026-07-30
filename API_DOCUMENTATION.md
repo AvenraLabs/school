@@ -140,18 +140,19 @@ CRUD for the school-wide subject catalog.
 
 ## 7. Library Management (`/api/library`)
 
-- `GET /books` | `POST /books` | `PATCH /books/:id` — Manage library books catalog.
+- `GET /books` | `POST /books` | `PATCH /books/:id` — Manage library books catalog (Book No, Book Title, Total Copies Count, Cover Photo).
 - `GET /issues` | `POST /issues` | `PATCH /issues/:id/return` — Issue/return book.
 
 ---
 
 ## 8. Transport & Live Tracking (`/api/transport`)
 
-- `GET /drivers` | `POST /drivers` | `GET /vehicles` | `POST /vehicles`
-- `GET /allocations` | `POST /allocations` — Assign students to bus routes.
-- `POST /trips/start` | `POST /trips/end` | `POST /trips/location` — Live GPS logging.
-- `GET /trips/active` — Active trip live location stream.
-- `GET /requests` | `POST /requests` | `PATCH /requests/:id/status` — Transport requests.
+- `GET /admin/transport/drivers` | `POST /admin/transport/drivers` | `PUT /admin/transport/drivers/:id` — Manage drivers and password resets.
+- `GET /admin/transport/vehicles` | `POST /admin/transport/vehicles` | `PUT /admin/transport/vehicles/:id` — Manage school bus fleet.
+- `GET /admin/transport/assignments` | `POST /admin/transport/assignments` — Allocate students to bus vehicles.
+- `GET /admin/transport/requests` | `POST /admin/transport/requests/:id/:action` — Admin desk to list, approve, or reject student bus change requests.
+- `POST /driver/transport/trips/start` | `POST /driver/transport/trips/:id/stop` | `POST /driver/transport/trips/:id/location` — Driver live GPS tracking.
+- `GET /student/transport/me` | `POST /student/transport/requests` — Student bus info and bus assignment requests.
 
 ---
 

@@ -29,6 +29,10 @@ export const listDriversService = async ({ school_id, query }) => {
         model: User,
         attributes: ["id", "name", "username", "phone", "is_active"],
       },
+      {
+        model: Vehicle,
+        attributes: ["id", "vehicle_number", "vehicle_name"],
+      },
     ],
     limit,
     offset,
@@ -253,7 +257,11 @@ export const listRequestsService = async ({ school_id, query }) => {
     include: [
       {
         model: Student,
-        include: [{ model: User, attributes: ["id", "name"] }],
+        include: [
+          { model: User, attributes: ["id", "name"] },
+          { model: Class, attributes: ["id", "class_name"] },
+          { model: Section, attributes: ["id", "name"] },
+        ],
       },
       {
         model: Vehicle,

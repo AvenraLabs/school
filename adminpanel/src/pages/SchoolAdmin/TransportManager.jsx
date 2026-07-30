@@ -19,7 +19,12 @@ import {
   ChevronLeft,
   ChevronRight,
   UserPlus,
-  Trash2
+  Trash2,
+  KeyRound,
+  CheckCircle,
+  XCircle,
+  Clock,
+  MessageSquare
 } from 'lucide-react';
 
 export function TransportManager() {
@@ -34,6 +39,9 @@ export function TransportManager() {
   const [trips, setTrips] = useState([]);
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [requestFilter, setRequestFilter] = useState('all');
 
   const [page, setPage] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
@@ -60,23 +68,27 @@ export function TransportManager() {
     license_number: ''
   });
 
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordDriver, setPasswordDriver] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [assignForm, setAssignForm] = useState({
-    vehicle_id: '',
-    stop_name: '',
-    pickup_time: ''
+    vehicle_id: ''
   });
 
   useEffect(() => {
     loadClasses();
     loadDrivers();
     loadVehicles();
+    loadRequests();
   }, []);
 
   useEffect(() => {
     loadTabData();
-  }, [activeTab, page, filterClass, filterSection]);
+  }, [activeTab, page, filterClass, filterSection, requestFilter]);
 
   const loadClasses = async () => {
     try {
@@ -105,6 +117,17 @@ export function TransportManager() {
     }
   };
 
+  const loadRequests = async () => {
+    try {
+      const res = await transportAPI.listRequests({ limit: 100 });
+      const reqList = res.data || [];
+      setRequests(reqList);
+      setPendingRequestsCount(reqList.filter((r) => r.status === 'pending').length);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const loadTabData = async () => {
     setLoading(true);
     try {
@@ -125,6 +148,12 @@ export function TransportManager() {
         setStudents(studentsRes.items || []);
         setTotalItems(studentsRes.total || 0);
         setAssignments(assignRes.data || []);
+      } else if (activeTab === 'bus-requests') {
+        const res = await transportAPI.listRequests({ limit, offset: page * limit });
+        const reqList = res.data || [];
+        setRequests(reqList);
+        setTotalItems(res.total || 0);
+        setPendingRequestsCount(reqList.filter((r) => r.status === 'pending').length);
       } else if (activeTab === 'active-trips') {
         const res = await transportAPI.getDashboardStats();
         setStats(res.data);
@@ -192,6 +221,26 @@ export function TransportManager() {
     }
   };
 
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!passwordDriver || !newPassword.trim()) {
+      toast.error('Password cannot be empty');
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      await transportAPI.updateDriver(passwordDriver.id, { password: newPassword.trim() });
+      toast.success(`Password updated for ${passwordDriver.user?.name || 'Driver'}`);
+      setShowPasswordModal(false);
+      setNewPassword('');
+      setPasswordDriver(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update driver password');
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   const handleAssignSubmit = async (e) => {
     e.preventDefault();
     if (!selectedStudent || !assignForm.vehicle_id) {
@@ -201,9 +250,7 @@ export function TransportManager() {
     try {
       await transportAPI.assignStudent({
         student_id: selectedStudent.id,
-        vehicle_id: Number(assignForm.vehicle_id),
-        stop_name: assignForm.stop_name,
-        pickup_time: assignForm.pickup_time
+        vehicle_id: Number(assignForm.vehicle_id)
       });
       toast.success('Student bus transport assigned successfully');
       setShowAssignModal(false);
@@ -223,12 +270,27 @@ export function TransportManager() {
     }
   };
 
-  const totalPages = Math.ceil(totalItems / limit) || 1;
+  const handleProcessRequest = async (requestId, action) => {
+    try {
+      await transportAPI.processRequest(requestId, action);
+      toast.success(`Bus request ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
+      loadRequests();
+      loadTabData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to process request');
+    }
+  };
 
+  const totalPages = Math.ceil(totalItems / limit) || 1;
   const activeClassObj = classes.find((c) => String(c.id) === String(filterClass));
 
+  const filteredRequests = requests.filter((r) => {
+    if (requestFilter === 'all') return true;
+    return r.status === requestFilter;
+  });
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-xs">
       {/* Compact Action Bar */}
       <Card className="p-3">
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -236,6 +298,14 @@ export function TransportManager() {
             <span className="font-bold text-[#14213D]">Transport Logistics & Fleet Desk</span>
             <span className="text-[#8C97AB]">|</span>
             <span className="text-[#52607D]">Active Fleet: {vehicles.length} Vehicles</span>
+            {pendingRequestsCount > 0 && (
+              <>
+                <span className="text-[#8C97AB]">|</span>
+                <span className="font-semibold text-[#B0403A] bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                  {pendingRequestsCount} Pending Bus Request{pendingRequestsCount > 1 ? 's' : ''}
+                </span>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -274,6 +344,11 @@ export function TransportManager() {
           { id: 'vehicles', label: 'Buses Roster', icon: Truck },
           { id: 'drivers', label: 'Drivers Roster', icon: UserCog },
           { id: 'student-transport', label: 'Passenger Roster', icon: Users },
+          {
+            id: 'bus-requests',
+            label: `Bus Requests ${pendingRequestsCount > 0 ? `(${pendingRequestsCount})` : ''}`,
+            icon: MessageSquare
+          },
           { id: 'active-trips', label: 'Active Trips', icon: Navigation },
           { id: 'trip-history', label: 'Trip Logs', icon: ClipboardList },
         ].map((tab) => {
@@ -398,25 +473,64 @@ export function TransportManager() {
                     <th className="px-4 py-3">License Number</th>
                     <th className="px-4 py-3">Assigned Vehicle</th>
                     <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
                   {drivers.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-12 text-center">
+                      <td colSpan={6} className="px-4 py-12 text-center">
                         <EmptyState icon={UserCog} title="No drivers registered" description="Register drivers to operate school buses." />
                       </td>
                     </tr>
                   ) : (
-                    drivers.map((d) => (
-                      <tr key={d.id} className="hover:bg-[#FAFAF8]">
-                        <td className="px-4 py-2.5 font-medium">{d.user?.name || '—'}</td>
-                        <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{d.user?.phone || '—'}</td>
-                        <td className="px-4 py-2.5 font-mono">{d.license_number || '—'}</td>
-                        <td className="px-4 py-2.5 font-semibold">{d.vehicles?.[0]?.vehicle_number || 'Unassigned'}</td>
-                        <td className="px-4 py-2.5"><StatusBadge status={d.is_active ? 'active' : 'inactive'} size="sm" /></td>
-                      </tr>
-                    ))
+                    drivers.map((d) => {
+                      const assignedVehicleNumber = d.Vehicle?.vehicle_number || d.vehicles?.[0]?.vehicle_number || d.vehicle?.vehicle_number || 'Unassigned';
+                      return (
+                        <tr key={d.id} className="hover:bg-[#FAFAF8]">
+                          <td className="px-4 py-2.5 font-medium">{d.user?.name || '—'}</td>
+                          <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{d.user?.phone || '—'}</td>
+                          <td className="px-4 py-2.5 font-mono">{d.license_number || '—'}</td>
+                          <td className="px-4 py-2.5 font-semibold text-[#14213D]">{assignedVehicleNumber}</td>
+                          <td className="px-4 py-2.5"><StatusBadge status={d.is_active ? 'active' : 'inactive'} size="sm" /></td>
+                          <td className="px-4 py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                icon={KeyRound}
+                                onClick={() => {
+                                  setPasswordDriver(d);
+                                  setNewPassword('');
+                                  setShowPasswordModal(true);
+                                }}
+                                className="text-[#2F6F5E] hover:bg-[#EAF3F0]"
+                              >
+                                Password
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                icon={Edit2}
+                                onClick={() => {
+                                  setSelectedDriver(d);
+                                  setDriverForm({
+                                    username: d.user?.username || '',
+                                    password: '',
+                                    name: d.user?.name || '',
+                                    phone: d.user?.phone || '',
+                                    license_number: d.license_number || ''
+                                  });
+                                  setShowDriverModal(true);
+                                }}
+                              >
+                                Edit
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -454,15 +568,13 @@ export function TransportManager() {
                       <th className="px-4 py-3">Student Name</th>
                       <th className="px-4 py-3">Class & Section</th>
                       <th className="px-4 py-3">Assigned Bus</th>
-                      <th className="px-4 py-3">Pickup Point / Stop</th>
-                      <th className="px-4 py-3">Pickup Time</th>
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
                     {students.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-12 text-center">
+                        <td colSpan={4} className="px-4 py-12 text-center">
                           <EmptyState icon={Users} title="No students found" description="Adjust class or section filters." />
                         </td>
                       </tr>
@@ -478,10 +590,8 @@ export function TransportManager() {
                               {s.class?.class_name || 'Class'} {s.section?.name ? `- Section ${s.section.name}` : ''}
                             </td>
                             <td className="px-4 py-2.5 font-mono font-bold text-[#2F6F5E]">
-                              {isAssigned ? (assign.vehicle?.vehicle_number || assign.vehicle?.vehicle_name || 'Bus Assigned') : 'Not Assigned'}
+                              {isAssigned ? (assign.vehicle?.vehicle_number ? `${assign.vehicle.vehicle_name || 'Bus'} (${assign.vehicle.vehicle_number})` : 'Bus Assigned') : 'Not Assigned'}
                             </td>
-                            <td className="px-4 py-2.5 font-medium text-[#14213D]">{isAssigned ? (assign.pickup_point || 'School Gate') : '—'}</td>
-                            <td className="px-4 py-2.5 font-mono text-[#52607D]">{isAssigned ? (assign.pickup_time || '07:30 AM') : '—'}</td>
                             <td className="px-4 py-2.5 text-right">
                               {isAssigned ? (
                                 <Button
@@ -500,7 +610,7 @@ export function TransportManager() {
                                   icon={UserPlus}
                                   onClick={() => {
                                     setSelectedStudent(s);
-                                    setAssignForm({ vehicle_id: vehicles[0]?.id || '', stop_name: 'Main Stop', pickup_time: '07:30 AM' });
+                                    setAssignForm({ vehicle_id: vehicles[0]?.id || '' });
                                     setShowAssignModal(true);
                                   }}
                                 >
@@ -511,6 +621,97 @@ export function TransportManager() {
                           </tr>
                         );
                       })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : activeTab === 'bus-requests' ? (
+            <div className="space-y-3">
+              {/* Requests Filter Bar */}
+              <div className="p-3 bg-[#FAFAF8] border-b border-[#E4E1D8] flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-[#14213D]">Status Filter:</span>
+                  <Select value={requestFilter} onChange={(e) => setRequestFilter(e.target.value)}>
+                    <option value="all">All Requests</option>
+                    <option value="pending">Pending Review ({pendingRequestsCount})</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </Select>
+                </div>
+                <span className="text-[#8C97AB] font-mono">Showing {filteredRequests.length} requests</span>
+              </div>
+
+              {/* Requests Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
+                    <tr>
+                      <th className="px-4 py-3">Student Name</th>
+                      <th className="px-4 py-3">Class & Section</th>
+                      <th className="px-4 py-3">Current Bus</th>
+                      <th className="px-4 py-3">Requested Bus</th>
+                      <th className="px-4 py-3">Date Submitted</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
+                    {filteredRequests.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-12 text-center">
+                          <EmptyState icon={MessageSquare} title="No student bus requests" description="Bus allocation requests submitted via student app will appear here." />
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredRequests.map((r) => (
+                        <tr key={r.id} className="hover:bg-[#FAFAF8]">
+                          <td className="px-4 py-2.5 font-semibold text-[#14213D]">{r.student?.user?.name || `Student #${r.student_id}`}</td>
+                          <td className="px-4 py-2.5 font-mono text-[#52607D]">
+                            {r.student?.class?.class_name || 'Class'} {r.student?.section?.name ? `- Section ${r.student.section.name}` : ''}
+                          </td>
+                          <td className="px-4 py-2.5 font-mono text-[#52607D]">
+                            {r.CurrentVehicle ? `${r.CurrentVehicle.vehicle_name} (${r.CurrentVehicle.vehicle_number})` : 'Unassigned'}
+                          </td>
+                          <td className="px-4 py-2.5 font-mono font-bold text-[#2F6F5E]">
+                            {r.RequestedVehicle ? `${r.RequestedVehicle.vehicle_name} (${r.RequestedVehicle.vehicle_number})` : `Bus #${r.requested_vehicle_id}`}
+                          </td>
+                          <td className="px-4 py-2.5 font-mono text-[#52607D]">
+                            {r.created_at ? formatDate(r.created_at) : 'Recent'}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <StatusBadge status={r.status === 'approved' ? 'active' : r.status === 'rejected' ? 'inactive' : 'pending'} size="sm" />
+                          </td>
+                          <td className="px-4 py-2.5 text-right">
+                            {r.status === 'pending' ? (
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  icon={CheckCircle}
+                                  onClick={() => handleProcessRequest(r.id, 'approve')}
+                                  className="bg-[#2F6F5E] hover:bg-[#25584A]"
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  icon={XCircle}
+                                  onClick={() => handleProcessRequest(r.id, 'reject')}
+                                  className="text-[#B0403A] border-red-200 hover:bg-red-50"
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-[#8C97AB] italic capitalize">
+                                Processed
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
                     )}
                   </tbody>
                 </table>
@@ -564,13 +765,12 @@ export function TransportManager() {
                     <th className="px-4 py-3">Trip Type</th>
                     <th className="px-4 py-3">Started At</th>
                     <th className="px-4 py-3">Ended At</th>
-                    <th className="px-4 py-3">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
                   {trips.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-12 text-center">
+                      <td colSpan={6} className="px-4 py-12 text-center">
                         <EmptyState icon={ClipboardList} title="No Trip Logs" description="Trip execution records will appear here as drivers complete runs." />
                       </td>
                     </tr>
@@ -583,7 +783,6 @@ export function TransportManager() {
                         <td className="px-4 py-2.5 font-mono text-[#2F6F5E] capitalize">{t.trip_type || 'regular'}</td>
                         <td className="px-4 py-2.5 font-mono text-[#52607D]">{t.started_at ? new Date(t.started_at).toLocaleString() : '—'}</td>
                         <td className="px-4 py-2.5 font-mono text-[#52607D]">{t.ended_at ? new Date(t.ended_at).toLocaleString() : 'En-route'}</td>
-                        <td className="px-4 py-2.5"><StatusBadge status={t.status === 'completed' ? 'active' : t.status || 'inactive'} size="sm" /></td>
                       </tr>
                     ))
                   )}
@@ -637,7 +836,7 @@ export function TransportManager() {
         </form>
       </Modal>
 
-      {/* Modal: Driver Registration */}
+      {/* Modal: Driver Registration & Edit */}
       <Modal isOpen={showDriverModal} onClose={() => setShowDriverModal(false)} title={selectedDriver ? "Edit Transport Driver" : "Register Transport Driver"}>
         <form onSubmit={handleDriverSubmit} className="space-y-4 text-xs">
           <div>
@@ -650,7 +849,7 @@ export function TransportManager() {
               <Input required={!selectedDriver} disabled={!!selectedDriver} placeholder="Username" value={driverForm.username} onChange={(e) => setDriverForm({ ...driverForm, username: e.target.value })} />
             </div>
             <div>
-              <label className="block font-semibold text-[#14213D] mb-1">Password {selectedDriver ? '(Optional)' : '*'}</label>
+              <label className="block font-semibold text-[#14213D] mb-1">Password {selectedDriver ? '(Leave blank to keep current)' : '*'}</label>
               <Input required={!selectedDriver} type="password" placeholder="Password" value={driverForm.password} onChange={(e) => setDriverForm({ ...driverForm, password: e.target.value })} />
             </div>
           </div>
@@ -666,10 +865,41 @@ export function TransportManager() {
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
             <Button variant="outline" type="button" onClick={() => setShowDriverModal(false)}>Cancel</Button>
-            <Button variant="primary" type="submit">Register Driver</Button>
+            <Button variant="primary" type="submit">Save Driver</Button>
           </div>
         </form>
       </Modal>
+
+      {/* Modal: Driver Password Reset */}
+      {showPasswordModal && passwordDriver && (
+        <Modal isOpen={showPasswordModal} onClose={() => setShowPasswordModal(false)} title={`Reset Password: ${passwordDriver.user?.name || 'Driver'}`}>
+          <form onSubmit={handlePasswordSubmit} className="space-y-4 text-xs">
+            <div className="p-3 bg-[#EAF3F0] border border-[#2F6F5E]/20 rounded-[8px]">
+              <p className="text-[#2F6F5E] font-medium">
+                Set a new account password for driver <strong className="font-bold">{passwordDriver.user?.name}</strong> (Username: <span className="font-mono">{passwordDriver.user?.username}</span>).
+              </p>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">New Password *</label>
+              <Input
+                required
+                type="password"
+                placeholder="Enter new password (min 6 characters)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
+              <Button variant="outline" type="button" onClick={() => setShowPasswordModal(false)}>Cancel</Button>
+              <Button variant="primary" type="submit" disabled={savingPassword}>
+                {savingPassword ? 'Updating...' : 'Update Password'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* Modal: Assign Student Transport */}
       {showAssignModal && selectedStudent && (
@@ -679,7 +909,7 @@ export function TransportManager() {
               <span className="text-[10px] text-[#8C97AB] font-mono uppercase block">SELECTED STUDENT</span>
               <h4 className="font-bold text-[#14213D] text-sm">{selectedStudent.user?.name || selectedStudent.name}</h4>
               <p className="text-[11px] text-[#52607D] font-mono">
-                Class {selectedStudent.class?.class_name || '6'} {selectedStudent.section?.name ? `- Section ${selectedStudent.section.name}` : ''}
+                Class {selectedStudent.class?.class_name || ''} {selectedStudent.section?.name ? `- Section ${selectedStudent.section.name}` : ''}
               </p>
             </div>
 
@@ -697,25 +927,6 @@ export function TransportManager() {
                   </option>
                 ))}
               </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-[#14213D] mb-1">Pickup Stop / Location</label>
-                <Input
-                  placeholder="e.g. Central Gate / Stop 4"
-                  value={assignForm.stop_name}
-                  onChange={(e) => setAssignForm({ ...assignForm, stop_name: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-[#14213D] mb-1">Pickup Time</label>
-                <Input
-                  placeholder="e.g. 07:30 AM"
-                  value={assignForm.pickup_time}
-                  onChange={(e) => setAssignForm({ ...assignForm, pickup_time: e.target.value })}
-                />
-              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">

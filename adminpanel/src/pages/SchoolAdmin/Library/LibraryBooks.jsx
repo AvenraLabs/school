@@ -45,8 +45,6 @@ export function LibraryBooks() {
   const [bookForm, setBookForm] = useState({
     book_name: '',
     book_no: '',
-    author: '',
-    category: 'General',
     total_copies: 1,
     image_url: '',
   });
@@ -82,8 +80,6 @@ export function LibraryBooks() {
     setBookForm({
       book_name: '',
       book_no: '',
-      author: '',
-      category: 'General',
       total_copies: 1,
       image_url: '',
     });
@@ -94,8 +90,6 @@ export function LibraryBooks() {
     setBookForm({
       book_name: book.book_name || '',
       book_no: book.book_no || '',
-      author: book.author || '',
-      category: book.category || 'General',
       total_copies: book.total_copies || 1,
       image_url: book.image_url || '',
     });
@@ -130,8 +124,6 @@ export function LibraryBooks() {
         await libraryAPI.addBook({
           book_name: bookForm.book_name.trim(),
           book_no: bookForm.book_no.trim() || `BK-${Date.now().toString().slice(-6)}`,
-          author: bookForm.author.trim() || 'Unknown',
-          category: bookForm.category || 'General',
           total_copies: Number(bookForm.total_copies) || 1,
           image_url: bookForm.image_url || undefined,
         });
@@ -140,8 +132,6 @@ export function LibraryBooks() {
         await libraryAPI.editBook(modalState.book.id, {
           book_name: bookForm.book_name.trim(),
           book_no: bookForm.book_no.trim(),
-          author: bookForm.author.trim(),
-          category: bookForm.category,
           total_copies: Number(bookForm.total_copies) || 1,
           image_url: bookForm.image_url || undefined,
         });
@@ -205,8 +195,7 @@ export function LibraryBooks() {
                     </div>
                     <div>
                       <p className="font-display font-bold text-xs text-[#14213D] truncate">{b.book_name}</p>
-                      <p className="text-[10px] text-[#8C97AB] font-mono">Acc No: {b.book_no}</p>
-                      {b.author && <p className="text-[10px] text-[#52607D] italic">By {b.author}</p>}
+                      <p className="text-[10px] text-[#8C97AB] font-mono">Book No: {b.book_no}</p>
                     </div>
                   </div>
                   <div className="pt-2 border-t border-[#EDEAE1] flex items-center justify-between">
@@ -258,25 +247,6 @@ export function LibraryBooks() {
                   placeholder="e.g. BK-1004"
                   value={bookForm.book_no}
                   onChange={(e) => setBookForm({ ...bookForm, book_no: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-[#14213D] mb-1">Author Name</label>
-                <Input
-                  placeholder="e.g. H.C. Verma, R.D. Sharma"
-                  value={bookForm.author}
-                  onChange={(e) => setBookForm({ ...bookForm, author: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-[#14213D] mb-1">Genre / Category</label>
-                <Input
-                  placeholder="e.g. Science, Mathematics, Fiction"
-                  value={bookForm.category}
-                  onChange={(e) => setBookForm({ ...bookForm, category: e.target.value })}
                 />
               </div>
               <div>
