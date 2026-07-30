@@ -249,4 +249,5 @@ Maps teachers to specific Class + Section + Subject combinations.
 - `notifications`, `notification_acks`: Targeting broadcasts & receipt acknowledgments.
 - `group_chats`, `group_chat_members`, `group_chat_messages`: Real-time class/subject chat channels.
 - `profile_update_requests`, `audit_logs`: Governance and administrative change tracking.
-- `lost_found_items`, `feedbacks`, `whatsapp_logs`: Operational tools.
+- `lost_found_items`, `feedbacks`: Operational student tools.
+- `whatsapp_logs`: Stores Meta WhatsApp message dispatches (`wamid`, `status` ['sent', 'delivered', 'read', 'failed', 'skipped', 'limit_exceeded'], `phone`, `message`, `response`, `error`).

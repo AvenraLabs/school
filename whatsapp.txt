@@ -1,0 +1,83 @@
+================================================================================
+SCHOOLIQ - META WHATSAPP BUSINESS TEMPLATE SPECIFICATIONS & ENVIRONMENT CONFIG
+================================================================================
+
+This document contains the exact template names, languages, parameter positions, 
+and body text formats required for creating approved Message Templates in Meta 
+Business Manager (WhatsApp Manager) for SchoolIQ.
+
+--------------------------------------------------------------------------------
+1. ENVIRONMENT VARIABLES (.env)
+--------------------------------------------------------------------------------
+WHATSAPP_TOKEN=your_meta_system_user_access_token
+WHATSAPP_PHONE_NUMBER_ID=your_whatsapp_phone_number_id
+WHATSAPP_API_VERSION=v21.0
+WHATSAPP_VERIFY_TOKEN=your_custom_webhook_secret_token
+
+Webhook Callback URL: https://admin.avenra.org/api/whatsapp/webhook
+
+--------------------------------------------------------------------------------
+2. META MESSAGE TEMPLATE DEFINITIONS (ONLY 3 TEMPLATES REQUIRED)
+--------------------------------------------------------------------------------
+
+TEMPLATE 1: absent_alert
+------------------------
+Category: UTILITY
+Template Name: absent_alert
+Language: English (en)
+Header: None
+
+Body Text:
+Dear Parent, your child {{1}} ({{2}}) has been marked ABSENT today ({{3}}). - {{4}}
+
+Variables / Parameters:
+{{1}} = Student Name (e.g. John Doe)
+{{2}} = Class & Section (e.g. Class 10-A)
+{{3}} = Date (e.g. 2026-07-30)
+{{4}} = School Name (e.g. Avenra International School)
+
+
+TEMPLATE 2: fee_receipt
+-----------------------
+Category: UTILITY
+Template Name: fee_receipt
+Language: English (en)
+Header: None
+
+Body Text:
+Dear Parent, payment of Rs {{1}} received for {{2}} (Receipt #{{3}}). Remaining balance: Rs {{4}}. - {{5}}
+
+Variables / Parameters:
+{{1}} = Amount Paid (e.g. 2,500)
+{{2}} = Student Name (e.g. John Doe)
+{{3}} = Receipt Number (e.g. REC-2026-104)
+{{4}} = Remaining Balance (e.g. 0)
+{{5}} = School Name (e.g. Avenra International School)
+
+
+TEMPLATE 3: general_announcement
+--------------------------------
+Category: UTILITY
+Template Name: general_announcement
+Language: English (en)
+Header: None
+
+Body Text:
+*{{1}}*
+
+{{2}}
+
+- {{3}}
+
+Variables / Parameters:
+{{1}} = Title (e.g. Holiday Notice)
+{{2}} = Message Content (e.g. The school will remain closed on Friday.)
+{{3}} = School Name (e.g. Avenra International School)
+
+--------------------------------------------------------------------------------
+3. META WEBHOOK SUBSCRIPTION FIELDS
+--------------------------------------------------------------------------------
+In WhatsApp Manager -> Webhooks:
+- Callback URL: https://admin.avenra.org/api/whatsapp/webhook
+- Verify Token: (must match WHATSAPP_VERIFY_TOKEN in .env)
+- Subscribed Fields: "messages"

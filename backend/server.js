@@ -166,6 +166,7 @@ import analyticsRoutes from "./src/modules/analytics/analytics.routes.js";
 import feeRoutes from "./src/modules/fees/fee.routes.js";
 import expenseRoutes from "./src/modules/expenses/expense.routes.js";
 import libraryRoutes from "./src/modules/library/library.routes.js";
+import whatsappRoutes from "./src/modules/whatsapp/whatsapp.routes.js";
 
 
 
@@ -237,6 +238,7 @@ app.use("/api/homework", homeworkRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/group-chat", groupChatRoutes);
 app.use("/api/game", gameRoutes);
+app.use("/api/whatsapp", whatsappRoutes);
 
 
 // 404 + ERROR HANDLER

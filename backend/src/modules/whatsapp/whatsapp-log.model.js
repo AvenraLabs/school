@@ -16,8 +16,14 @@ const WhatsappLog = db.define(
       references: { model: "schools", key: "id" },
     },
 
+    wamid: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: "Meta WhatsApp Message ID (wamid)",
+    },
+
     status: {
-      type: DataTypes.STRING, // success, failed, skipped
+      type: DataTypes.STRING, // pending, sent, delivered, read, failed, skipped, limit_exceeded
       allowNull: false,
     },
 
@@ -47,6 +53,7 @@ const WhatsappLog = db.define(
     timestamps: true,
     indexes: [
       { fields: ["school_id"] },
+      { fields: ["wamid"] },
       { fields: ["status"] },
       { fields: ["phone"] },
       { fields: ["created_at"] },

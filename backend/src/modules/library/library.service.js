@@ -43,7 +43,6 @@ export const getLibrarySettingsService = async (school_id) => {
   const school = await School.findByPk(school_id, {
     attributes: [
       "library_loan_period_days",
-      "library_overdue_whatsapp_enabled",
       "library_overdue_reminder_days",
       "library_overdue_fine_per_day",
     ],

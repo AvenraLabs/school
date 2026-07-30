@@ -168,4 +168,6 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
 - `GET /api/group-chat/rooms` | `GET /api/group-chat/rooms/:id/messages` — Group chat threads.
 - `POST /api/lost-found` | `GET /api/lost-found` — Lost & Found.
 - `POST /api/feedback` | `GET /api/feedback` — System feedback & bug reports.
+- `GET /api/whatsapp/webhook` — Meta Webhook hub verification challenge endpoint.
+- `POST /api/whatsapp/webhook` — Meta Webhook real-time delivery status callback event receiver.
 - `POST /api/upload` — File upload endpoint (Images, PDFs, Documents).

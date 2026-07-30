@@ -90,3 +90,4 @@ Powered by `socket.io` with distinct namespace handlers:
 3. **Library Subsystem**: Cataloging, multi-copy availability, loan issuing, automated overdue fine calculation and in-app notification reminder cron jobs.
 4. **Transport Subsystem**: Drivers, vehicles, student transport allocations, live trip sessions, high-frequency GPS logging, change request approvals.
 5. **Approval Workflow Subsystem**: Teacher & student registration approvals, profile update requests, audit logging.
+6. **WhatsApp Cloud API Integration**: Meta Graph API `v21.0` business-initiated message templates (`absent_alert`, `general_announcement`, `fee_receipt`), quota limits, and live Webhook status callback handling (`wamid` tracking for `sent`, `delivered`, `read`, `failed`).

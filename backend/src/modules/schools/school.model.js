@@ -104,11 +104,6 @@ const School = db.define(
       defaultValue: 14,
     },
 
-    library_overdue_whatsapp_enabled: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-
     library_overdue_reminder_days: {
       type: DataTypes.INTEGER,
       defaultValue: 1,
