@@ -275,7 +275,6 @@ export const getStudentAnalytics = asyncHandler(async (req, res) => {
   // 8. Calculate Class / Section Leaderboard
   const rankWhere = {
     school_id,
-    academic_year_id,
     status: "ACTIVE",
     approval_status: "approved",
   };
