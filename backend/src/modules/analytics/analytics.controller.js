@@ -131,15 +131,16 @@ export const getStudentAnalytics = asyncHandler(async (req, res) => {
   // 4. Calculate Exam Trends (Line Graph)
   const examGroups = {};
   marks.forEach((m) => {
+    const examObj = m.exam || m.Exam;
     const examId = m.exam_id;
-    const examName = m.exam?.name || `Exam #${examId}`;
+    const examName = examObj?.name || (examId ? `Exam #${examId}` : "Exam");
     if (!examGroups[examId]) {
       examGroups[examId] = {
         id: examId,
         name: examName,
         obtained: 0,
         max: 0,
-        date: m.exam?.created_at || m.created_at,
+        date: examObj?.created_at || m.created_at,
       };
     }
     examGroups[examId].obtained += m.marks_obtained;
@@ -148,6 +149,7 @@ export const getStudentAnalytics = asyncHandler(async (req, res) => {
 
   const examTrends = Object.values(examGroups)
     .map((g) => ({
+      id: String(g.id),
       name: g.name,
       percentage: g.max > 0 ? Math.round((g.obtained / g.max) * 100) : 0,
       obtained: g.obtained,
@@ -173,13 +175,15 @@ export const getStudentAnalytics = asyncHandler(async (req, res) => {
   // 6. Per-subject improvement (latest vs previous exam per subject)
   const subjectByExam = {};
   marks.forEach((m) => {
-    const subjectName = m.subject?.name || `Subject #${m.subject_id}`;
+    const subjectObj = m.subject || m.Subject;
+    const subjectName = subjectObj?.name || (m.subject_id ? `Subject #${m.subject_id}` : "Subject");
     const examId = m.exam_id;
+    const examObj = m.exam || m.Exam;
     if (!subjectByExam[subjectName]) {
       subjectByExam[subjectName] = {};
     }
     if (!subjectByExam[subjectName][examId]) {
-      subjectByExam[subjectName][examId] = { obtained: 0, max: 0, date: m.exam?.created_at || m.created_at };
+      subjectByExam[subjectName][examId] = { obtained: 0, max: 0, date: examObj?.created_at || m.created_at };
     }
     subjectByExam[subjectName][examId].obtained += m.marks_obtained;
     subjectByExam[subjectName][examId].max += m.max_marks || 100;
@@ -205,7 +209,8 @@ export const getStudentAnalytics = asyncHandler(async (req, res) => {
   // 7. Calculate Subject Radar Metrics
   const subjectBuckets = {};
   marks.forEach((m) => {
-    const subjectName = m.subject?.name || `Subject #${m.subject_id}`;
+    const subjectObj = m.subject || m.Subject;
+    const subjectName = subjectObj?.name || (m.subject_id ? `Subject #${m.subject_id}` : "Subject");
     if (!subjectBuckets[subjectName]) {
       subjectBuckets[subjectName] = { obtained: 0, max: 0 };
     }
@@ -221,6 +226,45 @@ export const getStudentAnalytics = asyncHandler(async (req, res) => {
     })
   );
 
+  // 7b. Per-Exam Subject Breakdown & Exam List for UI Selector
+  const examList = [
+    { id: "all", name: "All Exams" },
+    ...Object.values(examGroups).map((g) => ({ id: String(g.id), name: g.name })),
+  ];
+
+  const subjectScoresByExam = {
+    all: subjectAverages,
+  };
+
+  marks.forEach((m) => {
+    const examObj = m.exam || m.Exam;
+    const subjectObj = m.subject || m.Subject;
+    const examIdStr = String(m.exam_id);
+    const examName = examObj?.name || (m.exam_id ? `Exam #${m.exam_id}` : "Exam");
+    const subjectName = subjectObj?.name || (m.subject_id ? `Subject #${m.subject_id}` : "Subject");
+
+    const keys = [examIdStr, examName, examName.toLowerCase().trim()];
+    keys.forEach((key) => {
+      if (!subjectScoresByExam[key]) {
+        subjectScoresByExam[key] = [];
+      }
+      let existing = subjectScoresByExam[key].find((s) => s.subject === subjectName);
+      const maxVal = m.max_marks || 100;
+      if (!existing) {
+        existing = {
+          subject: subjectName,
+          obtained: 0,
+          max: 0,
+          score: 0,
+        };
+        subjectScoresByExam[key].push(existing);
+      }
+      existing.obtained += m.marks_obtained;
+      existing.max += maxVal;
+      existing.score = existing.max > 0 ? Math.round((existing.obtained / existing.max) * 100) : 0;
+    });
+  });
+
   const sortedSubjects = [...subjectAverages].sort((a, b) => b.score - a.score);
   const strongSubject = sortedSubjects[0] || null;
   const focusSubject =
@@ -228,21 +272,25 @@ export const getStudentAnalytics = asyncHandler(async (req, res) => {
       ? sortedSubjects[sortedSubjects.length - 1]
       : null;
 
-  // 8. Build ranking (section or class-wide based on scope)
-  const rankFilter = { school_id, status: "ACTIVE" };
-  if (scope === "section") {
-    rankFilter.class_id = student.class_id;
-    if (student.section_id) {
-      rankFilter.section_id = student.section_id;
-    }
-  } else {
-    rankFilter.class_id = student.class_id;
+  // 8. Calculate Class / Section Leaderboard
+  const rankWhere = {
+    school_id,
+    academic_year_id,
+    status: "ACTIVE",
+    approval_status: "approved",
+  };
+  if (scope === "section" && student.section_id) {
+    rankWhere.section_id = student.section_id;
+  } else if (scope === "class" && student.class_id) {
+    rankWhere.class_id = student.class_id;
   }
 
   const peers = await Student.findAll({
-    where: rankFilter,
-    attributes: ["id"],
+    where: rankWhere,
+    attributes: ["id", "class_id", "section_id"],
+    include: [{ model: User, attributes: ["name", "avatar_url"] }],
   });
+
   const peerIds = peers.map((p) => p.id);
 
   const ranking = await buildRanking(peerIds, school_id, academic_year_id);
@@ -287,6 +335,8 @@ export const getStudentAnalytics = asyncHandler(async (req, res) => {
       scope,
       improvement,
       trends: examTrends,
+      exams: examList,
+      subject_scores_by_exam: subjectScoresByExam,
       radar: subjectAverages,
       strong_subject: strongSubject,
       focus_subject: focusSubject,

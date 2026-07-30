@@ -20,7 +20,7 @@ const titleMap = {
   '/admin/timetables': 'Class Master Timetables',
   '/admin/exams': 'Exams, Marks & Report Cards',
   '/admin/subjects': 'Curriculum & Subject Catalog',
-  '/admin/assignments': 'Teacher Class Mapping',
+  '/admin/assignments': 'Teacher & Subject Allocations',
   '/admin/academic-year': 'Academic Sessions & Term Setup',
   '/admin/login-roster': 'Portal Credentials Roster',
   '/admin/audit-logs': 'System Security Audit Logs',

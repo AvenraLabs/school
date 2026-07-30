@@ -64,7 +64,7 @@ const schoolAdminLinks = [
 
   { section: 'System Configuration' },
   { to: '/admin/subjects', icon: BookOpen, label: 'Subjects' },
-  { to: '/admin/assignments', icon: ClipboardList, label: 'Teacher Mapping' },
+  { to: '/admin/assignments', icon: ClipboardList, label: 'Teacher Allocations' },
   { to: '/admin/academic-year', icon: Calendar, label: 'Academic Year' },
   { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },
   { to: '/admin/feedback', icon: MessageSquare, label: 'Feedback' },

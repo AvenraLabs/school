@@ -19,6 +19,8 @@ import {
   DialogActions,
   IconButton,
   Avatar,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -33,7 +35,7 @@ import {
   Remove,
   HelpOutline,
 } from "@mui/icons-material";
-import { alpha, useTheme } from "@mui/material/styles";
+import { useTheme } from "@mui/material/styles";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
@@ -146,106 +148,68 @@ function TrendLineChart({ data }) {
   );
 }
 
-// Custom SVG Radar Chart
-function SubjectRadarChart({ data }) {
+// Custom Bar Chart for Subject Comparison
+function SubjectBarChart({ data }) {
   const theme = useTheme();
   if (!data || data.length === 0)
     return (
-      <Typography variant="caption" color="text.secondary">
-        No subject breakdown available.
+      <Typography variant="caption" color="text.secondary" sx={{ py: 3, display: "block", textAlign: "center" }}>
+        No subject marks available for this exam selection.
       </Typography>
     );
 
-  const size = 300;
-  const center = size / 2;
-  const maxRadius = size * 0.35;
-  const totalAxes = data.length;
-
-  const getCoordinates = (index, value) => {
-    const angle = (Math.PI * 2 / totalAxes) * index - Math.PI / 2;
-    const radius = (value / 100) * maxRadius;
-    return {
-      x: center + radius * Math.cos(angle),
-      y: center + radius * Math.sin(angle),
-    };
-  };
-
-  const gridRings = [25, 50, 75, 100].map((pct) => {
-    const points = [];
-    for (let i = 0; i < totalAxes; i++) {
-      const c = getCoordinates(i, pct);
-      points.push(`${c.x},${c.y}`);
-    }
-    return points.join(" ");
-  });
-
-  const dataPoints = data
-    .map((d, i) => {
-      const c = getCoordinates(i, d.score);
-      return `${c.x},${c.y}`;
-    })
-    .join(" ");
-
-  const primaryColor = theme.palette.primary.main;
+  // Color palette: rich dark tones — emerald, indigo, amber, rose, cyan, violet
+  const PALETTE = [
+    "#0f766e", // dark teal
+    "#1d4ed8", // deep indigo
+    "#b45309", // burnt amber
+    "#be123c", // deep rose
+    "#0e7490", // dark cyan
+    "#7c3aed", // deep violet
+    "#166534", // forest green
+    "#9a3412", // deep orange
+  ];
 
   return (
-    <svg
-      viewBox={`0 0 ${size} ${size}`}
-      width="100%"
-      height={size}
-      style={{ overflow: "visible" }}
-    >
-      {gridRings.map((pts, i) => (
-        <polygon
-          key={i}
-          points={pts}
-          fill="none"
-          stroke="rgba(0,0,0,0.06)"
-          strokeWidth="1"
-        />
-      ))}
+    <Stack spacing={2} sx={{ width: "100%", pt: 1 }}>
+      {data.map((item, idx) => {
+        const score = item.score ?? 0;
+        const color = PALETTE[idx % PALETTE.length];
 
-      {data.map((d, index) => {
-        const outerCoord = getCoordinates(index, 100);
-        const labelCoord = getCoordinates(index, 115);
         return (
-          <g key={index}>
-            <line
-              x1={center}
-              y1={center}
-              x2={outerCoord.x}
-              y2={outerCoord.y}
-              stroke="rgba(0,0,0,0.06)"
-              strokeWidth="1"
-            />
-            <text
-              x={labelCoord.x}
-              y={labelCoord.y + 4}
-              fontSize="10"
-              fontWeight="bold"
-              fill="#64748b"
-              textAnchor="middle"
+          <Box key={item.subject || idx}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.8 }}>
+              <Typography variant="body2" fontWeight={800} color="text.primary">
+                {item.subject}
+              </Typography>
+              <Typography variant="body2" fontWeight={900} sx={{ color, fontFamily: "'Outfit', sans-serif" }}>
+                {score}%
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                width: "100%",
+                height: 12,
+                borderRadius: 6,
+                bgcolor: "rgba(0,0,0,0.06)",
+                overflow: "hidden",
+                position: "relative",
+              }}
             >
-              {d.subject}
-            </text>
-          </g>
+              <Box
+                sx={{
+                  width: `${Math.min(100, Math.max(0, score))}%`,
+                  height: "100%",
+                  borderRadius: 6,
+                  background: `linear-gradient(90deg, ${color}, ${color}cc)`,
+                  transition: "width 0.6s ease-in-out",
+                }}
+              />
+            </Box>
+          </Box>
         );
       })}
-
-      <polygon
-        points={dataPoints}
-        fill={alpha(primaryColor, 0.15)}
-        stroke={primaryColor}
-        strokeWidth="2.5"
-      />
-
-      {data.map((d, index) => {
-        const c = getCoordinates(index, d.score);
-        return (
-          <circle key={index} cx={c.x} cy={c.y} r="3.5" fill={primaryColor} />
-        );
-      })}
-    </svg>
+    </Stack>
   );
 }
 
@@ -288,15 +252,14 @@ export default function StudentPerformancePage() {
   const [error, setError] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [scope, setScope] = useState("section");
+  const [selectedExamFilter, setSelectedExamFilter] = useState("all");
   const [helpOpen, setHelpOpen] = useState(false);
 
   const loadAnalytics = async (rankScope) => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get("/analytics/student", {
-        params: { scope: rankScope },
-      });
+      const res = await api.get("/analytics/student", { params: { scope: rankScope } });
       setAnalytics(res.data?.data);
     } catch (err) {
       console.error(err);
@@ -367,7 +330,39 @@ export default function StudentPerformancePage() {
     strong_subject,
     focus_subject,
     leaderboard,
+    exams,
+    subject_scores_by_exam,
   } = analytics;
+
+  const availableExams = (exams && exams.length > 1)
+    ? exams
+    : [
+        { id: "all", name: "All Exams" },
+        ...(trends || []).map((t) => ({
+          id: String(t.id || t.name),
+          name: t.name,
+        })),
+      ];
+
+  const subjectScoresMap = subject_scores_by_exam || {};
+
+  const selectedExamObj = availableExams.find(
+    (e) => String(e.id) === String(selectedExamFilter) || String(e.name) === String(selectedExamFilter)
+  );
+
+  const targetKey = selectedExamFilter === "all"
+    ? "all"
+    : (selectedExamFilter || selectedExamObj?.name || selectedExamObj?.id);
+
+  const currentSubjectData =
+    selectedExamFilter === "all"
+      ? (subjectScoresMap["all"] || radar || [])
+      : (subjectScoresMap[targetKey] ||
+         subjectScoresMap[String(targetKey).toLowerCase().trim()] ||
+         subjectScoresMap[selectedExamObj?.id] ||
+         subjectScoresMap[selectedExamObj?.name] ||
+         (selectedExamObj ? subjectScoresMap[String(selectedExamObj.name).toLowerCase().trim()] : null) ||
+         []);
 
   return (
     <Container maxWidth="sm" sx={{ py: 3, pb: 10 }}>
@@ -388,7 +383,7 @@ export default function StudentPerformancePage() {
             fontWeight={900}
             sx={{ fontFamily: "'Outfit', sans-serif" }}
           >
-            Performance & Insights
+            Insights
           </Typography>
           <IconButton onClick={() => setHelpOpen(true)} size="small" color="primary">
             <HelpOutline />
@@ -706,23 +701,50 @@ export default function StudentPerformancePage() {
           </CardContent>
         </Card>
 
-        {/* Subject Comparison Radar */}
+        {/* Subject Comparison Bar Chart */}
         <Card sx={cardSx}>
           <CardContent sx={{ p: 2.5 }}>
             <Stack
               direction="row"
               alignItems="center"
-              spacing={1}
+              justifyContent="space-between"
               sx={{ mb: 2 }}
             >
-              <CalendarMonth color="primary" sx={{ fontSize: 18 }} />
-              <Typography variant="subtitle2" fontWeight={900}>
-                Subject Comparison
-              </Typography>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <CalendarMonth color="primary" sx={{ fontSize: 18 }} />
+                <Typography variant="subtitle2" fontWeight={900}>
+                  Subject Chart
+                </Typography>
+              </Stack>
+
+              {/* Exam Dropdown Selector */}
+              {availableExams && availableExams.length > 0 && (
+                <Select
+                  value={selectedExamFilter}
+                  onChange={(e) => setSelectedExamFilter(e.target.value)}
+                  size="small"
+                  sx={{
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    height: 32,
+                    borderRadius: "8px",
+                    bgcolor: "rgba(0,0,0,0.03)",
+                    "& .MuiSelect-select": {
+                      py: 0.5,
+                      px: 1.5,
+                    },
+                  }}
+                >
+                  {availableExams.map((ex) => (
+                    <MenuItem key={ex.id} value={String(ex.id)} sx={{ fontSize: "0.8rem", fontWeight: 600 }}>
+                      {ex.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              )}
             </Stack>
-            <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <SubjectRadarChart data={radar} />
-            </Box>
+
+            <SubjectBarChart data={currentSubjectData} />
           </CardContent>
         </Card>
 

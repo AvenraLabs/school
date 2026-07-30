@@ -273,7 +273,7 @@ export function TeacherAssignments() {
       <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
         <h2 className="font-display font-bold text-base text-[#14213D] flex items-center gap-2">
           <UserCog className="w-4 h-4 text-[#2F6F5E]" />
-          Faculty Assignments & Class Mapping
+          Teacher & Subject Allocations
         </h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={expandAll}>Expand All</Button>
@@ -297,7 +297,7 @@ export function TeacherAssignments() {
                 }`}
               >
                 <Users className="w-3.5 h-3.5" />
-                <span>Class Coordinators</span>
+                <span>Class Teachers</span>
               </button>
               <button
                 onClick={() => { setActiveTab('subject-teachers'); closePicker(); }}
@@ -308,7 +308,7 @@ export function TeacherAssignments() {
                 }`}
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>Subject Mapping</span>
+                <span>Subject Teachers</span>
               </button>
             </div>
 
@@ -332,7 +332,7 @@ export function TeacherAssignments() {
                     : 'bg-white border border-[#E4E1D8] text-[#52607D] hover:bg-[#FAFAF8]'
                 }`}
               >
-                Missing Coordinator ({stats.missingCoordinators})
+                Missing Class Teacher ({stats.missingCoordinators})
               </button>
               <button
                 onClick={() => setGapFilter('MISSING_SUBJECTS')}
@@ -342,7 +342,7 @@ export function TeacherAssignments() {
                     : 'bg-white border border-[#E4E1D8] text-[#52607D] hover:bg-[#FAFAF8]'
                 }`}
               >
-                Missing Subject Staff ({stats.missingSubjects})
+                Missing Subject Teachers ({stats.missingSubjects})
               </button>
             </div>
           </div>
@@ -352,7 +352,7 @@ export function TeacherAssignments() {
             <div className="relative sm:col-span-2">
               <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#8C97AB]" />
               <Input
-                placeholder="Search class name, section, or coordinator..."
+                placeholder="Search class name, section, or teacher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8 text-xs h-8 bg-white"

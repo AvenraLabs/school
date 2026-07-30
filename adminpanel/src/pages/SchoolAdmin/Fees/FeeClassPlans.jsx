@@ -153,7 +153,10 @@ export function FeeClassPlans() {
         <form onSubmit={handleCreate} className="space-y-4 text-xs">
           <div>
             <label className="block font-semibold text-[#14213D] mb-1">Fee Title *</label>
-            <Input required placeholder="e.g. Term 1 Tuition Fee" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Input required placeholder="e.g. Term 1 Tuition Fee" value={title} onChange={(e) => {
+              const v = e.target.value;
+              setTitle(v.length > 0 ? v.charAt(0).toUpperCase() + v.slice(1) : v);
+            }} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">

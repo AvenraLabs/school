@@ -9,8 +9,18 @@ import {
   Stack,
   Chip,
   CircularProgress,
+  Collapse,
 } from "@mui/material";
-import { EmojiEvents, Replay } from "@mui/icons-material";
+import {
+  EmojiEvents,
+  Replay,
+  Visibility,
+  CheckCircle,
+  Cancel,
+  ExpandMore,
+  ExpandLess,
+  HelpOutline,
+} from "@mui/icons-material";
 import { getQuizLeaderboard } from "../api/quiz.api";
 import { useAuth } from "../../../auth/AuthProvider";
 import { getAssetUrl } from "../../../utils/asset";
@@ -99,6 +109,8 @@ export default function QuizResultPage() {
   const [topic, setTopic] = useState(stateData.topic || sessionStorage.getItem("last_quiz_topic") || "");
   const [totalQuestions, setTotalQuestions] = useState(stateData.totalQuestions || 0);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [answersReview, setAnswersReview] = useState([]);
+  const [showAnswers, setShowAnswers] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -108,7 +120,7 @@ export default function QuizResultPage() {
         const data = res.data;
         if (data?.leaderboard) {
           setLeaderboard(data.leaderboard);
-          // Always trust API — it has the real stored topic
+          if (data.answersReview) setAnswersReview(data.answersReview);
           if (data.topic && data.topic !== "Quiz") setTopic(data.topic);
           if (data.totalQuestions) setTotalQuestions(data.totalQuestions);
         } else if (Array.isArray(data)) {
@@ -315,6 +327,134 @@ export default function QuizResultPage() {
               );
             })}
           </Stack>
+        )}
+
+        {/* Detailed Question Review Accordion */}
+        {answersReview && answersReview.length > 0 && (
+          <Box sx={{ mt: 3, textAlign: "left" }}>
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<Visibility />}
+              endIcon={showAnswers ? <ExpandLess /> : <ExpandMore />}
+              onClick={() => setShowAnswers(!showAnswers)}
+              sx={{
+                borderRadius: "14px",
+                py: 1.3,
+                fontWeight: 800,
+                fontSize: "14px",
+                textTransform: "none",
+                fontFamily: "'Outfit', sans-serif",
+                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                borderColor: alpha(theme.palette.primary.main, 0.3),
+                color: "primary.main",
+                "&:hover": {
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                },
+              }}
+            >
+              {showAnswers ? "Hide Answers & Review" : "View Answers & Detailed Review"}
+            </Button>
+
+            <Collapse in={showAnswers} timeout="auto" unmountOnExit sx={{ mt: 2 }}>
+              <Stack spacing={2}>
+                {answersReview.map((q, idx) => {
+                  const opts = Array.isArray(q.options) ? q.options : [];
+                  return (
+                    <Paper
+                      key={q.id || idx}
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        borderRadius: "14px",
+                        border: "1px solid rgba(0,0,0,0.08)",
+                        bgcolor: "#fafafa",
+                      }}
+                    >
+                      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1, mb: 1.5 }}>
+                        <Typography sx={{ fontWeight: 800, fontSize: "14px", color: "#0f172a" }}>
+                          Q{idx + 1}. {q.question_text}
+                        </Typography>
+                        {q.is_correct ? (
+                          <Chip
+                            icon={<CheckCircle sx={{ fontSize: "14px !important" }} />}
+                            label="Correct"
+                            size="small"
+                            color="success"
+                            sx={{ fontWeight: 800, fontSize: "11px", height: "24px" }}
+                          />
+                        ) : q.answered ? (
+                          <Chip
+                            icon={<Cancel sx={{ fontSize: "14px !important" }} />}
+                            label="Incorrect"
+                            size="small"
+                            color="error"
+                            sx={{ fontWeight: 800, fontSize: "11px", height: "24px" }}
+                          />
+                        ) : (
+                          <Chip
+                            icon={<HelpOutline sx={{ fontSize: "14px !important" }} />}
+                            label="Skipped"
+                            size="small"
+                            sx={{ fontWeight: 800, fontSize: "11px", height: "24px", bgcolor: "#f1f5f9", color: "#64748b" }}
+                          />
+                        )}
+                      </Box>
+
+                      {/* Options */}
+                      <Stack spacing={1}>
+                        {opts.map((opt, optIdx) => {
+                          const isCorrect = optIdx === q.correct_option_index;
+                          const isSelected = optIdx === q.selected_option_index;
+                          const isWrongSelection = isSelected && !isCorrect;
+
+                          let borderCol = "rgba(0,0,0,0.08)";
+                          let bgCol = "#fff";
+                          let textCol = "#334155";
+                          let icon = null;
+
+                          if (isCorrect) {
+                            borderCol = "#22c55e";
+                            bgCol = "#f0fdf4";
+                            textCol = "#15803d";
+                            icon = <CheckCircle sx={{ fontSize: 16, color: "#22c55e" }} />;
+                          } else if (isWrongSelection) {
+                            borderCol = "#ef4444";
+                            bgCol = "#fef2f2";
+                            textCol = "#b91c1c";
+                            icon = <Cancel sx={{ fontSize: 16, color: "#ef4444" }} />;
+                          }
+
+                          return (
+                            <Box
+                              key={optIdx}
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                p: "8px 12px",
+                                borderRadius: "10px",
+                                border: `1.5px solid ${borderCol}`,
+                                bgcolor: bgCol,
+                                color: textCol,
+                                fontSize: "13px",
+                                fontWeight: isCorrect || isSelected ? 700 : 500,
+                              }}
+                            >
+                              <Typography sx={{ fontSize: "13px", fontWeight: "inherit", color: "inherit" }}>
+                                {String.fromCharCode(65 + optIdx)}. {opt}
+                              </Typography>
+                              {icon}
+                            </Box>
+                          );
+                        })}
+                      </Stack>
+                    </Paper>
+                  );
+                })}
+              </Stack>
+            </Collapse>
+          </Box>
         )}
 
         <Stack spacing={1.5} sx={{ mt: 4 }}>

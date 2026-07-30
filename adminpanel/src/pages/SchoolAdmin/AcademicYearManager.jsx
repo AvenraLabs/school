@@ -178,12 +178,17 @@ export function AcademicYearManager() {
   const [customOverrides, setCustomOverrides] = useState({});
 
   const fetchPreviewReport = async (overrideData = customOverrides) => {
+    // If overrideData is a React SyntheticEvent, fallback to customOverrides
+    const actualOverrides = (overrideData && !overrideData.nativeEvent && !overrideData._reactName && typeof overrideData === 'object')
+      ? overrideData
+      : customOverrides;
+
     setPreviewLoading(true);
     setWizardStep(3);
     try {
       const res = await academicYearsAPI.getPreview({
         repeat_student_ids: repeatStudentIds,
-        custom_overrides: overrideData,
+        custom_overrides: actualOverrides,
       });
       setPreviewReport(res);
     } catch (e) {
@@ -491,7 +496,7 @@ export function AcademicYearManager() {
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={() => toggleRepeatStudent(s)}
-                                className="rounded border-[#E4E1D8] text-[#2F6F5E] cursor-pointer"
+                                className="w-4 h-4 rounded border-[#E4E1D8] text-[#2F6F5E] accent-[#2F6F5E] focus:ring-[#2F6F5E] cursor-pointer"
                               />
                             </td>
                             <td className="px-3 py-2 font-semibold">{s.user?.name || '—'}</td>
@@ -506,7 +511,7 @@ export function AcademicYearManager() {
 
               <div className="flex justify-between pt-2 border-t border-[#EDEAE1]">
                 <Button variant="outline" onClick={() => setWizardStep(1)}>Back</Button>
-                <Button variant="primary" onClick={fetchPreviewReport}>Generate Preview Report</Button>
+                <Button variant="primary" onClick={() => fetchPreviewReport()}>Generate Preview Report</Button>
               </div>
             </div>
           )}
@@ -599,7 +604,7 @@ export function AcademicYearManager() {
                       type="checkbox"
                       checked={confirmCheckbox}
                       onChange={(e) => setConfirmCheckbox(e.target.checked)}
-                      className="rounded border-[#E4E1D8] text-[#2F6F5E] cursor-pointer"
+                      className="w-4 h-4 rounded border-[#E4E1D8] text-[#2F6F5E] accent-[#2F6F5E] focus:ring-[#2F6F5E] cursor-pointer"
                     />
                     <span className="font-semibold text-[#14213D]">
                       I confirm promotion migration for term {wizardYears.startYear}-{wizardYears.endYear}.

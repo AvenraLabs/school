@@ -116,9 +116,6 @@ export default function LibraryPage() {
           <CardContent sx={{ p: 2.5 }}>
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <Box>
-                <Typography variant="caption" sx={{ fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  School Library
-                </Typography>
                 <Typography variant="h5" sx={{ fontWeight: 900, color: "#0f172a" }}>
                   My Books
                 </Typography>

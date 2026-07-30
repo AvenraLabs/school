@@ -36,7 +36,7 @@ export function useProfileCompletion() {
 
       // If backend returns a new token (with updated first_login flag), use it
       if (response.token) {
-        login(response.token);
+        login(response.token, response.refreshToken);
       }
 
       return response;

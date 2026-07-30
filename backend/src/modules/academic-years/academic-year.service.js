@@ -195,13 +195,19 @@ export const getPromotionPreviewService = async (school_id, { repeat_student_ids
       const targetClass = allClasses.find(
         (c) => c.class_name.toLowerCase().trim() === nextClassName.toLowerCase().trim()
       );
+      const classSections = targetClass?.sections || targetClass?.Sections || [];
+
       const targetSection = override?.toSection
-        ? targetClass?.sections?.find((s) => s.name.toLowerCase().trim() === override.toSection.toLowerCase().trim())
-        : targetClass?.sections?.find((s) => s.name.toLowerCase().trim() === currentSectionName.toLowerCase().trim());
+        ? classSections.find((s) => s.name?.toLowerCase().trim() === override.toSection.toLowerCase().trim())
+        : (classSections.find((s) => s.name?.toLowerCase().trim() === currentSectionName.toLowerCase().trim()) || classSections[0]);
 
       const hasError = !targetClass || !targetSection;
       if (hasError) {
-        errors.push(`Target section mapping missing for ${currentClassName} ${currentSectionName} → ${nextClassName} ${override?.toSection || currentSectionName}`);
+        if (!targetClass) {
+          errors.push(`Target class '${nextClassName}' does not exist. Please create Class '${nextClassName}' in Classes & Sections manager.`);
+        } else if (!targetSection) {
+          errors.push(`Target section '${currentSectionName}' missing in Class '${nextClassName}'. Please add a section to Class '${nextClassName}'.`);
+        }
       }
 
       totalPromoted++;
@@ -214,7 +220,7 @@ export const getPromotionPreviewService = async (school_id, { repeat_student_ids
           toSection: targetSection?.name || currentSectionName,
           count: 0,
           hasError,
-          errorMsg: hasError ? "Section mapping missing" : null,
+          errorMsg: hasError ? (!targetClass ? "Target class missing" : "Section mapping missing") : null,
         };
       }
       transitions[key].count++;

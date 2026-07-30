@@ -31,13 +31,14 @@ export function useLogin() {
 
       const data = await loginApi(credentials);
       const token = data?.token;
+      const refreshToken = data?.refreshToken;
 
       if (!token) {
         throw new Error("Login failed: missing token in response");
       }
 
       // Login will validate the token and throw if invalid
-      login(token);
+      login(token, refreshToken);
       return true;
     } catch (err) {
       let message = "Login failed";

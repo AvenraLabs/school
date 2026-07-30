@@ -349,7 +349,10 @@ export function ExpenseManager() {
         <form onSubmit={handleCreateCategory} className="space-y-3 text-xs">
           <div>
             <label className="block font-semibold text-[#14213D] mb-1">Category Name *</label>
-            <Input required placeholder="Category name..." value={catFormData.name} onChange={(e) => setCatFormData({ ...catFormData, name: e.target.value })} />
+            <Input required placeholder="Category name..." value={catFormData.name} onChange={(e) => {
+              const v = e.target.value;
+              setCatFormData({ ...catFormData, name: v.length > 0 ? v.charAt(0).toUpperCase() + v.slice(1) : v });
+            }} />
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
             <Button variant="outline" type="button" onClick={() => setShowAddCatModal(false)}>Cancel</Button>

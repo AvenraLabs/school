@@ -200,11 +200,30 @@ export function ExamsManager() {
   };
 
   const openSchedule = (exam = null, slot = null) => {
+    let defaultDate = slot?.exam_date || '';
+    if (!defaultDate && exam) {
+      const existingSlots = getSubjectSlots(exam);
+      if (existingSlots.length > 0) {
+        const latestSlotDate = existingSlots[existingSlots.length - 1]?.exam_date;
+        if (latestSlotDate && !isNaN(new Date(latestSlotDate).getTime())) {
+          const nextDate = new Date(latestSlotDate);
+          nextDate.setDate(nextDate.getDate() + 1);
+          if (nextDate.getDay() === 0) nextDate.setDate(nextDate.getDate() + 1);
+          defaultDate = nextDate.toISOString().split('T')[0];
+        }
+      }
+      if (!defaultDate) {
+        const today = new Date();
+        if (today.getDay() === 0) today.setDate(today.getDate() + 1);
+        defaultDate = today.toISOString().split('T')[0];
+      }
+    }
+
     setScheduleForm({
       class_id: exam?.class_id || selectedClass || '',
       exam_id: exam?.id || '',
       subject_id: slot?.subject_id || '',
-      exam_date: slot?.exam_date || '',
+      exam_date: defaultDate,
       syllabus: slot?.syllabus || '',
     });
     setShowSchedule(true);
@@ -293,21 +312,42 @@ export function ExamsManager() {
     setSaving(true);
     try {
       let count = 0;
-      const todayStr = new Date().toISOString().split('T')[0];
+      const existingSlots = getSubjectSlots(targetExam);
+      let startDate = new Date();
+      if (existingSlots.length > 0) {
+        const latestSlotDate = existingSlots[existingSlots.length - 1]?.exam_date;
+        if (latestSlotDate && !isNaN(new Date(latestSlotDate).getTime())) {
+          startDate = new Date(latestSlotDate);
+          startDate.setDate(startDate.getDate() + 1);
+        }
+      }
+
+      let currentDate = new Date(startDate);
+
       for (const sub of subjectPool) {
+        // Skip Sunday
+        if (currentDate.getDay() === 0) {
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
         try {
           await examsAPI.upsertSubject(
             Number(examId),
             Number(sub.id),
-            todayStr,
+            dateStr,
             'Full Syllabus'
           );
           count++;
         } catch (e) {
           console.error('Failed adding subject slot:', sub.name, e);
         }
+        currentDate.setDate(currentDate.getDate() + 1);
       }
-      toast.success(`Auto-populated ${count} subject exam slots!`);
+      toast.success(`Auto-populated ${count} subject exam slots with consecutive dates!`);
       loadExams(classId, selectedSection);
     } catch (e) {
       toast.error('Failed to auto-populate exam schedule');

@@ -540,7 +540,6 @@ export default function StudentTransportPage() {
         boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.25)}`,
       }}>
         <Typography variant="h6" fontWeight="bold">My School Bus</Typography>
-        <Typography variant="body2" sx={{ opacity: 0.85 }}>View assigned transport and live location</Typography>
       </Paper>
 
       {!transportInfo ? (
@@ -562,7 +561,6 @@ export default function StudentTransportPage() {
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                 <DirectionsBus sx={{ color: "primary.main", fontSize: 28 }} />
                 <Box>
-                  <Typography variant="caption" color="textSecondary" fontWeight="bold">BUS NUMBER</Typography>
                   <Typography variant="h5" fontWeight="bold" color="primary">
                     {transportInfo.vehicle?.vehicle_name || "Bus"}
                   </Typography>

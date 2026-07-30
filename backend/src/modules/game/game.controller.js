@@ -230,10 +230,49 @@ export const getLeaderboard = asyncHandler(async (req, res) => {
     session?.settings?.total_questions ||
     5;
 
+  let answersReview = [];
+  if (session?.quiz_id && req.user?.id) {
+    const myPlayer = await GameSessionPlayer.findOne({
+      where: { session_id: sessionId, user_id: req.user.id },
+    });
+    if (myPlayer) {
+      const [questions, myAnswers] = await Promise.all([
+        QuizQuestion.findAll({
+          where: { quiz_id: session.quiz_id },
+          order: [["order_index", "ASC"]],
+        }),
+        PlayerAnswer.findAll({
+          where: { session_player_id: myPlayer.id },
+        }),
+      ]);
+
+      const answerMap = new Map();
+      for (const ans of myAnswers) {
+        answerMap.set(String(ans.question_id), ans);
+      }
+
+      answersReview = questions.map((q, idx) => {
+        const playerAns = answerMap.get(String(q.id));
+        return {
+          id: q.id,
+          order_index: q.order_index ?? (idx + 1),
+          question_text: q.question_text,
+          options: q.options,
+          correct_option_index: q.correct_option_index,
+          selected_option_index: playerAns ? playerAns.selected_option_index : null,
+          is_correct: playerAns ? playerAns.is_correct : false,
+          answered: !!playerAns,
+          time_taken_ms: playerAns?.time_taken_ms || null,
+        };
+      });
+    }
+  }
+
   res.json({
     topic,
     totalQuestions,
     leaderboard,
+    answersReview,
   });
 });
 

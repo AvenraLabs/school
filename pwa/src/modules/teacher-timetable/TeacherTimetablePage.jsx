@@ -128,10 +128,6 @@ export default function TeacherTimetablePage() {
       {/* TAB 0: TEACHER'S OWN TIMETABLE */}
       {activeTab === 0 && (
         <Box>
-          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-            Your personal teaching schedule across different sections.
-          </Typography>
-
           {/* Day of Week Selector */}
           <Tabs
             value={activeDay}

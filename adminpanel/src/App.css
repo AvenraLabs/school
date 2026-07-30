@@ -161,8 +161,8 @@
 }
 
 .checkbox-custom:checked {
-  background: #4f46e5;
-  border-color: #4f46e5;
+  background: #2F6F5E;
+  border-color: #2F6F5E;
 }
 
 .checkbox-custom:checked::after {
@@ -188,7 +188,7 @@
 }
 
 .toggle.active {
-  background: #4f46e5;
+  background: #2F6F5E;
 }
 
 .toggle::after {

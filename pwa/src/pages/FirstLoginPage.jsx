@@ -177,7 +177,7 @@ export default function FirstLoginPage() {
 
       // Update session with new token (if provided)
       if (response.data && response.data.token) {
-        login(response.data.token);
+        login(response.data.token, response.data.refreshToken);
       }
 
       // Profile completed successfully

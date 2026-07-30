@@ -8,7 +8,7 @@ import { EmptyState } from '../../components/common/EmptyState';
 import { Button } from '../../components/ui/Button';
 import { Select, Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { Download, ClipboardList, KeyRound } from 'lucide-react';
+import { Download, ClipboardList, KeyRound, Eye, EyeOff } from 'lucide-react';
 
 export function LoginRoster() {
   const [data, setData] = useState(null);
@@ -19,6 +19,7 @@ export function LoginRoster() {
   const [loading, setLoading] = useState(true);
   const [resetModal, setResetModal] = useState(null);
   const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [resetting, setResetting] = useState(false);
   const toast = useToast();
 
@@ -212,21 +213,32 @@ export function LoginRoster() {
       </Card>
 
       {/* Modal: Reset Password */}
-      <Modal isOpen={!!resetModal} onClose={() => setResetModal(null)} title={`Reset Password for ${resetModal?.name}`}>
+      <Modal isOpen={!!resetModal} onClose={() => { setResetModal(null); setShowPassword(false); }} title={`Reset Password for ${resetModal?.name}`}>
         <form onSubmit={handleResetPassword} className="space-y-4 text-xs">
           <div>
             <label className="block font-semibold text-[#14213D] mb-1">New Password (Min 4 chars) *</label>
-            <Input
-              type="password"
-              required
-              minLength={4}
-              placeholder="Enter new password..."
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={4}
+                placeholder="Enter new password..."
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C97AB] hover:text-[#14213D] cursor-pointer p-1"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
-            <Button variant="outline" type="button" onClick={() => setResetModal(null)}>Cancel</Button>
+            <Button variant="outline" type="button" onClick={() => { setResetModal(null); setShowPassword(false); }}>Cancel</Button>
             <Button variant="primary" type="submit" loading={resetting}>Update Password</Button>
           </div>
         </form>

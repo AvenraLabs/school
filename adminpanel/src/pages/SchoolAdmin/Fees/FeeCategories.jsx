@@ -89,7 +89,10 @@ export function FeeCategories() {
             placeholder="New Fee Category Name..."
             className="flex-1 text-xs"
             value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setNewCategoryName(v.length > 0 ? v.charAt(0).toUpperCase() + v.slice(1) : v);
+            }}
           />
           <Button variant="primary" icon={Plus} type="submit" loading={saving} disabled={!newCategoryName.trim()}>
             Add Category
@@ -110,7 +113,10 @@ export function FeeCategories() {
                       autoFocus
                       className="text-xs h-8"
                       value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setEditingName(v.length > 0 ? v.charAt(0).toUpperCase() + v.slice(1) : v);
+                      }}
                     />
                     <Button variant="primary" size="sm" icon={Check} onClick={() => handleSaveEdit(c.id)} />
                     <Button variant="outline" size="sm" icon={X} onClick={() => setEditingId(null)} />

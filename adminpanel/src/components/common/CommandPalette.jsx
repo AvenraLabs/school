@@ -41,7 +41,7 @@ const navigationItems = [
   { group: 'Academic Management', label: 'Exams & Marks', to: '/admin/exams', icon: FileText },
 
   { group: 'System Configuration', label: 'Subject Catalog', to: '/admin/subjects', icon: BookOpen },
-  { group: 'System Configuration', label: 'Teacher Mapping', to: '/admin/assignments', icon: ClipboardList },
+  { group: 'System Configuration', label: 'Teacher Allocations', to: '/admin/assignments', icon: ClipboardList },
   { group: 'System Configuration', label: 'Academic Year Setup', to: '/admin/academic-year', icon: Calendar },
   { group: 'System Configuration', label: 'Login Credentials Roster', to: '/admin/login-roster', icon: ClipboardList },
   { group: 'System Configuration', label: 'System Audit Logs', to: '/admin/audit-logs', icon: Sparkles },

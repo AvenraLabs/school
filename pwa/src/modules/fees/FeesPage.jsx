@@ -129,24 +129,10 @@ export default function FeesPage() {
           <CardContent sx={{ p: 2.5 }}>
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
               <Box>
-                <Typography variant="caption" sx={{ fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  School Fees & Collections
-                </Typography>
                 <Typography variant="h5" sx={{ fontWeight: 900, color: "#0f172a" }}>
-                  My Fee Ledger
+                  Fee Ledger
                 </Typography>
               </Box>
-
-              <Chip
-                label={isFullyPaid ? "✅ All Fees Paid" : `Pending: ₹${summary.total_balance.toLocaleString("en-IN")}`}
-                sx={{
-                  fontWeight: 900,
-                  fontSize: 12,
-                  bgcolor: isFullyPaid ? "#e6f4ea" : "#fff7ed",
-                  color: isFullyPaid ? "#137333" : "#c2410c",
-                  border: `1px solid ${isFullyPaid ? "#ceead6" : "#ffedd5"}`,
-                }}
-              />
             </Box>
 
             {/* Progress Bar */}
