@@ -230,9 +230,9 @@ export default function FirstLoginPage() {
   const hasAvatar = Boolean(currentAvatarUrl);
 
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ py: 4 }}>
-        <Paper sx={{ p: 3 }}>
+    <Container maxWidth="sm" sx={{ px: { xs: 1.5, sm: 2 } }}>
+      <Box sx={{ py: { xs: 2, sm: 4 } }}>
+        <Paper sx={{ p: { xs: 2, sm: 3 } }}>
           <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
             Complete Your Profile
           </Typography>
@@ -243,8 +243,30 @@ export default function FirstLoginPage() {
             </Alert>
           )}
 
-          {/* Stepper */}
-          <Stepper activeStep={activeStep} orientation={isMobile ? "vertical" : "horizontal"} sx={{ mb: 4 }}>
+          {/* Horizontal Stepper for Desktop */}
+          <Stepper
+            activeStep={activeStep}
+            sx={{
+              mb: 4,
+              display: { xs: "none", sm: "flex" }
+            }}
+          >
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+
+          {/* Vertical Stepper for Mobile */}
+          <Stepper
+            activeStep={activeStep}
+            orientation="vertical"
+            sx={{
+              mb: 4,
+              display: { xs: "flex", sm: "none" }
+            }}
+          >
             {steps.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
