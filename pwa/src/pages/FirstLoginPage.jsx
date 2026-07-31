@@ -174,7 +174,7 @@ export default function FirstLoginPage() {
 
       const response = await completeProfileApi(submitData);
 
-      // Mark as submitted BEFORE calling login() so the useEffect guard does not fire navigate(-1)
+      // Mark submitted BEFORE login() so the useEffect guard does not call navigate(-1)
       submittedRef.current = true;
 
       // Update session with new token (first_login: false, must_change_password: false)
@@ -182,8 +182,13 @@ export default function FirstLoginPage() {
         login(response.data.token, response.data.refreshToken);
       }
 
-      // Navigate directly to approval-pending — avoids the "/" bounce-loop through ForceProfileCompletion
-      navigate("/approval-pending", { replace: true });
+      // If already approved (e.g. admin pre-approved), go straight to dashboard.
+      // Otherwise go to approval-pending to wait for admin approval.
+      if (response.data?.already_approved) {
+        navigate(`/${user.role}/dashboard`, { replace: true });
+      } else {
+        navigate("/approval-pending", { replace: true });
+      }
     } catch (err) {
       submittedRef.current = false;
       setError(err?.response?.data?.message || err?.message || "Failed to save profile");
