@@ -249,7 +249,6 @@ export function SchoolRegistry() {
                   <th className="px-4 py-3">Employee ID</th>
                   <th className="px-4 py-3">Faculty Name</th>
                   <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3">Designation</th>
                   <th className="px-4 py-3">Status</th>
                 </tr>
               </thead>
@@ -269,7 +268,6 @@ export function SchoolRegistry() {
                       <span className="text-[10px] text-[#2F6F5E] underline">View</span>
                     </td>
                     <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{t.user?.phone || '—'}</td>
-                    <td className="px-4 py-2.5 font-medium">{t.designation || 'Teacher'}</td>
                     <td className="px-4 py-2.5"><StatusBadge status="active" size="sm" /></td>
                   </tr>
                 ))}
@@ -513,10 +511,6 @@ export function SchoolRegistry() {
                   <div>
                     <span className="text-[10px] text-[#52607D] uppercase font-mono block">EMPLOYEE ID</span>
                     <span className="font-mono font-bold text-[#14213D]">{formatEmployeeId(selectedTeacher.employee_id)}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[#52607D] uppercase font-mono block">DESIGNATION</span>
-                    <span className="font-bold text-[#14213D]">{selectedTeacher.designation || 'Teacher'}</span>
                   </div>
                   <div>
                     <span className="text-[10px] text-[#52607D] uppercase font-mono block">QUALIFICATION</span>

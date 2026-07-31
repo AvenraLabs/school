@@ -276,36 +276,6 @@ export default function DashboardPage() {
               </Paper>
             </Grid>
 
-            <Grid item xs={4}>
-              <Paper
-                sx={{
-                  p: { xs: 1.2, sm: 2 },
-                  bgcolor: 'rgba(255,255,255,0.12)',
-                  backdropFilter: 'blur(12px)',
-                  color: 'white',
-                  borderRadius: '16px',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-              >
-                <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: { xs: '0.55rem', sm: '0.68rem' }, fontWeight: 700, letterSpacing: '0.3px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
-                    Grading
-                  </Typography>
-                  <Typography sx={{ fontSize: { xs: '1rem', sm: '1.4rem' }, fontWeight: 950, lineHeight: 1.2 }}>
-                    {totalPendingTasks} Pending
-                  </Typography>
-                </Box>
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.52rem', sm: '0.65rem' } }}>
-                    HW: {pendingHomeworkCount} • Exam: {pendingReportCardsCount}
-                  </Typography>
-                </Box>
-              </Paper>
-            </Grid>
           </Grid>
         </Box>
 

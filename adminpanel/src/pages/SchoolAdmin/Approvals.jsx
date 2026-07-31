@@ -189,10 +189,6 @@ export function Approvals() {
               <span className="font-semibold text-[#14213D] font-mono">{selectedItem.employee_id || '—'}</span>
             </div>
             <div>
-              <span className="text-[#8C97AB] block mb-0.5">Designation</span>
-              <span className="font-semibold text-[#14213D]">{selectedItem.designation || '—'}</span>
-            </div>
-            <div>
               <span className="text-[#8C97AB] block mb-0.5">Qualification</span>
               <span className="font-semibold text-[#14213D]">{selectedItem.qualification || '—'}</span>
             </div>

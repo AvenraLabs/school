@@ -40,7 +40,7 @@ export default function ProfileForm({
       mother_name: profile?.mother_name || "",
       guardian_name: profile?.guardian_name || "",
       address: profile?.address || "",
-      designation: profile?.designation || "",
+      designation: undefined,
       qualification: profile?.qualification || "",
       experience: profile?.experience || "",
       roll_no: profile?.roll_no || "",
@@ -371,11 +371,6 @@ export default function ProfileForm({
                 <option value="female">Female</option>
                 <option value="other">Other</option>
               </TextField>
-              <TextField
-                label="Designation"
-                fullWidth
-                {...register("designation")}
-              />
             </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: '100%' }}>
               <TextField

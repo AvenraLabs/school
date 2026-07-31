@@ -250,16 +250,7 @@ export default function ProfilePage() {
                       </Typography>
                     </Box>
                   </>
-                ) : (
-                  <Box sx={{ width: "100%", pr: 2, textAlign: "right" }}>
-                    <Typography variant="body1" fontWeight={900} color="text.primary" noWrap>
-                      {profile.designation || "—"}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                      Designation
-                    </Typography>
-                  </Box>
-                )}
+                ) : null}
               </Stack>
             </Stack>
 

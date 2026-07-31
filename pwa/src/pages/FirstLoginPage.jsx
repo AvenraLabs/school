@@ -9,9 +9,6 @@ import {
   Stack,
   Typography,
   CircularProgress,
-  Stepper,
-  Step,
-  StepLabel,
   Avatar,
   IconButton,
   Chip,
@@ -236,9 +233,6 @@ export default function FirstLoginPage() {
     <Container maxWidth="sm" sx={{ px: { xs: 1.5, sm: 2 } }}>
       <Box sx={{ py: { xs: 2, sm: 4 } }}>
         <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-          <Typography variant="h6" gutterBottom sx={{ mb: 2.5, fontWeight: 700, fontSize: { xs: 16, sm: 18 } }}>
-            Complete Your Profile
-          </Typography>
 
           {error && (
             <Alert severity="error" sx={{ mb: 2, fontSize: 12 }} onClose={() => setError(null)}>
@@ -246,68 +240,41 @@ export default function FirstLoginPage() {
             </Alert>
           )}
 
-          {/* Horizontal Stepper for Desktop */}
-          <Stepper
-            activeStep={activeStep}
-            sx={{ mb: 3, display: { xs: "none", sm: "flex" } }}
-          >
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel
-                  slotProps={{ label: { style: { fontSize: 12 } } }}
-                >
-                  {label}
-                </StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-
-          {/* Compact inline step indicator for Mobile */}
-          <Box
-            sx={{
-              display: { xs: "flex", sm: "none" },
-              alignItems: "center",
-              gap: 1,
-              mb: 2.5,
-              flexWrap: "wrap",
-            }}
-          >
-            {steps.map((label, idx) => (
-              <Box
-                key={label}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                }}
-              >
+          {/* Step progress — numbered circles only */}
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", mb: 2 }}>
+            {steps.map((_, idx) => (
+              <Box key={idx} sx={{ display: "flex", alignItems: "center" }}>
                 <Box
                   sx={{
-                    width: 22,
-                    height: 22,
+                    width: 26,
+                    height: 26,
                     borderRadius: "50%",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     fontSize: 11,
                     fontWeight: 700,
-                    bgcolor: idx < activeStep ? "success.main" : idx === activeStep ? "primary.main" : "grey.300",
-                    color: idx <= activeStep ? "white" : "text.secondary",
+                    bgcolor:
+                      idx < activeStep
+                        ? "success.main"
+                        : idx === activeStep
+                        ? "primary.main"
+                        : "grey.300",
+                    color: idx <= activeStep ? "white" : "text.disabled",
+                    transition: "background-color 0.2s",
                   }}
                 >
                   {idx < activeStep ? "✓" : idx + 1}
                 </Box>
-                <Typography
-                  sx={{
-                    fontSize: 11,
-                    fontWeight: idx === activeStep ? 700 : 400,
-                    color: idx === activeStep ? "primary.main" : "text.secondary",
-                  }}
-                >
-                  {label}
-                </Typography>
                 {idx < steps.length - 1 && (
-                  <Typography sx={{ fontSize: 11, color: "grey.400" }}>›</Typography>
+                  <Box
+                    sx={{
+                      width: 28,
+                      height: 2,
+                      bgcolor: idx < activeStep ? "success.main" : "grey.300",
+                      transition: "background-color 0.2s",
+                    }}
+                  />
                 )}
               </Box>
             ))}
@@ -317,9 +284,6 @@ export default function FirstLoginPage() {
             {/* Security Step */}
             {activeStep === 0 && (
               <Stack spacing={1.5}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: 13 }}>
-                  Set Account Password
-                </Typography>
                 {isStudent && (
                   <Alert severity="info" sx={{ fontSize: 11, py: 0.5 }}>
                     This login is shared with your parent — make sure they know the new password too.
