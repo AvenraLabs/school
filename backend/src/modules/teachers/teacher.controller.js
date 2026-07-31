@@ -19,7 +19,6 @@ export const createTeacher = asyncHandler(async (req, res) => {
     email: req.body.email,
     phone: req.body.phone,
     gender: req.body.gender,
-    designation: req.body.designation,
     qualification: req.body.qualification,
     joining_date: req.body.joining_date,
     experience: req.body.experience,
@@ -74,7 +73,6 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
     phone,
     email,
     gender,
-    designation,
     qualification,
     experience,
     avatar_url,
@@ -131,7 +129,7 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
       if (normalizedNew !== normalizedCur) pending_data.avatar_url = normalizedNew;
     }
 
-    const teacherFields = ["gender", "designation", "qualification", "experience"];
+    const teacherFields = ["gender", "qualification", "experience"];
     teacherFields.forEach(field => {
       if (req.body[field] !== undefined) {
         const normalizedNew = req.body[field] || null;
@@ -212,7 +210,6 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
   // Update Teacher details
   const teacherUpdates = {
     gender,
-    designation,
     qualification,
     experience,
     approval_status: "pending",

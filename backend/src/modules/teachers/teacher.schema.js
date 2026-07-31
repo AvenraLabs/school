@@ -14,7 +14,6 @@ export const completeTeacherProfileSchema = z.object({
   name: z.string().min(1).optional(),
   phone: z.preprocess(emptyToUndefined, z.string().optional()),
   gender: z.preprocess(emptyToUndefined, z.enum(["male", "female", "other"]).optional()),
-  designation: z.string().optional(),
   qualification: z.string().optional(),
   experience: z.preprocess(emptyToUndefined, z.coerce.number().int().nonnegative().optional()),
   email: z.preprocess(emptyToUndefined, z.string().email().optional()),

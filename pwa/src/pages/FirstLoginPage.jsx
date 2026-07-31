@@ -15,10 +15,16 @@ import {
   Avatar,
   IconButton,
   Chip,
-  useTheme,
-  useMediaQuery,
+  InputAdornment,
 } from "@mui/material";
-import { PhotoCamera, Delete } from "@mui/icons-material";
+import {
+  PhotoCamera,
+  Delete,
+  Visibility,
+  VisibilityOff,
+  CheckCircle,
+  Cancel,
+} from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { completeProfileApi, uploadProfilePicture } from "../modules/profile/profile.api";
@@ -30,8 +36,6 @@ const TEACHER_STEPS = ["Security", "Personal", "Professional"];
 export default function FirstLoginPage() {
   const { user, login, logout } = useAuth();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -40,6 +44,10 @@ export default function FirstLoginPage() {
   const [avatarFile, setAvatarFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null);
+
+  // Password visibility state
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const isStudent = user?.role === "student";
   const isTeacher = user?.role === "teacher";
@@ -64,18 +72,15 @@ export default function FirstLoginPage() {
     address: "",
     residential_status: "dayscholar",
 
-    // Teacher Professional (if teacher)
-    designation: "",
+    // Teacher Professional
     qualification: "",
     experience: "",
-    subject: "",
-    joining_date: "",
   });
 
   // Check if user is on first login
   useEffect(() => {
     if (user && !user.first_login) {
-      navigate(-1); // Go back if not first login
+      navigate(-1);
     }
   }, [user, navigate]);
 
@@ -94,34 +99,27 @@ export default function FirstLoginPage() {
       setError(null);
       setUploading(true);
 
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
       if (!allowedTypes.includes(file.type)) {
-        throw new Error(`Invalid file type. Allowed: ${allowedTypes.join(', ')}`);
+        throw new Error(`Invalid file type. Allowed: ${allowedTypes.join(", ")}`);
       }
 
-      // Validate file size (5MB limit)
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      const maxSize = 5 * 1024 * 1024;
       if (file.size > maxSize) {
         throw new Error("File size too large. Maximum size: 5MB");
       }
 
-      // Create preview
       const preview = createImagePreview(file);
       setPreviewUrl(preview);
       setAvatarFile(file);
 
-      // Upload the file
       const uploadedUrl = await uploadProfilePicture(file, user.id);
       setAvatarUrl(uploadedUrl);
 
-      // Clean up preview
       revokeImagePreview(preview);
       setPreviewUrl(null);
     } catch (uploadError) {
       setError(`Avatar upload failed: ${uploadError.message}`);
-      
-      // Clean up on error
       if (previewUrl) {
         revokeImagePreview(previewUrl);
         setPreviewUrl(null);
@@ -131,8 +129,7 @@ export default function FirstLoginPage() {
       setUploading(false);
     }
 
-    // Clear file input
-    e.target.value = '';
+    e.target.value = "";
   }
 
   function handleAvatarDelete() {
@@ -147,7 +144,6 @@ export default function FirstLoginPage() {
   async function handleNext() {
     setError(null);
 
-    // Security Step Validation
     if (activeStep === 0) {
       if (user?.must_change_password || formData.new_password) {
         if (!formData.new_password || formData.new_password.length < 6) {
@@ -166,7 +162,6 @@ export default function FirstLoginPage() {
     }
 
     if (activeStep === steps.length - 1) {
-      // Submit form
       await handleSubmit();
     } else {
       setActiveStep((prev) => prev + 1);
@@ -187,30 +182,30 @@ export default function FirstLoginPage() {
       const submitData = {
         ...formData,
         role: user?.role,
-        experience: formData.experience ? parseInt(formData.experience) : 0,
+        experience: formData.experience ? parseInt(formData.experience) : undefined,
       };
 
-      // Add avatar URL if uploaded
       if (avatarUrl) {
         submitData.avatar_url = avatarUrl;
       }
 
-      // Remove empty fields
+      // Remove empty/undefined fields
       Object.keys(submitData).forEach((key) => {
-        if (submitData[key] === "" || submitData[key] === null) {
+        if (submitData[key] === "" || submitData[key] === null || submitData[key] === undefined) {
           delete submitData[key];
         }
       });
 
       const response = await completeProfileApi(submitData);
 
-      // Update session with new token (if provided)
+      // Update session with new token (first_login is now false inside it)
       if (response.data && response.data.token) {
         login(response.data.token, response.data.refreshToken);
       }
 
-      // Profile completed successfully
-      navigate("/", { replace: true });
+      // Navigate directly to approval-pending since profile is submitted for approval
+      // after first completion. This avoids the "/" → login → dashboard → ForceProfileCompletion loop.
+      navigate("/approval-pending", { replace: true });
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || "Failed to save profile");
     } finally {
@@ -229,16 +224,24 @@ export default function FirstLoginPage() {
   const currentAvatarUrl = previewUrl || avatarUrl;
   const hasAvatar = Boolean(currentAvatarUrl);
 
+  // Password match state
+  const passwordsMatch =
+    formData.new_password &&
+    formData.confirm_password &&
+    formData.new_password === formData.confirm_password;
+  const passwordsMismatch =
+    formData.confirm_password && formData.new_password !== formData.confirm_password;
+
   return (
     <Container maxWidth="sm" sx={{ px: { xs: 1.5, sm: 2 } }}>
       <Box sx={{ py: { xs: 2, sm: 4 } }}>
         <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-          <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
+          <Typography variant="h6" gutterBottom sx={{ mb: 2.5, fontWeight: 700, fontSize: { xs: 16, sm: 18 } }}>
             Complete Your Profile
           </Typography>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            <Alert severity="error" sx={{ mb: 2, fontSize: 12 }} onClose={() => setError(null)}>
               {error}
             </Alert>
           )}
@@ -246,104 +249,183 @@ export default function FirstLoginPage() {
           {/* Horizontal Stepper for Desktop */}
           <Stepper
             activeStep={activeStep}
-            sx={{
-              mb: 4,
-              display: { xs: "none", sm: "flex" }
-            }}
+            sx={{ mb: 3, display: { xs: "none", sm: "flex" } }}
           >
             {steps.map((label) => (
               <Step key={label}>
-                <StepLabel>{label}</StepLabel>
+                <StepLabel
+                  slotProps={{ label: { style: { fontSize: 12 } } }}
+                >
+                  {label}
+                </StepLabel>
               </Step>
             ))}
           </Stepper>
 
-          {/* Vertical Stepper for Mobile */}
-          <Stepper
-            activeStep={activeStep}
-            orientation="vertical"
+          {/* Compact inline step indicator for Mobile */}
+          <Box
             sx={{
-              mb: 4,
-              display: { xs: "flex", sm: "none" }
+              display: { xs: "flex", sm: "none" },
+              alignItems: "center",
+              gap: 1,
+              mb: 2.5,
+              flexWrap: "wrap",
             }}
           >
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
+            {steps.map((label, idx) => (
+              <Box
+                key={label}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    bgcolor: idx < activeStep ? "success.main" : idx === activeStep ? "primary.main" : "grey.300",
+                    color: idx <= activeStep ? "white" : "text.secondary",
+                  }}
+                >
+                  {idx < activeStep ? "✓" : idx + 1}
+                </Box>
+                <Typography
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: idx === activeStep ? 700 : 400,
+                    color: idx === activeStep ? "primary.main" : "text.secondary",
+                  }}
+                >
+                  {label}
+                </Typography>
+                {idx < steps.length - 1 && (
+                  <Typography sx={{ fontSize: 11, color: "grey.400" }}>›</Typography>
+                )}
+              </Box>
             ))}
-          </Stepper>
+          </Box>
 
-          <Stack spacing={3}>
+          <Stack spacing={2}>
             {/* Security Step */}
             {activeStep === 0 && (
-              <Stack spacing={2}>
-                <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 600 }}>
+              <Stack spacing={1.5}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: 13 }}>
                   Set Account Password
                 </Typography>
                 {isStudent && (
-                  <Alert severity="info" sx={{ textTransform: "none" }}>
+                  <Alert severity="info" sx={{ fontSize: 11, py: 0.5 }}>
                     This login is shared with your parent — make sure they know the new password too.
                   </Alert>
                 )}
+
                 <TextField
                   fullWidth
+                  size="small"
                   label="New Password"
-                  type="password"
+                  type={showNewPassword ? "text" : "password"}
                   value={formData.new_password}
                   onChange={(e) => handleInputChange("new_password", e.target.value)}
                   placeholder="Minimum 6 characters"
                   required
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={() => setShowNewPassword((v) => !v)}
+                          edge="end"
+                          tabIndex={-1}
+                        >
+                          {showNewPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  inputProps={{ style: { fontSize: 13 } }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
+
                 <TextField
                   fullWidth
+                  size="small"
                   label="Confirm New Password"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   value={formData.confirm_password}
                   onChange={(e) => handleInputChange("confirm_password", e.target.value)}
                   placeholder="Re-enter new password"
                   required
+                  error={Boolean(passwordsMismatch)}
+                  helperText={
+                    passwordsMismatch
+                      ? "Passwords do not match"
+                      : passwordsMatch
+                      ? "Passwords match ✓"
+                      : ""
+                  }
+                  FormHelperTextProps={{
+                    sx: { color: passwordsMatch ? "success.main" : "error.main", fontSize: 11 },
+                  }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          {formData.confirm_password && (
+                            passwordsMatch
+                              ? <CheckCircle sx={{ fontSize: 16, color: "success.main" }} />
+                              : <Cancel sx={{ fontSize: 16, color: "error.main" }} />
+                          )}
+                          <IconButton
+                            size="small"
+                            onClick={() => setShowConfirmPassword((v) => !v)}
+                            edge="end"
+                            tabIndex={-1}
+                          >
+                            {showConfirmPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                          </IconButton>
+                        </Box>
+                      </InputAdornment>
+                    ),
+                  }}
+                  inputProps={{ style: { fontSize: 13 } }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
               </Stack>
             )}
 
             {/* Personal Step */}
             {activeStep === 1 && (
-              <Stack spacing={2}>
-                {/* Avatar Upload Section */}
+              <Stack spacing={1.5}>
+                {/* Avatar Upload */}
                 <Box sx={{ textAlign: "center" }}>
                   <Box position="relative" display="inline-block">
                     <Avatar
                       src={currentAvatarUrl}
-                      sx={{ 
-                        width: 120, 
-                        height: 120, 
-                        mx: "auto", 
-                        mb: 2,
+                      sx={{
+                        width: 90,
+                        height: 90,
+                        mx: "auto",
+                        mb: 1.5,
                         border: 2,
-                        borderColor: 'primary.main',
-                        borderStyle: uploading ? 'dashed' : 'solid'
+                        borderColor: "primary.main",
+                        borderStyle: uploading ? "dashed" : "solid",
                       }}
-                    >
-                      {uploading && (
-                        <CircularProgress 
-                          size={100} 
-                          sx={{ 
-                            position: 'absolute',
-                            color: 'primary.main'
-                          }} 
-                        />
-                      )}
-                    </Avatar>
-                    
+                    />
                     {uploading && (
                       <Box
                         position="absolute"
                         top="50%"
                         left="50%"
-                        sx={{ transform: 'translate(-50%, -50%)' }}
+                        sx={{ transform: "translate(-50%, -60%)" }}
                       >
-                        <CircularProgress size={24} />
+                        <CircularProgress size={20} />
                       </Box>
                     )}
                   </Box>
@@ -352,11 +434,12 @@ export default function FirstLoginPage() {
                     <Button
                       component="label"
                       variant="outlined"
-                      startIcon={<PhotoCamera />}
+                      startIcon={<PhotoCamera sx={{ fontSize: 14 }} />}
                       disabled={uploading}
                       size="small"
+                      sx={{ fontSize: 11 }}
                     >
-                      {hasAvatar ? 'Change Photo' : 'Add Photo'}
+                      {hasAvatar ? "Change Photo" : "Add Photo"}
                       <input
                         hidden
                         type="file"
@@ -373,48 +456,49 @@ export default function FirstLoginPage() {
                         color="error"
                         size="small"
                       >
-                        <Delete />
+                        <Delete sx={{ fontSize: 16 }} />
                       </IconButton>
                     )}
                   </Stack>
 
-                  <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 1 }}>
-                    <Chip label="Max 5MB" size="small" variant="outlined" />
-                    <Chip label="JPEG, PNG, WebP" size="small" variant="outlined" />
+                  <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 0.5 }}>
+                    <Chip label="Max 5MB" size="small" variant="outlined" sx={{ fontSize: 10, height: 20 }} />
+                    <Chip label="JPEG, PNG, WebP" size="small" variant="outlined" sx={{ fontSize: 10, height: 20 }} />
                   </Stack>
-
-                  {uploading && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      Uploading image...
-                    </Typography>
-                  )}
                 </Box>
 
                 <TextField
+                  size="small"
                   label="Full Name"
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   fullWidth
                   required
+                  inputProps={{ style: { fontSize: 13 } }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
 
                 <TextField
+                  size="small"
                   label="Date of Birth"
                   type="date"
                   value={formData.dob}
                   onChange={(e) => handleInputChange("dob", e.target.value)}
                   fullWidth
-                  InputLabelProps={{ shrink: true }}
+                  InputLabelProps={{ shrink: true, style: { fontSize: 13 } }}
+                  inputProps={{ style: { fontSize: 13 } }}
                 />
 
                 <TextField
                   select
+                  size="small"
                   label="Gender"
                   value={formData.gender}
                   onChange={(e) => handleInputChange("gender", e.target.value)}
                   fullWidth
                   SelectProps={{ native: true }}
-                  InputLabelProps={{ shrink: true }}
+                  InputLabelProps={{ shrink: true, style: { fontSize: 13 } }}
+                  inputProps={{ style: { fontSize: 13 } }}
                 >
                   <option value="">Select Gender</option>
                   <option value="male">Male</option>
@@ -423,119 +507,128 @@ export default function FirstLoginPage() {
                 </TextField>
 
                 <TextField
+                  size="small"
                   label="Phone Number"
                   value={formData.phone}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
                   fullWidth
+                  inputProps={{ style: { fontSize: 13 } }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
 
                 <TextField
+                  size="small"
                   label="Email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   fullWidth
+                  inputProps={{ style: { fontSize: 13 } }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
               </Stack>
             )}
 
             {/* Student Family Info */}
             {isStudent && activeStep === 2 && (
-              <Stack spacing={2}>
+              <Stack spacing={1.5}>
                 <TextField
+                  size="small"
                   label="Father's Name"
                   value={formData.father_name}
                   onChange={(e) => handleInputChange("father_name", e.target.value)}
                   fullWidth
+                  inputProps={{ style: { fontSize: 13 } }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
-
                 <TextField
+                  size="small"
                   label="Mother's Name"
                   value={formData.mother_name}
                   onChange={(e) => handleInputChange("mother_name", e.target.value)}
                   fullWidth
+                  inputProps={{ style: { fontSize: 13 } }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
-
                 <TextField
+                  size="small"
                   label="Guardian Name (if applicable)"
                   value={formData.guardian_name}
                   onChange={(e) => handleInputChange("guardian_name", e.target.value)}
                   fullWidth
+                  inputProps={{ style: { fontSize: 13 } }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
               </Stack>
             )}
 
             {/* Student Contact Info */}
             {isStudent && activeStep === 3 && (
-              <Stack spacing={2}>
+              <Stack spacing={1.5}>
                 <TextField
+                  size="small"
                   label="Emergency Contact Number"
                   value={formData.emergency_contact}
                   onChange={(e) => handleInputChange("emergency_contact", e.target.value)}
                   fullWidth
                   required
+                  inputProps={{ style: { fontSize: 13 } }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
-
                 <TextField
                   select
+                  size="small"
                   label="Residential Status"
                   value={formData.residential_status}
                   onChange={(e) => handleInputChange("residential_status", e.target.value)}
                   fullWidth
                   SelectProps={{ native: true }}
+                  InputLabelProps={{ shrink: true, style: { fontSize: 13 } }}
+                  inputProps={{ style: { fontSize: 13 } }}
                 >
                   <option value="dayscholar">Day Scholar</option>
                   <option value="hosteler">Hosteler</option>
                 </TextField>
-
                 <TextField
+                  size="small"
                   label="Address"
                   value={formData.address}
                   onChange={(e) => handleInputChange("address", e.target.value)}
                   fullWidth
                   multiline
                   rows={3}
+                  inputProps={{ style: { fontSize: 13 } }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
-
-                <Alert severity="info">
+                <Alert severity="info" sx={{ fontSize: 11, py: 0.5 }}>
                   Your teacher will need to approve this profile before you can access all features.
                 </Alert>
               </Stack>
             )}
 
-            {/* Teacher Professional Info */}
+            {/* Teacher Professional Info — only qualification and experience */}
             {isTeacher && activeStep === 2 && (
-              <Stack spacing={2}>
+              <Stack spacing={1.5}>
                 <TextField
-                  label="Designation"
-                  value={formData.designation}
-                  onChange={(e) => handleInputChange("designation", e.target.value)}
-                  fullWidth
-                />
-
-                <TextField
+                  size="small"
                   label="Qualification"
                   value={formData.qualification}
                   onChange={(e) => handleInputChange("qualification", e.target.value)}
                   fullWidth
+                  inputProps={{ style: { fontSize: 13 } }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
-
                 <TextField
+                  size="small"
                   label="Years of Experience"
                   type="number"
                   value={formData.experience}
                   onChange={(e) => handleInputChange("experience", e.target.value)}
                   fullWidth
+                  inputProps={{ style: { fontSize: 13 }, min: 0 }}
+                  InputLabelProps={{ style: { fontSize: 13 } }}
                 />
-
-                <TextField
-                  label="Subject/Department"
-                  value={formData.subject}
-                  onChange={(e) => handleInputChange("subject", e.target.value)}
-                  fullWidth
-                />
-
-                <Alert severity="info">
+                <Alert severity="info" sx={{ fontSize: 11, py: 0.5 }}>
                   Your school admin will need to approve this profile before you can start teaching.
                 </Alert>
               </Stack>
@@ -543,11 +636,13 @@ export default function FirstLoginPage() {
           </Stack>
 
           {/* Action Buttons */}
-          <Stack direction="row" spacing={2} sx={{ mt: 4 }}>
+          <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
             <Button
               onClick={handleBack}
               disabled={activeStep === 0 || loading || uploading}
               fullWidth
+              size="small"
+              sx={{ fontSize: 13 }}
             >
               Back
             </Button>
@@ -556,9 +651,11 @@ export default function FirstLoginPage() {
               onClick={handleNext}
               disabled={loading || uploading}
               fullWidth
+              size="small"
+              sx={{ fontSize: 13 }}
             >
               {loading ? (
-                <CircularProgress size={24} />
+                <CircularProgress size={20} />
               ) : activeStep === steps.length - 1 ? (
                 "Complete"
               ) : (
@@ -572,11 +669,8 @@ export default function FirstLoginPage() {
               const nextUser = await logout();
               if (nextUser) {
                 let basePath = "/student";
-                if (nextUser.role === "teacher") {
-                  basePath = "/teacher";
-                } else if (nextUser.role === "driver") {
-                  basePath = "/driver";
-                }
+                if (nextUser.role === "teacher") basePath = "/teacher";
+                else if (nextUser.role === "driver") basePath = "/driver";
                 window.location.href = `${basePath}/dashboard`;
               } else {
                 window.location.href = "/login";
@@ -584,7 +678,8 @@ export default function FirstLoginPage() {
             }}
             fullWidth
             variant="text"
-            sx={{ mt: 2 }}
+            size="small"
+            sx={{ mt: 1, fontSize: 12 }}
             disabled={loading || uploading}
           >
             Logout

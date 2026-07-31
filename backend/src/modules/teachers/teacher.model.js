@@ -34,10 +34,6 @@ const Teacher = db.define(
       allowNull: true,
     },
 
-    designation: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
 
     qualification: {
       type: DataTypes.STRING,

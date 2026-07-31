@@ -345,7 +345,7 @@ export function AuthProvider({ children }) {
         localStorage.setItem("activeUserId", nextAcc.user.id);
         setToken(nextAcc.token);
         setUser(nextAcc.user || decodeToken(nextAcc.token));
-        return decoded;
+        return nextAcc.user || decodeToken(nextAcc.token);
       } else {
         disconnectSharedSocket();
         localStorage.removeItem("token");
