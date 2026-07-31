@@ -280,13 +280,13 @@ export function SubstituteTeachers({
                     <div key={p.timetable_id} className="pt-3 first:pt-0 space-y-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="font-bold text-[#14213D] font-mono">Period {p.period_number}</span>
+                          <span className="font-bold text-[#14213D]">{p.subject_name}</span>
                           <span className="text-[#8C97AB] mx-2">·</span>
-                          <span className="font-semibold text-[#14213D]">{p.subject?.name}</span>
-                          <span className="text-[#8C97AB] mx-2">·</span>
-                          <span className="text-[#52607D]">Class {p.class?.class_name} {p.section?.name}</span>
+                          <span className="text-[#52607D] font-medium">Class {p.class_name} (Section {p.section_name})</span>
                         </div>
-                        <span className="text-[10px] text-[#8C97AB] font-mono">{p.start_time} - {p.end_time}</span>
+                        <span className="text-[10px] text-[#8C97AB] font-mono">
+                          {p.start_time?.substring(0, 5)} - {p.end_time?.substring(0, 5)}
+                        </span>
                       </div>
 
                       {loadingCandidates ? (
