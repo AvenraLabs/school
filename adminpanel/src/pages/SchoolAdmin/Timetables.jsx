@@ -12,11 +12,22 @@ import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck, AlertTriangle, Ch
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-export function Timetables() {
+export function Timetables({
+  selectedClass: propSelectedClass,
+  setSelectedClass: propSetSelectedClass,
+  selectedSection: propSelectedSection,
+  setSelectedSection: propSetSelectedSection,
+  isEmbedded = false
+} = {}) {
   const navigate = useNavigate();
   const [classes, setClasses] = useState([]);
-  const [selectedClass, setSelectedClass] = useState('');
-  const [selectedSection, setSelectedSection] = useState('');
+  const [internalClass, setInternalClass] = useState('');
+  const [internalSection, setInternalSection] = useState('');
+
+  const selectedClass = propSelectedClass !== undefined ? propSelectedClass : internalClass;
+  const setSelectedClass = propSetSelectedClass !== undefined ? propSetSelectedClass : setInternalClass;
+  const selectedSection = propSelectedSection !== undefined ? propSelectedSection : internalSection;
+  const setSelectedSection = propSetSelectedSection !== undefined ? propSetSelectedSection : setInternalSection;
   const [timetable, setTimetable] = useState({});
   const [assignments, setAssignments] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -210,7 +221,14 @@ export function Timetables() {
   };
 
   const handleSaveDay = async () => {
-    const unresolved = entries.filter((e) => !e.is_break && e.subject_id && !e.teacher_assignment_id);
+    const unresolved = entries.filter((e) => {
+      if (e.is_break || !e.subject_id) return false;
+      if (e.teacher_assignment_id) return false;
+      const sub = (sectionSubjects.length > 0 ? sectionSubjects : subjects).find(
+        (s) => String(s.id) === String(e.subject_id)
+      );
+      return sub?.subject_type !== 'co_curricular';
+    });
     if (unresolved.length > 0) {
       toast.error('Some subjects have no teacher assigned. Please assign teachers first.');
       return;
@@ -395,22 +413,26 @@ export function Timetables() {
                 Print Schedule
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              icon={Clock}
-              onClick={() => navigate('/admin/subject-periods')}
-            >
-              Period Allocations
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              icon={UserCheck}
-              onClick={() => navigate('/admin/timetables/substitutions')}
-            >
-              Substitute Teachers
-            </Button>
+            {!isEmbedded && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={Clock}
+                  onClick={() => navigate('/admin/subject-periods')}
+                >
+                  Period Allocations
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={UserCheck}
+                  onClick={() => navigate('/admin/timetables/substitutions')}
+                >
+                  Substitute Teachers
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </Card>
@@ -426,45 +448,47 @@ export function Timetables() {
       )}
 
       {/* Class & Section Selectors */}
-      <Card className="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider mb-1 font-mono">
-              Class *
-            </label>
-            <Select
-              value={selectedClass}
-              onChange={(e) => {
-                setSelectedClass(e.target.value);
-                setSelectedSection('');
-                setTimetable({});
-                setEditDay(null);
-              }}
-            >
-              <option value="">Select Class...</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>Class {c.class_name}</option>
-              ))}
-            </Select>
-          </div>
+      {!isEmbedded && (
+        <Card className="p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider mb-1 font-mono">
+                Class *
+              </label>
+              <Select
+                value={selectedClass}
+                onChange={(e) => {
+                  setSelectedClass(e.target.value);
+                  setSelectedSection('');
+                  setTimetable({});
+                  setEditDay(null);
+                }}
+              >
+                <option value="">Select Class...</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>Class {c.class_name}</option>
+                ))}
+              </Select>
+            </div>
 
-          <div>
-            <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider mb-1 font-mono">
-              Section *
-            </label>
-            <Select
-              value={selectedSection}
-              onChange={(e) => { setSelectedSection(e.target.value); setEditDay(null); }}
-              disabled={!selectedClass}
-            >
-              <option value="">Select Section...</option>
-              {selectedSections.map((s) => (
-                <option key={s.id} value={s.id}>Section {s.name}</option>
-              ))}
-            </Select>
+            <div>
+              <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider mb-1 font-mono">
+                Section *
+              </label>
+              <Select
+                value={selectedSection}
+                onChange={(e) => { setSelectedSection(e.target.value); setEditDay(null); }}
+                disabled={!selectedClass}
+              >
+                <option value="">Select Section...</option>
+                {selectedSections.map((s) => (
+                  <option key={s.id} value={s.id}>Section {s.name}</option>
+                ))}
+              </Select>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Weekly Schedule Display / Day Editor */}
       {!selectedClass || !selectedSection ? (
@@ -596,7 +620,7 @@ export function Timetables() {
               <Card key={day} className="flex flex-col justify-between">
                 <CardHeader className="py-2.5 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8] flex items-center justify-between">
                   <CardTitle className="text-xs font-bold uppercase text-[#14213D]">
-                    {day} ({dayEntries.length} Periods)
+                    {day} ({dayEntries.filter((e) => !e.is_break).length} Periods)
                   </CardTitle>
                   <div className="flex items-center gap-1">
                     {dayEntries.length > 0 && (

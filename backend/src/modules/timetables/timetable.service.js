@@ -74,9 +74,27 @@ export const saveTimetableService = async ({
     /**
      * 4️⃣ Insert new timetable entries
      */
+    const subjectIds = entries.map(e => e.subject_id).filter(Boolean);
+    const subjects = await Subject.findAll({
+      where: { id: subjectIds, school_id },
+      transaction: t,
+    });
+    const subjectMap = new Map(subjects.map(s => [String(s.id), s]));
+
     for (const e of entries) {
-      if (!e.is_break && !e.teacher_assignment_id && (!e.teacher_id || !e.subject_id)) {
-        throw new AppError("ASSIGNMENT_REQUIRED", 400);
+      const subObj = e.subject_id ? subjectMap.get(String(e.subject_id)) : null;
+      const isCoCurricular = subObj?.subject_type === 'co_curricular';
+
+      if (!e.is_break && !e.teacher_assignment_id) {
+        if (isCoCurricular) {
+          if (!e.subject_id) {
+            throw new AppError("ASSIGNMENT_REQUIRED", 400);
+          }
+        } else {
+          if (!e.teacher_id || !e.subject_id) {
+            throw new AppError("ASSIGNMENT_REQUIRED", 400);
+          }
+        }
       }
 
       let assignment = null;
@@ -93,13 +111,18 @@ export const saveTimetableService = async ({
             },
             transaction: t,
           });
-        } else if (e.teacher_id && e.subject_id) {
+        } else if (e.subject_id) {
+          const teacherId = e.teacher_id || null;
+          if (!isCoCurricular && !teacherId) {
+            throw new AppError("INVALID_TEACHER_ASSIGNMENT", 400);
+          }
+
           const [assoc, created] = await TeacherAssignment.findOrCreate({
             where: {
               school_id,
               class_id,
               section_id,
-              teacher_id: e.teacher_id,
+              teacher_id: teacherId,
               subject_id: e.subject_id,
             },
             defaults: {
@@ -116,52 +139,54 @@ export const saveTimetableService = async ({
           assignment = assoc;
         }
 
-        if (!assignment) {
+        if (!assignment && !isCoCurricular) {
           throw new AppError("INVALID_TEACHER_ASSIGNMENT", 400);
         }
 
         // 3.5 Teacher Collision Detection across other sections
-        const teacherId = assignment.teacher_id;
-        const overlapping = await Timetable.findAll({
-          where: {
-            school_id,
-            academic_year_id: academicYearId,
-            day_of_week,
-            [Op.or]: [
-              { class_id: { [Op.ne]: class_id } },
-              { section_id: { [Op.ne]: section_id } },
-            ],
-            start_time: { [Op.lt]: e.end_time },
-            end_time: { [Op.gt]: e.start_time },
-          },
-          include: [
-            {
-              model: TeacherAssignment,
-              where: { teacher_id: teacherId },
-              required: true,
-              include: [
-                {
-                  model: Teacher,
-                  include: [{ model: User, attributes: ["name"] }],
-                },
+        const teacherId = assignment?.teacher_id;
+        if (teacherId) {
+          const overlapping = await Timetable.findAll({
+            where: {
+              school_id,
+              academic_year_id: academicYearId,
+              day_of_week,
+              [Op.or]: [
+                { class_id: { [Op.ne]: class_id } },
+                { section_id: { [Op.ne]: section_id } },
               ],
+              start_time: { [Op.lt]: e.end_time },
+              end_time: { [Op.gt]: e.start_time },
             },
-            { model: Class, attributes: ["class_name"] },
-            { model: Section, attributes: ["name"] },
-          ],
-          transaction: t,
-        });
+            include: [
+              {
+                model: TeacherAssignment,
+                where: { teacher_id: teacherId },
+                required: true,
+                include: [
+                  {
+                    model: Teacher,
+                    include: [{ model: User, attributes: ["name"] }],
+                  },
+                ],
+              },
+              { model: Class, attributes: ["class_name"] },
+              { model: Section, attributes: ["name"] },
+            ],
+            transaction: t,
+          });
 
-        if (overlapping.length > 0) {
-          const conflict = overlapping[0];
-          const teacherName = conflict.teacher_assignment?.teacher?.user?.name || "Teacher";
-          const conflictClass = conflict.class?.class_name || `Class #${conflict.class_id}`;
-          const conflictSec = conflict.section?.name || `Section #${conflict.section_id}`;
-          const slot = `${conflict.start_time} - ${conflict.end_time}`;
-          throw new AppError(
-            `Teacher Schedule Conflict: ${teacherName} is already scheduled in Class ${conflictClass} (Section ${conflictSec}) at ${slot} on ${day_of_week.toUpperCase()}.`,
-            400
-          );
+          if (overlapping.length > 0) {
+            const conflict = overlapping[0];
+            const teacherName = conflict.teacher_assignment?.teacher?.user?.name || "Teacher";
+            const conflictClass = conflict.class?.class_name || `Class #${conflict.class_id}`;
+            const conflictSec = conflict.section?.name || `Section #${conflict.section_id}`;
+            const slot = `${conflict.start_time} - ${conflict.end_time}`;
+            throw new AppError(
+              `TEACHER_COLLISION: ${teacherName} is already scheduled in Class ${conflictClass} (${conflictSec}) at ${slot}`,
+              409
+            );
+          }
         }
       }
 
@@ -174,7 +199,7 @@ export const saveTimetableService = async ({
           day_of_week,
           start_time: e.start_time,
           end_time: e.end_time,
-          teacher_assignment_id: e.is_break ? null : assignment.id,
+          teacher_assignment_id: e.is_break ? null : (assignment?.id || null),
           is_break: e.is_break,
           title: e.is_break ? e.title : null,
         },

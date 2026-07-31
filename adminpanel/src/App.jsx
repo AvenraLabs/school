@@ -27,6 +27,7 @@ import { TeacherAssignments } from './pages/SchoolAdmin/TeacherAssignments';
 import { Timetables } from './pages/SchoolAdmin/Timetables';
 import { BellSchedulesManager } from './pages/SchoolAdmin/BellSchedulesManager';
 import { SubstituteTeachers } from './pages/SchoolAdmin/SubstituteTeachers';
+import { TimetableModule } from './pages/SchoolAdmin/TimetableModule';
 import { Notifications } from './pages/SchoolAdmin/Notifications';
 import { ExamsManager } from './pages/SchoolAdmin/ExamsManager';
 import { AuditLogs } from './pages/SchoolAdmin/AuditLogs';
@@ -99,6 +100,7 @@ function App() {
               <Route path="/admin/timetables" element={<Timetables />} />
               <Route path="/admin/bell-schedules" element={<BellSchedulesManager />} />
               <Route path="/admin/timetables/substitutions" element={<SubstituteTeachers />} />
+              <Route path="/admin/timetable-hub" element={<TimetableModule />} />
               <Route path="/admin/transport" element={<TransportManager />} />
               <Route path="/admin/notifications" element={<Notifications />} />
               <Route path="/admin/exams" element={<ExamsManager />} />

@@ -22,7 +22,7 @@ const TeacherAssignment = db.define(
 
     teacher_id: {
       type: DataTypes.BIGINT,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: "teachers",
         key: "id",

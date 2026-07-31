@@ -7,10 +7,21 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import { EmptyState } from '../../components/common/EmptyState';
 import { Calendar, Wand2, Save, BookOpen, AlertCircle, Sparkles, CheckCircle } from 'lucide-react';
 
-export function SubjectPeriodsManager() {
+export function SubjectPeriodsManager({
+  selectedClass: propSelectedClass,
+  setSelectedClass: propSetSelectedClass,
+  selectedSection: propSelectedSection,
+  setSelectedSection: propSetSelectedSection,
+  isEmbedded = false
+} = {}) {
   const [classes, setClasses] = useState([]);
-  const [selectedClass, setSelectedClass] = useState('');
-  const [selectedSection, setSelectedSection] = useState('');
+  const [internalClass, setInternalClass] = useState('');
+  const [internalSection, setInternalSection] = useState('');
+
+  const selectedClass = propSelectedClass !== undefined ? propSelectedClass : internalClass;
+  const setSelectedClass = propSetSelectedClass !== undefined ? propSetSelectedClass : setInternalClass;
+  const selectedSection = propSelectedSection !== undefined ? propSelectedSection : internalSection;
+  const setSelectedSection = propSetSelectedSection !== undefined ? propSetSelectedSection : setInternalSection;
 
   const [subjectsList, setSubjectsList] = useState([]);
   const [academicPeriods, setAcademicPeriods] = useState({});   // id -> periods_per_week
@@ -19,6 +30,9 @@ export function SubjectPeriodsManager() {
 
   const [periodBudget, setPeriodBudget] = useState(null);  // derived from bell schedule
   const [bellTemplate, setBellTemplate] = useState(null);
+  const [academicSlotsPerDay, setAcademicSlotsPerDay] = useState(0);
+  const [workingDays, setWorkingDays] = useState(6);
+  const [breakCount, setBreakCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [aiSuggested, setAiSuggested] = useState(false);
@@ -37,6 +51,9 @@ export function SubjectPeriodsManager() {
       setSubjectExamScores({});
       setBellTemplate(null);
       setPeriodBudget(null);
+      setAcademicSlotsPerDay(0);
+      setWorkingDays(6);
+      setBreakCount(0);
       setAiSuggested(false);
     }
   }, [selectedClass, selectedSection]);
@@ -96,17 +113,29 @@ export function SubjectPeriodsManager() {
           const tpl = tplRes.data || tplRes.template || tplRes;
           setBellTemplate(tpl);
           const slots = tpl.periods || [];
-          const academicSlotsPerDay = slots.filter((s) => !s.is_break).length;
-          const workingDays = tpl.working_days_per_week || classObj?.bellScheduleTemplate?.working_days_per_week || 5;
-          const computed = academicSlotsPerDay * workingDays;
+          const academicSlots = slots.filter((s) => !s.is_break).length;
+          const wDays = tpl.working_days_per_week || classObj?.bellScheduleTemplate?.working_days_per_week || 6;
+          const breaks = slots.filter((s) => s.is_break).length;
+
+          setAcademicSlotsPerDay(academicSlots);
+          setWorkingDays(wDays);
+          setBreakCount(breaks);
+
+          const computed = academicSlots * wDays;
           setPeriodBudget(computed > 0 ? computed : null);
         } else {
           setBellTemplate(null);
           setPeriodBudget(null);
+          setAcademicSlotsPerDay(0);
+          setWorkingDays(6);
+          setBreakCount(0);
         }
       } catch {
         setBellTemplate(null);
         setPeriodBudget(null);
+        setAcademicSlotsPerDay(0);
+        setWorkingDays(6);
+        setBreakCount(0);
       }
 
       // Load exam averages for AI weighting
@@ -277,27 +306,31 @@ export function SubjectPeriodsManager() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="w-40">
-            <Select
-              value={selectedClass}
-              onChange={(e) => { setSelectedClass(e.target.value); setSelectedSection(''); }}
-              options={[
-                { value: '', label: 'Select Class...' },
-                ...classes.map((c) => ({ value: c.id, label: c.class_name })),
-              ]}
-            />
-          </div>
-          <div className="w-44">
-            <Select
-              disabled={!selectedClass}
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              options={[
-                { value: '', label: 'All Sections (Class Default)' },
-                ...selectedSections.map((s) => ({ value: s.id, label: `Section ${s.name}` })),
-              ]}
-            />
-          </div>
+          {!isEmbedded && (
+            <>
+              <div className="w-40">
+                <Select
+                  value={selectedClass}
+                  onChange={(e) => { setSelectedClass(e.target.value); setSelectedSection(''); }}
+                  options={[
+                    { value: '', label: 'Select Class...' },
+                    ...classes.map((c) => ({ value: c.id, label: c.class_name })),
+                  ]}
+                />
+              </div>
+              <div className="w-44">
+                <Select
+                  disabled={!selectedClass}
+                  value={selectedSection}
+                  onChange={(e) => setSelectedSection(e.target.value)}
+                  options={[
+                    { value: '', label: 'All Sections (Class Default)' },
+                    ...selectedSections.map((s) => ({ value: s.id, label: `Section ${s.name}` })),
+                  ]}
+                />
+              </div>
+            </>
+          )}
           {selectedClass && (
             <Button
               variant="primary"
@@ -334,9 +367,16 @@ export function SubjectPeriodsManager() {
               </div>
               <div className="flex items-center gap-3 w-full md:w-auto justify-end">
                 {periodBudget !== null && (
-                  <span className="text-xs text-[#52607D] bg-white border border-[#E4E1D8] px-3 py-1.5 rounded-lg">
-                    <span className="font-bold text-[#14213D]">{periodBudget}</span> periods / week
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-xs text-[#52607D] bg-white border border-[#E4E1D8] px-3 py-1.5 rounded-lg">
+                      <span className="font-bold text-[#14213D]">{academicSlotsPerDay}</span> periods/day × <span className="font-bold text-[#14213D]">{workingDays}</span> days = <span className="font-bold text-[#14213D]">{periodBudget}</span> periods/week
+                    </span>
+                    {breakCount > 0 && (
+                      <span className="text-[10px] text-gray-400 font-medium">
+                        ({breakCount} break slot(s)/day excluded from budget)
+                      </span>
+                    )}
+                  </div>
                 )}
                 <Button onClick={handleSuggestAIDistribution} className="bg-[#14213D] hover:bg-[#1E2D4A] text-white">
                   <Wand2 className="w-4 h-4 mr-1.5 text-amber-400" />

@@ -47,14 +47,35 @@ export function GeneratedDraftReviewModal({ isOpen, onClose, job, onPublished })
   const activeSectionData = draftTimetable[selectedSectionId] || null;
   const activeDaySlots = activeSectionData?.days?.[selectedDay] || [];
 
-  const handlePlaceUnplacedUnit = (unitIdx, targetDay, slotIdx) => {
-    if (!activeSectionData) return;
+  const isTeacherBusyAt = (teacherId, day, startTime, endTime) => {
+    if (!teacherId) return false;
+    for (const secId of Object.keys(draftTimetable)) {
+      const daySlots = draftTimetable[secId]?.days?.[day] || [];
+      for (const slot of daySlots) {
+        if (
+          slot.start_time === startTime &&
+          slot.end_time === endTime &&
+          slot.teacher_id === teacherId
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
 
+  const handlePlaceUnplacedUnit = (unitIdx, targetDay, slotIdx) => {
     const unit = unplacedUnits[unitIdx];
     if (!unit) return;
 
+    const targetSectionId = unit.section_id;
+    if (!targetSectionId || !draftTimetable[targetSectionId]) {
+      toast.error('Target section not found in draft.');
+      return;
+    }
+
     const updated = structuredClone(draftTimetable);
-    const targetSlot = updated[selectedSectionId]?.days?.[targetDay]?.[slotIdx];
+    const targetSlot = updated[targetSectionId]?.days?.[targetDay]?.[slotIdx];
 
     if (!targetSlot || targetSlot.is_break) {
       toast.error('Cannot place subject into a break slot.');
@@ -63,6 +84,7 @@ export function GeneratedDraftReviewModal({ isOpen, onClose, job, onPublished })
 
     targetSlot.subject_id = unit.subject_id;
     targetSlot.subject_name = unit.subject_name;
+    targetSlot.teacher_id = unit.teacher_id;
     targetSlot.teacher_assignment_id = unit.teacher_assignment_id;
     targetSlot.teacher_name = unit.teacher_name;
 
@@ -106,14 +128,6 @@ export function GeneratedDraftReviewModal({ isOpen, onClose, job, onPublished })
             </div>
             <div>
               <h4 className="font-bold text-emerald-950 text-sm">Draft Generation Completed Successfully</h4>
-              <p className="text-emerald-800 text-xs mt-0.5">
-                {summary.placed_count} period slots assigned across {summary.sections_count} section(s).
-                {unplacedUnits.length > 0 && (
-                  <span className="text-amber-800 font-semibold ml-1.5">
-                    ({unplacedUnits.length} unplaced unit(s) require manual placement)
-                  </span>
-                )}
-              </p>
             </div>
           </div>
 
@@ -124,7 +138,7 @@ export function GeneratedDraftReviewModal({ isOpen, onClose, job, onPublished })
             className="bg-[#2F6F5E] hover:bg-[#245749] text-white text-xs py-1.5 px-4"
           >
             <Save className="w-4 h-4 mr-1.5" />
-            {publishing ? 'Publishing...' : 'Confirm & Publish Timetable'}
+            {publishing ? 'Publishing...' : 'Confirm'}
           </Button>
         </div>
 
@@ -168,13 +182,20 @@ export function GeneratedDraftReviewModal({ isOpen, onClose, job, onPublished })
                         }}
                         options={[
                           { value: '', label: 'Quick Place in Slot...' },
-                          ...(activeDaySlots || [])
-                            .map((slot, sIdx) => ({ slot, sIdx }))
-                            .filter(({ slot }) => !slot.is_break && !slot.subject_id)
-                            .map(({ slot, sIdx }) => ({
-                              value: `${selectedDay}:${sIdx}`,
-                              label: `${selectedDay.toUpperCase()} (${slot.start_time} - ${slot.end_time})`,
-                            })),
+                          ...DAYS.flatMap((day) => {
+                            const daySlots = draftTimetable[u.section_id]?.days?.[day] || [];
+                            return daySlots
+                              .map((slot, sIdx) => ({ slot, sIdx, day }))
+                              .filter(({ slot, day }) =>
+                                !slot.is_break &&
+                                !slot.subject_id &&
+                                !isTeacherBusyAt(u.teacher_id, day, slot.start_time, slot.end_time)
+                              )
+                              .map(({ slot, sIdx, day }) => ({
+                                value: `${day}:${sIdx}`,
+                                label: `${day.toUpperCase()} (${slot.start_time} - ${slot.end_time})`,
+                              }));
+                          }),
                         ]}
                       />
                     </div>
@@ -204,7 +225,7 @@ export function GeneratedDraftReviewModal({ isOpen, onClose, job, onPublished })
 
           <div className="flex items-center gap-1 overflow-x-auto">
             {DAYS.map((day) => {
-              const count = activeSectionData?.days?.[day]?.filter((s) => s.subject_id).length || 0;
+              const count = activeSectionData?.days?.[day]?.filter((s) => !s.is_break).length || 0;
               return (
                 <button
                   key={day}

@@ -191,7 +191,7 @@ Tracks historical academic class/section placements by year.
 Maps teachers to specific Class + Section + Subject combinations.
 - `id` (BIGINT, PK)
 - `school_id` (BIGINT, FK)
-- `teacher_id` (BIGINT, FK -> `teachers.id`)
+- `teacher_id` (BIGINT, FK -> `teachers.id`, Nullable for co-curricular)
 - `class_id` (BIGINT, FK), `section_id` (BIGINT, FK), `subject_id` (BIGINT, FK)
 - `is_active` (BOOLEAN), `is_class_teacher` (BOOLEAN)
 

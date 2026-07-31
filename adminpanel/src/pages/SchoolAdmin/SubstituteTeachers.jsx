@@ -22,7 +22,13 @@ import {
 } from 'lucide-react';
 import { formatDate } from '../../utils/date';
 
-export function SubstituteTeachers() {
+export function SubstituteTeachers({
+  selectedClass: propSelectedClass,
+  setSelectedClass: propSetSelectedClass,
+  selectedSection: propSelectedSection,
+  setSelectedSection: propSetSelectedSection,
+  isEmbedded = false
+} = {}) {
   const navigate = useNavigate();
   const toast = useToast();
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -158,7 +164,7 @@ export function SubstituteTeachers() {
       setSaving(true);
       await substitutionAPI.saveSubstitutions(todayStr, payload);
       toast.success('Substitutions saved successfully!');
-      navigate('/admin/timetables');
+      navigate('/admin/timetable-hub?tab=schedule');
     } catch (err) {
       if (err.response?.status === 409) {
         toast.error('Conflict: One of the selected teachers was assigned elsewhere.');
@@ -182,7 +188,7 @@ export function SubstituteTeachers() {
               variant="outline"
               size="icon"
               icon={ChevronLeft}
-              onClick={() => navigate('/admin/timetables')}
+              onClick={() => navigate('/admin/timetable-hub?tab=schedule')}
               title="Back to Timetables"
             />
             <span className="font-bold text-[#14213D]">Substitute Desk ({formatDate(todayStr)})</span>

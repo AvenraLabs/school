@@ -52,7 +52,7 @@ export function BellSchedulesManager() {
       const classList = clsRes.items || clsRes.data || clsRes || [];
       setAllClasses(classList);
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed to load bell schedule templates and classes');
+      toast.error(e.response?.data?.message || 'Failed to load period templates and classes');
     } finally {
       setLoading(false);
     }
@@ -182,15 +182,15 @@ export function BellSchedulesManager() {
 
       if (editingTemplate) {
         await bellSchedulesAPI.update(editingTemplate.id, payload);
-        toast.success('Bell schedule template updated successfully!');
+        toast.success('Period template updated successfully!');
       } else {
         await bellSchedulesAPI.create(payload);
-        toast.success('Bell schedule template created successfully!');
+        toast.success('Period template created successfully!');
       }
       setShowModal(false);
       loadData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to save bell schedule template');
+      toast.error(err.response?.data?.message || 'Failed to save period template');
     } finally {
       setSaving(false);
     }
@@ -215,10 +215,10 @@ export function BellSchedulesManager() {
         <div>
           <h2 className="font-display font-bold text-base text-[#14213D] flex items-center gap-2">
             <Clock className="w-4 h-4 text-[#2F6F5E]" />
-            Bell Schedule Templates
+            Period Templates
           </h2>
           <p className="text-gray-500 text-xs mt-0.5">
-            Create daily timing templates and link them to your classes & grade levels.
+            Create period templates and link them to your classes & grade levels.
           </p>
         </div>
         <Button
@@ -235,13 +235,13 @@ export function BellSchedulesManager() {
       {loading ? (
         <div className="p-12 text-center text-xs text-[#8C97AB] flex flex-col items-center gap-2">
           <div className="w-6 h-6 border-2 border-[#2F6F5E] border-t-transparent rounded-full animate-spin" />
-          Loading bell schedule templates...
+          Loading period templates...
         </div>
       ) : templates.length === 0 ? (
         <EmptyState
           icon={Clock}
-          title="No Bell Schedule Templates"
-          description="Create your first timing template to define daily period slots and break times for your classes."
+          title="No Period Templates"
+          description="Create your first period template to define daily period slots and break times for your classes."
           actionLabel="Create Template"
           onAction={handleOpenCreate}
         />
@@ -258,6 +258,9 @@ export function BellSchedulesManager() {
                 <CardHeader className="pb-3 border-b border-[#E4E1D8] flex flex-row items-start justify-between">
                   <div>
                     <CardTitle className="text-sm font-bold text-[#14213D]">{tpl.name}</CardTitle>
+                    <p className="text-[10px] text-gray-500 mt-0.5 font-medium">
+                      {academicCount} periods ({breakCount} break slot(s))
+                    </p>
                     {/* Linked Classes Badges */}
                     <div className="flex flex-wrap items-center gap-1.5 mt-2">
                       <span className="text-[10px] font-semibold text-[#52607D] uppercase">Assigned:</span>
@@ -338,7 +341,7 @@ export function BellSchedulesManager() {
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title={editingTemplate ? `Edit Template: ${editingTemplate.name}` : 'Create Bell Schedule Template'}
+        title={editingTemplate ? `Edit Template: ${editingTemplate.name}` : 'Create Period Template'}
         maxWidth="max-w-2xl"
       >
         <form onSubmit={handleSave} className="space-y-4 text-xs">
@@ -545,7 +548,7 @@ export function BellSchedulesManager() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Delete Bell Schedule Template"
+        title="Delete Period Template"
         description={`Are you sure you want to delete "${deleteTarget?.name}"? Classes using this template will need a new schedule assigned.`}
         confirmLabel="Delete Template"
         variant="danger"

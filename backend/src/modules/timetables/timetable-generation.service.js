@@ -105,7 +105,6 @@ export const checkReadinessService = async ({ school_id, class_id }) => {
         const periods = sub.periods_per_week;
 
         if (!assignment || !assignment.teacher) {
-          // Co-curricular subjects don't require a teacher assignment
           if (sub.subject_type !== 'co_curricular') {
             missingTeachers.push({
               subject_id: sub.id,
@@ -348,7 +347,7 @@ export async function processTimetableGeneration(jobId) {
     });
 
     // 3. Initialize In-Memory Teacher Busy Matrix
-    const teacherBusy = {};
+    let teacherBusy = {};
 
     if (!overwrite) {
       const existingTimetables = await Timetable.findAll({
@@ -388,7 +387,7 @@ export async function processTimetableGeneration(jobId) {
     // 4. Multi-Section Solver Execution
     for (const sec of readySections) {
       const { class_id, section_id, class_name, section_name, bell_schedule } = sec;
-      const workingDays = Math.min(6, Math.max(1, bell_schedule.working_days_per_week || 6));
+      const workingDays = Math.min(6, Math.max(1, bell_schedule.working_days_per_week));
       const activeDays = DAYS.slice(0, workingDays);
 
       const bst = await BellScheduleTemplate.findByPk(bell_schedule.id, {
@@ -415,6 +414,7 @@ export async function processTimetableGeneration(jobId) {
           title: p.is_break ? (p.title || "Break") : null,
           subject_id: null,
           subject_name: null,
+          teacher_id: null,
           teacher_assignment_id: null,
           teacher_name: null,
         }));
@@ -428,8 +428,7 @@ export async function processTimetableGeneration(jobId) {
         const assignment = assignmentMap.get(key);
         const reqPeriods = Number(sub.periods_per_week || 0);
         const isCoCurricular = sub.subject_type === 'co_curricular';
-
-        // Academic subjects require a teacher; co-curricular can be placed without one
+        // Academic subjects require a teacher assignment, co-curricular subjects can be scheduled without one
         const canPlace = (assignment && assignment.teacher) || isCoCurricular;
 
         if (canPlace && reqPeriods > 0) {
@@ -455,71 +454,125 @@ export async function processTimetableGeneration(jobId) {
         }
       });
 
-      shuffleArray(unitsToPlace);
+      let bestSectionDays = null;
+      let bestTeacherBusy = null;
+      let bestUnplacedUnits = null;
+      let minUnplacedCount = Infinity;
 
-      for (const unit of unitsToPlace) {
-        let placed = false;
-        const candidateDays = [...activeDays];
-        shuffleArray(candidateDays);
+      const getTeacherBusyCount = (tid) => {
+        if (!tid || !teacherBusy[tid]) return 0;
+        let count = 0;
+        for (const day of Object.keys(teacherBusy[tid])) {
+          count += Object.keys(teacherBusy[tid][day]).length;
+        }
+        return count;
+      };
 
-        for (const day of candidateDays) {
-          if (placed) break;
+      for (let attempt = 0; attempt < 25; attempt++) {
+        // Clone initial state of days for this section
+        const attemptDays = structuredClone(generatedTimetable[section_id].days);
+        // Clone teacherBusy state
+        const attemptTeacherBusy = structuredClone(teacherBusy);
+        const attemptUnplaced = [];
 
-          const daySlots = generatedTimetable[section_id].days[day];
+        // Shuffle units and then sort so units for the busiest teachers are scheduled first
+        const attemptUnits = [...unitsToPlace];
+        shuffleArray(attemptUnits);
+        attemptUnits.sort((a, b) => {
+          if (a.teacher_id === null && b.teacher_id !== null) return 1;
+          if (a.teacher_id !== null && b.teacher_id === null) return -1;
+          if (a.teacher_id === null && b.teacher_id === null) return 0;
+          const busyA = getTeacherBusyCount(a.teacher_id);
+          const busyB = getTeacherBusyCount(b.teacher_id);
+          return busyB - busyA; // Busiest first
+        });
 
-          const placedCountToday = daySlots.filter((slot) => slot.subject_id === unit.subject_id).length;
-          if (placedCountToday >= unit.daily_cap) {
-            continue;
-          }
+        for (const unit of attemptUnits) {
+          let placed = false;
+          const candidateDays = [...activeDays];
+          shuffleArray(candidateDays);
 
-          const candidateSlotIndices = daySlots
-            .map((slot, index) => ({ slot, index }))
-            .filter(({ slot }) => !slot.is_break && slot.subject_id === null)
-            .map(({ index }) => index);
+          for (const day of candidateDays) {
+            if (placed) break;
 
-          shuffleArray(candidateSlotIndices);
+            const daySlots = attemptDays[day];
 
-          for (const slotIdx of candidateSlotIndices) {
-            const slot = daySlots[slotIdx];
-            const slotKey = `${slot.start_time}_${slot.end_time}`;
-            const tid = unit.teacher_id;
+            const placedCountToday = daySlots.filter((slot) => slot.subject_id === unit.subject_id).length;
+            if (placedCountToday >= unit.daily_cap) {
+              continue;
+            }
 
-            // tid is null for co-curricular subjects — no teacher conflict check needed
-            const isTeacherBusy = tid ? teacherBusy[tid]?.[day]?.[slotKey] : false;
+            const candidateSlotIndices = daySlots
+              .map((slot, index) => ({ slot, index }))
+              .filter(({ slot }) => !slot.is_break && slot.subject_id === null)
+              .map(({ index }) => index);
 
-            if (!isTeacherBusy) {
-              daySlots[slotIdx] = {
-                ...slot,
-                subject_id: unit.subject_id,
-                subject_name: unit.subject_name,
-                subject_code: unit.subject_code,
-                teacher_assignment_id: unit.teacher_assignment_id,
-                teacher_name: unit.teacher_name,
-              };
+            shuffleArray(candidateSlotIndices);
 
-              if (tid) {
-                if (!teacherBusy[tid]) teacherBusy[tid] = {};
-                if (!teacherBusy[tid][day]) teacherBusy[tid][day] = {};
-                teacherBusy[tid][day][slotKey] = true;
+            for (const slotIdx of candidateSlotIndices) {
+              const slot = daySlots[slotIdx];
+              const slotKey = `${slot.start_time}_${slot.end_time}`;
+              const tid = unit.teacher_id;
+
+              // tid is null for co-curricular subjects — no teacher conflict check needed
+              const isTeacherBusy = tid ? attemptTeacherBusy[tid]?.[day]?.[slotKey] : false;
+
+              if (!isTeacherBusy) {
+                daySlots[slotIdx] = {
+                  ...slot,
+                  subject_id: unit.subject_id,
+                  subject_name: unit.subject_name,
+                  subject_code: unit.subject_code,
+                  teacher_id: unit.teacher_id,
+                  teacher_assignment_id: unit.teacher_assignment_id,
+                  teacher_name: unit.teacher_name,
+                };
+
+                if (tid) {
+                  if (!attemptTeacherBusy[tid]) attemptTeacherBusy[tid] = {};
+                  if (!attemptTeacherBusy[tid][day]) attemptTeacherBusy[tid][day] = {};
+                  attemptTeacherBusy[tid][day][slotKey] = true;
+                }
+
+                placed = true;
+                break;
               }
-
-              placed = true;
-              totalPlacedCount++;
-              break;
             }
           }
+
+          if (!placed) {
+            attemptUnplaced.push({
+              class_id: unit.class_id,
+              section_id: unit.section_id,
+              subject_id: unit.subject_id,
+              teacher_id: unit.teacher_id,
+              teacher_assignment_id: unit.teacher_assignment_id,
+              class_name: unit.class_name,
+              section_name: unit.section_name,
+              subject_name: unit.subject_name,
+              teacher_name: unit.teacher_name,
+              reason: "No collision-free open period slot available matching teacher & daily cap constraints",
+            });
+          }
         }
 
-        if (!placed) {
-          unplacedUnits.push({
-            class_name: unit.class_name,
-            section_name: unit.section_name,
-            subject_name: unit.subject_name,
-            teacher_name: unit.teacher_name,
-            reason: "No collision-free open period slot available matching teacher & daily cap constraints",
-          });
+        if (attemptUnplaced.length < minUnplacedCount) {
+          minUnplacedCount = attemptUnplaced.length;
+          bestSectionDays = attemptDays;
+          bestTeacherBusy = attemptTeacherBusy;
+          bestUnplacedUnits = attemptUnplaced;
+        }
+
+        if (minUnplacedCount === 0) {
+          break; // Stop early if we found a perfect collision-free placement
         }
       }
+
+      // Apply the best attempt
+      generatedTimetable[section_id].days = bestSectionDays;
+      teacherBusy = bestTeacherBusy;
+      unplacedUnits.push(...bestUnplacedUnits);
+      totalPlacedCount += (unitsToPlace.length - bestUnplacedUnits.length);
     }
 
     await job.update({
@@ -657,7 +710,26 @@ export const confirmGenerationJobService = async ({
               title: slot.title || "Break",
               is_break: true,
             });
-          } else if (slot.subject_id && slot.teacher_assignment_id) {
+          } else if (slot.subject_id) {
+            let taId = slot.teacher_assignment_id || null;
+            if (!taId) {
+              const [assoc] = await TeacherAssignment.findOrCreate({
+                where: {
+                  school_id,
+                  class_id: classId,
+                  section_id: sectionId,
+                  teacher_id: null,
+                  subject_id: slot.subject_id,
+                },
+                defaults: {
+                  is_active: true,
+                  is_class_teacher: false,
+                },
+                transaction: t,
+              });
+              taId = assoc.id;
+            }
+
             rowsToCreate.push({
               school_id,
               academic_year_id: academicYearId,
@@ -666,8 +738,7 @@ export const confirmGenerationJobService = async ({
               day_of_week: dayLower,
               start_time: slot.start_time,
               end_time: slot.end_time,
-              subject_id: slot.subject_id,
-              teacher_assignment_id: slot.teacher_assignment_id,
+              teacher_assignment_id: taId,
               is_break: false,
             });
           }
