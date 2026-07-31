@@ -264,7 +264,7 @@ export const getActivePosters = asyncHandler(async (req, res) => {
   });
 });
 
-/* ADMIN / TEACHER: UPDATE POSTER */
+/* ADMIN / TEACHER: UPDATE ANNOUNCEMENT / POSTER */
 export const updateNotification = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const Notification = (await import("./notification.model.js")).default;
@@ -273,12 +273,11 @@ export const updateNotification = asyncHandler(async (req, res) => {
     where: {
       id,
       school_id: req.user.school_id,
-      is_poster: true,
     },
   });
 
   if (!notification) {
-    throw new AppError("Poster announcement not found", 404);
+    throw new AppError("Announcement not found", 404);
   }
 
   const {
@@ -313,7 +312,7 @@ export const updateNotification = asyncHandler(async (req, res) => {
   });
 });
 
-/* ADMIN / TEACHER: DELETE POSTER */
+/* ADMIN / TEACHER: DELETE ANNOUNCEMENT / POSTER */
 export const deleteNotification = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const Notification = (await import("./notification.model.js")).default;
@@ -323,12 +322,11 @@ export const deleteNotification = asyncHandler(async (req, res) => {
     where: {
       id,
       school_id: req.user.school_id,
-      is_poster: true,
     },
   });
 
   if (!notification) {
-    throw new AppError("Poster announcement not found", 404);
+    throw new AppError("Announcement not found", 404);
   }
 
   // Delete associated acknowledgements first
@@ -338,7 +336,7 @@ export const deleteNotification = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
-    message: "Poster announcement deleted successfully",
+    message: "Announcement deleted successfully",
   });
 });
 

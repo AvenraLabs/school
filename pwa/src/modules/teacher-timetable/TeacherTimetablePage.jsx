@@ -149,9 +149,11 @@ export default function TeacherTimetablePage() {
               </Typography>
             </Paper>
           ) : (
-            <Stack spacing={2} sx={{ pb: 3 }}>
+          <Stack spacing={2} sx={{ pb: 3 }}>
               {timetable[activeDay].map((p, idx) => {
                 const isBreak = p.is_break;
+                const isCovering = p.is_covering;          // this teacher substituting for someone else today
+                const isSubstituted = p.is_substituted;    // this teacher is absent; someone else covering
                 const className = p.class?.class_name || p.Class?.class_name || "";
                 const sectionName = p.section?.name || p.Section?.name || "";
                 const classSection = [className, sectionName].filter(Boolean).join("-");
@@ -160,9 +162,26 @@ export default function TeacherTimetablePage() {
                 const dur = durationLabel(p.start_time, p.end_time);
                 const timeLabel = `${start}${end ? ` - ${end}` : ""}`;
 
+                // Border color: covering=secondary, substituted=info, break=grey, normal=primary
+                const borderColor = isCovering
+                  ? "secondary.main"
+                  : isSubstituted
+                  ? "info.main"
+                  : isBreak
+                  ? "grey.400"
+                  : "primary.main";
+
+                const bgColor = isCovering
+                  ? "rgba(20,184,166,0.06)"
+                  : isSubstituted
+                  ? "rgba(14,165,233,0.06)"
+                  : isBreak
+                  ? "action.hover"
+                  : "background.paper";
+
                 return (
                   <Paper
-                    key={p.id || idx}
+                    key={`${p.id}-${idx}`}
                     sx={{
                       p: 2,
                       borderRadius: 3,
@@ -170,9 +189,10 @@ export default function TeacherTimetablePage() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       borderLeft: 6,
-                      borderColor: isBreak ? "warning.main" : "primary.main",
+                      borderColor,
                       boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                      bgcolor: isBreak ? "warning.light" : "background.paper"
+                      bgcolor: bgColor,
+                      opacity: isSubstituted ? 0.75 : 1,
                     }}
                   >
                     <Box sx={{ mr: 2, color: "text.secondary" }}>
@@ -188,9 +208,51 @@ export default function TeacherTimetablePage() {
                     </Box>
 
                     <Box sx={{ textAlign: "right", flex: 1 }}>
-                      <Typography variant="subtitle1" fontWeight="bold" color={isBreak ? "warning.dark" : "text.primary"}>
-                        {isBreak ? (p.title || "Break") : (p.subject?.name || "Subject")}
-                      </Typography>
+                      {/* Subject + sub indicator row */}
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.75, flexWrap: "wrap" }}>
+                        <Typography variant="subtitle1" fontWeight="bold" color={isBreak ? "text.secondary" : "text.primary"}>
+                          {isBreak ? (p.title || "Break") : (p.subject?.name || "Subject")}
+                        </Typography>
+                        {isCovering && (
+                          <Box
+                            component="span"
+                            sx={{
+                              fontSize: 9,
+                              fontWeight: 700,
+                              letterSpacing: 0.4,
+                              px: 0.75,
+                              py: 0.2,
+                              bgcolor: "secondary.main",
+                              color: "white",
+                              borderRadius: "4px",
+                              lineHeight: 1.6,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Substituting
+                          </Box>
+                        )}
+                        {isSubstituted && (
+                          <Box
+                            component="span"
+                            sx={{
+                              fontSize: 9,
+                              fontWeight: 700,
+                              letterSpacing: 0.4,
+                              px: 0.75,
+                              py: 0.2,
+                              bgcolor: "info.main",
+                              color: "white",
+                              borderRadius: "4px",
+                              lineHeight: 1.6,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Covered
+                          </Box>
+                        )}
+                      </Box>
+
                       {!isBreak && classSection && (
                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5, mt: 0.5 }}>
                           <School fontSize="small" color="action" />
@@ -198,6 +260,19 @@ export default function TeacherTimetablePage() {
                             Class {classSection}
                           </Typography>
                         </Box>
+                      )}
+
+                      {/* "For: Original Teacher Name" when substituting */}
+                      {isCovering && p.original_teacher_name && (
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
+                          For: {p.original_teacher_name}
+                        </Typography>
+                      )}
+                      {/* "Covered by: Sub Name" when absent */}
+                      {isSubstituted && p.substitute_teacher_name && (
+                        <Typography variant="caption" color="info.main" display="block" sx={{ mt: 0.25 }}>
+                          Covered by: {p.substitute_teacher_name}
+                        </Typography>
                       )}
                     </Box>
                   </Paper>
@@ -274,9 +349,9 @@ export default function TeacherTimetablePage() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       borderLeft: 6,
-                      borderColor: isBreak ? "warning.main" : "primary.main",
+                      borderColor: isBreak ? "grey.400" : "primary.main",
                       boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                      bgcolor: isBreak ? "warning.light" : "background.paper"
+                      bgcolor: isBreak ? "action.hover" : "background.paper"
                     }}
                   >
                     <Box sx={{ mr: 2, color: "text.secondary" }}>
@@ -292,7 +367,7 @@ export default function TeacherTimetablePage() {
                     </Box>
 
                     <Box sx={{ textAlign: "right", flex: 1 }}>
-                      <Typography variant="subtitle1" fontWeight="bold" color={isBreak ? "warning.dark" : "text.primary"}>
+                      <Typography variant="subtitle1" fontWeight="bold" color={isBreak ? "text.secondary" : "text.primary"}>
                         {isBreak ? (p.title || "Break") : (p.subject?.name || "Subject")}
                       </Typography>
                       {!isBreak && teacherName && (

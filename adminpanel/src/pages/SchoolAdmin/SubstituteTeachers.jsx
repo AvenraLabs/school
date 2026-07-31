@@ -94,6 +94,8 @@ export function SubstituteTeachers({
         if (p.current_substitute?.teacher_id) {
           initialSubs[p.timetable_id] = p.current_substitute.teacher_id;
         }
+        // Periods with no existing substitute default to null (explicitly no-sub)
+        // — admin must actively pick a teacher to assign one
       });
       setSelectedSubstitutes(initialSubs);
 
@@ -126,6 +128,13 @@ export function SubstituteTeachers({
 
   const handleAssignSubstitute = (timetableId, substituteTeacherId) => {
     setSelectedSubstitutes((prev) => {
+      // substituteTeacherId === null means explicitly no substitution for this period
+      if (substituteTeacherId === null) {
+        const next = { ...prev };
+        delete next[timetableId];
+        return next;
+      }
+      // Toggle off if already selected
       if (prev[timetableId] === substituteTeacherId) {
         const next = { ...prev };
         delete next[timetableId];
@@ -150,13 +159,16 @@ export function SubstituteTeachers({
   const handleSaveSubstitutions = async () => {
     if (periods.length === 0) return;
 
-    const payload = Object.entries(selectedSubstitutes).map(([timetable_id, substitute_teacher_id]) => ({
-      timetable_id: Number(timetable_id),
-      substitute_teacher_id: Number(substitute_teacher_id),
-    }));
+    // Only send periods where a substitute was actually selected (not null / no-sub)
+    const payload = Object.entries(selectedSubstitutes)
+      .filter(([, substitute_teacher_id]) => substitute_teacher_id !== null && substitute_teacher_id !== undefined)
+      .map(([timetable_id, substitute_teacher_id]) => ({
+        timetable_id: Number(timetable_id),
+        substitute_teacher_id: Number(substitute_teacher_id),
+      }));
 
     if (payload.length === 0) {
-      toast.error('Please select at least one substitute teacher.');
+      toast.error('Select at least one substitute teacher for the periods that need coverage.');
       return;
     }
 
@@ -295,6 +307,20 @@ export function SubstituteTeachers({
                         <p className="text-[10px] text-[#B0403A]">No free teachers available for this period slot.</p>
                       ) : (
                         <div className="flex flex-wrap gap-2">
+                          {/* No Substitution option — always first */}
+                          <button
+                            type="button"
+                            onClick={() => handleAssignSubstitute(p.timetable_id, null)}
+                            className={`px-2.5 py-1.5 rounded-[6px] border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                              !selectedSubId
+                                ? 'bg-[#F5F0EB] text-[#8C4A2F] border-[#D4A574]'
+                                : 'bg-white text-[#8C97AB] border-[#E4E1D8] hover:bg-[#FAFAF8]'
+                            }`}
+                            title="Don't assign a substitute for this period"
+                          >
+                            <span>No Substitution</span>
+                          </button>
+
                           {candidates.map((cand) => {
                             const isSubSelected = String(selectedSubId) === String(cand.teacher_id);
                             return (

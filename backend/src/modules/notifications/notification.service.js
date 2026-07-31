@@ -71,21 +71,24 @@ export const listNotificationsForUserService = async ({
         ? { [Op.or]: [audienceFilter, { sender_user_id: user_id }] }
         : audienceFilter;
 
-    // Target user filter (null means broadcast/class-wide, non-null means single target user)
-    const targetUserFilter = {
-      [Op.or]: [{ target_user_id: null }, { target_user_id: user_id }],
-    };
-
-    // Class/section scope
+    // Class/section scope for broadcasts
     const scopeConditions = [{ class_id: null }];
     if (class_ids.length) scopeConditions.push({ class_id: { [Op.in]: class_ids } });
     if (section_ids.length) scopeConditions.push({ section_id: { [Op.in]: section_ids } });
 
-    where[Op.and] = [
-      audienceOrCreator,
-      targetUserFilter,
-      { [Op.or]: scopeConditions },
-    ];
+    // 1. Direct personal notification sent specifically to this user_id
+    const directPersonalNotif = { target_user_id: user_id };
+
+    // 2. Broadcast notification targeted to class/role (not targeted to a specific other user)
+    const broadcastNotif = {
+      [Op.and]: [
+        { target_user_id: null },
+        audienceOrCreator,
+        { [Op.or]: scopeConditions },
+      ],
+    };
+
+    where[Op.or] = [directPersonalNotif, broadcastNotif];
   }
 
   return Notification.findAndCountAll({

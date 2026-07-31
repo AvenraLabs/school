@@ -756,10 +756,10 @@ export function Notifications() {
         isOpen={!!deletingNotification}
         title="Delete Announcement"
         message={`Are you sure you want to delete "${deletingNotification?.title}"?`}
-        confirmLabel="Delete"
-        variant="danger"
+        confirmText="Delete"
+        danger={true}
         onConfirm={handleDelete}
-        onCancel={() => setDeletingNotification(null)}
+        onClose={() => setDeletingNotification(null)}
       />
     </div>
   );

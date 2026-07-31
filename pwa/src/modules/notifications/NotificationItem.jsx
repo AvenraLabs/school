@@ -58,8 +58,16 @@ export default function NotificationItem({ item, onAcknowledge }) {
     const titleLower = (item.title || "").toLowerCase();
     const messageLower = (item.message || "").toLowerCase();
 
-    // Academic deep-linking keywords
-    if (titleLower.includes("homework") || messageLower.includes("homework") || titleLower.includes("diary")) {
+    // ── Priority 1: explicit deep_link from backend ──
+    if (item.deep_link) {
+      navigate(item.deep_link);
+      return;
+    }
+
+    // ── Priority 2: keyword-based deep-linking ──
+    if (titleLower.includes("substitut") || messageLower.includes("substitut") || messageLower.includes("cover")) {
+      navigate("/teacher/timetable");
+    } else if (titleLower.includes("homework") || messageLower.includes("homework") || titleLower.includes("diary")) {
       navigate(`/${isTeacher ? "teacher" : "student"}/diary`);
     } else if (titleLower.includes("report") || messageLower.includes("report")) {
       navigate(`/${isTeacher ? "teacher" : "student"}/report-cards${isTeacher ? "/entry" : ""}`);
@@ -68,7 +76,7 @@ export default function NotificationItem({ item, onAcknowledge }) {
     } else if (titleLower.includes("fee") || messageLower.includes("fee")) {
       navigate(`/${isTeacher ? "teacher" : "student"}/fees`);
     } else {
-      // General announcement -> Open dialog
+      // General announcement → Open dialog
       setModalOpen(true);
     }
   };

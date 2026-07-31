@@ -85,6 +85,12 @@ const Notification = db.define(
       type: DataTypes.JSONB,
       allowNull: true,
     },
+
+    deep_link: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: "Optional route path for in-app navigation when notification is tapped",
+    },
   },
   {
     tableName: "notifications",

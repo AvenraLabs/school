@@ -10,6 +10,7 @@ import Section from "../sections/section.model.js";
 import Subject from "../subjects/subject.model.js";
 import ExamMark from "../report-cards/exam-mark.model.js";
 import Student from "../students/student.model.js";
+import Notification from "../notifications/notification.model.js";
 import AppError from "../../shared/appError.js";
 import { getCurrentAcademicYearId } from "../academic-years/academic-year.helper.js";
 
@@ -340,7 +341,14 @@ export const saveSubstitutionsService = async ({ user, school_id, date, substitu
 
       const period = await Timetable.findOne({
         where: { id: timetable_id, school_id },
-        include: [{ model: TeacherAssignment }],
+        include: [
+          {
+            model: TeacherAssignment,
+            include: [{ model: Subject, attributes: ["id", "name"] }],
+          },
+          { model: Class,   attributes: ["id", "class_name"] },
+          { model: Section, attributes: ["id", "name"] },
+        ],
         transaction: t,
       });
 
@@ -406,6 +414,7 @@ export const saveSubstitutionsService = async ({ user, school_id, date, substitu
         transaction: t,
       });
 
+      let savedSub;
       if (existing) {
         await existing.update(
           {
@@ -415,8 +424,9 @@ export const saveSubstitutionsService = async ({ user, school_id, date, substitu
           },
           { transaction: t }
         );
+        savedSub = existing;
       } else {
-        await TimetableSubstitution.create(
+        savedSub = await TimetableSubstitution.create(
           {
             school_id,
             academic_year_id: academicYearId,
@@ -430,6 +440,38 @@ export const saveSubstitutionsService = async ({ user, school_id, date, substitu
           },
           { transaction: t }
         );
+      }
+
+      // ── Fire in-app notification to the substitute teacher ──
+      try {
+        // Get subject + class + section names for the message
+        const subjectName = period.teacher_assignment?.subject?.name || "a class";
+        const className   = period.class?.class_name  || "";
+        const sectionName = period.section?.name      || "";
+        const classLabel  = [className, sectionName].filter(Boolean).join("-");
+        const timeLabel   = `${period.start_time?.slice(0, 5)} – ${period.end_time?.slice(0, 5)}`;
+
+        // Resolve substitute teacher's user_id for targeting
+        const subTeacher = await Teacher.findByPk(substitute_teacher_id, {
+          attributes: ["user_id"],
+          transaction: t,
+        });
+
+        if (subTeacher) {
+          await Notification.create({
+            school_id,
+            sender_user_id: user.id,
+            sender_role:    "school_admin",
+            title:          "📋 Substitution Assigned",
+            message:        `You have been assigned to cover ${subjectName} for Class ${classLabel} on ${date} at ${timeLabel}. Tap to view your schedule.`,
+            target_role:    "teacher",
+            target_user_id: subTeacher.user_id,
+            deep_link:      "/teacher/timetable",
+          }, { transaction: t });
+        }
+      } catch (notifErr) {
+        // Notification failure must not roll back the substitution save
+        console.error("[Substitution] notification fire failed:", notifErr.message);
       }
     }
 

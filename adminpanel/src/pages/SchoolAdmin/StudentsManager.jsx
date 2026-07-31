@@ -34,9 +34,35 @@ export function StudentsManager() {
   const filterSection = searchParams.get('section_id') || '';
   const activeTab = searchParams.get('status') || 'ACTIVE';
 
-  const setFilterClass = (val) => setSearchParams(prev => { if (val) prev.set('class_id', val); else prev.delete('class_id'); prev.delete('section_id'); return prev; });
-  const setFilterSection = (val) => setSearchParams(prev => { if (val) prev.set('section_id', val); else prev.delete('section_id'); return prev; });
-  const setActiveTab = (val) => setSearchParams(prev => { prev.set('status', val); return prev; });
+  const setFilterClass = (val) => {
+    setPage(0);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (val) next.set('class_id', val);
+      else next.delete('class_id');
+      next.delete('section_id');
+      return next;
+    });
+  };
+
+  const setFilterSection = (val) => {
+    setPage(0);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (val) next.set('section_id', val);
+      else next.delete('section_id');
+      return next;
+    });
+  };
+
+  const setActiveTab = (val) => {
+    setPage(0);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('status', val);
+      return next;
+    });
+  };
 
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -227,35 +253,40 @@ export function StudentsManager() {
       </div>
 
       {/* Filters Bar */}
-      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-3 shadow-xs flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#52607D] mr-1">
-          <Filter className="w-3.5 h-3.5 text-[#2F6F5E]" />
-          <span>Filters:</span>
+      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#52607D]">
+            <Filter className="w-3.5 h-3.5 text-[#2F6F5E]" />
+            <span>Filters:</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Select
+              className="w-40 sm:w-44"
+              value={filterClass}
+              onChange={(e) => setFilterClass(e.target.value)}
+            >
+              <option value="">All Classes</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>Class {c.class_name}</option>
+              ))}
+            </Select>
+
+            <Select
+              className="w-40 sm:w-44"
+              value={filterSection}
+              onChange={(e) => setFilterSection(e.target.value)}
+              disabled={!filterClass}
+            >
+              <option value="">All Sections</option>
+              {(classes.find((c) => String(c.id) === String(filterClass))?.sections || []).map((s) => (
+                <option key={s.id} value={s.id}>Section {s.name}</option>
+              ))}
+            </Select>
+          </div>
         </div>
-        <Select
-          className="w-44"
-          value={filterClass}
-          onChange={(e) => { setFilterClass(e.target.value); setFilterSection(''); setPage(0); }}
-        >
-          <option value="">All Classes</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.id}>{c.class_name}</option>
-          ))}
-        </Select>
 
-        <Select
-          className="w-44"
-          value={filterSection}
-          onChange={(e) => { setFilterSection(e.target.value); setPage(0); }}
-          disabled={!filterClass}
-        >
-          <option value="">All Sections</option>
-          {(classes.find((c) => String(c.id) === String(filterClass))?.sections || []).map((s) => (
-            <option key={s.id} value={s.id}>Section {s.name}</option>
-          ))}
-        </Select>
-
-        <div className="ml-auto text-xs text-[#52607D] font-mono tabular-nums">
+        <div className="text-xs text-[#52607D] font-mono tabular-nums">
           Total Records: <span className="font-semibold text-[#14213D]">{total}</span>
         </div>
       </div>
@@ -405,33 +436,35 @@ export function StudentsManager() {
       {/* Modal: Create Student */}
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Add New Student Record">
         <form onSubmit={handleCreate} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-[#14213D] mb-1">Class Target *</label>
-            <Select
-              required
-              value={createForm.class_id}
-              onChange={(e) => setCreateForm({ ...createForm, class_id: e.target.value, section_id: '' })}
-            >
-              <option value="">Select class</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>{c.class_name}</option>
-              ))}
-            </Select>
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#14213D] mb-1">Class Target *</label>
+              <Select
+                required
+                value={createForm.class_id}
+                onChange={(e) => setCreateForm({ ...createForm, class_id: e.target.value, section_id: '' })}
+              >
+                <option value="">Select class</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>Class {c.class_name}</option>
+                ))}
+              </Select>
+            </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-[#14213D] mb-1">Section Target *</label>
-            <Select
-              required
-              value={createForm.section_id}
-              onChange={(e) => setCreateForm({ ...createForm, section_id: e.target.value })}
-              disabled={!createForm.class_id}
-            >
-              <option value="">Select section</option>
-              {(classes.find((c) => String(c.id) === String(createForm.class_id))?.sections || []).map((s) => (
-                <option key={s.id} value={s.id}>Section {s.name}</option>
-              ))}
-            </Select>
+            <div>
+              <label className="block text-xs font-semibold text-[#14213D] mb-1">Section Target *</label>
+              <Select
+                required
+                value={createForm.section_id}
+                onChange={(e) => setCreateForm({ ...createForm, section_id: e.target.value })}
+                disabled={!createForm.class_id}
+              >
+                <option value="">Select section</option>
+                {(classes.find((c) => String(c.id) === String(createForm.class_id))?.sections || []).map((s) => (
+                  <option key={s.id} value={s.id}>Section {s.name}</option>
+                ))}
+              </Select>
+            </div>
           </div>
 
           <div>

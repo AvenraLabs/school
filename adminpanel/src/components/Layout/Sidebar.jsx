@@ -228,9 +228,6 @@ export function Sidebar({ isOpen, onClose, isCollapsed, setIsCollapsed }) {
         <div className="flex flex-col flex-1 min-h-0">
           <div className="h-14 px-4 border-b border-[#EDEAE1] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-8 h-8 rounded-[8px] bg-[#2F6F5E] text-white flex items-center justify-center font-display font-bold text-sm shrink-0 shadow-xs">
-                S
-              </div>
               {!isCollapsed && (
                 <div className="flex flex-col truncate">
                   <span className="font-display font-bold text-sm text-[#14213D] tracking-tight leading-tight">

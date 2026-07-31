@@ -305,8 +305,15 @@ export function ExamsManager() {
     }
     if (subjectPool.length === 0) subjectPool = subjects;
 
-    if (!examId || !classId || subjectPool.length === 0) {
-      toast.error('No subjects available to auto-populate. Set up subjects in the Subjects manager first.');
+    // Skip co-curricular / activity subjects (only add academic subjects to exam slots)
+    const academicPool = subjectPool.filter((sub) => {
+      const type = sub.subject_type || sub.Subject?.subject_type || sub.type;
+      const category = sub.category || sub.Subject?.category;
+      return type !== 'co_curricular' && category !== 'co_curricular' && !sub.is_co_curricular;
+    });
+
+    if (!examId || !classId || academicPool.length === 0) {
+      toast.error('No academic subjects available to auto-populate. Set up academic subjects in the Subjects manager first.');
       return;
     }
     setSaving(true);
@@ -324,7 +331,7 @@ export function ExamsManager() {
 
       let currentDate = new Date(startDate);
 
-      for (const sub of subjectPool) {
+      for (const sub of academicPool) {
         // Skip Sunday
         if (currentDate.getDay() === 0) {
           currentDate.setDate(currentDate.getDate() + 1);

@@ -103,8 +103,10 @@ export const Select = forwardRef(({
     }
   };
 
+  const hasWidthClass = /\b(w-|max-w-)\S+/.test(className);
+
   return (
-    <div ref={containerRef} className={`relative w-full ${className}`}>
+    <div ref={containerRef} className={`relative ${hasWidthClass ? '' : 'w-full'} ${className}`}>
       {/* Hidden native select for React synthetic event propagation */}
       <select
         ref={(node) => {

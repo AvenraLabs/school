@@ -54,13 +54,19 @@ export function useNotifications() {
   }, [loadingMore, hasMore, fetchPage]);
 
   async function acknowledge(id) {
-    await acknowledgeNotification(id);
+    try {
+      await acknowledgeNotification(id);
+    } catch (err) {
+      console.error("Failed to acknowledge notification:", err);
+    }
+    // Optimistic update — mark as read locally without re-fetching the whole list.
+    // Do NOT dispatch notifications:refresh here; that triggers a full list reload which
+    // destroys local component state (e.g. modal open) before it can render.
     setItems((prev) =>
       prev.map((n) =>
         n.id === id ? { ...n, is_acknowledged: true } : n
       )
     );
-    window.dispatchEvent(new Event("notifications:refresh"));
   }
 
   async function markAllRead() {

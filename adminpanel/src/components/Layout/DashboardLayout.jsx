@@ -75,7 +75,7 @@ export function DashboardLayout() {
             </div>
           </div>
 
-          {/* Top Actions: Command Palette trigger & Institutional Indicator */}
+          {/* Top Actions: Command Palette trigger */}
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => setCmdOpen(true)}
@@ -87,11 +87,6 @@ export function DashboardLayout() {
                 Ctrl + K
               </kbd>
             </button>
-
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EAF3F0] border border-[#D3E6E0] text-[11px] font-medium text-[#2F6F5E]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2F6F5E] animate-pulse" />
-              <span>{user?.school_name || 'Main Campus'}</span>
-            </div>
           </div>
         </header>
 

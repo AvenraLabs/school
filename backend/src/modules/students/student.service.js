@@ -81,6 +81,11 @@ export const createStudentService = async ({
 
     const password = `${username}@123`;
 
+    const primaryPhone = phone || guardian_phone || emergency_contact || null;
+    const cleanedPrimaryPhone = primaryPhone ? cleanTo10Digits(primaryPhone) : null;
+    const cleanedGuardianPhone = guardian_phone ? cleanTo10Digits(guardian_phone) : null;
+    const cleanedEmergency = emergency_contact ? cleanTo10Digits(emergency_contact) : cleanedGuardianPhone;
+
     /**
      * 4️⃣ Create user
      */
@@ -95,7 +100,7 @@ export const createStudentService = async ({
         is_active: true,
         name: name || "Student",
         email: email || null,
-        phone: phone ? cleanTo10Digits(phone) : null,
+        phone: cleanedPrimaryPhone,
       },
       { transaction: t }
     );
@@ -115,7 +120,8 @@ export const createStudentService = async ({
         father_name: father_name || null,
         mother_name: mother_name || null,
         guardian_name: guardian_name || null,
-        guardian_phone: guardian_phone ? cleanTo10Digits(guardian_phone) : null,
+        guardian_phone: cleanedGuardianPhone,
+        emergency_contact: cleanedEmergency,
         address: address || null,
         blood_group: blood_group || null,
         aadhar_no: aadhar_no || null,

@@ -6,21 +6,28 @@ import { Button } from '../ui/Button';
 export function ConfirmDialog({
   isOpen,
   onClose,
+  onCancel,
   onConfirm,
   title,
   message,
-  confirmText = 'Confirm',
+  confirmText,
+  confirmLabel,
   danger = false,
+  variant,
   loading = false,
 }) {
+  const handleClose = onClose || onCancel;
+  const isDanger = danger || variant === 'danger' || variant === 'destructive';
+  const labelText = confirmText || confirmLabel || 'Confirm';
+
   return (
-    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose?.()}>
+    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && handleClose?.()}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 bg-[#14213D]/40 backdrop-blur-[2px] z-50 animate-in fade-in duration-200" />
         <DialogPrimitive.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white border border-[#E4E1D8] rounded-[10px] shadow-[0_4px_16px_rgba(20,33,61,0.08)] z-50 outline-none overflow-hidden p-5 text-center animate-in zoom-in-95 duration-150">
           <div className="flex justify-end">
             <DialogPrimitive.Close
-              onClick={onClose}
+              onClick={handleClose}
               className="w-7 h-7 flex items-center justify-center rounded-[6px] text-[#52607D] hover:bg-[#FAFAF8] transition-colors outline-none cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -29,7 +36,7 @@ export function ConfirmDialog({
 
           <div
             className={`w-11 h-11 rounded-full flex items-center justify-center mx-auto mb-3.5 ${
-              danger ? 'bg-[#FDF2F1] text-[#B0403A]' : 'bg-[#FDF8EC] text-[#B8860B]'
+              isDanger ? 'bg-[#FDF2F1] text-[#B0403A]' : 'bg-[#FDF8EC] text-[#B8860B]'
             }`}
           >
             <AlertTriangle className="w-5 h-5" />
@@ -46,19 +53,19 @@ export function ConfirmDialog({
           <div className="flex items-center gap-2.5">
             <Button
               variant="outline"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={loading}
               className="flex-1"
             >
               Cancel
             </Button>
             <Button
-              variant={danger ? 'destructive' : 'primary'}
+              variant={isDanger ? 'destructive' : 'primary'}
               onClick={onConfirm}
               loading={loading}
               className="flex-1"
             >
-              {confirmText}
+              {labelText}
             </Button>
           </div>
         </DialogPrimitive.Content>

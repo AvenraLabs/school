@@ -71,9 +71,9 @@ export default function TimetableStudentView({ timetable }) {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   borderLeft: 6,
-                  borderColor: isBreak ? 'warning.main' : 'primary.main',
+                  borderColor: isBreak ? 'grey.400' : 'primary.main',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                  bgcolor: isBreak ? 'warning.light' : 'background.paper'
+                  bgcolor: isBreak ? 'action.hover' : 'background.paper'
                 }}
               >
                 <Box sx={{ mr: 2, color: 'text.secondary' }}>
@@ -89,7 +89,7 @@ export default function TimetableStudentView({ timetable }) {
                 </Box>
 
                 <Box sx={{ textAlign: "right", flex: 1 }}>
-                  <Typography variant="subtitle1" fontWeight="bold">
+                  <Typography variant="subtitle1" fontWeight="bold" color={isBreak ? "text.secondary" : "text.primary"}>
                     {isBreak ? "Break" : (p.subject?.name || "Subject")}
                   </Typography>
                   {!isBreak && teacherName && (

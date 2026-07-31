@@ -689,7 +689,7 @@ export const sendPaymentWhatsAppReceiptService = async (payment_id, school_id) =
     include: [
       {
         model: Student,
-        attributes: ["id", "admission_no", "roll_no", "phone", "emergency_contact"],
+        attributes: ["id", "admission_no", "roll_no", "emergency_contact"],
         include: [
           { model: User, attributes: ["name", "phone"] },
           { model: Class, attributes: ["class_name"] },
@@ -708,7 +708,7 @@ export const sendPaymentWhatsAppReceiptService = async (payment_id, school_id) =
   const studentName = payment.Student?.User?.name || payment.Student?.name || "Student";
   const className = payment.Student?.Class?.class_name || "";
   const feeTitle = payment.StudentFee?.FeeDefinition?.title || "School Fee";
-  const rawPhone = payment.Student?.phone || payment.Student?.User?.phone || payment.Student?.emergency_contact;
+  const rawPhone = payment.Student?.User?.phone || payment.Student?.emergency_contact;
 
   if (!rawPhone || !rawPhone.trim()) {
     throw new AppError("Parent phone number is empty in student profile", 400);
