@@ -9,6 +9,7 @@ import {
     setClassSubjectsService,
     getSectionOverridesService,
     setSectionOverridesService,
+    saveSubjectPeriodsService,
     getSubjectsForSection,
 } from "./subject.service.js";
 
@@ -165,3 +166,20 @@ export const setSectionOverrides = asyncHandler(async (req, res) => {
     );
     res.json(result);
 });
+
+/**
+ * PUT /subjects/periods
+ * Bulk saves periods_per_week allocations for class or section subjects.
+ * Body: { class_id, section_id?, periods: [{ subject_id, periods_per_week }] }
+ */
+export const saveSubjectPeriods = asyncHandler(async (req, res) => {
+    const { class_id, section_id, periods } = req.body;
+    const result = await saveSubjectPeriodsService({
+        school_id: req.user.school_id,
+        class_id: Number(class_id),
+        section_id: section_id ? Number(section_id) : undefined,
+        periods,
+    });
+    res.json(result);
+});
+

@@ -26,6 +26,11 @@ const ClassSubject = db.define(
       allowNull: false,
       defaultValue: true,
     },
+    periods_per_week: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+    },
   },
   {
     tableName: "class_subjects",

@@ -84,6 +84,7 @@ export const createSectionService = async ({
             password: defaultPassword(stuUsername),
             is_active: true,
             first_login: true,
+            must_change_password: true,
             name: `Student ${cls.class_name}${normalizedName}-${i}`,
           },
           { transaction: t }

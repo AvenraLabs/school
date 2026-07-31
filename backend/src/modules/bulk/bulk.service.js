@@ -81,6 +81,7 @@ export const bulkCreateDataService = async ({
           password: defaultPassword(username),
           is_active: true,
           first_login: true,
+          must_change_password: true,
           name: `Teacher ${serial}`,
         },
         { transaction: t }
@@ -186,6 +187,7 @@ export const bulkCreateDataService = async ({
               password: defaultPassword(stuUsername),
               is_active: true,
               first_login: true,
+              must_change_password: true,
               name: `Student ${classData.name}${sectionNameCapital}-${i}`,
             },
             { transaction: t }

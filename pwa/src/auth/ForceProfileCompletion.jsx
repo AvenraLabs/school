@@ -8,6 +8,10 @@ export default function ForceProfileCompletion({ children }) {
 
     if (loading) return null;
 
+    if (user && user.must_change_password && !user.first_login) {
+        return <Navigate to="/change-password" state={{ from: location }} replace />;
+    }
+
     if (user && user.first_login) {
         return <Navigate to="/first-login" state={{ from: location }} replace />;
     }

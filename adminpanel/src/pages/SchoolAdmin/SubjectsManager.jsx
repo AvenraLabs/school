@@ -19,6 +19,7 @@ export function SubjectsManager() {
   const [showEdit, setShowEdit] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [name, setName] = useState('');
+  const [subjectType, setSubjectType] = useState('academic'); // 'academic' | 'co_curricular'
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
@@ -151,13 +152,28 @@ export function SubjectsManager() {
   };
 
   /* ===================== Subject Catalog CRUD ===================== */
+  const handleOpenAdd = () => {
+    setName('');
+    setSubjectType('academic');
+    setShowAdd(true);
+  };
+
+  const handleOpenEdit = (sub) => {
+    setShowEdit(sub);
+    setName(sub.name || '');
+    setSubjectType(sub.subject_type || 'academic');
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!name.trim() || saving) return;
     setSaving(true);
     try {
-      await subjectsAPI.create(name.trim());
-      toast.success('Subject created');
+      await subjectsAPI.create({
+        name: name.trim(),
+        subject_type: subjectType,
+      });
+      toast.success('Subject created successfully!');
       setShowAdd(false);
       setName('');
       loadSubjects();
@@ -173,8 +189,11 @@ export function SubjectsManager() {
     if (!name.trim() || saving) return;
     setSaving(true);
     try {
-      await subjectsAPI.update(showEdit.id, name.trim());
-      toast.success('Subject updated');
+      await subjectsAPI.update(showEdit.id, {
+        name: name.trim(),
+        subject_type: subjectType,
+      });
+      toast.success('Subject updated successfully!');
       setShowEdit(null);
       setName('');
       loadSubjects();
@@ -218,7 +237,7 @@ export function SubjectsManager() {
           </div>
 
           {activeTab === 0 && (
-            <Button variant="primary" size="sm" icon={Plus} onClick={() => { setShowAdd(true); setName(''); }}>
+            <Button variant="primary" size="sm" icon={Plus} onClick={handleOpenAdd}>
               Add Subject
             </Button>
           )}
@@ -237,17 +256,18 @@ export function SubjectsManager() {
             <table className="w-full text-left border-collapse text-xs">
               <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
                 <tr>
-                  <th className="px-4 py-2.5 w-20">ID</th>
+                  <th className="px-4 py-2.5 w-16">ID</th>
                   <th className="px-4 py-2.5">Subject Name</th>
-                  <th className="px-4 py-2.5 text-right w-32">Actions</th>
+                  <th className="px-4 py-2.5">Subject Type</th>
+                  <th className="px-4 py-2.5 text-right w-28">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
                 {loading ? (
-                  <tr><td colSpan={3} className="px-4 py-8 text-center text-[#8C97AB]">Loading subject catalog...</td></tr>
+                  <tr><td colSpan={4} className="px-4 py-8 text-center text-[#8C97AB]">Loading subject catalog...</td></tr>
                 ) : subjects.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-4 py-12 text-center">
+                    <td colSpan={4} className="px-4 py-12 text-center">
                       <EmptyState icon={BookOpen} title="No subjects created yet" description="Create your first subject to start building curriculum schedules." />
                     </td>
                   </tr>
@@ -256,9 +276,18 @@ export function SubjectsManager() {
                     <tr key={s.id} className="hover:bg-[#FAFAF8] transition-colors">
                       <td className="px-4 py-2.5 font-mono text-[#8C97AB]">#{s.id}</td>
                       <td className="px-4 py-2.5 font-semibold text-[#14213D]">{s.name}</td>
+                      <td className="px-4 py-2.5">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                          s.subject_type === 'co_curricular'
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                            : 'bg-[#EAF3F0] text-[#2F6F5E] border-[#D3E6E0]'
+                        }`}>
+                          {s.subject_type === 'co_curricular' ? 'Co-Curricular / Activity' : 'Academic'}
+                        </span>
+                      </td>
                       <td className="px-4 py-2.5 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => { setShowEdit(s); setName(s.name); }} title="Edit Subject">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(s)} title="Edit Subject">
                             <Edit2 className="w-3.5 h-3.5" />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(s)} title="Delete Subject" className="text-[#B0403A] hover:bg-[#FDF2F1]">
@@ -446,9 +475,22 @@ export function SubjectsManager() {
         <form onSubmit={handleCreate} className="space-y-4 text-xs">
           <div>
             <label className="block font-semibold text-[#14213D] mb-1">Subject Name *</label>
-            <Input required autoFocus placeholder="e.g. Physical Education, Computer Science..." value={name} onChange={(e) => setName(e.target.value)} />
+            <Input required autoFocus placeholder="e.g. Games, Yoga, Physical Education, Maths..." value={name} onChange={(e) => setName(e.target.value)} />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+
+          <div>
+            <label className="block font-semibold text-[#14213D] mb-1">Subject Type *</label>
+            <Select
+              value={subjectType}
+              onChange={(e) => setSubjectType(e.target.value)}
+              options={[
+                { value: 'academic', label: 'Academic Subject' },
+                { value: 'co_curricular', label: 'Co-Curricular / Activity' },
+              ]}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
             <Button type="button" variant="outline" size="sm" onClick={() => setShowAdd(false)}>Cancel</Button>
             <Button type="submit" variant="primary" size="sm" disabled={saving}>{saving ? 'Saving...' : 'Create Subject'}</Button>
           </div>
@@ -462,7 +504,20 @@ export function SubjectsManager() {
             <label className="block font-semibold text-[#14213D] mb-1">Subject Name *</label>
             <Input required autoFocus value={name} onChange={(e) => setName(e.target.value)} />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+
+          <div>
+            <label className="block font-semibold text-[#14213D] mb-1">Subject Type *</label>
+            <Select
+              value={subjectType}
+              onChange={(e) => setSubjectType(e.target.value)}
+              options={[
+                { value: 'academic', label: 'Academic Subject' },
+                { value: 'co_curricular', label: 'Co-Curricular / Activity' },
+              ]}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
             <Button type="button" variant="outline" size="sm" onClick={() => setShowEdit(null)}>Cancel</Button>
             <Button type="submit" variant="primary" size="sm" disabled={saving}>{saving ? 'Saving...' : 'Update Subject'}</Button>
           </div>

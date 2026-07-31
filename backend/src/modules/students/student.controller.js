@@ -192,7 +192,23 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
   const currentUser = await User.findByPk(req.user.id);
   if (!currentUser) throw new AppError("User not found", 404);
 
+  const { new_password } = req.body;
+
+  if (currentUser.must_change_password) {
+    if (!new_password || new_password.trim().length < 6) {
+      throw new AppError("New password is required and must be at least 6 characters long", 400);
+    }
+    const defaultPwd = `${currentUser.username}@123`;
+    if (new_password === currentUser.password || new_password === defaultPwd) {
+      throw new AppError("New password must be different from your current default password", 400);
+    }
+  }
+
   const userUpdates = {};
+  if (new_password && new_password.trim().length >= 6) {
+    userUpdates.password = new_password.trim();
+    userUpdates.must_change_password = false;
+  }
   if (name !== undefined) userUpdates.name = name;
   if (phone !== undefined) userUpdates.phone = cleanedPhone || null;
   if (req.body.email !== undefined) userUpdates.email = req.body.email;
@@ -203,7 +219,7 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     }
     userUpdates.avatar_url = avatar_url || null;
   }
-  if (req.user.first_login && name !== undefined) {
+  if (currentUser.first_login) {
     userUpdates.first_login = false;
   }
 
@@ -238,19 +254,34 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     );
   }
 
-  /* Create new token */
-  const token = jwt.sign(
-    {
-      id: req.user.id,
-      role: req.user.role,
-      school_id: req.user.school_id,
-      iat: Date.now(),
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
-  );
+  const updatedUser = await User.findByPk(req.user.id);
+  const tokenPayload = {
+    id:                   updatedUser.id,
+    role:                 updatedUser.role,
+    school_id:            updatedUser.school_id,
+    name:                 updatedUser.name,
+    username:             updatedUser.username,
+    phone:                updatedUser.phone,
+    first_login:          updatedUser.first_login,
+    must_change_password: updatedUser.must_change_password,
+    student_id:           student.id,
+    class_id:             student.class_id,
+    section_id:           student.section_id,
+  };
 
-  res.json({ message: "Profile completed", token, user: req.user });
+  const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "15m" });
+  const refreshToken = jwt.sign({ id: updatedUser.id, token_type: "refresh" }, process.env.JWT_SECRET, { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" });
+
+  updatedUser.refresh_token = refreshToken;
+  await updatedUser.save();
+
+  res.json({
+    message: "Profile and security credentials updated successfully",
+    token: accessToken,
+    accessToken,
+    refreshToken,
+    user: tokenPayload,
+  });
 });
 
 /* STUDENT: MY PROFILE */

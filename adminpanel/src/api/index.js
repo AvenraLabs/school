@@ -162,10 +162,9 @@ export const classesAPI = {
     return response.data;
   },
 
-  update: async (id, className) => {
-    const response = await axiosInstance.patch(`/classes/${id}`, {
-      class_name: className,
-    });
+  update: async (id, data) => {
+    const payload = typeof data === 'object' ? data : { class_name: data };
+    const response = await axiosInstance.patch(`/classes/${id}`, payload);
     return response.data;
   },
 
@@ -179,6 +178,61 @@ export const classesAPI = {
     if (classId) params.class_id = classId;
     if (sectionId) params.section_id = sectionId;
     const response = await axiosInstance.get('/classes/login-roster', { params });
+    return response.data;
+  },
+};
+
+// Bell Schedules API
+export const bellSchedulesAPI = {
+  list: async () => {
+    const response = await axiosInstance.get('/bell-schedules');
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await axiosInstance.get(`/bell-schedules/${id}`);
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await axiosInstance.post('/bell-schedules', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await axiosInstance.patch(`/bell-schedules/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await axiosInstance.delete(`/bell-schedules/${id}`);
+    return response.data;
+  },
+};
+
+// Timetable Generation API
+export const timetableGenerationAPI = {
+  getReadiness: async (classId) => {
+    const params = {};
+    if (classId) params.class_id = classId;
+    const response = await axiosInstance.get('/timetable-generation/readiness', { params });
+    return response.data;
+  },
+
+  run: async (data = {}) => {
+    const response = await axiosInstance.post('/timetable-generation/run', data);
+    return response.data;
+  },
+
+  getJobStatus: async (jobId) => {
+    const response = await axiosInstance.get(`/timetable-generation/${jobId}`);
+    return response.data;
+  },
+
+  confirm: async (jobId, payloadTimetable) => {
+    const response = await axiosInstance.post(`/timetable-generation/${jobId}/confirm`, {
+      payload_timetable: payloadTimetable,
+    });
     return response.data;
   },
 };
@@ -218,8 +272,9 @@ export const sectionsAPI = {
 
 // Subjects API
 export const subjectsAPI = {
-  create: async (name) => {
-    const response = await axiosInstance.post('/subjects', { name });
+  create: async (payload) => {
+    const body = typeof payload === 'string' ? { name: payload } : payload;
+    const response = await axiosInstance.post('/subjects', body);
     return response.data;
   },
 
@@ -228,8 +283,9 @@ export const subjectsAPI = {
     return response.data;
   },
 
-  update: async (id, name) => {
-    const response = await axiosInstance.patch(`/subjects/${id}`, { name });
+  update: async (id, payload) => {
+    const body = typeof payload === 'string' ? { name: payload } : payload;
+    const response = await axiosInstance.patch(`/subjects/${id}`, body);
     return response.data;
   },
 
@@ -264,6 +320,12 @@ export const subjectsAPI = {
 
   setSectionOverrides: async (classId, sectionId, overrides) => {
     const response = await axiosInstance.put(`/subjects/section/${classId}/${sectionId}/overrides`, { overrides });
+    return response.data;
+  },
+
+  // Bulk save periods per week allocations
+  savePeriods: async (data) => {
+    const response = await axiosInstance.put('/subjects/periods', data);
     return response.data;
   },
 };

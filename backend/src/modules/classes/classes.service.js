@@ -3,6 +3,7 @@ import Class from "./classes.model.js";
 import Section from "../sections/section.model.js";
 import Teacher from "../teachers/teacher.model.js";
 import Student from "../students/student.model.js";
+import BellScheduleTemplate from "../timetables/bell-schedule-template.model.js";
 
 import User from "../users/user.model.js";
 
@@ -25,6 +26,11 @@ export const getClassesService = async (school_id) => {
         model: Section,
         attributes: ["id", "name", "is_active"],
       },
+      {
+        model: BellScheduleTemplate,
+        as: "bellScheduleTemplate",
+        attributes: ["id", "name", "working_days_per_week"],
+      },
     ],
     order: [["class_name", "ASC"]],
   });
@@ -37,6 +43,11 @@ export const getClassByIdService = async (id, school_id) => {
       {
         model: Section,
         attributes: ["id", "name", "is_active"],
+      },
+      {
+        model: BellScheduleTemplate,
+        as: "bellScheduleTemplate",
+        attributes: ["id", "name", "working_days_per_week"],
       },
     ],
   });

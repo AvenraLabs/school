@@ -20,6 +20,8 @@ import ForceProfileCompletion from "../auth/ForceProfileCompletion";
 import RequireApproval from "../auth/RequireApproval";
 import ApprovalPending from "../pages/ApprovalPending";
 
+import ChangePasswordPage from "../pages/ChangePasswordPage";
+
 export default function App() {
 
   const online = useOnlineStatus();
@@ -39,6 +41,15 @@ export default function App() {
           element={
             <RequireAuth>
               <FirstLoginPage />
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/change-password"
+          element={
+            <RequireAuth>
+              <ChangePasswordPage />
             </RequireAuth>
           }
         />

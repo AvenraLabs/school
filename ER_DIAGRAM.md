@@ -113,6 +113,7 @@ System-wide credential and auth profile entity.
 - `school_id` (BIGINT, FK -> `schools.id`)
 - `class_name` (STRING)
 - `class_teacher_id` (BIGINT, FK -> `teachers.id`, Nullable)
+- `bell_schedule_template_id` (BIGINT, FK -> `bell_schedule_templates.id`, Nullable)
 - `is_active` (BOOLEAN)
 
 #### `sections`
@@ -128,17 +129,19 @@ System-wide credential and auth profile entity.
 - `school_id` (BIGINT, FK -> `schools.id`)
 - `name` (STRING), `code` (STRING)
 - `category` (ENUM: 'theory', 'practical', 'both')
+- `subject_type` (ENUM: 'academic', 'co_curricular', Default: 'academic')
 
-#### `class_subjects` ⬅ NEW
+#### `class_subjects`
 Default subject pool for a class. All sections in the class study these subjects unless a `section_subject_overrides` row says otherwise.
 - `id` (BIGINT, PK)
 - `school_id` (BIGINT, FK -> `schools.id`, CASCADE)
 - `class_id` (BIGINT, FK -> `classes.id`, CASCADE)
 - `subject_id` (BIGINT, FK -> `subjects.id`, CASCADE)
+- `periods_per_week` (INTEGER, Nullable, Default: null)
 - `is_active` (BOOLEAN, Default: true)
 - Unique: `(school_id, class_id, subject_id)`
 
-#### `section_subject_overrides` ⬅ NEW
+#### `section_subject_overrides`
 Per-section subject overrides — only populated for sections that differ from the class default (e.g. stream splits). Empty = section uses class default.
 - `id` (BIGINT, PK)
 - `school_id` (BIGINT, FK -> `schools.id`, CASCADE)
@@ -146,8 +149,9 @@ Per-section subject overrides — only populated for sections that differ from t
 - `section_id` (BIGINT, FK -> `sections.id`, CASCADE)
 - `subject_id` (BIGINT, FK -> `subjects.id`, CASCADE)
 - `is_included` (BOOLEAN, Non-Null) — `true` = force include; `false` = force exclude from class default
+- `periods_per_week` (INTEGER, Nullable, Default: null) — overrides `class_subjects.periods_per_week` if set
 - Unique: `(school_id, class_id, section_id, subject_id)`
-- **Resolution**: `getSubjectsForSection(school_id, class_id, section_id)` applies overrides over class default
+- **Resolution**: `getSubjectsForSection(school_id, class_id, section_id)` applies overrides over class default for both inclusion and `periods_per_week`
 
 #### `teachers`
 - `id` (BIGINT, PK)
@@ -156,6 +160,7 @@ Per-section subject overrides — only populated for sections that differ from t
 - `employee_id` (STRING)
 - `gender` (ENUM), `designation` (STRING), `qualification` (STRING)
 - `joining_date` (DATEONLY), `experience` (INTEGER)
+- `max_periods_per_week` (INTEGER, Nullable) — capacity limit for workload collision checks
 - `approval_status` (ENUM: 'pending', 'approved', 'rejected')
 - `is_active` (BOOLEAN)
 - `status` (ENUM: 'ACTIVE', 'RESIGNED', 'RETIRED', 'TERMINATED')
@@ -217,6 +222,29 @@ Maps teachers to specific Class + Section + Subject combinations.
 - `date` (DATEONLY)
 - `class_id` (BIGINT, FK), `section_id` (BIGINT, FK)
 - `original_teacher_id` (BIGINT, FK -> `teachers.id`), `substitute_teacher_id` (BIGINT, FK -> `teachers.id`)
+
+#### `bell_schedule_templates`
+- `id` (BIGINT, PK)
+- `school_id` (BIGINT, FK -> `schools.id`, CASCADE)
+- `name` (STRING)
+- `working_days_per_week` (INTEGER, Default: 6)
+
+#### `bell_schedule_periods`
+- `id` (BIGINT, PK)
+- `template_id` (BIGINT, FK -> `bell_schedule_templates.id`, CASCADE)
+- `order_index` (INTEGER)
+- `start_time` (STRING), `end_time` (STRING)
+- `is_break` (BOOLEAN, Default: false)
+- `title` (STRING, Nullable)
+
+#### `timetable_generation_jobs`
+- `id` (BIGINT, PK)
+- `school_id` (BIGINT, FK -> `schools.id`, CASCADE)
+- `academic_year_id` (BIGINT, FK -> `academic_years.id`, CASCADE)
+- `status` (ENUM: 'pending', 'processing', 'completed', 'failed')
+- `triggered_by` (BIGINT, FK -> `users.id`, Nullable)
+- `result_summary` (JSONB)
+- `completed_at` (DATE, Nullable)
 
 ---
 

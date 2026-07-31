@@ -18,12 +18,14 @@ import { SchoolAnalyticsPage } from './pages/SchoolAdmin/SchoolAnalyticsPage';
 import { BulkSeeder } from './pages/SchoolAdmin/BulkSeeder';
 import { ClassesManager } from './pages/SchoolAdmin/ClassesManager';
 import { SubjectsManager } from './pages/SchoolAdmin/SubjectsManager';
+import { SubjectPeriodsManager } from './pages/SchoolAdmin/SubjectPeriodsManager';
 import { TeachersManager } from './pages/SchoolAdmin/TeachersManager';
 import { StudentsManager } from './pages/SchoolAdmin/StudentsManager';
 import { LoginRoster } from './pages/SchoolAdmin/LoginRoster';
 import { Approvals } from './pages/SchoolAdmin/Approvals';
 import { TeacherAssignments } from './pages/SchoolAdmin/TeacherAssignments';
 import { Timetables } from './pages/SchoolAdmin/Timetables';
+import { BellSchedulesManager } from './pages/SchoolAdmin/BellSchedulesManager';
 import { SubstituteTeachers } from './pages/SchoolAdmin/SubstituteTeachers';
 import { Notifications } from './pages/SchoolAdmin/Notifications';
 import { ExamsManager } from './pages/SchoolAdmin/ExamsManager';
@@ -88,12 +90,14 @@ function App() {
               <Route path="/admin/bulk-seeder" element={<BulkSeeder />} />
               <Route path="/admin/classes" element={<ClassesManager />} />
               <Route path="/admin/subjects" element={<SubjectsManager />} />
+              <Route path="/admin/subject-periods" element={<SubjectPeriodsManager />} />
               <Route path="/admin/teachers" element={<TeachersManager />} />
               <Route path="/admin/students" element={<StudentsManager />} />
               <Route path="/admin/login-roster" element={<LoginRoster />} />
               <Route path="/admin/approvals" element={<Approvals />} />
               <Route path="/admin/assignments" element={<TeacherAssignments />} />
               <Route path="/admin/timetables" element={<Timetables />} />
+              <Route path="/admin/bell-schedules" element={<BellSchedulesManager />} />
               <Route path="/admin/timetables/substitutions" element={<SubstituteTeachers />} />
               <Route path="/admin/transport" element={<TransportManager />} />
               <Route path="/admin/notifications" element={<Notifications />} />

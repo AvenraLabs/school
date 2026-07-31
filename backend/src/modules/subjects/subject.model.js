@@ -35,6 +35,12 @@ const Subject = db.define(
       allowNull: false,
       defaultValue: "theory",
     },
+
+    subject_type: {
+      type: DataTypes.ENUM("academic", "co_curricular"),
+      allowNull: false,
+      defaultValue: "academic",
+    },
   },
   {
     tableName: "subjects",

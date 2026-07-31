@@ -95,13 +95,15 @@ export const login = asyncHandler(async (req, res) => {
 
   // ── 4. Issue tokens (Access + Refresh) ─────────────────────────────
   const tokenPayload = {
-    id:           user.id,
-    role:         user.role,
-    school_id:    user.school_id,
-    school_board: schoolBoard,
-    name:         user.name,
-    username:     user.username,
-    phone:        user.phone,
+    id:                   user.id,
+    role:                 user.role,
+    school_id:            user.school_id,
+    school_board:         schoolBoard,
+    name:                 user.name,
+    username:             user.username,
+    phone:                user.phone,
+    first_login:          user.first_login,
+    must_change_password: user.must_change_password,
     ...additionalClaims,
   };
 
@@ -300,7 +302,7 @@ export const adminResetUserPassword = asyncHandler(async (req, res) => {
   }
 
   targetUser.password = new_password;
-  targetUser.first_login = true;
+  targetUser.must_change_password = true;
   // Invalidate any active sessions for the target user
   targetUser.refresh_token = null;
   await targetUser.save();

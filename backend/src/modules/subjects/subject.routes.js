@@ -9,11 +9,13 @@ import {
     getResolvedSubjectsForSection,
     getSectionOverrides,
     setSectionOverrides,
+    saveSubjectPeriods,
 } from "./subject.controller.js";
 import { validate } from "../../shared/middlewares/validate.js";
 import {
     createSubjectSchema,
     updateSubjectSchema,
+    savePeriodsSchema,
 } from "./subject.schema.js";
 import { protect } from "../../shared/middlewares/auth.js";
 import { allowRoles } from "../../shared/middlewares/role.js";
@@ -23,6 +25,11 @@ const router = express.Router();
 router.use(protect);
 
 // ─── Specific routes MUST come before /:id to avoid route conflicts ───
+
+// Bulk period allocation update (for class default or section override)
+router
+    .route("/periods")
+    .put(allowRoles("school_admin"), validate(savePeriodsSchema), saveSubjectPeriods);
 
 // Class-level subject mapping (default pool for a class)
 router

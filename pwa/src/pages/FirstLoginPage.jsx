@@ -22,8 +22,8 @@ import { useAuth } from "../auth/AuthProvider";
 import { completeProfileApi, uploadProfilePicture } from "../modules/profile/profile.api";
 import { createImagePreview, revokeImagePreview } from "../utils/imageUtils";
 
-const STUDENT_STEPS = ["Personal", "Family", "Contact"];
-const TEACHER_STEPS = ["Personal", "Professional"];
+const STUDENT_STEPS = ["Security", "Personal", "Family", "Contact"];
+const TEACHER_STEPS = ["Security", "Personal", "Professional"];
 
 export default function FirstLoginPage() {
   const { user, login, logout } = useAuth();
@@ -42,6 +42,10 @@ export default function FirstLoginPage() {
   const steps = isStudent ? STUDENT_STEPS : isTeacher ? TEACHER_STEPS : [];
 
   const [formData, setFormData] = useState({
+    // Security
+    new_password: "",
+    confirm_password: "",
+
     // Personal
     name: user?.name || "",
     dob: "",
@@ -137,6 +141,26 @@ export default function FirstLoginPage() {
   }
 
   async function handleNext() {
+    setError(null);
+
+    // Security Step Validation
+    if (activeStep === 0) {
+      if (user?.must_change_password || formData.new_password) {
+        if (!formData.new_password || formData.new_password.length < 6) {
+          setError("New password is required and must be at least 6 characters long.");
+          return;
+        }
+        if (formData.new_password !== formData.confirm_password) {
+          setError("Passwords do not match.");
+          return;
+        }
+        if (user?.username && formData.new_password === `${user.username}@123`) {
+          setError("New password must be different from your default password.");
+          return;
+        }
+      }
+    }
+
     if (activeStep === steps.length - 1) {
       // Submit form
       await handleSubmit();
@@ -224,8 +248,40 @@ export default function FirstLoginPage() {
           </Stepper>
 
           <Stack spacing={3}>
-            {/* Personal Step */}
+            {/* Security Step */}
             {activeStep === 0 && (
+              <Stack spacing={2}>
+                <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 600 }}>
+                  Set Account Password
+                </Typography>
+                {isStudent && (
+                  <Alert severity="info" sx={{ textTransform: "none" }}>
+                    This login is shared with your parent — make sure they know the new password too.
+                  </Alert>
+                )}
+                <TextField
+                  fullWidth
+                  label="New Password"
+                  type="password"
+                  value={formData.new_password}
+                  onChange={(e) => handleInputChange("new_password", e.target.value)}
+                  placeholder="Minimum 6 characters"
+                  required
+                />
+                <TextField
+                  fullWidth
+                  label="Confirm New Password"
+                  type="password"
+                  value={formData.confirm_password}
+                  onChange={(e) => handleInputChange("confirm_password", e.target.value)}
+                  placeholder="Re-enter new password"
+                  required
+                />
+              </Stack>
+            )}
+
+            {/* Personal Step */}
+            {activeStep === 1 && (
               <Stack spacing={2}>
                 {/* Avatar Upload Section */}
                 <Box sx={{ textAlign: "center" }}>
@@ -356,7 +412,7 @@ export default function FirstLoginPage() {
             )}
 
             {/* Student Family Info */}
-            {isStudent && activeStep === 1 && (
+            {isStudent && activeStep === 2 && (
               <Stack spacing={2}>
                 <TextField
                   label="Father's Name"
@@ -382,7 +438,7 @@ export default function FirstLoginPage() {
             )}
 
             {/* Student Contact Info */}
-            {isStudent && activeStep === 2 && (
+            {isStudent && activeStep === 3 && (
               <Stack spacing={2}>
                 <TextField
                   label="Emergency Contact Number"
@@ -420,7 +476,7 @@ export default function FirstLoginPage() {
             )}
 
             {/* Teacher Professional Info */}
-            {isTeacher && activeStep === 1 && (
+            {isTeacher && activeStep === 2 && (
               <Stack spacing={2}>
                 <TextField
                   label="Designation"

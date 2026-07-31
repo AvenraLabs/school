@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { timetableAPI, classesAPI, teacherAssignmentsAPI, subjectsAPI } from '../../api';
+import { timetableAPI, classesAPI, teacherAssignmentsAPI, subjectsAPI, bellSchedulesAPI, timetableGenerationAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { Button } from '../../components/ui/Button';
 import { Select, Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
+import { ReadinessCheckPanel } from '../../components/Timetable/ReadinessCheckPanel';
+import { GeneratedDraftReviewModal } from '../../components/Timetable/GeneratedDraftReviewModal';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck, AlertTriangle, Check, Printer, Copy, Clock, Wand2 } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck, AlertTriangle, Check, Printer, Copy, Clock, Wand2, ShieldCheck, Sparkles, RefreshCw } from 'lucide-react';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -23,11 +25,20 @@ export function Timetables() {
   const [editDay, setEditDay] = useState(null);
   const [entries, setEntries] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [readinessData, setReadinessData] = useState(null);
+  const [loadingReadiness, setLoadingReadiness] = useState(false);
+  const [showReadinessPanel, setShowReadinessPanel] = useState(false);
+
+  const [activeJob, setActiveJob] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+
   const toast = useToast();
 
   useEffect(() => {
     loadClasses();
     loadSubjects();
+    loadReadinessCheck();
   }, []);
 
   useEffect(() => {
@@ -38,7 +49,65 @@ export function Timetables() {
     } else {
       setSectionSubjects([]);
     }
+    loadReadinessCheck();
   }, [selectedClass, selectedSection]);
+
+  const loadReadinessCheck = async () => {
+    setLoadingReadiness(true);
+    try {
+      const res = await timetableGenerationAPI.getReadiness(selectedClass ? Number(selectedClass) : undefined);
+      setReadinessData(res.data || null);
+    } catch {
+      setReadinessData(null);
+    } finally {
+      setLoadingReadiness(false);
+    }
+  };
+
+  const handleRunAutoGeneration = async () => {
+    if (readinessData && readinessData.summary?.blocked_sections > 0) {
+      toast.error('Pre-flight readiness issues detected! Please resolve blocked section issues before generating.');
+      setShowReadinessPanel(true);
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const res = await timetableGenerationAPI.run({
+        class_id: selectedClass ? Number(selectedClass) : undefined,
+        overwrite: true,
+      });
+
+      const jobId = res.data?.job_id;
+      toast.success('Auto timetable generation job started in background!');
+
+      // Poll job status until complete
+      const interval = setInterval(async () => {
+        try {
+          const statusRes = await timetableGenerationAPI.getJobStatus(jobId);
+          const jobData = statusRes.data;
+          setActiveJob(jobData);
+
+          if (jobData.status === 'completed') {
+            clearInterval(interval);
+            setGenerating(false);
+            setShowReviewModal(true);
+            toast.success('Timetable generation complete! Opening review mode...');
+          } else if (jobData.status === 'failed') {
+            clearInterval(interval);
+            setGenerating(false);
+            toast.error(jobData.result_summary?.status_message || 'Timetable generation failed');
+          }
+        } catch {
+          clearInterval(interval);
+          setGenerating(false);
+        }
+      }, 2000);
+    } catch (e) {
+      setGenerating(false);
+      toast.error(e.response?.data?.message || 'Failed to start timetable generation');
+    }
+  };
 
   const loadClasses = async () => {
     try {
@@ -86,22 +155,24 @@ export function Timetables() {
   const selectedSections = classes.find((c) => String(c.id) === String(selectedClass))?.sections || [];
 
   const openDayEditor = (day) => {
-    const dayEntries = timetable[day] || [];
-    setEntries(
-      dayEntries.length > 0
-        ? dayEntries.map((e) => ({
-            start_time: e.start_time || '',
-            end_time: e.end_time || '',
-            teacher_assignment_id: e.teacher_assignment_id || undefined,
-            subject_id: e.subject_id || undefined,
-            title: e.title || '',
-            is_break: e.is_break || false,
-            _assignedTeacherName: e.teacher ? (e.teacher.name || e.teacher.user?.name) : null,
-            _hasAssignment: !!e.teacher_assignment_id,
-          }))
-        : [{ start_time: '09:00', end_time: '09:45', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false }]
-    );
     setEditDay(day);
+    const dayEntries = timetable[day] || [];
+    if (dayEntries.length > 0) {
+      setEntries(
+        dayEntries.map((e) => ({
+          start_time: e.start_time || '',
+          end_time: e.end_time || '',
+          teacher_assignment_id: e.teacher_assignment_id || undefined,
+          subject_id: e.subject_id || undefined,
+          title: e.title || '',
+          is_break: e.is_break || false,
+          _assignedTeacherName: e.teacher ? (e.teacher.name || e.teacher.user?.name) : null,
+          _hasAssignment: !!e.teacher_assignment_id,
+        }))
+      );
+    } else {
+      handleLoadFromBellSchedule();
+    }
   };
 
   const subjectAssignmentMap = {};
@@ -205,18 +276,49 @@ export function Timetables() {
   const selectedClassName = classes.find((c) => String(c.id) === String(selectedClass))?.class_name || '';
   const selectedSectionName = selectedSections.find((s) => String(s.id) === String(selectedSection))?.name || '';
 
-  const handlePrefillStandardPeriods = () => {
-    setEntries([
-      { start_time: '09:00', end_time: '09:45', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
-      { start_time: '09:45', end_time: '10:30', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
-      { start_time: '10:30', end_time: '10:45', teacher_assignment_id: undefined, subject_id: undefined, title: 'Tea Break', is_break: true },
-      { start_time: '10:45', end_time: '11:30', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
-      { start_time: '11:30', end_time: '12:15', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
-      { start_time: '12:15', end_time: '13:00', teacher_assignment_id: undefined, subject_id: undefined, title: 'Lunch Break', is_break: true },
-      { start_time: '13:00', end_time: '13:45', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
-      { start_time: '13:45', end_time: '14:30', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
-    ]);
-    toast.success('Standard 8-period schedule pre-filled!');
+  const handleLoadFromBellSchedule = async () => {
+    const currentClassObj = classes.find((c) => String(c.id) === String(selectedClass));
+    let templateId = currentClassObj?.bell_schedule_template_id || currentClassObj?.bellScheduleTemplate?.id;
+
+    let template = null;
+    if (templateId) {
+      try {
+        const res = await bellSchedulesAPI.getById(templateId);
+        template = res.data || res;
+      } catch { /* fallback */ }
+    }
+
+    if (!template) {
+      try {
+        const res = await bellSchedulesAPI.list();
+        const allTemplates = res.items || res.data || res || [];
+        template =
+          allTemplates.find((t) => (t.classes || []).some((c) => String(c.id) === String(selectedClass))) ||
+          allTemplates[0];
+      } catch { /* fallback */ }
+    }
+
+    if (!template || !template.periods || template.periods.length === 0) {
+      toast.error('No Bell Schedule Template found. Create one in Bell Schedules first.');
+      setEntries([
+        { start_time: '09:00', end_time: '09:45', teacher_assignment_id: undefined, subject_id: undefined, title: '', is_break: false },
+      ]);
+      return;
+    }
+
+    const newEntries = template.periods.map((p) => ({
+      start_time: p.start_time || '',
+      end_time: p.end_time || '',
+      teacher_assignment_id: undefined,
+      subject_id: undefined,
+      title: p.title || '',
+      is_break: !!p.is_break,
+      _assignedTeacherName: null,
+      _hasAssignment: false,
+    }));
+
+    setEntries(newEntries);
+    toast.success(`Auto-filled ${newEntries.length} period slot(s) from Bell Schedule "${template.name}"!`);
   };
 
   /**
@@ -260,11 +362,47 @@ export function Timetables() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={generating}
+              onClick={handleRunAutoGeneration}
+              className="bg-[#2F6F5E] hover:bg-[#245749] text-white"
+            >
+              {generating ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-3.5 h-3.5 mr-1.5 text-amber-300" />
+                  Auto-Generate Timetable
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={ShieldCheck}
+              onClick={() => setShowReadinessPanel(!showReadinessPanel)}
+              className={showReadinessPanel ? 'bg-[#EAF3F0] text-[#2F6F5E] border-[#2F6F5E]' : ''}
+            >
+              Pre-flight Readiness
+            </Button>
             {selectedClass && selectedSection && (
               <Button variant="outline" size="sm" icon={Printer} onClick={() => window.print()}>
                 Print Schedule
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              icon={Clock}
+              onClick={() => navigate('/admin/subject-periods')}
+            >
+              Period Allocations
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -276,6 +414,16 @@ export function Timetables() {
           </div>
         </div>
       </Card>
+
+      {/* Embedded Readiness Check Panel (when toggled or when readiness check loaded) */}
+      {showReadinessPanel && (
+        <ReadinessCheckPanel
+          readinessData={readinessData}
+          loading={loadingReadiness}
+          onRefresh={loadReadinessCheck}
+          selectedClass={selectedClass}
+        />
+      )}
 
       {/* Class & Section Selectors */}
       <Card className="p-4">
@@ -344,8 +492,8 @@ export function Timetables() {
                   Prefill All Subjects
                 </Button>
               )}
-              <Button variant="outline" size="sm" icon={Clock} onClick={handlePrefillStandardPeriods}>
-                Pre-fill Standard Periods
+              <Button variant="outline" size="sm" icon={Clock} onClick={handleLoadFromBellSchedule}>
+                Load from Bell Schedule
               </Button>
               <Button variant="primary" size="sm" icon={Save} disabled={saving} onClick={handleSaveDay}>
                 {saving ? 'Saving...' : 'Save Schedule'}
@@ -506,6 +654,19 @@ export function Timetables() {
           })}
         </div>
       )}
+
+      {/* Generated Draft Review Modal */}
+      <GeneratedDraftReviewModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        job={activeJob}
+        onPublished={() => {
+          if (selectedClass && selectedSection) {
+            loadTimetable();
+          }
+          loadReadinessCheck();
+        }}
+      />
     </div>
   );
 }

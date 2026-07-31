@@ -15,6 +15,7 @@ import {
   BookOpen,
   ClipboardList,
   Calendar,
+  Clock,
   Bell,
   FileText,
   LogOut,
@@ -31,6 +32,7 @@ import {
   Library,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   MoreVertical,
   User,
   Sliders,
@@ -42,32 +44,45 @@ import {
 import { authAPI, uploadAPI } from '../../api';
 import { getApiAssetUrl } from '../../api/axios';
 
-const schoolAdminLinks = [
-  { section: 'Daily Operations' },
-  { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/admin/fees', icon: IndianRupee, label: 'Fee Management' },
-  { to: '/admin/library', icon: Library, label: 'Library' },
-  { to: '/admin/analytics', icon: BarChart3, label: 'School Analytics' },
-  { to: '/admin/directory', icon: School, label: 'School Registry' },
-  { to: '/admin/notifications', icon: Bell, label: 'Announcements' },
-  { to: '/admin/transport', icon: Truck, label: 'Transport' },
-  { to: '/admin/lost-found', icon: Search, label: 'Lost & Found' },
-
-  { section: 'People & Approvals' },
-  { to: '/admin/students', icon: GraduationCap, label: 'Students' },
-  { to: '/admin/teachers', icon: UserCog, label: 'Teachers' },
-  { to: '/admin/approvals', icon: UserCheck, label: 'Approvals' },
-
-  { section: 'Academic Management' },
-  { to: '/admin/timetables', icon: Calendar, label: 'Timetables' },
-  { to: '/admin/exams', icon: FileText, label: 'Exams' },
-
-  { section: 'System Configuration' },
-  { to: '/admin/subjects', icon: BookOpen, label: 'Subjects' },
-  { to: '/admin/assignments', icon: ClipboardList, label: 'Teacher Allocations' },
-  { to: '/admin/academic-year', icon: Calendar, label: 'Academic Year' },
-  { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },
-  { to: '/admin/feedback', icon: MessageSquare, label: 'Feedback' },
+const schoolAdminGroups = [
+  {
+    group: 'Daily Operations',
+    defaultOpen: true,
+    items: [
+      { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/admin/fees', icon: IndianRupee, label: 'Fee Management' },
+      { to: '/admin/library', icon: Library, label: 'Library' },
+      { to: '/admin/notifications', icon: Bell, label: 'Announcements' },
+      { to: '/admin/transport', icon: Truck, label: 'Transport' },
+      { to: '/admin/lost-found', icon: Search, label: 'Lost & Found' },
+    ],
+  },
+  {
+    group: 'Academic Management',
+    defaultOpen: true,
+    items: [
+      { to: '/admin/timetables', icon: Calendar, label: 'Timetables' },
+      { to: '/admin/subject-periods', icon: Clock, label: 'Period Structure' },
+      { to: '/admin/bell-schedules', icon: Bell, label: 'Daily Schedule' },
+      { to: '/admin/subjects', icon: BookOpen, label: 'Subjects' },
+      { to: '/admin/assignments', icon: ClipboardList, label: 'Class & Subject Teachers' },
+      { to: '/admin/exams', icon: FileText, label: 'Exams' },
+    ],
+  },
+  {
+    group: 'People & Settings',
+    defaultOpen: false,
+    items: [
+      { to: '/admin/students', icon: GraduationCap, label: 'Students' },
+      { to: '/admin/teachers', icon: UserCog, label: 'Teachers' },
+      { to: '/admin/approvals', icon: UserCheck, label: 'Approvals' },
+      { to: '/admin/analytics', icon: BarChart3, label: 'School Analytics' },
+      { to: '/admin/directory', icon: School, label: 'School Registry' },
+      { to: '/admin/academic-year', icon: Calendar, label: 'Academic Year' },
+      { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },
+      { to: '/admin/feedback', icon: MessageSquare, label: 'Feedback' },
+    ],
+  },
 ];
 
 const superAdminLinks = [
@@ -94,6 +109,13 @@ export function Sidebar({ isOpen, onClose, isCollapsed, setIsCollapsed }) {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Collapsible sidebar groups — Daily Operations open by default
+  const [openGroups, setOpenGroups] = useState(() =>
+    Object.fromEntries(schoolAdminGroups.map((g) => [g.group, g.defaultOpen]))
+  );
+  const toggleGroup = (group) =>
+    setOpenGroups((prev) => ({ ...prev, [group]: !prev[group] }));
 
   const displayName = user?.name || user?.username || 'Admin';
   const initial = displayName[0].toUpperCase();
@@ -231,41 +253,99 @@ export function Sidebar({ isOpen, onClose, isCollapsed, setIsCollapsed }) {
           </div>
 
           {/* Nav links list */}
-          <nav className="flex-1 overflow-y-auto p-2.5 space-y-1">
-            {(user?.role === 'super_admin' ? superAdminLinks : schoolAdminLinks).map((item, idx) => {
-              if (item.section) {
-                if (isCollapsed) return <div key={idx} className="my-2 border-t border-[#EDEAE1]" />;
+          <nav className="flex-1 overflow-y-auto p-2.5 space-y-0.5">
+            {user?.role === 'super_admin' ? (
+              /* Super Admin: flat list */
+              superAdminLinks.map((item, idx) => {
+                if (item.section) {
+                  if (isCollapsed) return <div key={idx} className="my-2 border-t border-[#EDEAE1]" />;
+                  return (
+                    <div key={idx} className="pt-3 pb-1.5 px-2.5 text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
+                      {item.section}
+                    </div>
+                  );
+                }
+                const Icon = item.icon;
                 return (
-                  <div
-                    key={idx}
-                    className="pt-3 pb-1.5 px-2.5 text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono"
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === '/super-admin'}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2.5 px-2.5 py-2 rounded-[6px] text-xs font-medium transition-all ${
+                        isActive ? 'bg-[#EAF3F0] text-[#2F6F5E] font-semibold border-l-[3px] border-l-[#2F6F5E] pl-2' : 'text-[#52607D] hover:bg-[#FAFAF8] hover:text-[#14213D]'
+                      } ${isCollapsed ? 'justify-center px-0' : ''}`
+                    }
+                    title={isCollapsed ? item.label : undefined}
                   >
-                    {item.section}
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {!isCollapsed && <span className="truncate">{item.label}</span>}
+                  </NavLink>
+                );
+              })
+            ) : (
+              /* School Admin: collapsible groups */
+              schoolAdminGroups.map((grp) => {
+                const isOpen = openGroups[grp.group];
+                return (
+                  <div key={grp.group}>
+                    {/* Group header toggle */}
+                    {!isCollapsed ? (
+                      <button
+                        onClick={() => toggleGroup(grp.group)}
+                        className="w-full flex items-center justify-between px-2.5 pt-3 pb-1.5 text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono hover:text-[#52607D] transition-colors cursor-pointer group"
+                      >
+                        <span>{grp.group}</span>
+                        <ChevronDown
+                          className={`w-3 h-3 shrink-0 transition-transform duration-200 ${
+                            isOpen ? 'rotate-0' : '-rotate-90'
+                          }`}
+                        />
+                      </button>
+                    ) : (
+                      <div className="my-2 border-t border-[#EDEAE1]" />
+                    )}
+
+                    {/* Group items — animated collapse */}
+                    <AnimatePresence initial={false}>
+                      {(isOpen || isCollapsed) && (
+                        <motion.div
+                          key="content"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.18, ease: 'easeInOut' }}
+                          className="overflow-hidden space-y-0.5"
+                        >
+                          {grp.items.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                              <NavLink
+                                key={item.to}
+                                to={item.to}
+                                onClick={onClose}
+                                className={({ isActive }) =>
+                                  `flex items-center gap-2.5 px-2.5 py-2 rounded-[6px] text-xs font-medium transition-all ${
+                                    isActive
+                                      ? 'bg-[#EAF3F0] text-[#2F6F5E] font-semibold border-l-[3px] border-l-[#2F6F5E] pl-2'
+                                      : 'text-[#52607D] hover:bg-[#FAFAF8] hover:text-[#14213D]'
+                                  } ${isCollapsed ? 'justify-center px-0' : ''}`
+                                }
+                                title={isCollapsed ? item.label : undefined}
+                              >
+                                <Icon className="w-4 h-4 shrink-0" />
+                                {!isCollapsed && <span className="truncate">{item.label}</span>}
+                              </NavLink>
+                            );
+                          })}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
-              }
-
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === '/super-admin'}
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2.5 px-2.5 py-2 rounded-[6px] text-xs font-medium transition-all relative group ${
-                      isActive
-                        ? 'bg-[#EAF3F0] text-[#2F6F5E] font-semibold border-l-[3px] border-l-[#2F6F5E] pl-2'
-                        : 'text-[#52607D] hover:bg-[#FAFAF8] hover:text-[#14213D]'
-                    } ${isCollapsed ? 'justify-center px-0' : ''}`
-                  }
-                  title={isCollapsed ? item.label : undefined}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
-                </NavLink>
-              );
-            })}
+              })
+            )}
           </nav>
 
           {/* Bottom user profile menu with Radix DropdownMenu */}

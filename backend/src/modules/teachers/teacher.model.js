@@ -90,6 +90,12 @@ const Teacher = db.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+
+    max_periods_per_week: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+    },
   },
   {
     tableName: "teachers",

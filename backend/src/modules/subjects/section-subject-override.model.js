@@ -31,6 +31,11 @@ const SectionSubjectOverride = db.define(
       type: DataTypes.BOOLEAN,
       allowNull: false,
     },
+    periods_per_week: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+    },
   },
   {
     tableName: "section_subject_overrides",

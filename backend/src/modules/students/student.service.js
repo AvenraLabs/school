@@ -91,6 +91,7 @@ export const createStudentService = async ({
         username,
         password,
         first_login: true,
+        must_change_password: true,
         is_active: true,
         name: name || "Student",
         email: email || null,

@@ -12,6 +12,7 @@ export const createSubjectService = async ({
     name,
     code,
     category,
+    subject_type,
 }) => {
     const normalizedName = name.trim();
 
@@ -28,6 +29,7 @@ export const createSubjectService = async ({
         name: normalizedName,
         code: code ? code.trim().toUpperCase() : null,
         category,
+        subject_type,
     });
 
     return { subject };
@@ -72,6 +74,7 @@ export const updateSubjectService = async ({
     if (updates.name) subject.name = updates.name.trim();
     if (updates.code) subject.code = updates.code.trim().toUpperCase();
     if (updates.category) subject.category = updates.category;
+    if (updates.subject_type) subject.subject_type = updates.subject_type;
 
     await subject.save();
 
@@ -105,10 +108,17 @@ export const deleteSubjectService = async ({ school_id, subject_id }) => {
 export const getClassSubjectsService = async (school_id, class_id) => {
     const rows = await ClassSubject.findAll({
         where: { school_id, class_id, is_active: true },
-        include: [{ model: Subject, attributes: ["id", "name", "code", "category"] }],
+        include: [{ model: Subject, attributes: ["id", "name", "code", "category", "subject_type"] }],
         order: [[Subject, "name", "ASC"]],
     });
-    return rows.map((r) => r.subject).filter(Boolean);
+    return rows.map((r) => {
+        if (!r.subject) return null;
+        const plainSub = r.subject.toJSON ? r.subject.toJSON() : { ...r.subject };
+        return {
+            ...plainSub,
+            periods_per_week: r.periods_per_week ?? null,
+        };
+    }).filter(Boolean);
 };
 
 /**
@@ -185,7 +195,51 @@ export const setSectionOverridesService = async (school_id, class_id, section_id
 };
 
 /**
+ * Bulk updates periods_per_week for subjects in a class or section.
+ */
+export const saveSubjectPeriodsService = async ({ school_id, class_id, section_id, periods }) => {
+  return db.transaction(async (t) => {
+    if (section_id) {
+      for (const item of periods) {
+        const [override, created] = await SectionSubjectOverride.findOrCreate({
+          where: {
+            school_id,
+            class_id,
+            section_id,
+            subject_id: item.subject_id,
+          },
+          defaults: {
+            is_included: true,
+            periods_per_week: item.periods_per_week,
+          },
+          transaction: t,
+        });
+
+        if (!created) {
+          await override.update(
+            { periods_per_week: item.periods_per_week },
+            { transaction: t }
+          );
+        }
+      }
+    } else {
+      for (const item of periods) {
+        await ClassSubject.update(
+          { periods_per_week: item.periods_per_week },
+          {
+            where: { school_id, class_id, subject_id: item.subject_id },
+            transaction: t,
+          }
+        );
+      }
+    }
+    return { success: true, count: periods.length };
+  });
+};
+
+/**
  * Returns the fully resolved subject list for a section.
  * Uses the resolution function: class default + section overrides.
  */
 export { getSubjectsForSection };
+

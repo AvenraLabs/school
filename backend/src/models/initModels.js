@@ -18,6 +18,9 @@ import Class from "../modules/classes/classes.model.js";
 import Subject from "../modules/subjects/subject.model.js";
 import Timetable from "../modules/timetables/timetable.model.js";
 import TimetableSubstitution from "../modules/timetables/timetable-substitution.model.js";
+import BellScheduleTemplate from "../modules/timetables/bell-schedule-template.model.js";
+import BellSchedulePeriod from "../modules/timetables/bell-schedule-period.model.js";
+import TimetableGenerationJob from "../modules/timetables/timetable-generation-job.model.js";
 import Section from "../modules/sections/section.model.js";
 
 //homework
@@ -471,6 +474,14 @@ const initAssociations = () => {
   VideoGeneration.belongsTo(Class, { foreignKey: "class_id" });
   VideoGeneration.belongsTo(Section, { foreignKey: "section_id" });
   VideoGeneration.belongsTo(School, { foreignKey: "school_id" });
+
+  /* ==================== BELL SCHEDULE & GENERATION JOBS ==================== */
+  Class.belongsTo(BellScheduleTemplate, { foreignKey: "bell_schedule_template_id", as: "bellScheduleTemplate" });
+  BellScheduleTemplate.hasMany(Class, { foreignKey: "bell_schedule_template_id" });
+  BellScheduleTemplate.belongsTo(School, { foreignKey: "school_id" });
+  TimetableGenerationJob.belongsTo(School, { foreignKey: "school_id" });
+  TimetableGenerationJob.belongsTo(AcademicYear, { foreignKey: "academic_year_id" });
+  TimetableGenerationJob.belongsTo(User, { foreignKey: "triggered_by", as: "triggeredBy" });
 };
 
 initAssociations();

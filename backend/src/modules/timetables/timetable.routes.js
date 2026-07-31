@@ -13,10 +13,10 @@ const router = express.Router();
 
 router.use(protect);
 
-// Admin or Teacher: Save timetable
+// Admin only: Save/update timetable
 router.post(
   "/",
-  allowRoles("school_admin", "teacher"),
+  allowRoles("school_admin", "super_admin"),
   validate(saveTimetableSchema),
   saveTimetable
 );

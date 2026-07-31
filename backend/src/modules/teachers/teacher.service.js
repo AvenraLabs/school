@@ -59,6 +59,7 @@ export const createTeacherService = async ({
         username,
         password,
         first_login: true,
+        must_change_password: true,
         is_active: true,
         name: name || "Teacher",
         email: email || null,

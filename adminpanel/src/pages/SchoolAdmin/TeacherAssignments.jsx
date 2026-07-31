@@ -37,9 +37,7 @@ export function TeacherAssignments() {
   const [pickerSearch, setPickerSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Filters & Search
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedClassFilter, setSelectedClassFilter] = useState('ALL');
+  // Filters
   const [gapFilter, setGapFilter] = useState('ALL'); // ALL | UNASSIGNED_COORDINATOR | MISSING_SUBJECTS
 
   const toast = useToast();
@@ -96,9 +94,7 @@ export function TeacherAssignments() {
       setSectionAssignments(classMap);
       setSubjectAssignments(subjectMap);
 
-      const exp = {};
-      for (const cls of classList) exp[cls.id] = true;
-      setExpanded(exp);
+      setExpanded({});
     } catch {
       toast.error('Failed to load mapping registry');
     } finally {
@@ -202,11 +198,13 @@ export function TeacherAssignments() {
     let totalSubjectSlots = 0;
     let filledSubjectSlots = 0;
 
+    const academicSubs = subjects.filter((s) => s.subject_type !== 'co_curricular');
+
     classes.forEach((cls) => {
       (cls.sections || []).forEach((sec) => {
         totalSections++;
         if (sectionAssignments[sec.id]?.teacher) assignedCoordinators++;
-        subjects.forEach((sub) => {
+        academicSubs.forEach((sub) => {
           totalSubjectSlots++;
           if (subjectAssignments[sec.id]?.[sub.id]?.teacher) filledSubjectSlots++;
         });
@@ -232,27 +230,17 @@ export function TeacherAssignments() {
 
   // Filtered Classes & Sections
   const filteredClasses = useMemo(() => {
+    const academicSubs = subjects.filter((s) => s.subject_type !== 'co_curricular');
+
     return classes.map((cls) => {
-      if (selectedClassFilter !== 'ALL' && String(cls.id) !== String(selectedClassFilter)) {
-        return null;
-      }
-
       const matchingSections = (cls.sections || []).filter((sec) => {
-        // Search term filter
-        const matchSearch =
-          !searchTerm ||
-          cls.class_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          sec.name.toLowerCase().includes(searchTerm.toLowerCase());
-
-        if (!matchSearch) return false;
-
         // Gap filter
         if (gapFilter === 'UNASSIGNED_COORDINATOR') {
           return !sectionAssignments[sec.id]?.teacher;
         }
         if (gapFilter === 'MISSING_SUBJECTS') {
-          const filledCount = subjects.filter((s) => subjectAssignments[sec.id]?.[s.id]?.teacher).length;
-          return filledCount < subjects.length;
+          const filledCount = academicSubs.filter((s) => subjectAssignments[sec.id]?.[s.id]?.teacher).length;
+          return filledCount < academicSubs.length;
         }
         return true;
       });
@@ -260,7 +248,7 @@ export function TeacherAssignments() {
       if (matchingSections.length === 0) return null;
       return { ...cls, sections: matchingSections };
     }).filter(Boolean);
-  }, [classes, selectedClassFilter, searchTerm, gapFilter, sectionAssignments, subjectAssignments, subjects]);
+  }, [classes, gapFilter, sectionAssignments, subjectAssignments, subjects]);
 
   const filteredTeachers = teachers.filter((t) =>
     teacherDisplayName(t).toLowerCase().includes(pickerSearch.toLowerCase()) ||
@@ -269,18 +257,6 @@ export function TeacherAssignments() {
 
   return (
     <div className="space-y-5">
-      {/* Compact Page Action Bar */}
-      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
-        <h2 className="font-display font-bold text-base text-[#14213D] flex items-center gap-2">
-          <UserCog className="w-4 h-4 text-[#2F6F5E]" />
-          Teacher & Subject Allocations
-        </h2>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={expandAll}>Expand All</Button>
-          <Button variant="outline" size="sm" onClick={collapseAll}>Collapse All</Button>
-        </div>
-      </div>
-
       {/* Main Container Card */}
       <Card className="overflow-hidden">
         {/* Navigation & Filter Header */}
@@ -346,30 +322,6 @@ export function TeacherAssignments() {
               </button>
             </div>
           </div>
-
-          {/* Search & Filter Dropdown Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-            <div className="relative sm:col-span-2">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#8C97AB]" />
-              <Input
-                placeholder="Search class name, section, or teacher..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 text-xs h-8 bg-white"
-              />
-            </div>
-            <div>
-              <Select
-                value={selectedClassFilter}
-                onChange={(e) => setSelectedClassFilter(e.target.value)}
-                options={[
-                  { value: 'ALL', label: 'All Grade Levels' },
-                  ...classes.map((c) => ({ value: String(c.id), label: c.class_name })),
-                ]}
-                className="h-8 text-xs bg-white"
-              />
-            </div>
-          </div>
         </div>
 
         {/* Content Body */}
@@ -383,11 +335,9 @@ export function TeacherAssignments() {
             <EmptyState
               icon={UserCog}
               title="No matching classes or mapping gaps"
-              description="Try clearing your search or filter settings to view all section allocations."
+              description="Try resetting your filter settings to view all section allocations."
               actionLabel="Reset Filters"
               onAction={() => {
-                setSearchTerm('');
-                setSelectedClassFilter('ALL');
                 setGapFilter('ALL');
               }}
             />
@@ -432,8 +382,13 @@ export function TeacherAssignments() {
                       const classTeacher = classAssignment?.teacher;
                       const isClassPickerOpen = activePicker?.sectionId === sec.id && !activePicker?.subjectId;
 
-                      const filledSubjectsCount = subjects.filter((s) => subjectAssignments[sec.id]?.[s.id]?.teacher).length;
-                      const isFullyStaffed = classTeacher && filledSubjectsCount === subjects.length;
+                      const academicSubs = subjects.filter((s) => s.subject_type !== 'co_curricular');
+                      const filledAcademicCount = academicSubs.filter((s) => subjectAssignments[sec.id]?.[s.id]?.teacher).length;
+
+                      const isTabComplete =
+                        activeTab === 'class-teachers'
+                          ? !!classTeacher
+                          : filledAcademicCount === academicSubs.length;
 
                       return (
                         <div
@@ -447,9 +402,9 @@ export function TeacherAssignments() {
                                 {cls.class_name} — Section {sec.name}
                               </span>
                             </div>
-                            {isFullyStaffed ? (
+                            {isTabComplete ? (
                               <span className="text-[10px] font-semibold text-[#2F6F5E] bg-[#EAF3F0] px-2 py-0.5 rounded-full flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3" /> Fully Staffed
+                                <CheckCircle2 className="w-3 h-3" /> {activeTab === 'class-teachers' ? 'Assigned' : 'Fully Staffed'}
                               </span>
                             ) : (
                               <span className="text-[10px] font-semibold text-[#B0403A] bg-[#FDF2F1] px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -525,15 +480,16 @@ export function TeacherAssignments() {
                                   SUBJECT ALLOCATIONS
                                 </span>
                                 <span className="text-[10px] font-mono text-[#2F6F5E] font-semibold">
-                                  {filledSubjectsCount} / {subjects.length} Staffed
+                                  {filledAcademicCount} / {academicSubs.length} Academic Staffed
                                 </span>
                               </div>
 
-                              <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                              <div className="space-y-1.5">
                                 {subjects.map((sub) => {
                                   const assignment = subjectAssignments[sec.id]?.[sub.id];
                                   const teacher = assignment?.teacher;
                                   const isSubPickerOpen = activePicker?.sectionId === sec.id && activePicker?.subjectId === sub.id;
+                                  const isCoCurricular = sub.subject_type === 'co_curricular';
 
                                   return (
                                     <div
@@ -541,9 +497,20 @@ export function TeacherAssignments() {
                                       className="p-2 rounded-[6px] bg-white border border-[#EDEAE1] text-xs flex items-center justify-between gap-2 hover:border-[#D3E6E0] transition-colors"
                                     >
                                       <div className="min-w-0 flex-1">
-                                        <p className="font-semibold text-[#14213D] truncate">{sub.name}</p>
+                                        <p className="font-semibold text-[#14213D] truncate flex items-center gap-1.5">
+                                          <span>{sub.name}</span>
+                                          {isCoCurricular && (
+                                            <span className="text-[9px] font-normal text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded font-sans">
+                                              Co-Curricular
+                                            </span>
+                                          )}
+                                        </p>
                                         <p className="text-[10px] text-[#52607D] truncate">
-                                          {teacher ? `Faculty: ${teacherDisplayName(teacher)}` : '⚠️ Unassigned'}
+                                          {teacher
+                                            ? `Faculty: ${teacherDisplayName(teacher)}`
+                                            : isCoCurricular
+                                            ? 'Open Activity (Teacher optional)'
+                                            : '⚠️ Unassigned'}
                                         </p>
                                       </div>
 
@@ -567,6 +534,14 @@ export function TeacherAssignments() {
                                               <Trash2 className="w-3 h-3" />
                                             </Button>
                                           </>
+                                        ) : isCoCurricular ? (
+                                          /* Co-curricular with no teacher — optional, subtle assign link */
+                                          <button
+                                            className="text-[10px] text-[#8C97AB] hover:text-[#2F6F5E] underline underline-offset-2 transition-colors"
+                                            onClick={() => isSubPickerOpen ? closePicker() : openPicker(sec.id, cls.id, sub.id)}
+                                          >
+                                            Assign (optional)
+                                          </button>
                                         ) : (
                                           <Button
                                             variant="secondary"

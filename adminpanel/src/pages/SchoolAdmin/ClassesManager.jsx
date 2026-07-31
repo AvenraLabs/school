@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { classesAPI, sectionsAPI } from '../../api';
+import { classesAPI, sectionsAPI, bellSchedulesAPI } from '../../api';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { EmptyState } from '../../components/common/EmptyState';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { Input, Select } from '../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { useToast } from '../../context/ToastContext';
-import { Plus, Edit2, Trash2, Layers } from 'lucide-react';
+import { Plus, Edit2, Trash2, Layers, Clock } from 'lucide-react';
 
 export function ClassesManager() {
   const [classes, setClasses] = useState([]);
+  const [bellSchedules, setBellSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddClass, setShowAddClass] = useState(false);
   const [showEditClass, setShowEditClass] = useState(null);
@@ -19,13 +20,25 @@ export function ClassesManager() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteSectionTarget, setDeleteSectionTarget] = useState(null);
   const [newClassName, setNewClassName] = useState('');
+  const [newBellScheduleId, setNewBellScheduleId] = useState('');
   const [editClassName, setEditClassName] = useState('');
+  const [editBellScheduleId, setEditBellScheduleId] = useState('');
   const [newSectionName, setNewSectionName] = useState('');
   const [studentCount, setStudentCount] = useState('');
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
-  useEffect(() => { loadClasses(); }, []);
+  useEffect(() => {
+    loadClasses();
+    loadBellSchedules();
+  }, []);
+
+  const loadBellSchedules = async () => {
+    try {
+      const res = await bellSchedulesAPI.list();
+      setBellSchedules(res.items || []);
+    } catch { /* ignore */ }
+  };
 
   const loadClasses = async () => {
     try {
@@ -54,10 +67,14 @@ export function ClassesManager() {
     e.preventDefault();
     setSaving(true);
     try {
-      await classesAPI.create(newClassName);
+      await classesAPI.create({
+        class_name: newClassName,
+        bell_schedule_template_id: newBellScheduleId ? Number(newBellScheduleId) : null,
+      });
       toast.success('Class created');
       setShowAddClass(false);
       setNewClassName('');
+      setNewBellScheduleId('');
       loadClasses();
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to create class');
@@ -70,7 +87,10 @@ export function ClassesManager() {
     e.preventDefault();
     setSaving(true);
     try {
-      await classesAPI.update(showEditClass.id, editClassName);
+      await classesAPI.update(showEditClass.id, {
+        class_name: editClassName,
+        bell_schedule_template_id: editBellScheduleId ? Number(editBellScheduleId) : null,
+      });
       toast.success('Class updated');
       setShowEditClass(null);
       loadClasses();
@@ -177,9 +197,19 @@ export function ClassesManager() {
                   </div>
                   <div>
                     <CardTitle className="text-sm font-bold text-[#14213D]">{cls.class_name}</CardTitle>
-                    <span className="text-[10px] font-semibold text-[#8C97AB]">
-                      {cls.sections?.length || 0} Section{cls.sections?.length !== 1 ? 's' : ''}
-                    </span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] font-semibold text-[#8C97AB]">
+                        {cls.sections?.length || 0} Section{cls.sections?.length !== 1 ? 's' : ''}
+                      </span>
+                      {cls.bellScheduleTemplate ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#2F6F5E] bg-[#EAF3F0] px-1.5 py-0.5 rounded">
+                          <Clock className="w-2.5 h-2.5" />
+                          {cls.bellScheduleTemplate.name}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-gray-400 italic">No Bell Schedule</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -187,7 +217,11 @@ export function ClassesManager() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => { setShowEditClass(cls); setEditClassName(cls.class_name); }}
+                    onClick={() => {
+                      setShowEditClass(cls);
+                      setEditClassName(cls.class_name);
+                      setEditBellScheduleId(cls.bell_schedule_template_id || cls.bellScheduleTemplate?.id || '');
+                    }}
                     title="Edit Class"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
@@ -258,7 +292,7 @@ export function ClassesManager() {
 
       {/* Modal: Add Class */}
       <Modal isOpen={showAddClass} onClose={() => setShowAddClass(false)} title="Create New Class">
-        <form onSubmit={handleAddClass} className="space-y-4">
+        <form onSubmit={handleAddClass} className="space-y-4 text-xs">
           <div>
             <label className="block text-xs font-semibold text-[#14213D] mb-1">Class Name *</label>
             <Input
@@ -266,6 +300,17 @@ export function ClassesManager() {
               placeholder="e.g. Grade 10 or Class 10"
               value={newClassName}
               onChange={(e) => setNewClassName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#14213D] mb-1">Bell Schedule Template (Optional)</label>
+            <Select
+              value={newBellScheduleId}
+              onChange={(e) => setNewBellScheduleId(e.target.value)}
+              options={[
+                { value: '', label: '-- None (Assign Later) --' },
+                ...bellSchedules.map((b) => ({ value: b.id, label: `${b.name} (${b.working_days_per_week} Days/Wk)` })),
+              ]}
             />
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
@@ -276,14 +321,25 @@ export function ClassesManager() {
       </Modal>
 
       {/* Modal: Edit Class */}
-      <Modal isOpen={!!showEditClass} onClose={() => setShowEditClass(null)} title="Edit Class Name">
-        <form onSubmit={handleEditClass} className="space-y-4">
+      <Modal isOpen={!!showEditClass} onClose={() => setShowEditClass(null)} title="Edit Class">
+        <form onSubmit={handleEditClass} className="space-y-4 text-xs">
           <div>
             <label className="block text-xs font-semibold text-[#14213D] mb-1">Class Name *</label>
             <Input
               required
               value={editClassName}
               onChange={(e) => setEditClassName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#14213D] mb-1">Bell Schedule Template</label>
+            <Select
+              value={editBellScheduleId}
+              onChange={(e) => setEditBellScheduleId(e.target.value)}
+              options={[
+                { value: '', label: '-- None (Unassigned) --' },
+                ...bellSchedules.map((b) => ({ value: b.id, label: `${b.name} (${b.working_days_per_week} Days/Wk)` })),
+              ]}
             />
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">

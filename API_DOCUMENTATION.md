@@ -211,3 +211,17 @@ CRUD for the school-wide subject catalog.
 - `GET /api/library/issues` — List circulation active loans and history logs.
 - `GET /api/library/my-library` — Student / Teacher personal library loans overview (PWA).
 - `GET /api/library/reports/books` | `report/issued` | `report/overdue` | `report/lost` — Library reporting registers.
+
+---
+
+## 12. Bell Schedules & Auto Timetable Generator (`/api/bell-schedules`, `/api/timetable-generation`, `/api/subjects/periods`)
+
+- `GET /api/bell-schedules` | `POST /api/bell-schedules` — List and bulk save bell schedule templates + periods (School Admin).
+- `PATCH /api/bell-schedules/:id` | `DELETE /api/bell-schedules/:id` — Update or delete a bell schedule template.
+- `PUT /api/subjects/periods` — Bulk update subject periods per week allocations per class or section override.
+- `GET /api/timetable-generation/readiness` — Pre-flight readiness check (missing teachers, unset periods_per_week, teacher capacity overload).
+- `POST /api/timetable-generation/run` — Trigger async non-blocking timetable generation job (`timetable_generation_jobs`).
+- `GET /api/timetable-generation/:jobId` — Check generation job status and retrieve generated candidate draft schedule.
+- `POST /api/timetable-generation/:jobId/confirm` — Confirm, collision-verify, and publish candidate timetable draft into live `timetables` database table inside a transaction.
+
+

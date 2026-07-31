@@ -1,14 +1,11 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   CircularProgress,
   Alert,
   Typography,
   Box,
-  Button,
   Stack,
-  Card,
-  CardContent,
   Tabs,
   Tab,
   Paper,
@@ -17,17 +14,15 @@ import {
   Select,
   MenuItem
 } from "@mui/material";
-import { Edit, AccessTime, School, CalendarMonth } from "@mui/icons-material";
+import { AccessTime, School, CalendarMonth } from "@mui/icons-material";
 import { useTeacherTimetable } from "./useTeacherTimetable";
-import ManageTimetableDialog from "./ManageTimetableDialog";
 import { useTeacherAssignments } from "./useTeacherAssignments";
 import { getTimetable } from "./teacherTimetable.api";
 
 export default function TeacherTimetablePage() {
-  const { timetable, loading: myTimetableLoading, error: myTimetableError, refresh } = useTeacherTimetable();
-  const { classTeacherSections, loading: assignmentsLoading } = useTeacherAssignments();
+  const { timetable, loading: myTimetableLoading, error: myTimetableError } = useTeacherTimetable();
+  const { classTeacherSections } = useTeacherAssignments();
   const [activeTab, setActiveTab] = useState(0); // 0 = My Timetable, 1 = Class Timetable
-  const [showManage, setShowManage] = useState(false);
 
   // Class Timetable states
   const [selectedSection, setSelectedSection] = useState("");
@@ -255,17 +250,9 @@ export default function TeacherTimetablePage() {
             <Alert severity="error" sx={{ mt: 2 }}>{classTimetableError}</Alert>
           ) : classPeriods.length === 0 ? (
             <Paper sx={{ p: 4, textAlign: "center", borderRadius: 3, border: "1px dashed rgba(0,0,0,0.12)" }}>
-              <Typography color="text.secondary" sx={{ mb: 2 }}>
+              <Typography color="text.secondary">
                 No periods scheduled for {activeDay.charAt(0).toUpperCase() + activeDay.slice(1)} yet.
               </Typography>
-              <Button
-                variant="outlined"
-                startIcon={<Edit />}
-                onClick={() => setShowManage(true)}
-                disabled={assignmentsLoading}
-              >
-                Create Timetable
-              </Button>
             </Paper>
           ) : (
             <Stack spacing={2} sx={{ pb: 3 }}>
@@ -320,41 +307,10 @@ export default function TeacherTimetablePage() {
                   </Paper>
                 );
               })}
-
-              <Card sx={{ mt: 3, borderRadius: 3 }}>
-                <CardContent sx={{ py: "16px !important" }}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Box>
-                      <Typography variant="subtitle2" fontWeight={700}>
-                        Modify Class Timetable
-                      </Typography>
-                    </Box>
-                    <Button
-                      variant="contained"
-                      startIcon={<Edit />}
-                      onClick={() => setShowManage(true)}
-                      disabled={assignmentsLoading}
-                    >
-                      Manage
-                    </Button>
-                  </Stack>
-                </CardContent>
-              </Card>
             </Stack>
           )}
         </Box>
       )}
-
-      {/* MANAGE DIALOG */}
-      <ManageTimetableDialog
-        open={showManage}
-        onClose={() => setShowManage(false)}
-        onSuccess={() => {
-          refresh?.();
-          loadClassTimetable();
-        }}
-        classTeacherSections={classTeacherSections}
-      />
     </Container>
   );
 }

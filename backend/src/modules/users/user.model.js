@@ -50,6 +50,12 @@ const User = db.define(
       defaultValue: true,
     },
 
+    must_change_password: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+
     username: {
       type: DataTypes.STRING,
       allowNull: false,

@@ -3,62 +3,67 @@ import ClassSubject from "./class-subject.model.js";
 import SectionSubjectOverride from "./section-subject-override.model.js";
 
 /**
- * Resolves the effective subject list for a specific class section.
- *
- * Resolution rules (in priority order):
- * 1. If a section_subject_override row exists for (school_id, class_id, section_id, subject_id):
- *    - is_included = true  → subject IS in this section's list
- *    - is_included = false → subject is NOT in this section's list
- * 2. Otherwise, fall back to class_subjects default (is_active = true)
- *
- * This means:
- * - A school with no overrides configured gets the class default for every section (no extra work)
- * - A school with streams (e.g. 12-A Science, 12-B Commerce) sets only the delta rows
+ * Resolves the effective subject list for a specific class section,
+ * including periods_per_week (override > class_subject priority).
  *
  * @param {number} school_id
  * @param {number} class_id
  * @param {number} section_id
- * @returns {Promise<Subject[]>} Resolved subjects sorted by name
+ * @returns {Promise<Array>} Resolved subject objects with effective periods_per_week and subject_type
  */
 export const getSubjectsForSection = async (school_id, class_id, section_id) => {
-  // 1. Fetch class-level default subjects (with full Subject data)
+  // 1. Fetch class-level default subjects
   const classSubjectRows = await ClassSubject.findAll({
     where: { school_id, class_id, is_active: true },
-    include: [{ model: Subject, attributes: ["id", "name", "code", "category"] }],
+    include: [{ model: Subject, attributes: ["id", "name", "code", "category", "subject_type"] }],
   });
 
   // 2. Fetch section-level overrides
   const overrideRows = await SectionSubjectOverride.findAll({
     where: { school_id, class_id, section_id },
-    include: [{ model: Subject, attributes: ["id", "name", "code", "category"] }],
+    include: [{ model: Subject, attributes: ["id", "name", "code", "category", "subject_type"] }],
   });
 
-  // Build override map: subject_id → is_included
+  // Build override map: subject_id → row
   const overrideMap = {};
   for (const row of overrideRows) {
-    overrideMap[String(row.subject_id)] = row.is_included;
+    overrideMap[String(row.subject_id)] = row;
   }
 
-  // 3. Start with class default set, apply exclusion overrides
   const resolvedSubjects = [];
   const resolvedSubjectIds = new Set();
 
+  // 3. Start with class default set, apply section overrides
   for (const cs of classSubjectRows) {
     const subjectId = String(cs.subject_id);
-    if (overrideMap[subjectId] === false) {
+    const override = overrideMap[subjectId];
+
+    if (override && override.is_included === false) {
       // Explicitly excluded by section override
       continue;
     }
+
     if (cs.subject) {
-      resolvedSubjects.push(cs.subject);
+      const plainSubject = cs.subject.toJSON ? cs.subject.toJSON() : { ...cs.subject };
+      // Priority: section_subject_override.periods_per_week > class_subject.periods_per_week
+      const effectivePeriods =
+        override && override.periods_per_week !== null && override.periods_per_week !== undefined
+          ? override.periods_per_week
+          : cs.periods_per_week ?? null;
+
+      plainSubject.periods_per_week = effectivePeriods;
+      resolvedSubjects.push(plainSubject);
       resolvedSubjectIds.add(subjectId);
     }
   }
 
-  // 4. Add any subjects included via override that aren't already in class default
+  // 4. Add any subjects explicitly included via override that aren't in class default
   for (const row of overrideRows) {
-    if (row.is_included === true && !resolvedSubjectIds.has(String(row.subject_id)) && row.subject) {
-      resolvedSubjects.push(row.subject);
+    const subjectId = String(row.subject_id);
+    if (row.is_included === true && !resolvedSubjectIds.has(subjectId) && row.subject) {
+      const plainSubject = row.subject.toJSON ? row.subject.toJSON() : { ...row.subject };
+      plainSubject.periods_per_week = row.periods_per_week ?? null;
+      resolvedSubjects.push(plainSubject);
     }
   }
 

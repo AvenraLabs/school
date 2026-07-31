@@ -38,6 +38,15 @@ const Class = db.define(
       allowNull: false,
       defaultValue: true,
     },
+
+    bell_schedule_template_id: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+      references: {
+        model: "bell_schedule_templates",
+        key: "id",
+      },
+    },
   },
   {
     tableName: "classes",
