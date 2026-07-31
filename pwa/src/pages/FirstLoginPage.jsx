@@ -15,6 +15,8 @@ import {
   Avatar,
   IconButton,
   Chip,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import { PhotoCamera, Delete } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +30,8 @@ const TEACHER_STEPS = ["Security", "Personal", "Professional"];
 export default function FirstLoginPage() {
   const { user, login, logout } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -182,6 +186,7 @@ export default function FirstLoginPage() {
     try {
       const submitData = {
         ...formData,
+        role: user?.role,
         experience: formData.experience ? parseInt(formData.experience) : 0,
       };
 
@@ -239,7 +244,7 @@ export default function FirstLoginPage() {
           )}
 
           {/* Stepper */}
-          <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+          <Stepper activeStep={activeStep} orientation={isMobile ? "vertical" : "horizontal"} sx={{ mb: 4 }}>
             {steps.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
@@ -387,6 +392,7 @@ export default function FirstLoginPage() {
                   onChange={(e) => handleInputChange("gender", e.target.value)}
                   fullWidth
                   SelectProps={{ native: true }}
+                  InputLabelProps={{ shrink: true }}
                 >
                   <option value="">Select Gender</option>
                   <option value="male">Male</option>
