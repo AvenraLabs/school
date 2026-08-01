@@ -130,8 +130,7 @@ CRUD for the school-wide subject catalog.
 - `GET /categories` | `POST /categories` — Fee categories.
 - `GET /definitions` | `POST /definitions` — Define fee structure per class/year.
 - `GET /students` — Query student fee status (pending/partial/paid/overdue).
-- `POST /payments` — Record fee payment receipt.
-- `POST /payments/:id/void` — Void payment receipt.
+- `GET /dashboard` — Unified finance dashboard analytics. Returns 6 KPI metrics: `this_month_collection`, `this_month_expenses`, `pending_fees`, `net_cash_flow_year`, `total_fees_collected`, `total_expenses`, plus `monthly_trends` and `expense_distribution`.
 - `GET /daily-report` — Fee collection audit report register. Accepts `date` (YYYY-MM-DD; if omitted, returns all-time collection records), `mode`, `search`, `page`, `limit`.
 
 ### Expenses (`/api/expenses`)

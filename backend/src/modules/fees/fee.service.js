@@ -748,24 +748,10 @@ export const getUnifiedFinanceDashboardService = async (school_id) => {
   const currentYear = await getCurrentAcademicYear(school_id);
   const now = new Date();
   
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-  
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-  // Today's Collection
-  const todayPayments = await FeePayment.findAll({
-    where: {
-      school_id,
-      is_void: false,
-      paid_at: { [Op.between]: [startOfDay, endOfDay] },
-    },
-    attributes: ["amount"],
-  });
-  const todayCollection = todayPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-
-  // Month Collection
+  // This Month Collection
   const monthPayments = await FeePayment.findAll({
     where: {
       school_id,
@@ -776,7 +762,7 @@ export const getUnifiedFinanceDashboardService = async (school_id) => {
   });
   const monthCollection = monthPayments.reduce((sum, p) => sum + Number(p.amount), 0);
 
-  // Active Academic Year Collection
+  // Active Academic Year Collection (Total Fee Collection - Year)
   const ayStart = currentYear.start_date ? new Date(`${currentYear.start_date}T00:00:00.000Z`) : null;
   const ayEnd = currentYear.end_date ? new Date(`${currentYear.end_date}T23:59:59.999Z`) : null;
 
@@ -802,7 +788,7 @@ export const getUnifiedFinanceDashboardService = async (school_id) => {
     studentFees.filter((f) => Number(f.balance_amount) > 0).map((f) => f.student_id)
   );
 
-  // Total Expenses (This Month & Academic Year)
+  // This Month Expenses
   const monthExpenses = await Expense.findAll({
     where: {
       school_id,
@@ -813,6 +799,7 @@ export const getUnifiedFinanceDashboardService = async (school_id) => {
   });
   const thisMonthExpenses = monthExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
+  // Total Expenses (Academic Year)
   const yearExpensesWhere = { school_id, is_cancelled: false, academic_year_id: currentYear.id };
   const allExpenses = await Expense.findAll({
     where: yearExpensesWhere,
@@ -820,7 +807,8 @@ export const getUnifiedFinanceDashboardService = async (school_id) => {
   });
   const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
-  const netCash = monthCollection - thisMonthExpenses;
+  // Net Cash Flow = Total Collection (Year) - Total Expenses (Year)
+  const netCashFlowYear = totalFeesCollected - totalExpenses;
 
   // Monthly trends across active Academic Year (e.g. Jun 2026 -> Mar 2027)
   const monthlyTrends = [];
@@ -877,14 +865,13 @@ export const getUnifiedFinanceDashboardService = async (school_id) => {
   }));
 
   return {
-    today_collection: todayCollection,
     this_month_collection: monthCollection,
-    total_fees_collected: totalFeesCollected,
+    this_month_expenses: thisMonthExpenses,
     pending_fees: pendingFees,
     pending_students_count: pendingStudentIds.size,
-    this_month_expenses: thisMonthExpenses,
+    net_cash_flow_year: netCashFlowYear,
+    total_fees_collected: totalFeesCollected,
     total_expenses: totalExpenses,
-    net_cash: netCash,
     monthly_trends: monthlyTrends,
     expense_distribution: expenseDistribution,
     academic_year: {
@@ -895,3 +882,4 @@ export const getUnifiedFinanceDashboardService = async (school_id) => {
     },
   };
 };
+

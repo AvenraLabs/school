@@ -2,15 +2,12 @@ import React, { useState, useEffect } from 'react';
 import {
   TrendingUp,
   TrendingDown,
-  Calendar,
   AlertCircle,
-  Users,
   CreditCard,
   PieChart,
   RefreshCw,
   Wallet,
-  ArrowUpRight,
-  ArrowDownRight,
+  Receipt,
 } from 'lucide-react';
 import { feeAPI } from '../../../api';
 import { Button } from '../../../components/ui/Button';
@@ -69,14 +66,13 @@ export function FinanceDashboard() {
   }
 
   const {
-    today_collection = 0,
     this_month_collection = 0,
-    total_fees_collected = 0,
+    this_month_expenses = 0,
     pending_fees = 0,
     pending_students_count = 0,
-    this_month_expenses = 0,
+    net_cash_flow_year = 0,
+    total_fees_collected = 0,
     total_expenses = 0,
-    net_cash: netCash = 0,
     monthly_trends = [],
     expense_distribution = [],
   } = data || {};
@@ -101,35 +97,14 @@ export function FinanceDashboard() {
         </div>
       </Card>
 
-      {/* KPI Cards Grid */}
+      {/* KPI Cards Grid — 6 Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatsCard
-          title="Today's Collection"
-          value={formatINR(today_collection)}
-          icon={Calendar}
-          active={true}
-          subtext="Direct cash & digital receipt today"
-        />
-
         <StatsCard
           title="This Month Collection"
           value={formatINR(this_month_collection)}
           icon={TrendingUp}
-          subtext="Total collected in calendar month"
-        />
-
-        <StatsCard
-          title="Net Cash Flow (Month)"
-          value={formatINR(netCash)}
-          icon={Wallet}
-          subtext={`Collection (${formatINR(this_month_collection)}) − Expenses (${formatINR(this_month_expenses)})`}
-        />
-
-        <StatsCard
-          title="Total Pending Fees"
-          value={formatINR(pending_fees)}
-          icon={AlertCircle}
-          subtext={`Across ${pending_students_count} defaulter student(s)`}
+          active={true}
+          subtext="Total fees collected in current calendar month"
         />
 
         <StatsCard
@@ -140,10 +115,31 @@ export function FinanceDashboard() {
         />
 
         <StatsCard
+          title="Total Pending Fees"
+          value={formatINR(pending_fees)}
+          icon={AlertCircle}
+          subtext={`Across ${pending_students_count} defaulter student(s)`}
+        />
+
+        <StatsCard
+          title="Net Cash Flow (Year)"
+          value={formatINR(net_cash_flow_year)}
+          icon={Wallet}
+          subtext={`Collection (${formatINR(total_fees_collected)}) − Expenses (${formatINR(total_expenses)})`}
+        />
+
+        <StatsCard
           title="Total Fee Collection (Year)"
           value={formatINR(total_fees_collected)}
           icon={CreditCard}
           subtext={data?.academic_year?.name ? `Cumulative receipts (${data.academic_year.name})` : "Cumulative academic session receipts"}
+        />
+
+        <StatsCard
+          title="Total Expenses (Year)"
+          value={formatINR(total_expenses)}
+          icon={Receipt}
+          subtext={data?.academic_year?.name ? `All expenses (${data.academic_year.name})` : "All academic year expenses"}
         />
       </div>
 
