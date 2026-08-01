@@ -3,9 +3,10 @@ import asyncHandler from "../../shared/asyncHandler.js";
 import AppError from "../../shared/appError.js";
 import User from "../users/user.model.js";
 import School from "../schools/school.model.js";
+import { deleteCache } from "../../config/redis.js";
 
 export const login = asyncHandler(async (req, res) => {
-  const { username, password } = req.body; // already validated by Zod
+  const { username, password } = req.body; 
 
   // ── 1. Find user ────────────────────────────────────────────────
   const user = await User.findOne({ where: { username } });
@@ -32,8 +33,6 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   // ── 3. Role-specific profile status checks ────────────────────────
-  //    We must verify that the profile (teacher/student/driver) is still
-  //    active — a dismissed teacher or dropped student must not get a token.
   let additionalClaims = {};
 
   if (user.role === "teacher") {
@@ -246,6 +245,8 @@ export const logout = asyncHandler(async (req, res) => {
       { refresh_token: null },
       { where: { id: req.user.id } }
     );
+    // Invalidate Redis identity cache immediately
+    await deleteCache(`auth:identity:${req.user.id}`);
   }
   res.json({ message: "Logged out successfully" });
 });
@@ -266,9 +267,12 @@ export const changePassword = asyncHandler(async (req, res) => {
   }
 
   user.password = new_password;
+  user.must_change_password = false;
   // Invalidate any stored refresh_token on password change for security
   user.refresh_token = null;
   await user.save();
+  // Invalidate Redis identity cache immediately
+  await deleteCache(`auth:identity:${req.user.id}`);
 
   res.json({ message: "Password updated successfully" });
 });
@@ -306,6 +310,8 @@ export const adminResetUserPassword = asyncHandler(async (req, res) => {
   // Invalidate any active sessions for the target user
   targetUser.refresh_token = null;
   await targetUser.save();
+  // Invalidate Redis identity cache immediately
+  await deleteCache(`auth:identity:${targetUser.id}`);
 
   res.json({ message: "Password reset successfully" });
 });

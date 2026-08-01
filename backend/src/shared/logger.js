@@ -57,7 +57,7 @@ export const logger = {
   error: (event, message, meta = {}) => writeLog("ERROR", event, message, meta),
 
   /**
-   * Uniform Integration Call Logger across external services (Gemini, Kling, WhatsApp, Maps)
+   * Uniform Integration Call Logger across external services (Gemini, Veo, WhatsApp, Maps)
    * Log Shape: { timestamp, level, type, integration, action, status, duration_ms, error, meta }
    */
   integration: ({ integration, action, status, duration_ms = 0, error = null, meta = {} }) => {
@@ -67,7 +67,7 @@ export const logger = {
       timestamp,
       level: isError ? "ERROR" : "INFO",
       type: "integration_call",
-      integration, // gemini | kling | whatsapp | maps
+      integration, // gemini | veo | whatsapp | maps
       action,      // send_template | submit_video_task | rag_answer | geocode
       status,      // success | failure | skipped | limit_exceeded
       duration_ms,

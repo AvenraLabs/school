@@ -622,7 +622,7 @@ export default function TeacherAIToolsPage() {
   }, [assignedGrades]);
   const [videoSubject, setVideoSubject] = useState("");
   const [videoLanguage, setVideoLanguage] = useState("English");
-  const [videoDuration, setVideoDuration] = useState("5"); // "5" or "10" seconds
+  const [videoDuration, setVideoDuration] = useState("6"); // "4", "6", or "8" seconds
   const [activeVideoJob, setActiveVideoJob] = useState(null);
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [teacherVideos, setTeacherVideos] = useState([]);
@@ -1079,6 +1079,18 @@ export default function TeacherAIToolsPage() {
     }
   };
 
+  const handleDeleteVideo = async (id) => {
+    try {
+      await api.delete(`/ai/videos/${id}`);
+      setTeacherVideos((prev) => prev.filter((v) => v.id !== id));
+      if (activeVideoJob?.id === id) {
+        setVideoModalOpen(false);
+      }
+    } catch (err) {
+      console.error("Failed to delete video job:", err);
+    }
+  };
+
   return (
     <Container maxWidth="md" sx={{ py: 3, pb: 10 }}>
       {/* Mode 1: Document Viewer Screen */}
@@ -1328,31 +1340,84 @@ export default function TeacherAIToolsPage() {
                         </Typography>
                       </Box>
 
-                      {vid.status === "completed" && vid.video_url ? (
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={<PlayCircleOutline />}
-                          onClick={() => {
-                            setActiveVideoJob({
-                              id: vid.id,
-                              status: "completed",
-                              videoUrl: vid.video_url,
-                              topic: vid.topic,
-                            });
-                            setVideoModalOpen(true);
-                          }}
-                          sx={{
-                            borderRadius: "10px",
-                            fontWeight: 800,
-                            textTransform: "none",
-                            bgcolor: "#8b5cf6",
-                            "&:hover": { bgcolor: "#7c3aed" },
-                          }}
-                        >
-                          Watch Video
-                        </Button>
-                      ) : null}
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        {vid.status === "completed" && vid.video_url ? (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<PlayCircleOutline />}
+                            onClick={() => {
+                              setActiveVideoJob({
+                                id: vid.id,
+                                status: "completed",
+                                videoUrl: vid.video_url,
+                                topic: vid.topic,
+                              });
+                              setVideoModalOpen(true);
+                            }}
+                            sx={{
+                              borderRadius: "10px",
+                              fontWeight: 800,
+                              textTransform: "none",
+                              bgcolor: "#8b5cf6",
+                              "&:hover": { bgcolor: "#7c3aed" },
+                            }}
+                          >
+                            Watch Video
+                          </Button>
+                        ) : vid.status === "processing" ? (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<CircularProgress size={14} color="warning" />}
+                            onClick={() => {
+                              setActiveVideoJob({
+                                id: vid.id,
+                                status: "processing",
+                                topic: vid.topic,
+                                subjectName: vid.subject_name,
+                              });
+                              setVideoModalOpen(true);
+                              pollVideoJobStatus(vid.id);
+                            }}
+                            sx={{
+                              borderRadius: "10px",
+                              fontWeight: 800,
+                              textTransform: "none",
+                              borderColor: "#f97316",
+                              color: "#c2410c",
+                            }}
+                          >
+                            Check Status
+                          </Button>
+                        ) : vid.status === "failed" ? (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="error"
+                            onClick={() => {
+                              setActiveVideoJob({
+                                id: vid.id,
+                                status: "failed",
+                                topic: vid.topic,
+                                errorMessage: vid.error_message || "Video generation failed.",
+                              });
+                              setVideoModalOpen(true);
+                            }}
+                            sx={{
+                              borderRadius: "10px",
+                              fontWeight: 800,
+                              textTransform: "none",
+                            }}
+                          >
+                            View Error
+                          </Button>
+                        ) : null}
+
+                        <IconButton size="small" onClick={() => handleDeleteVideo(vid.id)} color="error">
+                          <DeleteOutline fontSize="small" />
+                        </IconButton>
+                      </Stack>
                     </Box>
                   ))}
                 </Stack>
@@ -2121,8 +2186,9 @@ export default function TeacherAIToolsPage() {
                         onChange={(e) => setVideoDuration(e.target.value)}
                         sx={{ borderRadius: "12px" }}
                       >
-                        <MenuItem value="5">5 Seconds Animation</MenuItem>
-                        <MenuItem value="10">10 Seconds Animation</MenuItem>
+                        <MenuItem value="4">4 Seconds Animation</MenuItem>
+                        <MenuItem value="6">6 Seconds Animation</MenuItem>
+                        <MenuItem value="8">8 Seconds Animation</MenuItem>
                       </Select>
                     </FormControl>
                   </Stack>
@@ -2230,7 +2296,7 @@ export default function TeacherAIToolsPage() {
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
             onClick={() => setVideoModalOpen(false)}
-            disabled={activeVideoJob?.status === "processing"}
+            disabled={activeVideoJob?.status === "processing" || activeVideoJob?.status === "pending"}
             sx={{ fontWeight: 800, textTransform: "none" }}
           >
             Close

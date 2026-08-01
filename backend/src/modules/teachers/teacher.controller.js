@@ -1,6 +1,7 @@
 import asyncHandler from "../../shared/asyncHandler.js";
 import jwt from "jsonwebtoken";
 import AppError from "../../shared/appError.js";
+import { deleteCache } from "../../config/redis.js";
 import {
   createTeacherService,
   listTeachersService,
@@ -102,27 +103,31 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
     }
   }
 
-  if (teacher.approval_status === "approved") {
-    const currentUser = await User.findByPk(req.user.id);
-    if (!currentUser) throw new AppError("User not found", 404);
+  const currentUser = await User.findByPk(req.user.id);
+  if (!currentUser) throw new AppError("User not found", 404);
 
-    // ── 1. Handle session-critical fields directly (no approval needed) ──
-    const { new_password } = req.body;
-    const directUpdates = {};
+  // ── 1. Handle session-critical fields directly (password & flags) ──
+  const { new_password } = req.body;
+  const directUpdates = {};
 
-    if (new_password && new_password.trim().length >= 6) {
-      directUpdates.password = new_password.trim();
+  if (new_password && new_password.trim().length >= 6) {
+    directUpdates.password = new_password.trim();
+    directUpdates.must_change_password = false;
+  }
+  // Always clear first_login on profile completion / password setup
+  if (currentUser.first_login || currentUser.must_change_password) {
+    if (new_password || currentUser.first_login) {
       directUpdates.must_change_password = false;
-    }
-    // Always clear first_login on profile completion, regardless of profile data changes
-    if (currentUser.first_login) {
       directUpdates.first_login = false;
     }
+  }
 
-    if (Object.keys(directUpdates).length > 0) {
-      await User.update(directUpdates, { where: { id: req.user.id } });
-    }
+  if (Object.keys(directUpdates).length > 0) {
+    await User.update(directUpdates, { where: { id: req.user.id } });
+    await deleteCache(`auth:identity:${req.user.id}`);
+  }
 
+  if (teacher.approval_status === "approved") {
     // ── 2. Queue profile-field diffs for admin approval ──
     const pending_data = {};
 
@@ -210,11 +215,6 @@ export const completeTeacherProfile = asyncHandler(async (req, res) => {
       user: tokenPayload,
     });
   }
-
-  const currentUser = await User.findByPk(req.user.id);
-  if (!currentUser) throw new AppError("User not found", 404);
-
-  const { new_password } = req.body;
 
   if (currentUser.must_change_password) {
     if (!new_password || new_password.trim().length < 6) {

@@ -170,7 +170,7 @@ CRUD for the school-wide subject catalog.
 - `GET /documents` | `GET /documents/:id` | `PATCH /documents/:id` — Saved AI documents.
 
 ### AI Video Generation (`/api/ai/videos`)
-- `POST /generate` | `GET /status/:id` | `GET /` — Generate 3D animation videos via Kling AI.
+- `POST /generate` | `GET /status/:id` | `GET /` — Generate 3D animation videos via Google Vertex AI (Veo 3).
 
 ### Token Quotas & AI Analytics (`/api/tokens`, `/api/ai-analytics`)
 - `GET /tokens/policy` | `PATCH /tokens/policy` (Super Admin) — Role token quotas.

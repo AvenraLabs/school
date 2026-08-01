@@ -12,7 +12,7 @@ import {
 
 const router = express.Router();
 
-// super admin: integration logs (Gemini, Kling, WhatsApp, Maps)
+// super admin: integration logs (Gemini, Veo, WhatsApp, Maps)
 router.get(
   "/analytics/ai/integration-logs",
   protect,

@@ -6,6 +6,7 @@ import {
   getVideoGenerationStatus,
   getTeacherVideos,
   getStudentClassVideos,
+  deleteVideoGeneration,
 } from "./video-generation.controller.js";
 
 const router = Router();
@@ -17,5 +18,6 @@ router.post("/", createVideoGeneration);
 router.get("/teacher/my-videos", getTeacherVideos);
 router.get("/student/class-videos", getStudentClassVideos);
 router.get("/:id", getVideoGenerationStatus);
+router.delete("/:id", deleteVideoGeneration);
 
 export default router;

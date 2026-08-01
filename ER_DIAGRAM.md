@@ -289,7 +289,7 @@ Maps teachers to specific Class + Section + Subject combinations.
 - RAG architecture: Textbook metadata linked to vector DB (ChromaDB) and chat histories.
 
 #### `video_generations`, `teacher_ai_documents`
-- AI video generation jobs (Kling AI) & generated lesson plans / question papers.
+- AI video generation jobs (Google Vertex AI Veo 3) & generated lesson plans / question papers.
 
 #### `token_accounts`, `token_policies`, `token_transactions`
 - AI token usage tracking and quota management per user/role.

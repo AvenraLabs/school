@@ -7,6 +7,7 @@ import TeacherAssignment from "../teacher-assignments/teacher-assignment.model.j
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import db from "../../config/db.js";
+import { deleteCache } from "../../config/redis.js";
 import { cleanTo10Digits } from "../../shared/utils/phoneUtils.js";
 import { buildStudentSearchWhere } from "../../shared/utils/searchHelpers.js";
 
@@ -325,6 +326,8 @@ export const updateStudentStatusService = async ({
         );
       }
     }
+
+    await deleteCache(`auth:identity:${student.user_id}`);
 
     return student;
   });

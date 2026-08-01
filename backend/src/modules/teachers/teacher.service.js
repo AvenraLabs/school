@@ -3,6 +3,7 @@ import db from "../../config/db.js";
 import User from "../users/user.model.js";
 import Teacher from "./teacher.model.js";
 import AppError from "../../shared/appError.js";
+import { deleteCache } from "../../config/redis.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import { cleanTo10Digits } from "../../shared/utils/phoneUtils.js";
 import { buildTeacherSearchWhere } from "../../shared/utils/searchHelpers.js";
@@ -202,6 +203,8 @@ export const updateTeacherStatusService = async ({
       { is_active: teacher.is_active },
       { where: { id: teacher.user_id }, transaction: t }
     );
+
+    await deleteCache(`auth:identity:${teacher.user_id}`);
 
     return teacher;
   });

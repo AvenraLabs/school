@@ -181,6 +181,8 @@ export function AuthProvider({ children }) {
               phone: normalized?.phone ?? prev?.phone,
               email: normalized?.email ?? prev?.email,
               avatar_url: avatarUrl || prev?.avatar_url || "",
+              must_change_password: normalized?.must_change_password ?? prev?.must_change_password,
+              first_login: normalized?.first_login ?? prev?.first_login,
               // Always update approval_status so RequireApproval reads from context
               ...(approvalStatus !== null ? { approval_status: approvalStatus } : {}),
               rejection_reason: rejectionReason,
@@ -325,37 +327,15 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.warn("Logout API call failed:", error);
     } finally {
-      const currentUserId = user?.id;
-      const accs = getSavedAccounts();
-      if (currentUserId) {
-        delete accs[currentUserId];
-        saveAccounts(accs);
-      }
-
-      const remainingIds = Object.keys(accs);
-      if (remainingIds.length > 0) {
-        const nextId = remainingIds[0];
-        const nextAcc = accs[nextId];
-        localStorage.setItem("token", nextAcc.token);
-        if (nextAcc.refreshToken) {
-          localStorage.setItem("refreshToken", nextAcc.refreshToken);
-        } else {
-          localStorage.removeItem("refreshToken");
-        }
-        localStorage.setItem("activeUserId", nextAcc.user.id);
-        setToken(nextAcc.token);
-        setUser(nextAcc.user || decodeToken(nextAcc.token));
-        return nextAcc.user || decodeToken(nextAcc.token);
-      } else {
-        disconnectSharedSocket();
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("accounts");
-        localStorage.removeItem("activeUserId");
-        setToken(null);
-        setUser(null);
-        return null;
-      }
+      disconnectSharedSocket();
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("accounts");
+      localStorage.removeItem("activeUserId");
+      setToken(null);
+      setUser(null);
+      setAccounts({});
+      return null;
     }
   }
 

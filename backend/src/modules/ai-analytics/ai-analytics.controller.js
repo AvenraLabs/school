@@ -64,7 +64,7 @@ export const studentAiAnalytics = asyncHandler(async (req, res) => {
 /* ===================== SUPER ADMIN INTEGRATION LOGS ===================== */
 export const getIntegrationLogs = asyncHandler(async (req, res) => {
   const dateStr = req.query.date || new Date().toISOString().split("T")[0];
-  const filterIntegration = req.query.integration || null; // gemini | kling | whatsapp | maps
+  const filterIntegration = req.query.integration || null; // gemini | veo | whatsapp | maps
   const filterStatus = req.query.status || null; // success | failure
 
   const logDir = path.join(__dirname, "../../storage/logs");

@@ -1,0 +1,80 @@
+1. Image Generation (Imagen 3)
+This is the best replacement for creating static educational diagrams or photos.
+
+Model ID: imagen-3.0-generate-001 (Use the "fast" variant if available in your region for lower cost).
+Method: generateImages
+
+
+// Inside your existing Express AI logic
+const imageModel = vertexAI.preview.getVisionModel({
+  model: 'imagen-3.0-generate-001', 
+});
+
+async function generateEducationalImage(prompt) {
+  const request = {
+    prompt: prompt,
+    sampleCount: 1,
+    aspectRatio: "16:9", // Good for school presentations
+    addWatermark: true,
+  };
+
+  const response = await imageModel.generateImages(request);
+  
+  // The API returns the image as a Base64 string
+  const base64Image = response.predictions[0].bytesBase64Encoded;
+  return base64Image;
+}
+
+
+
+
+
+
+
+2. Video Generation (Veo 3)
+Video generation is asynchronous. You get a "Job" back first, and then you poll it until it finishes.
+
+The API Call:
+const videoModel = vertexAI.preview.getVisionModel({ model: 'veo-3.0-fast-001' });
+
+const request = {
+  prompt: 'A cinematic zoom-out showing the solar system planets in motion',
+  fps: 24,
+  durationSeconds: 5,
+};
+
+const [operation] = await videoModel.generateVideo(request);
+
+// Log the operation name immediately for tracking
+console.log(`Operation Name: ${operation.name}`); 
+
+// Wait for the result
+const [response] = await operation.promise();
+
+
+
+The Response Structure (Operation Metadata):
+When you first call generateVideo, you get metadata to log:
+
+
+{
+  "name": "projects/12345/locations/us-central1/operations/88995544",
+  "metadata": {
+    "@type": "type.googleapis.com/google.cloud.aiplatform.v1.VideoGenerationMetadata",
+    "state": "RUNNING"
+  }
+}
+
+
+
+The Final Response Structure (After operation.promise()):
+
+{
+  "generatedVideos": [
+    {
+      "video": {
+        "uri": "gs://your-bucket/path/to/video.mp4" // If output_gcs_uri was set
+      }
+    }
+  ]
+}

@@ -56,7 +56,7 @@ const VideoGeneration = db.define(
       allowNull: false,
       defaultValue: "pending",
     },
-    kling_job_id: {
+    operation_name: {
       type: DataTypes.STRING,
       allowNull: true,
     },

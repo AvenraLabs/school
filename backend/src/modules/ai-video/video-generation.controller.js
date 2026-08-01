@@ -26,10 +26,10 @@ export async function createVideoGeneration(req, res, next) {
       throw new AppError("Topic is required to generate an educational video", 400);
     }
 
-    const cleanDuration = String(duration) === "10" ? "10" : "5";
+    const cleanDuration = ["4", "6", "8"].includes(String(duration)) ? String(duration) : "6";
     const durationSec = parseInt(cleanDuration, 10);
 
-    // Check AI Gemini Token Balance & Kling AI Video Seconds quota BEFORE creating job
+    // Check AI Gemini Token Balance & Veo 3 Video Seconds quota BEFORE creating job
     if (req.user?.id) {
       await assertHasTokenBalance(req.user.id);
       await assertHasVideoSecondsBalance(req.user.id, durationSec);
@@ -85,7 +85,7 @@ export async function createVideoGeneration(req, res, next) {
       status: "pending",
     });
 
-    // Deduct Gemini Tokens & Kling Video Seconds
+    // Deduct Gemini Tokens & Veo 3 Video Seconds
     if (req.user?.id) {
       const tokensUsed = 250;
       const log = await AiChatLog.create({
@@ -108,7 +108,7 @@ export async function createVideoGeneration(req, res, next) {
       await deductVideoSeconds({
         userId: req.user.id,
         durationSec,
-        reason: "kling_ai_video_generation",
+        reason: "veo_3_video_generation",
         refId: videoGen.id,
       });
     }
@@ -219,6 +219,30 @@ export async function getStudentClassVideos(req, res, next) {
       data: {
         videos,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * DELETE /api/ai/videos/:id
+ * Delete a video generation job
+ */
+export async function deleteVideoGeneration(req, res, next) {
+  try {
+    const { id } = req.params;
+    const videoGen = await VideoGeneration.findByPk(id);
+
+    if (!videoGen) {
+      throw new AppError("Video generation record not found", 404);
+    }
+
+    await videoGen.destroy();
+
+    res.json({
+      status: "success",
+      message: "Video generation job deleted successfully",
     });
   } catch (error) {
     next(error);

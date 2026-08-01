@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useProfileCompletion } from "../auth/useProfileCompletion";
+import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import {
   Container,
   Paper,
@@ -24,11 +25,25 @@ import {
 export function ChangePasswordPage() {
   const { user } = useAuth();
   const { completeProfile, loading, error, clearError } = useProfileCompletion();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [clientError, setClientError] = useState("");
+
+  const getTargetRoute = () => {
+    if (location.state?.from?.pathname) return location.state.from.pathname;
+    if (user?.role === "teacher") return "/teacher";
+    if (user?.role === "student") return "/student";
+    if (user?.role === "driver") return "/driver";
+    return "/";
+  };
+
+  if (user && !user.must_change_password && !user.first_login) {
+    return <Navigate to={getTargetRoute()} replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,6 +67,7 @@ export function ChangePasswordPage() {
 
     try {
       await completeProfile({ new_password: newPassword });
+      navigate(getTargetRoute(), { replace: true });
     } catch {
       // Handled via error state
     }

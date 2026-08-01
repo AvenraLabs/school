@@ -1,14 +1,14 @@
 import VideoGeneration from "../video-generation.model.js";
 import { generateEducationalVideoPrompt } from "./gemini-prompt.service.js";
-import { submitTextToVideoTask, queryKlingTaskStatus } from "./kling.service.js";
+import { submitTextToVideoTask } from "./google-video.service.js";
 import { downloadAndSaveVideo } from "./video-storage.service.js";
 import logger from "../../../shared/logger.js";
 
 /**
  * Executes full background video generation workflow:
  * 1. Generates Gemini Prompt
- * 2. Submits task to Kling AI
- * 3. Polls task status until completed
+ * 2. Submits task to Google Vertex AI (Veo 3: veo-3.0-fast-001)
+ * 3. Logs Operation Name immediately and awaits result
  * 4. Downloads & stores MP4 locally
  * 5. Updates PostgreSQL record
  */
@@ -29,78 +29,57 @@ export async function processVideoGeneration(generationId) {
       logger.info("VIDEO_WORKER_GEMINI_PROMPT", `Generating Gemini animation prompt for "${record.topic}"...`, { generationId });
       prompt = await generateEducationalVideoPrompt({
         topic: record.topic,
-        subjectName: record.subject_name,
         classLevel: record.class_id,
-        language: record.language,
         duration: record.duration,
       });
       await record.update({ prompt });
     }
 
-    // Step 2: Submit to Kling AI
-    logger.info("VIDEO_WORKER_KLING_SUBMIT", `Submitting task to Kling AI...`, { generationId });
-    const { taskId } = await submitTextToVideoTask({
+    // Step 2: Submit to Google Vertex AI (Veo)
+    logger.info("VIDEO_WORKER_VEO_SUBMIT", `Submitting task to Google Vertex AI (Veo)...`, { generationId });
+    const result = await submitTextToVideoTask({
       prompt,
-      duration: record.duration || "5",
+      duration: record.duration || "6",
+      classId: record.class_id,
+      subjectName: record.subject_name,
+      topic: record.topic,
     });
 
-    await record.update({ kling_job_id: taskId });
-    logger.info("VIDEO_WORKER_KLING_JOB_ASSIGNED", `Kling Job ID assigned: ${taskId}. Starting polling...`, { generationId, taskId });
+    const operationName = result.operationName;
+    await record.update({
+      operation_name: operationName,
+    });
+    logger.info("VIDEO_WORKER_VEO_JOB_ASSIGNED", `Veo Operation Name assigned: ${operationName}`, { generationId, operationName });
 
-    // Step 3: Poll Kling AI status (Interval: 10s, Max Wait: 10 mins)
-    const POLL_INTERVAL_MS = 10000;
-    const MAX_POLLS = 60; // 60 * 10s = 600s (10 minutes)
-    let pollCount = 0;
-    let completed = false;
+    if (result.status === "completed" && result.videoUrl) {
+      logger.info("VIDEO_WORKER_VEO_SUCCESS", `Veo task ${operationName} completed successfully! Video URL received.`, { generationId, operationName, videoUrl: result.videoUrl });
 
-    while (pollCount < MAX_POLLS && !completed) {
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-      pollCount++;
+      // Step 3: Resolve Cloud Storage Web URL
+      const { filePath, publicUrl } = await downloadAndSaveVideo({
+        videoUrl: result.videoUrl,
+        classId: record.class_id,
+        subjectName: record.subject_name,
+        topic: record.topic,
+      });
 
-      logger.info("VIDEO_WORKER_POLLING", `Polling Kling Task ${taskId} (Attempt ${pollCount}/${MAX_POLLS})...`, { generationId, taskId, pollCount });
-      const statusRes = await queryKlingTaskStatus(taskId);
+      // Step 4: Update PostgreSQL Record
+      await record.update({
+        status: "completed",
+        video_path: filePath,
+        video_url: publicUrl,
+        completed_at: new Date(),
+      });
 
-      if (statusRes.status === "succeed") {
-        completed = true;
-        logger.info("VIDEO_WORKER_KLING_SUCCESS", `Kling task ${taskId} completed successfully! Video URL received.`, { generationId, taskId, videoUrl: statusRes.videoUrl });
-
-        // Step 4: Download & Save locally
-        const { filePath, publicUrl } = await downloadAndSaveVideo({
-          videoUrl: statusRes.videoUrl,
-          classId: record.class_id,
-          subjectName: record.subject_name,
-          topic: record.topic,
-        });
-
-        // Step 5: Update PostgreSQL Record
-        await record.update({
-          status: "completed",
-          video_path: filePath,
-          video_url: publicUrl,
-          completed_at: new Date(),
-        });
-
-        logger.info("VIDEO_WORKER_COMPLETE", `Video generation #${generationId} complete! Saved to ${publicUrl}`, { generationId, publicUrl });
-        return;
-      } else if (statusRes.status === "failed") {
-        completed = true;
-        const err = statusRes.errorMessage || "Kling AI reported video generation failure";
-        logger.error("VIDEO_WORKER_KLING_FAILED", `Kling task ${taskId} failed: ${err}`, { generationId, taskId, error: err });
-        await record.update({
-          status: "failed",
-          error_message: err,
-        });
-        return;
-      }
-    }
-
-    if (!completed) {
-      const timeoutErr = "Video generation timed out after 10 minutes";
-      logger.error("VIDEO_WORKER_TIMEOUT", `Task #${generationId} timed out after 10 minutes`, { generationId, taskId });
+      logger.info("VIDEO_WORKER_COMPLETE", `Video generation #${generationId} complete! Saved to ${publicUrl}`, { generationId, publicUrl });
+      return;
+    } else {
+      const err = "Veo 3 video generation failed to return a valid video URL";
+      logger.error("VIDEO_WORKER_VEO_FAILED", `Task ${operationName} failed: ${err}`, { generationId, operationName, error: err });
       await record.update({
         status: "failed",
-        error_message: timeoutErr,
+        error_message: err,
       });
+      return;
     }
   } catch (error) {
     logger.error("VIDEO_WORKER_EXCEPTION", `Error processing video generation #${generationId}: ${error.message}`, { generationId, error: error.message });
@@ -112,7 +91,7 @@ export async function processVideoGeneration(generationId) {
 }
 
 /**
- * Queue a new video generation task (BullMQ or In-Memory Background Worker)
+ * Queue a new video generation task
  */
 export function enqueueVideoGeneration(generationId) {
   logger.info("VIDEO_QUEUE_ENQUEUE", `Enqueuing VideoGeneration ID #${generationId}...`, { generationId });

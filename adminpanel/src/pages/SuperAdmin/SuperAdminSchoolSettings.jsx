@@ -59,7 +59,7 @@ export function SuperAdminSchoolSettings() {
     { key: 'finance', label: 'Fees & Expense Management', icon: DollarSign, desc: 'Fee structures, student ledgers, concessions, receipts, expense vouchers.' },
     { key: 'ai_tutor', label: 'Student AI Tutor Chat', icon: Bot, desc: 'Student RAG AI tutor assistant and textbook chapter context search.' },
     { key: 'ai_tools', label: 'Teacher AI Tools & Quizzes', icon: Wand2, desc: 'AI Question Paper Generator, Lesson Planner, Homework Quizzes, Kahoot games.' },
-    { key: 'ai_video', label: 'Kling AI Video Generation (Paid API)', icon: Video, desc: '3D Educational video generation using paid Kling AI service.' },
+    { key: 'ai_video', label: 'Google Veo 3 Video Generation', icon: Video, desc: '3D Educational video generation using Google Vertex AI Veo 3.' },
     { key: 'whatsapp', label: 'WhatsApp Cloud API Alerts (Paid API)', icon: MessageSquare, desc: 'Meta WhatsApp absentee alerts and fee receipts dispatches.' },
   ];
 

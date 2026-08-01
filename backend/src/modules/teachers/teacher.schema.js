@@ -11,6 +11,7 @@ export const updateTeacherStatusSchema = z.object({
 
 /* teacher: complete profile */
 export const completeTeacherProfileSchema = z.object({
+  new_password: z.preprocess(emptyToUndefined, z.string().optional()),
   name: z.string().min(1).optional(),
   phone: z.preprocess(emptyToUndefined, z.string().optional()),
   gender: z.preprocess(emptyToUndefined, z.enum(["male", "female", "other"]).optional()),

@@ -50,7 +50,7 @@ SchoolIQ is a multi-tenant, enterprise-grade AI-powered School Management ERP sy
 |  +------------------------+  +-------------------+  +---------------+ |
 |                                                                       |
 |  +-----------------------------------------------------------------+  |
-|  | External Integrations: Google Gemini 2.5, Kling AI, WhatsApp    |  |
+|  | External Integrations: Google Gemini 2.5, Google Vertex AI (Veo 3), WhatsApp |  |
 |  +-----------------------------------------------------------------+  |
 +-----------------------------------------------------------------------+
 ```
@@ -79,7 +79,7 @@ Powered by `socket.io` with distinct namespace handlers:
 ### AI & RAG Engine Architecture
 1. **Curriculum Knowledge Ingestion**: Textbook PDFs (CBSE/State Board) parsed and chunked via `pdfjs-dist` into `textbook_chapters` metadata table and `ChromaDB` vector embeddings.
 2. **Teacher AI Tools**: AI Question Paper generator, Lesson Planner, Lesson Summarizer leveraging `@google/genai` (Gemini Flash & Pro models).
-3. **AI Video Generation**: Kling AI API integration for generating educational topic videos asynchronously.
+3. **AI Video Generation**: Google Vertex AI (Veo 3: `veo-3.0-fast-001`) integration for generating educational topic videos asynchronously.
 4. **Token Economics**: Token quotas, accounts, policies, and ledger transactions per school/role to control AI API costs.
 
 ---

@@ -60,8 +60,9 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       const isLoginRequest = originalRequest?.url?.includes('/auth/login');
       const isRefreshRequest = originalRequest?.url?.includes('/auth/refresh');
+      const isLogoutRequest = originalRequest?.url?.includes('/auth/logout');
 
-      if (isLoginRequest || isRefreshRequest) {
+      if (isLoginRequest || isRefreshRequest || isLogoutRequest) {
         return Promise.reject(error);
       }
 

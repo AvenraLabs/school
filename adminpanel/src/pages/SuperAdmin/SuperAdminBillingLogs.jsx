@@ -260,7 +260,7 @@ export function SuperAdminBillingLogs() {
         >
           <div className="flex items-center justify-between text-[#52607D]">
             <span className="font-bold text-xs text-[#14213D] flex items-center gap-1.5">
-              <Video className="w-4 h-4 text-[#2F6F5E]" /> AI Video Gen (Kling)
+              <Video className="w-4 h-4 text-[#2F6F5E]" /> AI Video Gen (Veo 3)
             </span>
             <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#FAFAF8] text-[#8C97AB] font-bold border border-[#E4E1D8]">
               Disabled
@@ -284,7 +284,7 @@ export function SuperAdminBillingLogs() {
               <Activity className="w-4 h-4 text-[#2F6F5E]" /> Platform Service Telemetry & Execution Logs
             </CardTitle>
             <p className="text-[11px] text-[#52607D]">
-              Real-time execution logs for Kling AI video generation, Meta WhatsApp, Gemini AI tokens, and Google Maps.
+              Real-time execution logs for Google Veo 3 video generation, Meta WhatsApp, Gemini AI tokens, and Google Maps.
             </p>
           </div>
 
@@ -292,7 +292,7 @@ export function SuperAdminBillingLogs() {
           <div className="flex items-center gap-1 bg-white p-1 rounded-[8px] border border-[#E4E1D8]">
             {[
               { id: 'ai', label: 'Gemini AI Tokens', icon: Coins },
-              { id: 'video', label: 'AI Video Gen (Kling)', icon: Film },
+              { id: 'video', label: 'AI Video Gen (Veo 3)', icon: Film },
               { id: 'whatsapp', label: 'WhatsApp Logs', icon: MessageSquare },
               { id: 'maps', label: 'Google Maps API', icon: MapPin },
             ].map((t) => (
@@ -461,7 +461,7 @@ export function SuperAdminBillingLogs() {
             </div>
           )}
 
-          {/* TAB 2: AI Video Gen (Kling AI Engine) */}
+          {/* TAB 2: AI Video Gen (Google Veo 3 Engine) */}
           {serviceTab === 'video' && (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
@@ -479,7 +479,7 @@ export function SuperAdminBillingLogs() {
                   {videoLogs.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center text-[#8C97AB]">
-                        No Kling AI video generation logs recorded yet.
+                        No Google Veo 3 video generation logs recorded yet.
                       </td>
                     </tr>
                   ) : (
@@ -494,7 +494,7 @@ export function SuperAdminBillingLogs() {
                           </td>
                           <td className="px-4 py-3 font-bold text-[#14213D]">{log.recipient || 'AI Educational Video'}</td>
                           <td className="px-4 py-3 font-bold text-[#2F6F5E]">{secs} seconds</td>
-                          <td className="px-4 py-3 text-[#52607D]">Kling AI Engine</td>
+                          <td className="px-4 py-3 text-[#52607D]">Google Veo 3 Engine</td>
                           <td className="px-4 py-3">
                             <StatusBadge status={log.status === 'completed' || log.status === 'success' ? 'active' : 'inactive'} size="sm" />
                           </td>
@@ -617,7 +617,7 @@ export function SuperAdminBillingLogs() {
 
             <div>
               <label className="block font-semibold text-[#14213D] mb-1">
-                AI Video Gen Rate (Kling API ₹ / Video Minute)
+                AI Video Gen Rate (Veo 3 API ₹ / Video Minute)
               </label>
               <Input
                 type="number"

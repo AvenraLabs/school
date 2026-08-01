@@ -24,6 +24,7 @@ export const createStudentSchema = z.object({
 
 /* student: first login */
 export const completeStudentProfileSchema = z.object({
+  new_password: z.preprocess(emptyToUndefined, z.string().optional()),
   name: z.string().min(1).optional(),
   phone: z.preprocess(emptyToUndefined, z.string().optional()),
   email: z.preprocess(emptyToUndefined, z.string().email().optional()),
