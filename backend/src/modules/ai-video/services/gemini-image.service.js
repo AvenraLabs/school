@@ -2,10 +2,8 @@ import { getAiClient, getGeminiModel } from "../../../modules/rag/shared/aiClien
 import {
   getGenAIClient,
   getStorageClient,
-  getGcpProject,
   getGcsOutputUri,
   slugify,
-  convertGsToPublicUrl,
 } from "./google-video.service.js";
 import { checkAndDeductTokens } from "../../tokens/token.service.js";
 import AiChatLog from "../../ai-chat-logs/ai-chat-log.model.js";
@@ -14,8 +12,6 @@ import logger from "../../../shared/logger.js";
 /**
  * Ask Gemini Flash Lite to return a structured JSON object containing:
  *   { "imagePrompt": "<Imagen prompt string>", "summary": "<≤15-word student caption>" }
- *
- * Uses actual Gemini usageMetadata.totalTokenCount for token deduction.
  */
 async function buildDiagramPromptAndSummary({ topic, classLevel, userId, refId }) {
   const ai = getAiClient();
@@ -34,13 +30,8 @@ Your task is to output ONLY valid JSON (no markdown fences, no extra text) with 
    - Style: clean flat-design illustration, white background, bright educational colors, child-friendly, similar to a textbook diagram
    - Include the text labels AS PART OF THE IMAGE (not as a caption): each part should have its name written next to it with a line pointing to it
    - No watermarks, no logos, no photographer credits
-   - Example topics and expected labeled parts:
-       Photosynthesis: sunlight arrow, CO₂ intake, O₂ output, water absorption via roots, glucose production, chloroplast
-       Solar System: Sun, each planet labeled with name, asteroid belt, orbits shown
-       Human Heart: left ventricle, right ventricle, aorta, pulmonary artery, vena cava, valves
 
 2. "summary": A single student-facing sentence of 15 words or fewer explaining what they will learn from this diagram.
-   Example: "Learn how plants convert sunlight into food through photosynthesis."
 
 Output ONLY the raw JSON object. No extra text.`;
 
@@ -57,7 +48,6 @@ Output ONLY the raw JSON object. No extra text.`;
     const response = await Promise.race([generatePromise, timeoutPromise]);
     const rawText = (response.text || "").trim();
 
-    // Deduct actual Gemini prompt tokens using usageMetadata
     const usage = response.usageMetadata || {};
     const tokensUsed = usage.totalTokenCount || Math.max(50, Math.ceil(((systemPrompt?.length || 0) + rawText.length) / 4));
 
@@ -103,34 +93,55 @@ Output ONLY the raw JSON object. No extra text.`;
 /**
  * Generate a labeled 2D educational diagram via Vertex AI Imagen,
  * upload the PNG to GCS, and return the GCS URI + public HTTPS URL + summary.
- *
- * Returns null on failure (caller treats this as a graceful partial failure).
  */
 export async function generateEducationalDiagram({ topic, classLevel, subjectName, classId, userId, refId }) {
   const startTime = Date.now();
   try {
-    // 1. Ask Gemini for structured JSON: { imagePrompt, summary }
     const { imagePrompt, summary } = await buildDiagramPromptAndSummary({ topic, classLevel, userId, refId });
     logger.info("DIAGRAM_PROMPT_READY", `Imagen prompt built for "${topic}"`, { imagePrompt: imagePrompt.slice(0, 120) });
 
-    // 2. Generate image via Vertex AI Imagen
     const ai = getGenAIClient();
-    const imagenModel = process.env.IMAGEN_MODEL_NAME || "imagen-3.0-generate-001";
+    const imagenModel = process.env.IMAGEN_MODEL_NAME || "gemini-2.5-flash-image";
 
-    const imageResponse = await ai.models.generateImages({
-      model: imagenModel,
-      prompt: imagePrompt,
-      config: { numberOfImages: 1, outputMimeType: "image/png" },
-    });
+    let imageBuffer = null;
 
-    const generatedImage = imageResponse?.generatedImages?.[0]?.image;
-    if (!generatedImage?.imageBytes) {
-      throw new Error("Imagen returned no image bytes");
+    if (imagenModel.includes("flash-image") || imagenModel.startsWith("gemini-")) {
+      const imageResponse = await ai.models.generateContent({
+        model: imagenModel,
+        contents: imagePrompt,
+        config: {
+          responseModalities: ["IMAGE"],
+          imageConfig: {
+            aspectRatio: "1:1",
+          },
+        },
+      });
+
+      const candidates = imageResponse?.candidates || [];
+      const parts = candidates[0]?.content?.parts || imageResponse?.parts || [];
+      const imagePart = parts.find((part) => part.inlineData || part.inline_data);
+      const base64Data = imagePart?.inlineData?.data || imagePart?.inline_data?.data;
+
+      if (!base64Data) {
+        throw new Error("Model returned a response but no image data was found.");
+      }
+
+      imageBuffer = Buffer.from(base64Data, "base64");
+    } else {
+      const imageResponse = await ai.models.generateImages({
+        model: imagenModel,
+        prompt: imagePrompt,
+        config: { numberOfImages: 1, outputMimeType: "image/png" },
+      });
+
+      const generatedImage = imageResponse?.generatedImages?.[0]?.image;
+      if (!generatedImage?.imageBytes) {
+        throw new Error("Imagen returned no image bytes");
+      }
+
+      imageBuffer = Buffer.from(generatedImage.imageBytes, "base64");
     }
 
-    const imageBuffer = Buffer.from(generatedImage.imageBytes, "base64");
-
-    // 3. Build GCS destination path (mirrors the video path structure)
     const rawGcsBase = getGcsOutputUri();
     const bucketMatch = rawGcsBase.match(/^gs:\/\/([^/]+)\//);
     if (!bucketMatch) throw new Error(`Cannot parse bucket from GCS_OUTPUT_URI: ${rawGcsBase}`);
@@ -145,7 +156,6 @@ export async function generateEducationalDiagram({ topic, classLevel, subjectNam
     const gsUri = `gs://${bucketName}/${objectPath}`;
     const publicUrl = `https://storage.googleapis.com/${bucketName}/${objectPath}`;
 
-    // 4. Upload PNG to GCS
     const storage = getStorageClient();
     const file = storage.bucket(bucketName).file(objectPath);
     await file.save(imageBuffer, {

@@ -303,7 +303,7 @@ Maps teachers to specific Class + Section + Subject combinations.
 
 #### `token_accounts`, `token_policies`, `token_transactions`
 - AI token usage tracking, video seconds quota, and diagram/image generation quota per user/role.
-- **Schema additions (migration `20260802130000`)**: `image_generation_balance` INTEGER on `token_accounts`; `annual_image_generations` INTEGER on `token_policies`; `resource_type` ENUM(`tokens`, `video_seconds`, `image_generations`), `ref_id` BIGINT, `reason` VARCHAR(255) on `token_transactions`.
+- **Schema additions (migration `20260802130000` & `20260802140000`)**: `image_generation_balance` INTEGER on `token_accounts`; `annual_image_generations` INTEGER and `school_id` INTEGER (FK -> `schools.id`, Nullable, unique composite index `[role, school_id]`) on `token_policies`; `resource_type` ENUM(`tokens`, `video_seconds`, `image_generations`), `ref_id` BIGINT, `reason` VARCHAR(255) on `token_transactions`. Allows dedicated per-school quota policies with automatic global fallback (`school_id: null`).
 
 ---
 

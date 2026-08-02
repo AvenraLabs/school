@@ -21,13 +21,29 @@ export async function ensureTokenAccount(userId, transaction = null) {
   let account = await TokenAccount.findOne({ where: { user_id: userId }, ...tOpt });
   if (account) return account;
 
-  let policy = await TokenPolicy.findOne({ where: { role: user.role }, ...tOpt });
+  // Check for school-specific policy first, fall back to global (school_id: null)
+  let policy = null;
+  if (user.school_id) {
+    policy = await TokenPolicy.findOne({
+      where: { role: user.role, school_id: user.school_id },
+      ...tOpt,
+    });
+  }
+
+  if (!policy) {
+    policy = await TokenPolicy.findOne({
+      where: { role: user.role, school_id: null },
+      ...tOpt,
+    });
+  }
+
   if (!policy) {
     const defaultTokens = user.role === "student" ? 3000000 : (user.role === "teacher" ? 10000000 : 0);
     const defaultVideoSeconds = 0;
     const defaultImageGenerations = user.role === "teacher" ? 500 : 0;
     policy = await TokenPolicy.create({
       role: user.role,
+      school_id: null,
       annual_tokens: defaultTokens,
       annual_video_seconds: defaultVideoSeconds,
       annual_image_generations: defaultImageGenerations,
@@ -447,7 +463,9 @@ export async function setRoleAnnualTokens({
     updateData.annual_image_generations = Number(annual_image_generations);
   }
 
-  let policy = await TokenPolicy.findOne({ where: { role } });
+  const cleanSchoolId = school_id ? Number(school_id) : null;
+
+  let policy = await TokenPolicy.findOne({ where: { role, school_id: cleanSchoolId } });
   if (policy) {
     const newTokens =
       updateData.annual_tokens !== undefined
@@ -477,6 +495,7 @@ export async function setRoleAnnualTokens({
   } else {
     policy = await TokenPolicy.create({
       role,
+      school_id: cleanSchoolId,
       annual_tokens: updateData.annual_tokens ?? (role === "student" ? 3000000 : 10000000),
       annual_video_seconds: updateData.annual_video_seconds ?? 0,
       annual_image_generations: updateData.annual_image_generations ?? 0,

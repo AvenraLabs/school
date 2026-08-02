@@ -21,6 +21,24 @@ import {
 function serializeVideoGen(v) {
   const json = v.toJSON ? v.toJSON() : { ...v };
   json.stream_url = `/api/ai/videos/stream/${v.id}`;
+
+  // Ensure image_url resolves to a valid public HTTPS URL if image_path is present
+  if (!json.image_url && json.image_path) {
+    if (json.image_path.startsWith("gs://")) {
+      const match = json.image_path.match(/^gs:\/\/([^/]+)\/(.+)$/);
+      if (match) {
+        json.image_url = `https://storage.googleapis.com/${match[1]}/${match[2]}`;
+      }
+    } else if (json.image_path.startsWith("http://") || json.image_path.startsWith("https://")) {
+      json.image_url = json.image_path;
+    }
+  } else if (json.image_url && json.image_url.startsWith("gs://")) {
+    const match = json.image_url.match(/^gs:\/\/([^/]+)\/(.+)$/);
+    if (match) {
+      json.image_url = `https://storage.googleapis.com/${match[1]}/${match[2]}`;
+    }
+  }
+
   return json;
 }
 
@@ -89,6 +107,34 @@ export async function createVideoGeneration(req, res, next) {
 
     const cleanLanguage = language || "English";
     const resolvedSubjectName = subjectName ? subjectName.trim() : "General";
+
+    // Idempotency Check: Block rapid duplicate requests for the same topic within 15 seconds
+    const fifteenSecsAgo = new Date(Date.now() - 15000);
+    const existingJob = await VideoGeneration.findOne({
+      where: {
+        teacher_id: teacherId,
+        topic: topic.trim(),
+        subject_name: resolvedSubjectName,
+        content_type,
+        createdAt: { [Op.gte]: fifteenSecsAgo },
+      },
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (existingJob) {
+      return res.status(200).json({
+        status: "success",
+        message: existingJob.status === "completed" ? "Diagram generated successfully" : "Generation request is already in progress",
+        data: {
+          jobId: existingJob.id,
+          status: existingJob.status,
+          contentType: existingJob.content_type,
+          topic: existingJob.topic,
+          imageUrl: existingJob.image_url,
+          summary: existingJob.summary,
+        },
+      });
+    }
 
     // Create DB record first to get reference ID
     const videoGen = await VideoGeneration.create({
@@ -246,7 +292,9 @@ export async function getTeacherVideos(req, res, next) {
     const offset = (page - 1) * limit;
     const subjectFilter = req.query.subjectName || req.query.subject;
 
-    let baseWhere = {};
+    let baseWhere = {
+      status: { [Op.in]: ["completed", "processing"] },
+    };
 
     if (req.user?.role === "teacher") {
       const teacherProfile = await Teacher.findOne({ where: { user_id: req.user.id } });

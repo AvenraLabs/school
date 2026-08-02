@@ -26,6 +26,9 @@
   <meta name="msapplication-TileColor" content="#1976d2" />
   <meta name="msapplication-config" content="/browserconfig.xml" />
 
+  <!-- Storage & API Preconnect -->
+  <link rel="preconnect" href="https://storage.googleapis.com" />
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -33,10 +36,9 @@
     href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap"
     rel="stylesheet" />
 
-
-  <!-- Leaflet Map CSS & JS -->
+  <!-- Leaflet Map CSS & JS (Deferred so it does not block LCP) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" defer></script>
 
   <title>SchoolIQ - Best School ERP in Tamil Nadu</title>
 </head>

@@ -16,15 +16,21 @@ import {
 
 export function SuperAdminQuotaTab({ policies = [], schools = [], onSaved }) {
   const toast = useToast();
-  const studentPol = policies.find((p) => p.role === 'student');
-  const teacherPol = policies.find((p) => p.role === 'teacher');
-
   const [mode, setMode] = useState('replace'); // 'replace' | 'add'
   const [selectedSchoolId, setSelectedSchoolId] = useState(''); // '' = all schools
-  const [studentVal, setStudentVal] = useState(studentPol?.annual_tokens ?? 500000);
-  const [teacherVal, setTeacherVal] = useState(teacherPol?.annual_tokens ?? 2000000);
-  const [teacherVideoVal, setTeacherVideoVal] = useState(teacherPol?.annual_video_seconds ?? 2000);
-  const [teacherImageVal, setTeacherImageVal] = useState(teacherPol?.annual_image_generations ?? 500);
+
+  const currentStudentPol =
+    policies.find((p) => p.role === 'student' && String(p.school_id || '') === String(selectedSchoolId || '')) ||
+    policies.find((p) => p.role === 'student' && !p.school_id);
+
+  const currentTeacherPol =
+    policies.find((p) => p.role === 'teacher' && String(p.school_id || '') === String(selectedSchoolId || '')) ||
+    policies.find((p) => p.role === 'teacher' && !p.school_id);
+
+  const [studentVal, setStudentVal] = useState(currentStudentPol?.annual_tokens ?? 500000);
+  const [teacherVal, setTeacherVal] = useState(currentTeacherPol?.annual_tokens ?? 2000000);
+  const [teacherVideoVal, setTeacherVideoVal] = useState(currentTeacherPol?.annual_video_seconds ?? 2000);
+  const [teacherImageVal, setTeacherImageVal] = useState(currentTeacherPol?.annual_image_generations ?? 500);
 
   const [schoolWhatsAppVal, setSchoolWhatsAppVal] = useState(10000);
   const [savingGlobal, setSavingGlobal] = useState(false);
@@ -48,17 +54,17 @@ export function SuperAdminQuotaTab({ policies = [], schools = [], onSaved }) {
 
   useEffect(() => {
     if (mode === 'replace') {
-      setStudentVal(studentPol?.annual_tokens ?? 500000);
-      setTeacherVal(teacherPol?.annual_tokens ?? 2000000);
-      setTeacherVideoVal(teacherPol?.annual_video_seconds ?? 2000);
-      setTeacherImageVal(teacherPol?.annual_image_generations ?? 500);
+      setStudentVal(currentStudentPol?.annual_tokens ?? 500000);
+      setTeacherVal(currentTeacherPol?.annual_tokens ?? 2000000);
+      setTeacherVideoVal(currentTeacherPol?.annual_video_seconds ?? 2000);
+      setTeacherImageVal(currentTeacherPol?.annual_image_generations ?? 500);
     } else {
       setStudentVal(0);
       setTeacherVal(0);
       setTeacherVideoVal(0);
       setTeacherImageVal(0);
     }
-  }, [mode, studentPol, teacherPol]);
+  }, [mode, selectedSchoolId, policies]);
 
   const handleSaveQuotas = async (e) => {
     e.preventDefault();

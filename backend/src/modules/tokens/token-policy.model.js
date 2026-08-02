@@ -10,6 +10,12 @@ const TokenPolicy = db.define(
       autoIncrement: true,
     },
 
+    school_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: "schools", key: "id" },
+    },
+
     role: {
       type: DataTypes.ENUM("student", "teacher"),
       allowNull: false,
@@ -43,7 +49,7 @@ const TokenPolicy = db.define(
     tableName: "token_policies",
     underscored: true,
     timestamps: true,
-    indexes: [{ unique: true, fields: ["role"] }],
+    indexes: [{ unique: true, fields: ["role", "school_id"] }],
   }
 );
 

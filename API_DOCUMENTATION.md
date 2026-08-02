@@ -184,7 +184,7 @@ CRUD for the school-wide subject catalog.
 
 
 ### Token Quotas & AI Analytics (`/api/tokens`, `/api/ai-analytics`)
-- `GET /tokens/policy` | `PATCH /tokens/policy` (Super Admin) — Role token quotas.
+- `GET /api/tokens/policies` | `POST /api/tokens/policies` (Super Admin) — Configure role annual AI tokens, video seconds, and diagram image quotas per `school_id` (or global baseline `school_id: null` in `replace` / `top-up` modes).
 - `GET /tokens/account` — User token balance check.
 - `GET /ai-analytics` — Usage & prompt audit logs.
 - `GET /api/analytics/ai/integration-logs` (Super Admin) — Query live JSON integration logs (Gemini, Kling, WhatsApp, Maps).
