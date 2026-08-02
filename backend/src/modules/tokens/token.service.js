@@ -332,15 +332,21 @@ export async function deductImageGeneration({ userId, count = 1, reason, refId }
  * Refunds all quotas (tokens, video_seconds, image_generations) associated with a generation job ID.
  * Looks up original usage transactions where ref_id = generationId and type = "usage".
  */
-export async function refundGenerationQuotas({ userId, generationId }) {
+export async function refundGenerationQuotas({ userId, generationId, resourceTypes = null }) {
   if (!userId || !generationId) return;
 
+  const whereClause = {
+    user_id: userId,
+    ref_id: generationId,
+    type: "usage",
+  };
+
+  if (Array.isArray(resourceTypes) && resourceTypes.length > 0) {
+    whereClause.resource_type = resourceTypes;
+  }
+
   const usageTxs = await TokenTransaction.findAll({
-    where: {
-      user_id: userId,
-      ref_id: generationId,
-      type: "usage",
-    },
+    where: whereClause,
   });
 
   if (!usageTxs || usageTxs.length === 0) return;
@@ -708,6 +714,19 @@ export async function getBillingSummaryService({ school_id = null }) {
     const videoSecs = Number(videoStats[0]?.total_seconds || 0);
     const estVideoCost = Number(((videoSecs / 60) * 2.0).toFixed(2));
 
+    // 2b. AI Image / Diagram generation usage
+    const imageStats = await VideoGeneration.findAll({
+      attributes: [[fn("COUNT", col("id")), "total_diagrams"]],
+      where: {
+        school_id: sid,
+        status: ["completed", "success"],
+        [Op.or]: [{ content_type: "diagram_only" }, { image_url: { [Op.ne]: null } }],
+      },
+      raw: true,
+    });
+    const diagramCount = Number(imageStats[0]?.total_diagrams || 0);
+    const estDiagramCost = Number((diagramCount * 1.0).toFixed(2));
+
     // 3. WhatsApp messages usage
     const whatsappLimit = sch.whatsapp_annual_limit ?? 10000;
     const waCountResult = await WhatsappLog.findAll({
@@ -744,7 +763,7 @@ export async function getBillingSummaryService({ school_id = null }) {
     const mapsCalls = Number(locStats[0]?.location_updates || 0) + Number(reqStats[0]?.requests || 0);
     const estMapsCost = Number(((mapsCalls / 1000) * 400).toFixed(2));
 
-    const totalCost = Number((estAiCost + estVideoCost + estWhatsappCost + estMapsCost).toFixed(2));
+    const totalCost = Number((estAiCost + estVideoCost + estDiagramCost + estWhatsappCost + estMapsCost).toFixed(2));
 
     result.push({
       school_id: sid,
@@ -759,6 +778,10 @@ export async function getBillingSummaryService({ school_id = null }) {
         count: videoCount,
         seconds_used: videoSecs,
         estimated_cost_inr: estVideoCost,
+      },
+      diagram: {
+        count: diagramCount,
+        estimated_cost_inr: estDiagramCost,
       },
       whatsapp: {
         sent_count: whatsappSent,

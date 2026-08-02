@@ -780,7 +780,7 @@ export const tokenPoliciesAPI = {
   },
 
   // Sets both student + teacher policies in one call
-  updateBoth: async (studentAnnual, teacherAnnual, mode = 'replace', teacherVideoSeconds, studentVideoSeconds, whatsappAnnualLimit, schoolId) => {
+  updateBoth: async (studentAnnual, teacherAnnual, mode = 'replace', teacherVideoSeconds, studentVideoSeconds, whatsappAnnualLimit, schoolId, teacherImageGenerations, studentImageGenerations) => {
     let payload = {};
     if (typeof studentAnnual === 'object' && studentAnnual !== null) {
       payload = {
@@ -788,6 +788,8 @@ export const tokenPoliciesAPI = {
         teacher_annual: studentAnnual.teacherAnnual,
         student_video_seconds: studentAnnual.studentVideoSeconds,
         teacher_video_seconds: studentAnnual.teacherVideoSeconds,
+        student_image_generations: studentAnnual.studentImageGenerations,
+        teacher_image_generations: studentAnnual.teacherImageGenerations,
         whatsapp_annual_limit: studentAnnual.whatsappAnnualLimit,
         school_id: studentAnnual.schoolId,
         mode: studentAnnual.mode || 'replace',
@@ -798,6 +800,8 @@ export const tokenPoliciesAPI = {
         teacher_annual: teacherAnnual,
         teacher_video_seconds: teacherVideoSeconds,
         student_video_seconds: studentVideoSeconds,
+        teacher_image_generations: teacherImageGenerations,
+        student_image_generations: studentImageGenerations,
         whatsapp_annual_limit: whatsappAnnualLimit,
         school_id: schoolId,
         mode,

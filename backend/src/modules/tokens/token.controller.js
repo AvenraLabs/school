@@ -34,48 +34,55 @@ export const setTokenPolicies = asyncHandler(async (req, res) => {
     teacher_annual,
     teacher_video_seconds,
     student_video_seconds,
+    teacher_image_generations,
+    student_image_generations,
     whatsapp_annual_limit,
     role,
     annual_tokens,
     annual_video_seconds,
+    annual_image_generations,
     mode = "replace",
     school_id = null,
   } = req.body;
 
-  if (student_annual !== undefined || student_video_seconds !== undefined) {
+  if (student_annual !== undefined || student_video_seconds !== undefined || student_image_generations !== undefined) {
     await setRoleAnnualTokens({
       role: "student",
       ...(student_annual !== undefined ? { annual_tokens: Number(student_annual) } : {}),
       ...(student_video_seconds !== undefined ? { annual_video_seconds: Number(student_video_seconds) } : {}),
+      ...(student_image_generations !== undefined ? { annual_image_generations: Number(student_image_generations) } : {}),
       mode,
       school_id,
       updated_by: req.user.id,
     });
-  } else if (role === "student" && (annual_tokens !== undefined || annual_video_seconds !== undefined)) {
+  } else if (role === "student" && (annual_tokens !== undefined || annual_video_seconds !== undefined || annual_image_generations !== undefined)) {
     await setRoleAnnualTokens({
       role: "student",
       ...(annual_tokens !== undefined ? { annual_tokens: Number(annual_tokens) } : {}),
       ...(annual_video_seconds !== undefined ? { annual_video_seconds: Number(annual_video_seconds) } : {}),
+      ...(annual_image_generations !== undefined ? { annual_image_generations: Number(annual_image_generations) } : {}),
       mode,
       school_id,
       updated_by: req.user.id,
     });
   }
 
-  if (teacher_annual !== undefined || teacher_video_seconds !== undefined) {
+  if (teacher_annual !== undefined || teacher_video_seconds !== undefined || teacher_image_generations !== undefined) {
     await setRoleAnnualTokens({
       role: "teacher",
       ...(teacher_annual !== undefined ? { annual_tokens: Number(teacher_annual) } : {}),
       ...(teacher_video_seconds !== undefined ? { annual_video_seconds: Number(teacher_video_seconds) } : {}),
+      ...(teacher_image_generations !== undefined ? { annual_image_generations: Number(teacher_image_generations) } : {}),
       mode,
       school_id,
       updated_by: req.user.id,
     });
-  } else if (role === "teacher" && (annual_tokens !== undefined || annual_video_seconds !== undefined)) {
+  } else if (role === "teacher" && (annual_tokens !== undefined || annual_video_seconds !== undefined || annual_image_generations !== undefined)) {
     await setRoleAnnualTokens({
       role: "teacher",
       ...(annual_tokens !== undefined ? { annual_tokens: Number(annual_tokens) } : {}),
       ...(annual_video_seconds !== undefined ? { annual_video_seconds: Number(annual_video_seconds) } : {}),
+      ...(annual_image_generations !== undefined ? { annual_image_generations: Number(annual_image_generations) } : {}),
       mode,
       school_id,
       updated_by: req.user.id,
@@ -90,7 +97,7 @@ export const setTokenPolicies = asyncHandler(async (req, res) => {
     });
   }
 
-  res.json({ success: true, message: "Token, Video, and WhatsApp policies updated successfully" });
+  res.json({ success: true, message: "Token, Video, Image, and WhatsApp policies updated successfully" });
 });
 
 export const listTokenAccounts = asyncHandler(async (req, res) => {

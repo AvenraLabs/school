@@ -176,8 +176,9 @@ CRUD for the school-wide subject catalog.
   - `diagram_and_video`: responds with `jobId` for polling; background queue runs Imagen + Veo concurrently via `Promise.allSettled`.
   - Quotas: Deducts 1 credit from `image_generation_balance` (row locked, atomic). Gemini prompt tokens deducted dynamically via `usageMetadata`. Video seconds deducted only for `diagram_and_video`. Auto-refunded on job failure.
 - `GET /api/ai/videos/stream/:id` — Public video streaming (HTTP 206 byte-range proxy from GCS).
-- `GET /api/ai/videos/teacher/my-videos` — Teacher's generated content. Each item includes: `image_url`, `image_path`, `summary`, `content_type`, `video_url`.
-- `GET /api/ai/videos/student/class-videos` — **Returns `{ subjects: [{ subject_name, items: [...] }] }` (grouped by subject)**. Each item includes: `image_url`, `summary`, `content_type`, `video_url`.
+- `GET /api/ai/videos/teacher/my-videos` — Teacher's generated content with pagination (`page`, `limit`, `subjectName`). Returns `{ videos, subjects: [{ subject_name, count }], pagination: { total, page, limit, totalPages, hasMore } }`.
+- `GET /api/ai/videos/student/class-videos` — Student's class content with pagination (`page`, `limit`, `subjectName`). Returns `{ subjects: [{ subject_name, items }], subjectCounts: [{ subject_name, count }], videos, pagination }`.
+- `DELETE /api/ai/videos/:id` — Delete video/diagram record (RBAC: Super Admin, School Admin, or owner Teacher).
 - `GET /api/ai/videos/:id` — Poll job status. Response includes `imageUrl`, `summary`, `contentType` in addition to existing `videoUrl`/`streamUrl` fields.
 - `DELETE /api/ai/videos/:id` — Delete generation record. **RBAC Enforced**: Allowed only for `school_admin`, `super_admin`, or the creator `teacher` (HTTP 403 Forbidden otherwise).
 

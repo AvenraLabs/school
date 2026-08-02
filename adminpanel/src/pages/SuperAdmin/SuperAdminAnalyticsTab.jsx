@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { tokenPoliciesAPI } from '../../api';
-import { useToast } from '../../context/ToastContext';
 import { StatsCard } from '../../components/common/StatsCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -9,20 +8,14 @@ import {
   BarChart3,
   Coins,
   Video,
+  Image,
   MessageSquare,
-  Activity,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  HelpCircle,
   Building2
 } from 'lucide-react';
 
 export function SuperAdminAnalyticsTab({ schools = [] }) {
-  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [billingSummary, setBillingSummary] = useState(null);
-  const [apiLogs, setApiLogs] = useState([]);
 
   useEffect(() => {
     loadAnalyticsData();
@@ -33,9 +26,6 @@ export function SuperAdminAnalyticsTab({ schools = [] }) {
     try {
       const summaryRes = await tokenPoliciesAPI.getBillingSummary();
       setBillingSummary(summaryRes.data || summaryRes);
-
-      const logsRes = await tokenPoliciesAPI.getApiLogs('all');
-      setApiLogs(logsRes.data || logsRes.items || []);
     } catch (err) {
       console.error('Failed loading analytics:', err);
     } finally {
@@ -44,30 +34,43 @@ export function SuperAdminAnalyticsTab({ schools = [] }) {
   };
 
   const totalWhatsAppSent = schools.reduce((acc, s) => acc + (s.whatsapp_sent_count || 0), 0);
-  const totalWhatsAppLimit = schools.reduce((acc, s) => acc + (s.whatsapp_annual_limit || 10000), 0);
+
+  // Extract totals from summary items
+  const summaryItem = Array.isArray(billingSummary?.items)
+    ? billingSummary.items[0]
+    : (Array.isArray(billingSummary) ? billingSummary[0] : billingSummary);
+
+  const totalTokens = summaryItem?.ai?.tokens_used ?? billingSummary?.total_tokens_used ?? 0;
+  const totalVideoSecs = summaryItem?.video?.seconds_used ?? billingSummary?.total_video_seconds ?? 0;
+  const totalDiagrams = summaryItem?.diagram?.count ?? billingSummary?.total_diagrams ?? 0;
 
   return (
-    <div className="space-y-6">
-      {/* Top Telemetry Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div className="space-y-4">
+      {/* Top Metric Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatsCard
-          title="Total AI Tokens Used"
-          value={(billingSummary?.total_tokens_used ?? 0).toLocaleString()}
+          title="Tokens Used"
+          value={totalTokens.toLocaleString()}
           icon={Coins}
           active={true}
         />
         <StatsCard
-          title="AI Video Seconds Renders"
-          value={(billingSummary?.total_video_seconds ?? 0).toLocaleString()}
+          title="Video Seconds"
+          value={totalVideoSecs.toLocaleString()}
           icon={Video}
         />
         <StatsCard
-          title="WhatsApp Outbound Messages"
+          title="Diagram Images"
+          value={totalDiagrams.toLocaleString()}
+          icon={Image}
+        />
+        <StatsCard
+          title="WhatsApp Sent"
           value={totalWhatsAppSent.toLocaleString()}
           icon={MessageSquare}
         />
         <StatsCard
-          title="Platform Active Schools"
+          title="Active Schools"
           value={schools.length}
           icon={Building2}
         />
@@ -75,9 +78,9 @@ export function SuperAdminAnalyticsTab({ schools = [] }) {
 
       {/* Institutional Consumption Breakdown */}
       <Card>
-        <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
-          <CardTitle className="text-sm font-bold text-[#14213D] flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-[#2F6F5E]" /> Institutional Telemetry & WhatsApp Quota Usage
+        <CardHeader className="py-2.5 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
+          <CardTitle className="text-xs font-bold text-[#14213D] flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-[#2F6F5E]" /> Institutional Telemetry & WhatsApp Quotas
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -85,21 +88,21 @@ export function SuperAdminAnalyticsTab({ schools = [] }) {
             <table className="w-full text-left border-collapse text-xs">
               <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">
                 <tr>
-                  <th className="px-4 py-3">Institution Name</th>
-                  <th className="px-4 py-3">Code / Handle</th>
-                  <th className="px-4 py-3">WhatsApp Messages Sent</th>
-                  <th className="px-4 py-3">Annual WhatsApp Limit</th>
-                  <th className="px-4 py-3">Quota Utilization</th>
-                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-2.5">School</th>
+                  <th className="px-4 py-2.5">Code</th>
+                  <th className="px-4 py-2.5">WhatsApp Sent</th>
+                  <th className="px-4 py-2.5">WhatsApp Limit</th>
+                  <th className="px-4 py-2.5">Utilization</th>
+                  <th className="px-4 py-2.5">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
                 {schools.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center">
+                    <td colSpan={6} className="px-4 py-8 text-center">
                       <EmptyState
                         icon={Building2}
-                        title="No institutional telemetry data"
+                        title="No telemetry data"
                         description="Register schools to track platform consumption."
                       />
                     </td>
@@ -112,12 +115,12 @@ export function SuperAdminAnalyticsTab({ schools = [] }) {
 
                     return (
                       <tr key={s.id} className="hover:bg-[#FAFAF8] transition-colors">
-                        <td className="px-4 py-3 font-bold text-[#14213D]">{s.name}</td>
-                        <td className="px-4 py-3 font-mono text-[#2F6F5E]">{s.code || `SCH-${s.id}`}</td>
-                        <td className="px-4 py-3 font-mono font-bold text-[#14213D]">{sent.toLocaleString()}</td>
-                        <td className="px-4 py-3 font-mono text-[#52607D]">{limit.toLocaleString()}</td>
-                        <td className="px-4 py-3">
-                          <div className="w-36 space-y-1">
+                        <td className="px-4 py-2.5 font-bold text-[#14213D]">{s.name || s.school_name}</td>
+                        <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{s.code || `SCH-${s.id}`}</td>
+                        <td className="px-4 py-2.5 font-mono font-bold text-[#14213D]">{sent.toLocaleString()}</td>
+                        <td className="px-4 py-2.5 font-mono text-[#52607D]">{limit.toLocaleString()}</td>
+                        <td className="px-4 py-2.5">
+                          <div className="w-32 space-y-0.5">
                             <div className="flex justify-between text-[10px] font-mono">
                               <span className="text-[#2F6F5E] font-bold">{pct}%</span>
                               <span className="text-[#8C97AB]">{sent}/{limit}</span>
@@ -132,7 +135,7 @@ export function SuperAdminAnalyticsTab({ schools = [] }) {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-2.5">
                           <StatusBadge status={String(s.status || '').toLowerCase() === 'active' || s.is_active ? 'active' : 'inactive'} size="sm" />
                         </td>
                       </tr>

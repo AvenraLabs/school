@@ -629,6 +629,9 @@ export default function TeacherAIToolsPage() {
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [teacherVideos, setTeacherVideos] = useState([]);
   const [loadingTeacherVideos, setLoadingTeacherVideos] = useState(false);
+  const [selectedSubjectFolder, setSelectedSubjectFolder] = useState(null);
+  const [subjectFolders, setSubjectFolders] = useState([]);
+  const [videoPagination, setVideoPagination] = useState({ page: 1, totalPages: 1, hasMore: false });
 
   useEffect(() => {
     const fetchSchoolSubjects = async () => {
@@ -644,11 +647,26 @@ export default function TeacherAIToolsPage() {
     fetchSchoolSubjects();
   }, []);
 
-  const loadTeacherVideos = async () => {
+  const loadTeacherVideos = async (subjectFilter = selectedSubjectFolder, pageNum = 1, append = false) => {
     setLoadingTeacherVideos(true);
     try {
-      const res = await api.get("/ai/videos/teacher/my-videos");
-      setTeacherVideos(res.data?.data?.videos || []);
+      const res = await api.get("/ai/videos/teacher/my-videos", {
+        params: {
+          page: pageNum,
+          limit: 12,
+          subjectName: subjectFilter || undefined,
+        },
+      });
+      const data = res.data?.data || {};
+      const newVids = data.videos || [];
+      setTeacherVideos((prev) => (append ? [...prev, ...newVids] : newVids));
+
+      if (Array.isArray(data.subjects)) {
+        setSubjectFolders(data.subjects);
+      }
+      if (data.pagination) {
+        setVideoPagination(data.pagination);
+      }
     } catch (err) {
       console.error("Failed to load teacher videos:", err);
     } finally {
@@ -1305,173 +1323,290 @@ export default function TeacherAIToolsPage() {
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Button
               startIcon={<ArrowBack />}
-              onClick={() => setSelectedToolKey(null)}
+              onClick={() => {
+                if (selectedSubjectFolder !== null) {
+                  setSelectedSubjectFolder(null);
+                  loadTeacherVideos(null, 1);
+                } else {
+                  setSelectedToolKey(null);
+                }
+              }}
               sx={{ fontWeight: 800, color: "#475569", textTransform: "none" }}
             >
-              Back
+              {selectedSubjectFolder ? "All Subjects" : "Back"}
             </Button>
-            <Chip icon={<OndemandVideo sx={{ fontSize: 16 }} />} label="AI Videos" sx={{ fontWeight: 800, bgcolor: "#f3e8ff", color: "#6b21a8" }} />
+            <Chip
+              icon={<OndemandVideo sx={{ fontSize: 16 }} />}
+              label={selectedSubjectFolder ? selectedSubjectFolder : "Subjects"}
+              sx={{ fontWeight: 800, bgcolor: "#f3e8ff", color: "#6b21a8" }}
+            />
           </Box>
 
-          <Card sx={{ borderRadius: "20px", border: "1px solid #e2e8f0" }}>
-            <CardContent sx={{ p: 2.5 }}>
+          {/* Subject Folders View (Default) */}
+          {selectedSubjectFolder === null ? (
+            <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#0f172a", mb: 2 }}>
-AI Content Library
+                Subjects Library
+              </Typography>
+              {loadingTeacherVideos ? (
+                <Box sx={{ p: 4, textAlign: "center" }}><CircularProgress size={30} /></Box>
+              ) : subjectFolders.length === 0 && teacherVideos.length === 0 ? (
+                <Card sx={{ borderRadius: "20px", border: "1px solid #e2e8f0", p: 4, textAlign: "center" }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                    Nothing generated yet. Use "AI Lesson Video" to create your first diagram or video!
+                  </Typography>
+                </Card>
+              ) : (
+                <Grid container spacing={2}>
+                  {(() => {
+                    // Combine folder list from backend with current local list if needed
+                    const folderMap = new Map();
+                    subjectFolders.forEach((sf) => folderMap.set(sf.subject_name, sf.count));
+                    teacherVideos.forEach((v) => {
+                      const name = v.subject_name || "General";
+                      if (!folderMap.has(name)) folderMap.set(name, 1);
+                    });
+
+                    return Array.from(folderMap.entries()).map(([subj, count]) => (
+                      <Grid item xs={6} sm={4} md={3} key={subj}>
+                        <Card
+                          onClick={() => {
+                            setSelectedSubjectFolder(subj);
+                            loadTeacherVideos(subj, 1);
+                          }}
+                          sx={{
+                            borderRadius: "16px",
+                            border: "1px solid #e2e8f0",
+                            bgcolor: "#ffffff",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                            "&:hover": {
+                              transform: "translateY(-3px)",
+                              boxShadow: "0 8px 24px rgba(139, 92, 246, 0.12)",
+                              borderColor: "#ddd6fe",
+                            },
+                          }}
+                        >
+                          <CardContent sx={{ p: 2.5, textAlign: "center" }}>
+                            <Box
+                              sx={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: "14px",
+                                bgcolor: "#f3e8ff",
+                                color: "#8b5cf6",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                mx: "auto",
+                                mb: 1.5,
+                              }}
+                            >
+                              <OndemandVideo sx={{ fontSize: 26 }} />
+                            </Box>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0f172a" }} noWrap>
+                              {subj}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 700 }}>
+                              {count} {count === 1 ? "item" : "items"}
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ));
+                  })()}
+                </Grid>
+              )}
+            </Box>
+          ) : (
+            /* Subject Items Media Grid — YouTube / Netflix Streaming Style */
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#0f172a", mb: 2 }}>
+                {selectedSubjectFolder} Content
               </Typography>
 
               {loadingTeacherVideos ? (
                 <Box sx={{ p: 4, textAlign: "center" }}><CircularProgress size={30} /></Box>
               ) : teacherVideos.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, py: 3, textAlign: "center" }}>
-                  Nothing generated yet. Go back and use "AI Lesson Video" to create your first diagram or video!
-                </Typography>
+                <Card sx={{ borderRadius: "20px", border: "1px solid #e2e8f0", p: 4, textAlign: "center" }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                    No videos in {selectedSubjectFolder} yet.
+                  </Typography>
+                </Card>
               ) : (
-                <Stack spacing={2}>
-                  {/* Group by subject_name */}
-                  {(() => {
-                    const grouped = {};
-                    teacherVideos.forEach((vid) => {
-                      const key = vid.subject_name || "General";
-                      if (!grouped[key]) grouped[key] = [];
-                      grouped[key].push(vid);
-                    });
-                    return Object.entries(grouped).map(([subject, items]) => (
-                      <Box key={subject}>
-                        <Typography variant="caption" sx={{ fontWeight: 800, color: "#8b5cf6", textTransform: "uppercase", letterSpacing: 1, display: "block", mb: 1 }}>
-                          {subject}
-                        </Typography>
-                        <Stack spacing={1.5}>
-                          {items.map((vid) => (
+                <Stack spacing={3}>
+                  <Grid container spacing={2.5}>
+                    {teacherVideos.map((vid) => {
+                      const hasVideo = Boolean(vid.video_url || vid.stream_url);
+                      return (
+                        <Grid item xs={12} sm={6} md={4} key={vid.id}>
+                          <Box
+                            sx={{
+                              borderRadius: "16px",
+                              overflow: "hidden",
+                              bgcolor: "#ffffff",
+                              transition: "all 0.2s ease",
+                              cursor: "pointer",
+                              "&:hover .thumbnail-img": { transform: "scale(1.04)" },
+                              "&:hover .play-overlay": { opacity: 1 },
+                            }}
+                          >
+                            {/* 16:9 Aspect Ratio Borderless Thumbnail */}
                             <Box
-                              key={vid.id}
+                              onClick={() => {
+                                setActiveVideoJob({
+                                  id: vid.id,
+                                  status: vid.status,
+                                  contentType: vid.content_type || "diagram_only",
+                                  videoUrl: vid.video_url,
+                                  imageUrl: vid.image_url,
+                                  summary: vid.summary,
+                                  streamUrl: vid.stream_url || `/api/ai/videos/stream/${vid.id}`,
+                                  topic: vid.topic,
+                                });
+                                setVideoModalOpen(true);
+                              }}
                               sx={{
-                                p: 2,
-                                borderRadius: "16px",
-                                border: "1px solid #f1f5f9",
-                                bgcolor: "#fafafa",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 1.5,
+                                width: "100%",
+                                aspectRatio: "16/9",
+                                borderRadius: "14px",
+                                overflow: "hidden",
+                                position: "relative",
+                                bgcolor: "#0f172a",
                               }}
                             >
-                              {/* Diagram thumbnail */}
-                              <Box
+                              {vid.image_url ? (
+                                <img
+                                  src={vid.image_url}
+                                  alt={vid.topic}
+                                  className="thumbnail-img"
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                    transition: "transform 0.3s ease",
+                                  }}
+                                />
+                              ) : (
+                                <Box sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "#1e1b4b" }}>
+                                  <OndemandVideo sx={{ fontSize: 40, color: "#8b5cf6" }} />
+                                </Box>
+                              )}
+
+                              {/* Play Icon Overlay for Videos */}
+                              {hasVideo && (
+                                <Box
+                                  className="play-overlay"
+                                  sx={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    bgcolor: "rgba(15, 23, 42, 0.4)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    opacity: 0.9,
+                                    transition: "opacity 0.2s ease",
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      width: 44,
+                                      height: 44,
+                                      borderRadius: "50%",
+                                      bgcolor: "rgba(255, 255, 255, 0.9)",
+                                      color: "#8b5cf6",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                                    }}
+                                  >
+                                    <PlayCircleOutline sx={{ fontSize: 32 }} />
+                                  </Box>
+                                </Box>
+                              )}
+
+                              {/* Content Type Chip */}
+                              <Box sx={{ position: "absolute", bottom: 8, left: 8 }}>
+                                <Chip
+                                  label={vid.content_type === "diagram_and_video" ? "Video" : "Diagram"}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: "rgba(15, 23, 42, 0.75)",
+                                    color: "#ffffff",
+                                    fontWeight: 800,
+                                    fontSize: "0.65rem",
+                                    backdropFilter: "blur(4px)",
+                                    height: 20,
+                                  }}
+                                />
+                              </Box>
+
+                              {/* Delete Button */}
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteVideo(vid.id);
+                                }}
                                 sx={{
-                                  width: 56,
-                                  height: 56,
-                                  borderRadius: "10px",
-                                  overflow: "hidden",
-                                  flexShrink: 0,
-                                  border: "1px solid #e2e8f0",
-                                  bgcolor: "#f3e8ff",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
+                                  position: "absolute",
+                                  top: 8,
+                                  right: 8,
+                                  bgcolor: "rgba(15, 23, 42, 0.6)",
+                                  color: "#ffffff",
+                                  "&:hover": { bgcolor: "rgba(239, 68, 68, 0.9)" },
                                 }}
                               >
-                                {vid.image_url ? (
-                                  <img src={vid.image_url} alt={vid.topic} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                ) : (
-                                  <OndemandVideo sx={{ fontSize: 24, color: "#8b5cf6" }} />
-                                )}
-                              </Box>
-
-                              <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", mb: 0.25 }}>
-                                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0f172a", fontSize: "0.85rem" }} noWrap>
-                                    {vid.topic}
-                                  </Typography>
-                                  <Chip
-                                    label={
-                                      vid.status === "completed"
-                                        ? vid.content_type === "diagram_and_video" ? `Diagram + ${vid.duration || 6}s Video` : "Diagram"
-                                        : vid.status
-                                    }
-                                    size="small"
-                                    color={vid.status === "completed" ? "success" : vid.status === "failed" ? "error" : "warning"}
-                                    sx={{ fontWeight: 800, height: 20, fontSize: 10 }}
-                                  />
-                                </Box>
-                                {vid.summary && (
-                                  <Typography variant="caption" sx={{ color: "text.secondary", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    {vid.summary}
-                                  </Typography>
-                                )}
-                              </Box>
-
-                              <Stack direction="row" spacing={0.5} alignItems="center" flexShrink={0}>
-                                {vid.status === "completed" ? (
-                                  <Button
-                                    variant="contained"
-                                    size="small"
-                                    startIcon={vid.video_url ? <PlayCircleOutline /> : <Visibility />}
-                                    onClick={() => {
-                                      setActiveVideoJob({
-                                        id: vid.id,
-                                        status: "completed",
-                                        contentType: vid.content_type || "diagram_only",
-                                        videoUrl: vid.video_url,
-                                        imageUrl: vid.image_url,
-                                        summary: vid.summary,
-                                        streamUrl: vid.stream_url || `/api/ai/videos/stream/${vid.id}`,
-                                        topic: vid.topic,
-                                      });
-                                      setVideoModalOpen(true);
-                                    }}
-                                    sx={{
-                                      borderRadius: "10px",
-                                      fontWeight: 800,
-                                      textTransform: "none",
-                                      fontSize: "0.75rem",
-                                      bgcolor: "#8b5cf6",
-                                      "&:hover": { bgcolor: "#7c3aed" },
-                                    }}
-                                  >
-                                    {vid.video_url ? "Watch" : "View"}
-                                  </Button>
-                                ) : vid.status === "processing" ? (
-                                  <Button
-                                    variant="outlined"
-                                    size="small"
-                                    startIcon={<CircularProgress size={12} color="warning" />}
-                                    onClick={() => {
-                                      setActiveVideoJob({ id: vid.id, status: "processing", topic: vid.topic, contentType: vid.content_type });
-                                      setVideoModalOpen(true);
-                                      pollVideoJobStatus(vid.id);
-                                    }}
-                                    sx={{ borderRadius: "10px", fontWeight: 800, textTransform: "none", fontSize: "0.75rem", borderColor: "#f97316", color: "#c2410c" }}
-                                  >
-                                    Status
-                                  </Button>
-                                ) : vid.status === "failed" ? (
-                                  <Button
-                                    variant="outlined"
-                                    size="small"
-                                    color="error"
-                                    onClick={() => {
-                                      setActiveVideoJob({ id: vid.id, status: "failed", topic: vid.topic, errorMessage: vid.error_message || "Generation failed." });
-                                      setVideoModalOpen(true);
-                                    }}
-                                    sx={{ borderRadius: "10px", fontWeight: 800, textTransform: "none", fontSize: "0.75rem" }}
-                                  >
-                                    Error
-                                  </Button>
-                                ) : null}
-
-                                <IconButton size="small" onClick={() => handleDeleteVideo(vid.id)} color="error" sx={{ p: 0.5 }}>
-                                  <DeleteOutline fontSize="small" />
-                                </IconButton>
-                              </Stack>
+                                <DeleteOutline fontSize="small" />
+                              </IconButton>
                             </Box>
-                          ))}
-                        </Stack>
-                      </Box>
-                    ));
-                  })()}
+
+                            {/* Clean Text Below Thumbnail (No border frame) */}
+                            <Box sx={{ pt: 1, pb: 0.5 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0f172a", fontSize: "0.9rem", lineHeight: 1.3 }} noWrap>
+                                {vid.topic}
+                              </Typography>
+                              {vid.summary && (
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: "#64748b",
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                    overflow: "hidden",
+                                    mt: 0.25,
+                                    lineHeight: 1.3,
+                                  }}
+                                >
+                                  {vid.summary}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+
+                  {/* Load More Pagination */}
+                  {videoPagination.hasMore && (
+                    <Box sx={{ textAlign: "center", pt: 1 }}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => loadTeacherVideos(selectedSubjectFolder, videoPagination.page + 1, true)}
+                        loading={loadingTeacherVideos}
+                        sx={{ borderRadius: "12px", fontWeight: 800, textTransform: "none", color: "#8b5cf6", borderColor: "#ddd6fe" }}
+                      >
+                        Load More Content
+                      </Button>
+                    </Box>
+                  )}
                 </Stack>
               )}
-            </CardContent>
-          </Card>
+            </Box>
+          )}
         </Stack>
       ) : selectedToolKey === "quiz_history" ? (
         /* Mode: Quiz History */

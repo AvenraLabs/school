@@ -91,6 +91,10 @@ export async function processVideoGeneration(generationId) {
       const reason = diagramResult.reason?.message || "Diagram generation failed";
       errors.push(`diagram: ${reason}`);
       logger.warn("VIDEO_WORKER_DIAGRAM_FAILED", `Diagram failed for #${generationId}: ${reason}`, { generationId });
+      if (userId) {
+        logger.info("VIDEO_WORKER_DIAGRAM_REFUND", `Refunding image_generations quota for #${generationId}`, { generationId, userId });
+        await refundGenerationQuotas({ userId, generationId, resourceTypes: ["image_generations"] });
+      }
     }
 
     // Video result
@@ -107,10 +111,9 @@ export async function processVideoGeneration(generationId) {
       errors.push(`video: ${reason}`);
       logger.warn("VIDEO_WORKER_VEO_FAILED", `Veo failed for #${generationId}: ${reason}`, { generationId });
 
-      // If Veo video rendering failed, refund deducted quotas for this generation
       if (userId) {
-        logger.info("VIDEO_WORKER_VEO_REFUND", `Refunding video generation quotas for #${generationId} (User #${userId})`, { generationId, userId });
-        await refundGenerationQuotas({ userId, generationId });
+        logger.info("VIDEO_WORKER_VEO_REFUND", `Refunding video_seconds quota for #${generationId} (User #${userId})`, { generationId, userId });
+        await refundGenerationQuotas({ userId, generationId, resourceTypes: ["video_seconds"] });
       }
     }
 
