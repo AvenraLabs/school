@@ -72,11 +72,6 @@ const User = db.define(
       defaultValue: true,
     },
 
-    refresh_token: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-
     avatar_url: {
       type: DataTypes.TEXT,
       allowNull: true,

@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 import AppError from "../../shared/appError.js";
 import { deleteCache } from "../../config/redis.js";
 import { cleanTo10Digits } from "../../shared/utils/phoneUtils.js";
+import db from "../../config/db.js";
+import RefreshToken from "../auth/refresh-token.model.js";
 import {
  createStudentService,
   listStudentsService,
@@ -184,15 +186,18 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
 
     if (Object.keys(pending_data).length > 0) {
       const ProfileUpdateRequest = (await import("../approvals/profile-update-request.model.js")).default;
-      await ProfileUpdateRequest.destroy({
-        where: { user_id: req.user.id, status: ["PENDING", "REJECTED"] },
-      });
-      await ProfileUpdateRequest.create({
-        school_id: req.user.school_id,
-        user_id: req.user.id,
-        role: "student",
-        pending_data,
-        status: "PENDING",
+      await db.transaction(async (t) => {
+        await ProfileUpdateRequest.destroy({
+          where: { user_id: req.user.id, status: ["PENDING", "REJECTED"] },
+          transaction: t,
+        });
+        await ProfileUpdateRequest.create({
+          school_id: req.user.school_id,
+          user_id: req.user.id,
+          role: "student",
+          pending_data,
+          status: "PENDING",
+        }, { transaction: t });
       });
     }
 
@@ -221,8 +226,11 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
       { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" }
     );
 
-    updatedUser.refresh_token = refreshToken;
-    await updatedUser.save();
+    await RefreshToken.create({
+      user_id: updatedUser.id,
+      token: refreshToken,
+      device_info: req.headers["user-agent"] || null,
+    });
 
     return res.json({
       success: true,
@@ -268,10 +276,6 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     userUpdates.first_login = false;
   }
 
-  if (Object.keys(userUpdates).length > 0) {
-    await User.update(userUpdates, { where: { id: req.user.id } });
-  }
-
   const studentUpdates = {
     dob,
     gender,
@@ -289,15 +293,19 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     rejection_reason: null,
   };
 
-  await student.update(studentUpdates);
-
-  if (roll_no !== undefined) {
-    const StudentEnrollment = (await import("./student-enrollment.model.js")).default;
-    await StudentEnrollment.update(
-      { roll_no: roll_no || null },
-      { where: { student_id: student.id } }
-    );
-  }
+  await db.transaction(async (t) => {
+    if (Object.keys(userUpdates).length > 0) {
+      await User.update(userUpdates, { where: { id: req.user.id }, transaction: t });
+    }
+    await student.update(studentUpdates, { transaction: t });
+    if (roll_no !== undefined) {
+      const StudentEnrollment = (await import("./student-enrollment.model.js")).default;
+      await StudentEnrollment.update(
+        { roll_no: roll_no || null },
+        { where: { student_id: student.id }, transaction: t }
+      );
+    }
+  });
 
   const updatedUser = await User.findByPk(req.user.id);
   const tokenPayload = {
@@ -317,8 +325,11 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
   const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "15m" });
   const refreshToken = jwt.sign({ id: updatedUser.id, token_type: "refresh" }, process.env.JWT_SECRET, { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" });
 
-  updatedUser.refresh_token = refreshToken;
-  await updatedUser.save();
+  await RefreshToken.create({
+    user_id: updatedUser.id,
+    token: refreshToken,
+    device_info: req.headers["user-agent"] || null,
+  });
 
   res.json({
     message: "Profile and security credentials updated successfully",

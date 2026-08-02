@@ -10,43 +10,51 @@ import TripLocation from "../transport/trip-location.model.js";
 import Trip from "../transport/trip.model.js";
 import TransportRequest from "../transport/transport-request.model.js";
 import School from "../schools/school.model.js";
+import db from "../../config/db.js";
 import { fn, col, literal } from "sequelize";
 
-export async function ensureTokenAccount(userId) {
-  const user = await User.findByPk(userId);
+export async function ensureTokenAccount(userId, transaction = null) {
+  const tOpt = transaction ? { transaction } : {};
+  const user = await User.findByPk(userId, tOpt);
   if (!user) return null;
 
-  let account = await TokenAccount.findOne({ where: { user_id: userId } });
+  let account = await TokenAccount.findOne({ where: { user_id: userId }, ...tOpt });
   if (account) return account;
 
-  let policy = await TokenPolicy.findOne({ where: { role: user.role } });
+  let policy = await TokenPolicy.findOne({ where: { role: user.role }, ...tOpt });
   if (!policy) {
     const defaultTokens = user.role === "student" ? 3000000 : (user.role === "teacher" ? 10000000 : 0);
     const defaultVideoSeconds = 0;
+    const defaultImageGenerations = user.role === "teacher" ? 500 : 0;
     policy = await TokenPolicy.create({
       role: user.role,
       annual_tokens: defaultTokens,
       annual_video_seconds: defaultVideoSeconds,
-    });
+      annual_image_generations: defaultImageGenerations,
+    }, tOpt);
   }
+
   const initialBalance = policy.annual_tokens ?? 0;
   const initialVideoSeconds = policy.annual_video_seconds ?? 0;
+  const initialImageGenerations = policy.annual_image_generations ?? 0;
 
   account = await TokenAccount.create({
     user_id: userId,
     balance: initialBalance,
     video_seconds_balance: initialVideoSeconds,
+    image_generation_balance: initialImageGenerations,
     expires_at: null,
-  });
+  }, tOpt);
 
   if (initialBalance > 0) {
     await TokenTransaction.create({
       user_id: userId,
       type: "admin_adjustment",
+      resource_type: "tokens",
       change: initialBalance,
       balance_before: 0,
       balance_after: initialBalance,
-    });
+    }, tOpt);
   }
 
   return account;
@@ -78,12 +86,10 @@ export async function assertHasVideoSecondsBalance(userId, durationSec = 5) {
     throw new AppError("User not found", 404);
   }
 
-  // Students do not have AI video generation access
   if (user.role === "student") {
     throw new AppError("AI video generation is only available for teachers.", 403);
   }
 
-  // Admin roles bypass video token limits
   if (!["teacher"].includes(user.role)) {
     return;
   }
@@ -97,56 +103,308 @@ export async function assertHasVideoSecondsBalance(userId, durationSec = 5) {
   }
 }
 
-export async function deductTokens({ userId, amount, reason, refId }) {
+export async function assertHasImageGenerationBalance(userId, count = 1) {
   const user = await User.findByPk(userId);
-  if (!user || !["student", "teacher"].includes(user.role)) {
-    return;
+  if (!user) {
+    throw new AppError("User not found", 404);
   }
 
-  if (amount <= 0) {
+  if (user.role === "student") {
+    throw new AppError("AI image generation is only available for teachers.", 403);
+  }
+
+  if (!["teacher"].includes(user.role)) {
     return;
   }
 
   const account = await ensureTokenAccount(userId);
-  if (!account) return;
-
-  const before = account.balance;
-  account.balance = Math.max(0, account.balance - amount);
-  await account.save();
-  const after = account.balance;
-
-  await TokenTransaction.create({
-    user_id: userId,
-    type: "usage",
-    change: -amount,
-    balance_before: before,
-    balance_after: after,
-  });
+  if (!account || (account.image_generation_balance ?? 0) < count) {
+    throw new AppError(
+      "You have used all your annual AI diagram creation quota (0 diagrams remaining). Please contact your school administrator to add diagram generations.",
+      402
+    );
+  }
 }
 
-export async function deductVideoSeconds({ userId, durationSec = 5, reason, refId }) {
+/**
+ * Atomic Check & Deduct Tokens (Row-level Lock)
+ */
+export async function checkAndDeductTokens({ userId, amount, reason, refId }, options = {}) {
   const user = await User.findByPk(userId);
-  if (!user || !["student", "teacher"].includes(user.role)) {
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  if (!["student", "teacher"].includes(user.role)) {
+    return;
+  }
+
+  const amt = Number(amount);
+  if (amt <= 0) return;
+
+  const executeDeduct = async (t) => {
+    await ensureTokenAccount(userId, t);
+    const account = await TokenAccount.findOne({
+      where: { user_id: userId },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+
+    if (!account || account.balance < amt) {
+      throw new AppError(
+        `Insufficient AI tokens. Balance: ${account?.balance || 0}, required: ${amt}. Please contact your administrator.`,
+        402
+      );
+    }
+
+    const before = account.balance;
+    account.balance = before - amt;
+    await account.save({ transaction: t });
+    const after = account.balance;
+
+    await TokenTransaction.create(
+      {
+        user_id: userId,
+        type: "usage",
+        resource_type: "tokens",
+        change: -amt,
+        balance_before: before,
+        balance_after: after,
+        ref_id: refId || null,
+        reason: reason || null,
+      },
+      { transaction: t }
+    );
+  };
+
+  if (options.transaction) {
+    await executeDeduct(options.transaction);
+  } else {
+    await db.transaction(async (t) => {
+      await executeDeduct(t);
+    });
+  }
+}
+
+/**
+ * Atomic Check & Deduct Video Seconds (Row-level Lock)
+ */
+export async function checkAndDeductVideoSeconds({ userId, durationSec = 5, reason, refId }, options = {}) {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  if (user.role === "student") {
+    throw new AppError("AI video generation is only available for teachers.", 403);
+  }
+
+  if (!["teacher"].includes(user.role)) {
     return;
   }
 
   const sec = Number(durationSec) || 5;
   if (sec <= 0) return;
 
-  const account = await ensureTokenAccount(userId);
-  if (!account) return;
+  const executeDeduct = async (t) => {
+    await ensureTokenAccount(userId, t);
+    const account = await TokenAccount.findOne({
+      where: { user_id: userId },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
 
-  const before = account.video_seconds_balance ?? 0;
-  account.video_seconds_balance = Math.max(0, before - sec);
-  await account.save();
-  const after = account.video_seconds_balance;
+    const currentBal = account?.video_seconds_balance ?? 0;
+    if (!account || currentBal < sec) {
+      throw new AppError(
+        `You have used all your annual AI video creation quota (${currentBal} video seconds remaining). Please contact your administrator.`,
+        402
+      );
+    }
 
-  await TokenTransaction.create({
-    user_id: userId,
-    type: "usage",
-    change: -sec,
-    balance_before: before,
-    balance_after: after,
+    const before = currentBal;
+    account.video_seconds_balance = before - sec;
+    await account.save({ transaction: t });
+    const after = account.video_seconds_balance;
+
+    await TokenTransaction.create(
+      {
+        user_id: userId,
+        type: "usage",
+        resource_type: "video_seconds",
+        change: -sec,
+        balance_before: before,
+        balance_after: after,
+        ref_id: refId || null,
+        reason: reason || null,
+      },
+      { transaction: t }
+    );
+  };
+
+  if (options.transaction) {
+    await executeDeduct(options.transaction);
+  } else {
+    await db.transaction(async (t) => {
+      await executeDeduct(t);
+    });
+  }
+}
+
+/**
+ * Atomic Check & Deduct Image Generation Quota (Row-level Lock)
+ */
+export async function checkAndDeductImageGeneration({ userId, count = 1, reason, refId }, options = {}) {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  if (user.role === "student") {
+    throw new AppError("AI image generation is only available for teachers.", 403);
+  }
+
+  if (!["teacher"].includes(user.role)) {
+    return;
+  }
+
+  const cnt = Number(count) || 1;
+  if (cnt <= 0) return;
+
+  const executeDeduct = async (t) => {
+    await ensureTokenAccount(userId, t);
+    const account = await TokenAccount.findOne({
+      where: { user_id: userId },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+
+    const currentBal = account?.image_generation_balance ?? 0;
+    if (!account || currentBal < cnt) {
+      throw new AppError(
+        `You have used all your annual AI diagram creation quota (${currentBal} diagrams remaining). Please contact your administrator.`,
+        402
+      );
+    }
+
+    const before = currentBal;
+    account.image_generation_balance = before - cnt;
+    await account.save({ transaction: t });
+    const after = account.image_generation_balance;
+
+    await TokenTransaction.create(
+      {
+        user_id: userId,
+        type: "usage",
+        resource_type: "image_generations",
+        change: -cnt,
+        balance_before: before,
+        balance_after: after,
+        ref_id: refId || null,
+        reason: reason || null,
+      },
+      { transaction: t }
+    );
+  };
+
+  if (options.transaction) {
+    await executeDeduct(options.transaction);
+  } else {
+    await db.transaction(async (t) => {
+      await executeDeduct(t);
+    });
+  }
+}
+
+export async function deductTokens({ userId, amount, reason, refId }) {
+  await checkAndDeductTokens({ userId, amount, reason, refId });
+}
+
+export async function deductVideoSeconds({ userId, durationSec = 5, reason, refId }) {
+  await checkAndDeductVideoSeconds({ userId, durationSec, reason, refId });
+}
+
+export async function deductImageGeneration({ userId, count = 1, reason, refId }) {
+  await checkAndDeductImageGeneration({ userId, count, reason, refId });
+}
+
+/**
+ * Refunds all quotas (tokens, video_seconds, image_generations) associated with a generation job ID.
+ * Looks up original usage transactions where ref_id = generationId and type = "usage".
+ */
+export async function refundGenerationQuotas({ userId, generationId }) {
+  if (!userId || !generationId) return;
+
+  const usageTxs = await TokenTransaction.findAll({
+    where: {
+      user_id: userId,
+      ref_id: generationId,
+      type: "usage",
+    },
+  });
+
+  if (!usageTxs || usageTxs.length === 0) return;
+
+  await db.transaction(async (t) => {
+    const account = await TokenAccount.findOne({
+      where: { user_id: userId },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+
+    if (!account) return;
+
+    for (const tx of usageTxs) {
+      // Prevent duplicate refunds
+      const existingRefund = await TokenTransaction.findOne({
+        where: {
+          user_id: userId,
+          ref_id: generationId,
+          resource_type: tx.resource_type,
+          type: "refund",
+        },
+        transaction: t,
+      });
+
+      if (existingRefund) continue;
+
+      const refundAmount = Math.abs(tx.change);
+      if (refundAmount <= 0) continue;
+
+      let before = 0;
+      let after = 0;
+
+      if (tx.resource_type === "video_seconds") {
+        before = account.video_seconds_balance ?? 0;
+        account.video_seconds_balance = before + refundAmount;
+        after = account.video_seconds_balance;
+      } else if (tx.resource_type === "image_generations") {
+        before = account.image_generation_balance ?? 0;
+        account.image_generation_balance = before + refundAmount;
+        after = account.image_generation_balance;
+      } else {
+        // default "tokens"
+        before = account.balance ?? 0;
+        account.balance = before + refundAmount;
+        after = account.balance;
+      }
+
+      await account.save({ transaction: t });
+
+      await TokenTransaction.create(
+        {
+          user_id: userId,
+          type: "refund",
+          resource_type: tx.resource_type,
+          change: refundAmount,
+          balance_before: before,
+          balance_after: after,
+          ref_id: generationId,
+          reason: `Refund for failed generation #${generationId}`,
+        },
+        { transaction: t }
+      );
+    }
   });
 }
 
@@ -154,6 +412,7 @@ export async function setRoleAnnualTokens({
   role,
   annual_tokens,
   annual_video_seconds,
+  annual_image_generations,
   mode = "replace",
   school_id = null,
   updated_by = null,
@@ -175,6 +434,12 @@ export async function setRoleAnnualTokens({
     }
     updateData.annual_video_seconds = Number(annual_video_seconds);
   }
+  if (annual_image_generations !== undefined) {
+    if (Number.isNaN(Number(annual_image_generations)) || annual_image_generations < 0) {
+      throw new AppError("Invalid annual_image_generations", 400);
+    }
+    updateData.annual_image_generations = Number(annual_image_generations);
+  }
 
   let policy = await TokenPolicy.findOne({ where: { role } });
   if (policy) {
@@ -190,10 +455,17 @@ export async function setRoleAnnualTokens({
           ? (policy.annual_video_seconds ?? 0) + updateData.annual_video_seconds
           : updateData.annual_video_seconds
         : policy.annual_video_seconds;
+    const newImage =
+      updateData.annual_image_generations !== undefined
+        ? mode === "add"
+          ? (policy.annual_image_generations ?? 0) + updateData.annual_image_generations
+          : updateData.annual_image_generations
+        : policy.annual_image_generations;
 
     await policy.update({
       annual_tokens: newTokens,
       annual_video_seconds: newVideo,
+      annual_image_generations: newImage,
       updated_by,
     });
   } else {
@@ -201,6 +473,7 @@ export async function setRoleAnnualTokens({
       role,
       annual_tokens: updateData.annual_tokens ?? (role === "student" ? 3000000 : 10000000),
       annual_video_seconds: updateData.annual_video_seconds ?? 0,
+      annual_image_generations: updateData.annual_image_generations ?? 0,
       updated_by,
     });
   }
@@ -219,8 +492,7 @@ export async function setRoleAnnualTokens({
 
     if (updateData.annual_tokens !== undefined) {
       const before = account.balance;
-      const after =
-        mode === "add" ? before + updateData.annual_tokens : updateData.annual_tokens;
+      const after = mode === "add" ? before + updateData.annual_tokens : updateData.annual_tokens;
 
       if (after !== before) {
         account.balance = after;
@@ -229,6 +501,7 @@ export async function setRoleAnnualTokens({
         await TokenTransaction.create({
           user_id: u.id,
           type: "admin_adjustment",
+          resource_type: "tokens",
           change: after - before,
           balance_before: before,
           balance_after: after,
@@ -248,9 +521,30 @@ export async function setRoleAnnualTokens({
         await TokenTransaction.create({
           user_id: u.id,
           type: "admin_adjustment",
+          resource_type: "video_seconds",
           change: afterVid - beforeVid,
           balance_before: beforeVid,
           balance_after: afterVid,
+        });
+      }
+    }
+
+    if (updateData.annual_image_generations !== undefined) {
+      const beforeImg = account.image_generation_balance ?? 0;
+      const afterImg =
+        mode === "add" ? beforeImg + updateData.annual_image_generations : updateData.annual_image_generations;
+
+      if (afterImg !== beforeImg) {
+        account.image_generation_balance = afterImg;
+        await account.save();
+
+        await TokenTransaction.create({
+          user_id: u.id,
+          type: "admin_adjustment",
+          resource_type: "image_generations",
+          change: afterImg - beforeImg,
+          balance_before: beforeImg,
+          balance_after: afterImg,
         });
       }
     }
@@ -274,6 +568,7 @@ export async function adjustUserTokens({ user_id, amount, mode = "add" }) {
   await TokenTransaction.create({
     user_id,
     type: "admin_adjustment",
+    resource_type: "tokens",
     change: after - before,
     balance_before: before,
     balance_after: after,
@@ -285,7 +580,6 @@ export async function adjustUserTokens({ user_id, amount, mode = "add" }) {
 export async function replenishSchoolYearlyTokens(schoolId, transaction = null) {
   const tOpt = transaction ? { transaction } : {};
 
-  // Fetch policies (or auto-create default policies if they don't exist yet)
   let studentPolicy = await TokenPolicy.findOne({ where: { role: "student" }, ...tOpt });
   if (!studentPolicy) {
     studentPolicy = await TokenPolicy.create({ role: "student", annual_tokens: 3000000 }, tOpt);
@@ -315,6 +609,7 @@ export async function replenishSchoolYearlyTokens(schoolId, transaction = null) 
       await TokenTransaction.create({
         user_id: u.id,
         type: "admin_adjustment",
+        resource_type: "tokens",
         change: baseline,
         balance_before: 0,
         balance_after: baseline,
@@ -328,6 +623,7 @@ export async function replenishSchoolYearlyTokens(schoolId, transaction = null) 
         await TokenTransaction.create({
           user_id: u.id,
           type: "admin_adjustment",
+          resource_type: "tokens",
           change: baseline - before,
           balance_before: before,
           balance_after: baseline,
@@ -393,10 +689,9 @@ export async function getBillingSummaryService({ school_id = null }) {
 
     const aiCalls = Number(aiStats[0]?.total_calls || 0);
     const aiTokens = Number(aiStats[0]?.total_tokens || 0);
-    // Cost: ₹0.05 per 1,000 tokens
     const estAiCost = Number(((aiTokens / 1000) * 0.05).toFixed(2));
 
-    // 2. AI Video seconds usage (Only count successful renders)
+    // 2. AI Video seconds usage
     const videoStats = await VideoGeneration.findAll({
       attributes: [
         [fn("COUNT", col("id")), "total_videos"],
@@ -411,10 +706,9 @@ export async function getBillingSummaryService({ school_id = null }) {
 
     const videoCount = Number(videoStats[0]?.total_videos || 0);
     const videoSecs = Number(videoStats[0]?.total_seconds || 0);
-    // Cost: ₹2.00 per video minute (60s)
     const estVideoCost = Number(((videoSecs / 60) * 2.0).toFixed(2));
 
-    // 3. WhatsApp messages usage (Only count successfully sent messages)
+    // 3. WhatsApp messages usage
     const whatsappLimit = sch.whatsapp_annual_limit ?? 10000;
     const waCountResult = await WhatsappLog.findAll({
       attributes: [[fn("COUNT", col("id")), "sent_count"]],
@@ -425,10 +719,9 @@ export async function getBillingSummaryService({ school_id = null }) {
       raw: true,
     });
     const whatsappSent = Number(waCountResult[0]?.sent_count || 0);
-    // Cost: ₹0.75 per message
     const estWhatsappCost = Number((whatsappSent * 0.75).toFixed(2));
 
-    // 4. Google Maps API calls (Trip Locations + Transport Requests)
+    // 4. Google Maps API calls
     const locStats = await TripLocation.findAll({
       attributes: [[fn("COUNT", col("trip_location.id")), "location_updates"]],
       include: [
@@ -449,7 +742,6 @@ export async function getBillingSummaryService({ school_id = null }) {
     });
 
     const mapsCalls = Number(locStats[0]?.location_updates || 0) + Number(reqStats[0]?.requests || 0);
-    // Cost: ₹400 per 1,000 API requests
     const estMapsCost = Number(((mapsCalls / 1000) * 400).toFixed(2));
 
     const totalCost = Number((estAiCost + estVideoCost + estWhatsappCost + estMapsCost).toFixed(2));
@@ -564,7 +856,6 @@ export async function getApiLogsFeedService({ school_id = null, type = "all", li
     });
   }
 
-  // Sort logs combined by created_at DESC
   logs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   return logs.slice(0, Number(limit));

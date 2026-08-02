@@ -623,6 +623,8 @@ export default function TeacherAIToolsPage() {
   const [videoSubject, setVideoSubject] = useState("");
   const [videoLanguage, setVideoLanguage] = useState("English");
   const [videoDuration, setVideoDuration] = useState("6"); // "4", "6", or "8" seconds
+  // When false (default): diagram_only — fast, no Veo quota. When true: diagram_and_video.
+  const [generateVideo, setGenerateVideo] = useState(false);
   const [activeVideoJob, setActiveVideoJob] = useState(null);
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [teacherVideos, setTeacherVideos] = useState([]);
@@ -934,16 +936,17 @@ export default function TeacherAIToolsPage() {
       }
       const formattedTitle = (docTopic || resolvedSubject).replace(/\b\w/g, (char) => char.toUpperCase());
 
-      // AI Video Feature Handling
+      // AI Content Generation (diagram ± video)
       if (selectedToolKey === "ai_video") {
         if (!title || !title.trim()) {
-          setErrorMsg("Please enter a Video Topic.");
+          setErrorMsg("Please enter a Topic.");
           setLoading(false);
           return;
         }
 
         const chosenSubject = videoSubject || (schoolSubjects[0] || "Science");
         const chosenGrade = videoGrade || "6";
+        const contentType = generateVideo ? "diagram_and_video" : "diagram_only";
 
         const videoRes = await api.post("/ai/videos", {
           classId: chosenGrade,
@@ -952,20 +955,36 @@ export default function TeacherAIToolsPage() {
           topic: title.trim(),
           language: videoLanguage,
           duration: videoDuration,
+          content_type: contentType,
         });
 
         const job = videoRes.data?.data;
         if (job && job.jobId) {
-          setActiveVideoJob({
-            id: job.jobId,
-            status: "processing",
-            topic: formattedTitle,
-            subjectName: resolvedSubject,
-            duration: videoDuration,
-          });
+          if (job.status === "completed") {
+            // diagram_only: already done, show diagram immediately
+            setActiveVideoJob({
+              id: job.jobId,
+              status: "completed",
+              contentType: "diagram_only",
+              topic: formattedTitle,
+              imageUrl: job.imageUrl,
+              summary: job.summary,
+            });
+          } else {
+            // diagram_and_video: background job, start polling
+            setActiveVideoJob({
+              id: job.jobId,
+              status: "processing",
+              contentType: "diagram_and_video",
+              topic: formattedTitle,
+              subjectName: chosenSubject,
+              duration: videoDuration,
+            });
+            pollVideoJobStatus(job.jobId);
+          }
           setVideoModalOpen(true);
           setSelectedToolKey(null);
-          pollVideoJobStatus(job.jobId);
+          loadTeacherVideos();
         }
         setLoading(false);
         return;
@@ -1297,130 +1316,158 @@ export default function TeacherAIToolsPage() {
           <Card sx={{ borderRadius: "20px", border: "1px solid #e2e8f0" }}>
             <CardContent sx={{ p: 2.5 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#0f172a", mb: 2 }}>
-                Generated Videos
+AI Content Library
               </Typography>
 
               {loadingTeacherVideos ? (
                 <Box sx={{ p: 4, textAlign: "center" }}><CircularProgress size={30} /></Box>
               ) : teacherVideos.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, py: 3, textAlign: "center" }}>
-                  No generated videos found. Select "AI Lesson Video" above to generate your first video!
+                  Nothing generated yet. Go back and use "AI Lesson Video" to create your first diagram or video!
                 </Typography>
               ) : (
-                <Stack spacing={1.5}>
-                  {teacherVideos.map((vid) => (
-                    <Box
-                      key={vid.id}
-                      sx={{
-                        p: 2,
-                        borderRadius: "16px",
-                        border: "1px solid #f1f5f9",
-                        bgcolor: "#fafafa",
-                        display: "flex",
-                        flexDirection: { xs: "column", sm: "row" },
-                        alignItems: { xs: "stretch", sm: "center" },
-                        justifyContent: "space-between",
-                        gap: 1.5,
-                      }}
-                    >
-                      <Box>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", mb: 0.5 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#0f172a" }}>
-                            {vid.topic}
-                          </Typography>
-                          <Chip
-                            label={vid.status === "completed" ? `${vid.duration || 5}s HD` : vid.status}
-                            size="small"
-                            color={vid.status === "completed" ? "success" : vid.status === "failed" ? "error" : "warning"}
-                            sx={{ fontWeight: 800, height: 22, fontSize: 11 }}
-                          />
-                        </Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                          {vid.subject_name || "General"} • {vid.language || "English"}
+                <Stack spacing={2}>
+                  {/* Group by subject_name */}
+                  {(() => {
+                    const grouped = {};
+                    teacherVideos.forEach((vid) => {
+                      const key = vid.subject_name || "General";
+                      if (!grouped[key]) grouped[key] = [];
+                      grouped[key].push(vid);
+                    });
+                    return Object.entries(grouped).map(([subject, items]) => (
+                      <Box key={subject}>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: "#8b5cf6", textTransform: "uppercase", letterSpacing: 1, display: "block", mb: 1 }}>
+                          {subject}
                         </Typography>
+                        <Stack spacing={1.5}>
+                          {items.map((vid) => (
+                            <Box
+                              key={vid.id}
+                              sx={{
+                                p: 2,
+                                borderRadius: "16px",
+                                border: "1px solid #f1f5f9",
+                                bgcolor: "#fafafa",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1.5,
+                              }}
+                            >
+                              {/* Diagram thumbnail */}
+                              <Box
+                                sx={{
+                                  width: 56,
+                                  height: 56,
+                                  borderRadius: "10px",
+                                  overflow: "hidden",
+                                  flexShrink: 0,
+                                  border: "1px solid #e2e8f0",
+                                  bgcolor: "#f3e8ff",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                {vid.image_url ? (
+                                  <img src={vid.image_url} alt={vid.topic} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                ) : (
+                                  <OndemandVideo sx={{ fontSize: 24, color: "#8b5cf6" }} />
+                                )}
+                              </Box>
+
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", mb: 0.25 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0f172a", fontSize: "0.85rem" }} noWrap>
+                                    {vid.topic}
+                                  </Typography>
+                                  <Chip
+                                    label={
+                                      vid.status === "completed"
+                                        ? vid.content_type === "diagram_and_video" ? `Diagram + ${vid.duration || 6}s Video` : "Diagram"
+                                        : vid.status
+                                    }
+                                    size="small"
+                                    color={vid.status === "completed" ? "success" : vid.status === "failed" ? "error" : "warning"}
+                                    sx={{ fontWeight: 800, height: 20, fontSize: 10 }}
+                                  />
+                                </Box>
+                                {vid.summary && (
+                                  <Typography variant="caption" sx={{ color: "text.secondary", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {vid.summary}
+                                  </Typography>
+                                )}
+                              </Box>
+
+                              <Stack direction="row" spacing={0.5} alignItems="center" flexShrink={0}>
+                                {vid.status === "completed" ? (
+                                  <Button
+                                    variant="contained"
+                                    size="small"
+                                    startIcon={vid.video_url ? <PlayCircleOutline /> : <Visibility />}
+                                    onClick={() => {
+                                      setActiveVideoJob({
+                                        id: vid.id,
+                                        status: "completed",
+                                        contentType: vid.content_type || "diagram_only",
+                                        videoUrl: vid.video_url,
+                                        imageUrl: vid.image_url,
+                                        summary: vid.summary,
+                                        streamUrl: vid.stream_url || `/api/ai/videos/stream/${vid.id}`,
+                                        topic: vid.topic,
+                                      });
+                                      setVideoModalOpen(true);
+                                    }}
+                                    sx={{
+                                      borderRadius: "10px",
+                                      fontWeight: 800,
+                                      textTransform: "none",
+                                      fontSize: "0.75rem",
+                                      bgcolor: "#8b5cf6",
+                                      "&:hover": { bgcolor: "#7c3aed" },
+                                    }}
+                                  >
+                                    {vid.video_url ? "Watch" : "View"}
+                                  </Button>
+                                ) : vid.status === "processing" ? (
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={<CircularProgress size={12} color="warning" />}
+                                    onClick={() => {
+                                      setActiveVideoJob({ id: vid.id, status: "processing", topic: vid.topic, contentType: vid.content_type });
+                                      setVideoModalOpen(true);
+                                      pollVideoJobStatus(vid.id);
+                                    }}
+                                    sx={{ borderRadius: "10px", fontWeight: 800, textTransform: "none", fontSize: "0.75rem", borderColor: "#f97316", color: "#c2410c" }}
+                                  >
+                                    Status
+                                  </Button>
+                                ) : vid.status === "failed" ? (
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    color="error"
+                                    onClick={() => {
+                                      setActiveVideoJob({ id: vid.id, status: "failed", topic: vid.topic, errorMessage: vid.error_message || "Generation failed." });
+                                      setVideoModalOpen(true);
+                                    }}
+                                    sx={{ borderRadius: "10px", fontWeight: 800, textTransform: "none", fontSize: "0.75rem" }}
+                                  >
+                                    Error
+                                  </Button>
+                                ) : null}
+
+                                <IconButton size="small" onClick={() => handleDeleteVideo(vid.id)} color="error" sx={{ p: 0.5 }}>
+                                  <DeleteOutline fontSize="small" />
+                                </IconButton>
+                              </Stack>
+                            </Box>
+                          ))}
+                        </Stack>
                       </Box>
-
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        {vid.status === "completed" && vid.video_url ? (
-                          <Button
-                            variant="contained"
-                            size="small"
-                            startIcon={<PlayCircleOutline />}
-                            onClick={() => {
-                              setActiveVideoJob({
-                                id: vid.id,
-                                status: "completed",
-                                videoUrl: vid.video_url,
-                                streamUrl: vid.stream_url || `/api/ai/videos/stream/${vid.id}`,
-                                topic: vid.topic,
-                              });
-                              setVideoModalOpen(true);
-                            }}
-                            sx={{
-                              borderRadius: "10px",
-                              fontWeight: 800,
-                              textTransform: "none",
-                              bgcolor: "#8b5cf6",
-                              "&:hover": { bgcolor: "#7c3aed" },
-                            }}
-                          >
-                            Watch Video
-                          </Button>
-                        ) : vid.status === "processing" ? (
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<CircularProgress size={14} color="warning" />}
-                            onClick={() => {
-                              setActiveVideoJob({
-                                id: vid.id,
-                                status: "processing",
-                                topic: vid.topic,
-                                subjectName: vid.subject_name,
-                              });
-                              setVideoModalOpen(true);
-                              pollVideoJobStatus(vid.id);
-                            }}
-                            sx={{
-                              borderRadius: "10px",
-                              fontWeight: 800,
-                              textTransform: "none",
-                              borderColor: "#f97316",
-                              color: "#c2410c",
-                            }}
-                          >
-                            Check Status
-                          </Button>
-                        ) : vid.status === "failed" ? (
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            color="error"
-                            onClick={() => {
-                              setActiveVideoJob({
-                                id: vid.id,
-                                status: "failed",
-                                topic: vid.topic,
-                                errorMessage: vid.error_message || "Video generation failed.",
-                              });
-                              setVideoModalOpen(true);
-                            }}
-                            sx={{
-                              borderRadius: "10px",
-                              fontWeight: 800,
-                              textTransform: "none",
-                            }}
-                          >
-                            View Error
-                          </Button>
-                        ) : null}
-
-                        <IconButton size="small" onClick={() => handleDeleteVideo(vid.id)} color="error">
-                          <DeleteOutline fontSize="small" />
-                        </IconButton>
-                      </Stack>
-                    </Box>
-                  ))}
+                    ));
+                  })()}
                 </Stack>
               )}
             </CardContent>
@@ -2171,27 +2218,58 @@ export default function TeacherAIToolsPage() {
                     <TextField
                       fullWidth
                       size="small"
-                      label="Video Topic"
+                      label="Topic"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="e.g. Solar System, Photosynthesis, Water Cycle"
                       sx={{ "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
                     />
 
-                    {/* Duration Selector */}
-                    <FormControl size="small" fullWidth>
-                      <InputLabel sx={{ fontWeight: 700 }}>Video Duration</InputLabel>
-                      <Select
-                        value={videoDuration}
-                        label="Video Duration"
-                        onChange={(e) => setVideoDuration(e.target.value)}
-                        sx={{ borderRadius: "12px" }}
-                      >
-                        <MenuItem value="4">4 Seconds Animation</MenuItem>
-                        <MenuItem value="6">6 Seconds Animation</MenuItem>
-                        <MenuItem value="8">8 Seconds Animation</MenuItem>
-                      </Select>
-                    </FormControl>
+                    {/* Video toggle — unchecked = diagram only (fast), checked = diagram + Veo video */}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        p: 1.5,
+                        borderRadius: "12px",
+                        bgcolor: generateVideo ? "#f3e8ff" : "#f8fafc",
+                        border: `1px solid ${generateVideo ? "#ddd6fe" : "#e2e8f0"}`,
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: "#0f172a" }}>
+                          Also generate a video
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                          {generateVideo ? "~1–3 min • Uses video seconds quota" : "Diagram ready instantly (~10s)"}
+                        </Typography>
+                      </Box>
+                      <Switch
+                        checked={generateVideo}
+                        onChange={(e) => setGenerateVideo(e.target.checked)}
+                        size="small"
+                        sx={{ "& .MuiSwitch-thumb": { bgcolor: generateVideo ? "#8b5cf6" : undefined } }}
+                      />
+                    </Box>
+
+                    {/* Duration Selector — only relevant when video is enabled */}
+                    {generateVideo && (
+                      <FormControl size="small" fullWidth>
+                        <InputLabel sx={{ fontWeight: 700 }}>Video Duration</InputLabel>
+                        <Select
+                          value={videoDuration}
+                          label="Video Duration"
+                          onChange={(e) => setVideoDuration(e.target.value)}
+                          sx={{ borderRadius: "12px" }}
+                        >
+                          <MenuItem value="4">4 Seconds Animation</MenuItem>
+                          <MenuItem value="6">6 Seconds Animation</MenuItem>
+                          <MenuItem value="8">8 Seconds Animation</MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
                   </Stack>
                 )}
               </Stack>
@@ -2255,41 +2333,83 @@ export default function TeacherAIToolsPage() {
             <Box sx={{ py: 3, textAlign: "center" }}>
               <CircularProgress size={44} sx={{ color: "#8b5cf6", mb: 2 }} />
               <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "#0f172a" }}>
-                Generating HD Educational Video...
+                {activeVideoJob?.contentType === "diagram_only" ? "Generating Diagram..." : "Generating Diagram + Video..."}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mt: 1 }}>
-                Animating <b>{activeVideoJob?.topic}</b> for Class {videoGrade || grade}.
+                Topic: <b>{activeVideoJob?.topic}</b>
               </Typography>
               <Typography variant="caption" color="text.disabled" sx={{ display: "block", mt: 2 }}>
-                This usually takes 1-2 minutes. You can leave this open while it renders.
+                {activeVideoJob?.contentType === "diagram_only"
+                  ? "Diagram is usually ready in ~10 seconds."
+                  : "Diagram + video takes 1–3 minutes. You can close this and check back later."}
               </Typography>
             </Box>
-          ) : activeVideoJob?.status === "completed" && (activeVideoJob?.videoUrl || activeVideoJob?.streamUrl || activeVideoJob?.stream_url) ? (
+          ) : activeVideoJob?.status === "completed" ? (
             <Stack spacing={2} sx={{ pt: 1 }}>
-              <Box sx={{ borderRadius: "12px", overflow: "hidden", border: "1px solid #e2e8f0", bgcolor: "#000000" }}>
-                <video
-                  src={getAssetUrl(activeVideoJob.videoUrl || activeVideoJob.video_url || activeVideoJob.streamUrl || activeVideoJob.stream_url)}
-                  controls
-                  autoPlay
-                  style={{ width: "100%", maxHeight: "350px", display: "block" }}
-                />
-              </Box>
-              <Button
-                variant="contained"
-                startIcon={<GetApp />}
-                component="a"
-                href={getAssetUrl(activeVideoJob.videoUrl || activeVideoJob.video_url || activeVideoJob.streamUrl || activeVideoJob.stream_url)}
-                download
-                target="_blank"
-                sx={{ borderRadius: "12px", fontWeight: 800, textTransform: "none", bgcolor: "#8b5cf6", "&:hover": { bgcolor: "#7c3aed" } }}
-              >
-                Download MP4 Video
-              </Button>
+              {/* Summary caption */}
+              {activeVideoJob.summary && (
+                <Typography variant="body2" sx={{ color: "#475569", fontWeight: 600, fontStyle: "italic", textAlign: "center" }}>
+                  {activeVideoJob.summary}
+                </Typography>
+              )}
+              {/* Diagram image */}
+              {activeVideoJob.imageUrl && (
+                <Box>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: "#475569", display: "block", mb: 0.5 }}>Labeled Diagram</Typography>
+                  <Box sx={{ borderRadius: "12px", overflow: "hidden", border: "1px solid #e2e8f0" }}>
+                    <img src={activeVideoJob.imageUrl} alt={activeVideoJob.topic} style={{ width: "100%", display: "block" }} />
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<GetApp />}
+                    component="a"
+                    href={activeVideoJob.imageUrl}
+                    download
+                    target="_blank"
+                    sx={{ mt: 1, borderRadius: "10px", fontWeight: 800, textTransform: "none", borderColor: "#8b5cf6", color: "#8b5cf6", fontSize: "0.8rem" }}
+                  >
+                    Download Diagram PNG
+                  </Button>
+                </Box>
+              )}
+              {/* Video player — only when content_type includes video */}
+              {(activeVideoJob.videoUrl || activeVideoJob.streamUrl || activeVideoJob.stream_url) && (
+                <Box>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: "#475569", display: "block", mb: 0.5 }}>Video</Typography>
+                  <Box sx={{ borderRadius: "12px", overflow: "hidden", border: "1px solid #e2e8f0", bgcolor: "#000" }}>
+                    <video
+                      src={getAssetUrl(activeVideoJob.videoUrl || activeVideoJob.video_url || activeVideoJob.streamUrl || activeVideoJob.stream_url)}
+                      controls
+                      autoPlay
+                      style={{ width: "100%", maxHeight: "300px", display: "block" }}
+                    />
+                  </Box>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<GetApp />}
+                    component="a"
+                    href={getAssetUrl(activeVideoJob.videoUrl || activeVideoJob.video_url || activeVideoJob.streamUrl || activeVideoJob.stream_url)}
+                    download
+                    target="_blank"
+                    sx={{ mt: 1, borderRadius: "10px", fontWeight: 800, textTransform: "none", bgcolor: "#8b5cf6", "&:hover": { bgcolor: "#7c3aed" }, fontSize: "0.8rem" }}
+                  >
+                    Download MP4 Video
+                  </Button>
+                </Box>
+              )}
+              {/* Fallback if somehow neither diagram nor video available */}
+              {!activeVideoJob.imageUrl && !activeVideoJob.videoUrl && !activeVideoJob.streamUrl && (
+                <Alert severity="warning" sx={{ borderRadius: "12px", fontWeight: 700 }}>
+                  Content was generated but URLs are not available yet. Please try refreshing.
+                </Alert>
+              )}
             </Stack>
           ) : (
             <Box sx={{ py: 2 }}>
               <Alert severity="error" sx={{ borderRadius: "12px", fontWeight: 700 }}>
-                {activeVideoJob?.errorMessage || "Video generation failed. Please try again."}
+                {activeVideoJob?.errorMessage || "Content generation failed. Please try again."}
               </Alert>
             </Box>
           )}

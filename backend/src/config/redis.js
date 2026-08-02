@@ -77,6 +77,7 @@ export async function getCache(key) {
 
 export async function setCache(key, value, ttlSeconds = 300) {
   const expiresAt = Date.now() + ttlSeconds * 1000;
+  // TODO before scaling to multiple backend instances: this in-memory fallback cache is not shared across replicas — deleteCache only clears the local instance's memory cache, so a stale identity can be served by another instance for up to 5 minutes during a Redis outage. Acceptable at single-instance scale, revisit before horizontal scaling.
   memoryCache.set(key, { value, expiresAt });
 
   if (redisClient && isRedisConnected) {

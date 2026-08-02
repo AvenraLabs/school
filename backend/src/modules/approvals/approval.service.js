@@ -1,6 +1,7 @@
 import { getPagination } from "../../shared/utils/pagination.js";
 import { Op } from "sequelize";
 import AppError from "../../shared/appError.js";
+import { deleteCache } from "../../config/redis.js";
 
 import Student from "../students/student.model.js";
 import Teacher from "../teachers/teacher.model.js";
@@ -416,6 +417,8 @@ export const processProfileUpdateService = async ({
     await request.update({
       status: "APPROVED",
     });
+
+    await deleteCache(`auth:identity:${userId}`);
 
     return request;
   }

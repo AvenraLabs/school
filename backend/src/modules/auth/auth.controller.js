@@ -4,6 +4,7 @@ import AppError from "../../shared/appError.js";
 import User from "../users/user.model.js";
 import School from "../schools/school.model.js";
 import { deleteCache } from "../../config/redis.js";
+import RefreshToken from "./refresh-token.model.js";
 
 export const login = asyncHandler(async (req, res) => {
   const { username, password } = req.body; 
@@ -119,9 +120,14 @@ export const login = asyncHandler(async (req, res) => {
   );
 
   // ── 5. Save refresh token & update last_login ─────────────────────
-  user.refresh_token = refreshToken;
   user.last_login = new Date();
   await user.save();
+
+  await RefreshToken.create({
+    user_id: user.id,
+    token: refreshToken,
+    device_info: req.headers["user-agent"] || null,
+  });
 
   res.json({
     token: accessToken,
@@ -157,7 +163,10 @@ export const refreshToken = asyncHandler(async (req, res) => {
   }
 
   // Verify incoming refresh token matches stored token (revocation check)
-  if (!user.refresh_token || user.refresh_token !== incomingRefreshToken) {
+  const tokenRecord = await RefreshToken.findOne({
+    where: { user_id: user.id, token: incomingRefreshToken },
+  });
+  if (!tokenRecord) {
     throw new AppError("Refresh token revoked or invalid", 401);
   }
 
@@ -224,8 +233,12 @@ export const refreshToken = asyncHandler(async (req, res) => {
     { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" }
   );
 
-  user.refresh_token = newRefreshToken;
-  await user.save();
+  await tokenRecord.destroy();
+  await RefreshToken.create({
+    user_id: user.id,
+    token: newRefreshToken,
+    device_info: req.headers["user-agent"] || null,
+  });
 
   res.json({
     token: newAccessToken,
@@ -240,11 +253,12 @@ export const refreshToken = asyncHandler(async (req, res) => {
 export const logout = asyncHandler(async (req, res) => {
   // req.user is populated by the protect middleware
   if (req.user?.id) {
-    // Clear any stored refresh_token so old sessions are fully revoked
-    await User.update(
-      { refresh_token: null },
-      { where: { id: req.user.id } }
-    );
+    const incomingRefreshToken = req.body?.refreshToken || req.body?.refresh_token;
+    if (incomingRefreshToken) {
+      await RefreshToken.destroy({ where: { user_id: req.user.id, token: incomingRefreshToken } });
+    } else {
+      await RefreshToken.destroy({ where: { user_id: req.user.id } });
+    }
     // Invalidate Redis identity cache immediately
     await deleteCache(`auth:identity:${req.user.id}`);
   }
@@ -268,8 +282,8 @@ export const changePassword = asyncHandler(async (req, res) => {
 
   user.password = new_password;
   user.must_change_password = false;
-  // Invalidate any stored refresh_token on password change for security
-  user.refresh_token = null;
+  // Invalidate any stored refresh_tokens on password change for security
+  await RefreshToken.destroy({ where: { user_id: user.id } });
   await user.save();
   // Invalidate Redis identity cache immediately
   await deleteCache(`auth:identity:${req.user.id}`);
@@ -308,7 +322,7 @@ export const adminResetUserPassword = asyncHandler(async (req, res) => {
   targetUser.password = new_password;
   targetUser.must_change_password = true;
   // Invalidate any active sessions for the target user
-  targetUser.refresh_token = null;
+  await RefreshToken.destroy({ where: { user_id: targetUser.id } });
   await targetUser.save();
   // Invalidate Redis identity cache immediately
   await deleteCache(`auth:identity:${targetUser.id}`);

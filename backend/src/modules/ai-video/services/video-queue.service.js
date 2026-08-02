@@ -1,16 +1,30 @@
 import VideoGeneration from "../video-generation.model.js";
+import Teacher from "../../teachers/teacher.model.js";
 import { generateEducationalVideoPrompt } from "./gemini-prompt.service.js";
+import { generateEducationalDiagram } from "./gemini-image.service.js";
 import { submitTextToVideoTask } from "./google-video.service.js";
 import { downloadAndSaveVideo } from "./video-storage.service.js";
+import { refundGenerationQuotas } from "../../tokens/token.service.js";
 import logger from "../../../shared/logger.js";
 
 /**
- * Executes full background video generation workflow:
- * 1. Generates Gemini Prompt
- * 2. Submits task to Google Vertex AI (Veo 3: veo-3.0-fast-001)
- * 3. Logs Operation Name immediately and awaits result
- * 4. Downloads & stores MP4 locally
- * 5. Updates PostgreSQL record
+ * Helper to resolve the user_id associated with a video generation record
+ */
+async function getUserIdForRecord(record) {
+  if (record.teacher_id) {
+    const teacher = await Teacher.findByPk(record.teacher_id);
+    if (teacher?.user_id) return teacher.user_id;
+  }
+  return null;
+}
+
+/**
+ * Executes the background "diagram_and_video" workflow:
+ *  1. Generate Gemini video prompt
+ *  2. Concurrently: generate labeled 2D diagram (Imagen) + submit Veo video task
+ *  3. Save whichever artifacts succeeded (partial failure is acceptable)
+ *  4. Update PostgreSQL record with status and all available URLs
+ *  5. If video generation (or full job) fails, refund deducted quotas for this generation ID
  */
 export async function processVideoGeneration(generationId) {
   const record = await VideoGeneration.findByPk(generationId);
@@ -19,84 +33,131 @@ export async function processVideoGeneration(generationId) {
     return;
   }
 
+  const userId = await getUserIdForRecord(record);
+
   try {
-    logger.info("VIDEO_WORKER_START", `Starting video generation ID #${generationId} (Topic: "${record.topic}")...`, { generationId, topic: record.topic });
+    logger.info("VIDEO_WORKER_START", `Starting generation ID #${generationId} (Topic: "${record.topic}", Type: ${record.content_type || "diagram_and_video"})...`, { generationId });
     await record.update({ status: "processing" });
 
-    // Step 1: Generate Prompt via Gemini
+    // Step 1: Generate Gemini prompt for the Veo video
     let prompt = record.prompt;
     if (!prompt) {
-      logger.info("VIDEO_WORKER_GEMINI_PROMPT", `Generating Gemini animation prompt for "${record.topic}"...`, { generationId });
+      logger.info("VIDEO_WORKER_GEMINI_PROMPT", `Generating Gemini video prompt for "${record.topic}"...`, { generationId });
       prompt = await generateEducationalVideoPrompt({
         topic: record.topic,
         classLevel: record.class_id,
         duration: record.duration,
+        userId,
+        refId: generationId,
       });
       await record.update({ prompt });
     }
 
-    // Step 2: Submit to Google Vertex AI (Veo)
-    logger.info("VIDEO_WORKER_VEO_SUBMIT", `Submitting task to Google Vertex AI (Veo)...`, { generationId });
-    const result = await submitTextToVideoTask({
-      prompt,
-      duration: record.duration || "6",
-      classId: record.class_id,
-      subjectName: record.subject_name,
-      topic: record.topic,
-    });
+    // Step 2: Run diagram generation (Imagen) AND Veo video concurrently
+    logger.info("VIDEO_WORKER_CONCURRENT_START", `Starting concurrent diagram + Veo tasks for #${generationId}...`, { generationId });
 
-    const operationName = result.operationName;
-    await record.update({
-      operation_name: operationName,
-    });
-    logger.info("VIDEO_WORKER_VEO_JOB_ASSIGNED", `Veo Operation Name assigned: ${operationName}`, { generationId, operationName });
-
-    if (result.status === "completed" && result.videoUrl) {
-      logger.info("VIDEO_WORKER_VEO_SUCCESS", `Veo task ${operationName} completed successfully! Video URL received.`, { generationId, operationName, videoUrl: result.videoUrl });
-
-      // Step 3: Resolve Cloud Storage Web URL
-      const { filePath, publicUrl } = await downloadAndSaveVideo({
-        videoUrl: result.videoUrl,
+    const [diagramResult, videoResult] = await Promise.allSettled([
+      generateEducationalDiagram({
+        topic: record.topic,
+        classLevel: record.class_id,
+        subjectName: record.subject_name,
+        classId: record.class_id,
+        userId,
+        refId: generationId,
+      }),
+      submitTextToVideoTask({
+        prompt,
+        duration: record.duration || "6",
         classId: record.class_id,
         subjectName: record.subject_name,
         topic: record.topic,
-      });
+      }),
+    ]);
 
-      // Step 4: Update PostgreSQL Record
-      await record.update({
-        status: "completed",
-        video_path: filePath,
-        video_url: publicUrl,
-        completed_at: new Date(),
-      });
+    // Step 3: Collect whichever results succeeded
+    const updates = { completed_at: new Date() };
+    let anySuccess = false;
+    const errors = [];
 
-      logger.info("VIDEO_WORKER_COMPLETE", `Video generation #${generationId} complete! Saved to ${publicUrl}`, { generationId, publicUrl });
-      return;
+    // Diagram result
+    if (diagramResult.status === "fulfilled" && diagramResult.value) {
+      const { imagePath, imageUrl, summary } = diagramResult.value;
+      updates.image_path = imagePath;
+      updates.image_url = imageUrl;
+      if (summary) updates.summary = summary;
+      anySuccess = true;
+      logger.info("VIDEO_WORKER_DIAGRAM_OK", `Diagram saved for #${generationId}: ${imageUrl}`, { generationId });
     } else {
-      const err = "Veo 3 video generation failed to return a valid video URL";
-      logger.error("VIDEO_WORKER_VEO_FAILED", `Task ${operationName} failed: ${err}`, { generationId, operationName, error: err });
-      await record.update({
-        status: "failed",
-        error_message: err,
-      });
-      return;
+      const reason = diagramResult.reason?.message || "Diagram generation failed";
+      errors.push(`diagram: ${reason}`);
+      logger.warn("VIDEO_WORKER_DIAGRAM_FAILED", `Diagram failed for #${generationId}: ${reason}`, { generationId });
     }
+
+    // Video result
+    if (videoResult.status === "fulfilled" && videoResult.value?.videoUrl) {
+      const veoResult = videoResult.value;
+      const { filePath, publicUrl } = await downloadAndSaveVideo({ videoUrl: veoResult.videoUrl });
+      updates.video_path = filePath;
+      updates.video_url = publicUrl;
+      if (veoResult.operationName) updates.operation_name = veoResult.operationName;
+      anySuccess = true;
+      logger.info("VIDEO_WORKER_VEO_OK", `Video saved for #${generationId}: ${publicUrl}`, { generationId });
+    } else {
+      const reason = videoResult.reason?.message || "Veo video generation failed";
+      errors.push(`video: ${reason}`);
+      logger.warn("VIDEO_WORKER_VEO_FAILED", `Veo failed for #${generationId}: ${reason}`, { generationId });
+
+      // If Veo video rendering failed, refund deducted quotas for this generation
+      if (userId) {
+        logger.info("VIDEO_WORKER_VEO_REFUND", `Refunding video generation quotas for #${generationId} (User #${userId})`, { generationId, userId });
+        await refundGenerationQuotas({ userId, generationId });
+      }
+    }
+
+    // Step 4: Update record
+    if (anySuccess) {
+      updates.status = "completed";
+      if (errors.length > 0) {
+        updates.error_message = `Partial: ${errors.join("; ")}`;
+      }
+      logger.info("VIDEO_WORKER_COMPLETE", `Generation #${generationId} complete (partial=${errors.length > 0})`, { generationId, updates });
+    } else {
+      updates.status = "failed";
+      updates.error_message = errors.join("; ") || "Both diagram and video generation failed";
+      logger.error("VIDEO_WORKER_ALL_FAILED", `All tasks failed for #${generationId}: ${updates.error_message}`, { generationId });
+
+      // Refund all deducted quotas on total failure
+      if (userId) {
+        logger.info("VIDEO_WORKER_TOTAL_REFUND", `Refunding all quotas for failed generation #${generationId}`, { generationId, userId });
+        await refundGenerationQuotas({ userId, generationId });
+      }
+    }
+
+    await record.update(updates);
   } catch (error) {
-    logger.error("VIDEO_WORKER_EXCEPTION", `Error processing video generation #${generationId}: ${error.message}`, { generationId, error: error.message });
+    logger.error("VIDEO_WORKER_EXCEPTION", `Unexpected error processing #${generationId}: ${error.message}`, { generationId, error: error.message });
     await record.update({
       status: "failed",
       error_message: error.message || "Unexpected background error occurred",
     });
+
+    // Refund quotas on uncaught exception
+    if (userId) {
+      try {
+        await refundGenerationQuotas({ userId, generationId });
+      } catch (refundErr) {
+        logger.error("VIDEO_WORKER_REFUND_ERROR", `Failed to issue quota refund for #${generationId}: ${refundErr.message}`, { generationId });
+      }
+    }
   }
 }
 
 /**
- * Queue a new video generation task
+ * Queue a new "diagram_and_video" generation task
  */
 export function enqueueVideoGeneration(generationId) {
   logger.info("VIDEO_QUEUE_ENQUEUE", `Enqueuing VideoGeneration ID #${generationId}...`, { generationId });
-  
-  // Non-blocking asynchronous execution in Node process
+
   setImmediate(() => {
     processVideoGeneration(generationId).catch((err) => {
       logger.error("VIDEO_QUEUE_WORKER_ERROR", `Background process error for ID #${generationId}: ${err.message}`, { generationId, error: err.message });

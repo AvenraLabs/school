@@ -4,6 +4,7 @@ import db from "../config/db.js";
 /* ===================== CORE ===================== */
 import School from "../modules/schools/school.model.js";
 import User from "../modules/users/user.model.js";
+import RefreshToken from "../modules/auth/refresh-token.model.js";
 import LostFoundItem from "../modules/lost-found/lost-found.model.js";
 import Feedback from "../modules/feedback/feedback.model.js";
 
@@ -138,6 +139,9 @@ const initAssociations = () => {
 
   User.hasOne(Teacher, { foreignKey: "user_id" });
   Teacher.belongsTo(User, { foreignKey: "user_id" });
+
+  User.hasMany(RefreshToken, { foreignKey: "user_id", onDelete: "CASCADE" });
+  RefreshToken.belongsTo(User, { foreignKey: "user_id" });
 
   /* ==================== STUDENT (LEGACY – KEEP) ==================== */
   Student.belongsTo(School, { foreignKey: "school_id" });

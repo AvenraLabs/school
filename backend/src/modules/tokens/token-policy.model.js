@@ -27,6 +27,12 @@ const TokenPolicy = db.define(
       defaultValue: 0,
     },
 
+    annual_image_generations: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+
     updated_by: {
       type: DataTypes.BIGINT,
       allowNull: true,

@@ -30,7 +30,7 @@ function getGcsOutputUri() {
 let aiInstance = null;
 let storageInstance = null;
 
-function getGenAIClient() {
+export function getGenAIClient() {
   if (!aiInstance) {
     aiInstance = new GoogleGenAI({
       vertexai: true,
@@ -41,14 +41,16 @@ function getGenAIClient() {
   return aiInstance;
 }
 
-function getStorageClient() {
+export function getStorageClient() {
   if (!storageInstance) {
     storageInstance = new Storage({ projectId: getGcpProject() });
   }
   return storageInstance;
 }
 
-function slugify(text) {
+export { getGcpProject, getGcsOutputUri };
+
+export function slugify(text) {
   if (!text) return "general";
   return String(text)
     .toLowerCase()

@@ -80,6 +80,27 @@ const VideoGeneration = db.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    // "diagram_only" (default) or "diagram_and_video" (opt-in)
+    content_type: {
+      type: DataTypes.ENUM("diagram_only", "diagram_and_video"),
+      allowNull: true,
+      defaultValue: "diagram_only",
+    },
+    // GCS gs:// URI for the labeled 2D diagram PNG
+    image_path: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    // Public HTTPS URL for the diagram PNG (CDN-served from GCS)
+    image_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    // Student-facing one-liner "what you'll learn" caption (≤15 words)
+    summary: {
+      type: DataTypes.STRING(200),
+      allowNull: true,
+    },
     completed_at: {
       type: DataTypes.DATE,
       allowNull: true,

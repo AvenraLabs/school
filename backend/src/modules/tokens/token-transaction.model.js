@@ -45,6 +45,22 @@ const TokenTransaction = db.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+
+    resource_type: {
+      type: DataTypes.ENUM("tokens", "video_seconds", "image_generations"),
+      allowNull: false,
+      defaultValue: "tokens",
+    },
+
+    ref_id: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+    },
+
+    reason: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
   },
   {
     tableName: "token_transactions",

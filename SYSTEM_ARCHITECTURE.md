@@ -64,8 +64,8 @@ SchoolIQ is a multi-tenant, enterprise-grade AI-powered School Management ERP sy
 - **Middleware Isolation**: The `protect` middleware resolves the user identity from Redis/DB and attaches `req.user.school_id`. All controllers enforce `school_id` scoping in query predicates (`where: { school_id }`).
 
 ### Authentication & Authorization
-- **Dual Token JWT Architecture**: Short-lived Access Tokens (`JWT_EXPIRES_IN=15m`) containing `id`, `role`, `school_id`, `school_board`, and profile claims (`teacher_id`, `student_id`, `driver_id`), paired with long-lived Refresh Tokens (`REFRESH_TOKEN_EXPIRES_IN=30d`) stored in the database (`users.refresh_token`).
-- **Silent Token Rotation & Revocation**: Client apps (`adminpanel` & `pwa`) use automated Axios interceptors to silently exchange refresh tokens for new access tokens upon HTTP `401`. Refresh tokens are rotated on each exchange and revoked immediately on logout, password changes, or admin password resets.
+- **Dual Token JWT Architecture**: Short-lived Access Tokens (`JWT_EXPIRES_IN=15m`) containing `id`, `role`, `school_id`, `school_board`, and profile claims (`teacher_id`, `student_id`, `driver_id`), paired with long-lived Refresh Tokens (`REFRESH_TOKEN_EXPIRES_IN=30d`) stored in a multi-device database table (`refresh_tokens`).
+- **Silent Token Rotation & Revocation**: Client apps (`adminpanel` & `pwa`) use automated Axios interceptors to silently exchange refresh tokens for new access tokens upon HTTP `401`. Refresh tokens are stored per device/session in `refresh_tokens`, rotated on each exchange, and revoked immediately on logout, password changes, or admin password resets.
 - **Role-based Access Control (RBAC)**: `allowRoles("super_admin", "school_admin", "teacher", "student", "driver")` middleware guards endpoints.
 - **Identity Caching**: Auth identities are cached in Redis (`auth:identity:<userId>`) for 5 minutes to ensure high performance without database spam.
 
