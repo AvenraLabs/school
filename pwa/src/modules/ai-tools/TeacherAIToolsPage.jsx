@@ -1351,6 +1351,7 @@ export default function TeacherAIToolsPage() {
                                 id: vid.id,
                                 status: "completed",
                                 videoUrl: vid.video_url,
+                                streamUrl: vid.stream_url || `/api/ai/videos/stream/${vid.id}`,
                                 topic: vid.topic,
                               });
                               setVideoModalOpen(true);
@@ -2263,11 +2264,11 @@ export default function TeacherAIToolsPage() {
                 This usually takes 1-2 minutes. You can leave this open while it renders.
               </Typography>
             </Box>
-          ) : activeVideoJob?.status === "completed" && activeVideoJob?.videoUrl ? (
+          ) : activeVideoJob?.status === "completed" && (activeVideoJob?.videoUrl || activeVideoJob?.streamUrl || activeVideoJob?.stream_url) ? (
             <Stack spacing={2} sx={{ pt: 1 }}>
               <Box sx={{ borderRadius: "12px", overflow: "hidden", border: "1px solid #e2e8f0", bgcolor: "#000000" }}>
                 <video
-                  src={getAssetUrl(activeVideoJob.videoUrl)}
+                  src={getAssetUrl(activeVideoJob.streamUrl || activeVideoJob.stream_url || activeVideoJob.videoUrl)}
                   controls
                   autoPlay
                   style={{ width: "100%", maxHeight: "350px", display: "block" }}
@@ -2277,7 +2278,7 @@ export default function TeacherAIToolsPage() {
                 variant="contained"
                 startIcon={<GetApp />}
                 component="a"
-                href={getAssetUrl(activeVideoJob.videoUrl)}
+                href={getAssetUrl(activeVideoJob.streamUrl || activeVideoJob.stream_url || activeVideoJob.videoUrl)}
                 download
                 target="_blank"
                 sx={{ borderRadius: "12px", fontWeight: 800, textTransform: "none", bgcolor: "#8b5cf6", "&:hover": { bgcolor: "#7c3aed" } }}

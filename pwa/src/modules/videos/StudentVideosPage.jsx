@@ -181,7 +181,7 @@ export default function StudentVideosPage() {
             <Stack spacing={2} sx={{ pt: 1 }}>
               <Box sx={{ borderRadius: "12px", overflow: "hidden", border: "1px solid #e2e8f0", bgcolor: "#000000" }}>
                 <video
-                  src={getAssetUrl(activeVideo.video_url)}
+                  src={getAssetUrl(activeVideo.stream_url || activeVideo.video_url)}
                   controls
                   autoPlay
                   style={{ width: "100%", maxHeight: "350px", display: "block" }}
@@ -191,7 +191,7 @@ export default function StudentVideosPage() {
                 variant="contained"
                 startIcon={<GetApp />}
                 component="a"
-                href={getAssetUrl(activeVideo.video_url)}
+                href={getAssetUrl(activeVideo.stream_url || activeVideo.video_url)}
                 download
                 target="_blank"
                 sx={{ borderRadius: "12px", fontWeight: 800, textTransform: "none", bgcolor: "#8b5cf6", "&:hover": { bgcolor: "#7c3aed" } }}

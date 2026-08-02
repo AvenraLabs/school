@@ -7,9 +7,13 @@ import {
   getTeacherVideos,
   getStudentClassVideos,
   deleteVideoGeneration,
+  streamVideo,
 } from "./video-generation.controller.js";
 
 const router = Router();
+
+// Allow public streaming of generated educational video assets by ID for standard HTML5 video tags
+router.get("/stream/:id", streamVideo);
 
 router.use(protect);
 router.use(requireModuleEnabled("ai_video"));

@@ -6,6 +6,7 @@ import Student from "../students/student.model.js";
 import Class from "../classes/classes.model.js";
 import { Op } from "sequelize";
 import AiChatLog from "../ai-chat-logs/ai-chat-log.model.js";
+import { Storage } from "@google-cloud/storage";
 import {
   deductTokens,
   ensureTokenAccount,
@@ -144,12 +145,16 @@ export async function getVideoGenerationStatus(req, res, next) {
       throw new AppError("Video generation job not found", 404);
     }
 
+    const streamUrl = `/api/ai/videos/stream/${videoGen.id}`;
+
     res.json({
       status: "success",
       data: {
         id: videoGen.id,
         status: videoGen.status, // "pending", "processing", "completed", "failed"
-        videoUrl: videoGen.video_url,
+        videoUrl: streamUrl || videoGen.video_url,
+        streamUrl,
+        gcsPublicUrl: videoGen.video_url,
         topic: videoGen.topic,
         subjectName: videoGen.subject_name,
         duration: videoGen.duration,
@@ -177,10 +182,16 @@ export async function getTeacherVideos(req, res, next) {
       }
     }
 
-    const videos = await VideoGeneration.findAll({
+    const rawVideos = await VideoGeneration.findAll({
       where: whereClause,
       order: [["created_at", "DESC"]],
       limit: 30,
+    });
+
+    const videos = rawVideos.map((v) => {
+      const json = v.toJSON();
+      json.stream_url = `/api/ai/videos/stream/${v.id}`;
+      return json;
     });
 
     res.json({
@@ -205,13 +216,19 @@ export async function getStudentClassVideos(req, res, next) {
       throw new AppError("Student profile not found", 404);
     }
 
-    const videos = await VideoGeneration.findAll({
+    const rawVideos = await VideoGeneration.findAll({
       where: {
         class_id: student.class_id,
         status: "completed",
       },
       order: [["created_at", "DESC"]],
       limit: 30,
+    });
+
+    const videos = rawVideos.map((v) => {
+      const json = v.toJSON();
+      json.stream_url = `/api/ai/videos/stream/${v.id}`;
+      return json;
     });
 
     res.json({
@@ -248,4 +265,87 @@ export async function deleteVideoGeneration(req, res, next) {
     next(error);
   }
 }
+
+/**
+ * GET /api/ai/videos/stream/:id
+ * Streams video directly from GCS with HTTP 206 partial content support
+ */
+export async function streamVideo(req, res, next) {
+  try {
+    const { id } = req.params;
+    const videoGen = await VideoGeneration.findByPk(id);
+
+    if (!videoGen) {
+      throw new AppError("Video record not found", 404);
+    }
+
+    const gcsUri = videoGen.video_path || videoGen.video_url;
+    if (!gcsUri) {
+      throw new AppError("No video file associated with this record", 404);
+    }
+
+    let bucketName = null;
+    let objectPath = null;
+
+    if (gcsUri.startsWith("gs://")) {
+      const match = gcsUri.match(/^gs:\/\/([^\/]+)\/(.+)$/);
+      if (match) {
+        bucketName = match[1];
+        objectPath = match[2];
+      }
+    } else if (gcsUri.startsWith("https://storage.googleapis.com/")) {
+      const match = gcsUri.match(/^https:\/\/storage\.googleapis\.com\/([^\/]+)\/(.+)$/);
+      if (match) {
+        bucketName = match[1];
+        objectPath = match[2];
+      }
+    }
+
+    if (!bucketName || !objectPath) {
+      return res.redirect(gcsUri);
+    }
+
+    const project = process.env.GCP_PROJECT || process.env.GCP_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT;
+    const storage = new Storage({ projectId: project });
+    const file = storage.bucket(bucketName).file(objectPath);
+
+    const [exists] = await file.exists();
+    if (!exists) {
+      throw new AppError("Video file does not exist in Cloud Storage bucket", 404);
+    }
+
+    const [metadata] = await file.getMetadata();
+    const fileSize = parseInt(metadata.size, 10);
+    const contentType = metadata.contentType || "video/mp4";
+
+    const range = req.headers.range;
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = end - start + 1;
+
+      res.writeHead(206, {
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": chunksize,
+        "Content-Type": contentType,
+        "Access-Control-Allow-Origin": "*",
+      });
+
+      file.createReadStream({ start, end }).pipe(res);
+    } else {
+      res.writeHead(200, {
+        "Content-Length": fileSize,
+        "Content-Type": contentType,
+        "Access-Control-Allow-Origin": "*",
+      });
+
+      file.createReadStream().pipe(res);
+    }
+  } catch (error) {
+    next(error);
+  }
+}
+
 
