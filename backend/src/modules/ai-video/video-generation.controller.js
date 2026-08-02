@@ -152,7 +152,7 @@ export async function getVideoGenerationStatus(req, res, next) {
       data: {
         id: videoGen.id,
         status: videoGen.status, // "pending", "processing", "completed", "failed"
-        videoUrl: streamUrl || videoGen.video_url,
+        videoUrl: videoGen.video_url || streamUrl,
         streamUrl,
         gcsPublicUrl: videoGen.video_url,
         topic: videoGen.topic,
@@ -268,7 +268,7 @@ export async function deleteVideoGeneration(req, res, next) {
 
 /**
  * GET /api/ai/videos/stream/:id
- * Streams video directly from GCS with HTTP 206 partial content support
+ * Streams video directly from GCS or redirects to public GCS URL
  */
 export async function streamVideo(req, res, next) {
   try {
@@ -279,9 +279,14 @@ export async function streamVideo(req, res, next) {
       throw new AppError("Video record not found", 404);
     }
 
-    const gcsUri = videoGen.video_path || videoGen.video_url;
+    const gcsUri = videoGen.video_url || videoGen.video_path;
     if (!gcsUri) {
       throw new AppError("No video file associated with this record", 404);
+    }
+
+    // Direct public GCS HTTP/HTTPS URL -> redirect for high speed CDN streaming
+    if (gcsUri.startsWith("http://") || gcsUri.startsWith("https://")) {
+      return res.redirect(302, gcsUri);
     }
 
     let bucketName = null;
@@ -293,16 +298,10 @@ export async function streamVideo(req, res, next) {
         bucketName = match[1];
         objectPath = match[2];
       }
-    } else if (gcsUri.startsWith("https://storage.googleapis.com/")) {
-      const match = gcsUri.match(/^https:\/\/storage\.googleapis\.com\/([^\/]+)\/(.+)$/);
-      if (match) {
-        bucketName = match[1];
-        objectPath = match[2];
-      }
     }
 
     if (!bucketName || !objectPath) {
-      return res.redirect(gcsUri);
+      return res.redirect(302, gcsUri);
     }
 
     const project = process.env.GCP_PROJECT || process.env.GCP_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT;
