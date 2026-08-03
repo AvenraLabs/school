@@ -20,6 +20,7 @@ import {
 } from "@mui/icons-material";
 import { tokens } from "../../theme/tokens";
 import { formatDate } from "../../utils/date";
+import { getAssetUrl } from "../../utils/asset";
 
 export default function ContentTile({
   item,
@@ -32,7 +33,9 @@ export default function ContentTile({
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
 
   const hasVideo = Boolean(item.video_url || (item.content_type === "diagram_and_video" && item.video_path));
-  const hasDiagram = Boolean(item.image_url) && !imgError;
+  const rawImgUrl = item.image_url || item.imageUrl || item.image_path;
+  const diagramUrl = rawImgUrl ? getAssetUrl(rawImgUrl) : null;
+  const hasDiagram = Boolean(diagramUrl) && !imgError;
   const isMenuOpen = Boolean(menuAnchorEl);
 
   const handleMenuOpen = (e) => {
@@ -83,7 +86,7 @@ export default function ContentTile({
       >
         {hasDiagram ? (
           <img
-            src={item.image_url}
+            src={diagramUrl}
             alt={item.topic}
             decoding="async"
             loading="eager"

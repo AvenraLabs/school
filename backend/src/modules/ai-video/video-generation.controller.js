@@ -39,6 +39,7 @@ function serializeVideoGen(v) {
     }
   }
 
+  json.imageUrl = json.image_url || null;
   return json;
 }
 

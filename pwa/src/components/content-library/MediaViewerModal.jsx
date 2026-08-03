@@ -1,22 +1,41 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Dialog,
   IconButton,
   Typography,
   Chip,
+  Button,
+  ButtonGroup,
+  CircularProgress,
   useTheme,
 } from "@mui/material";
 import { Close, GetApp, OndemandVideo, ImageOutlined } from "@mui/icons-material";
 import { tokens } from "../../theme/tokens";
+import { getAssetUrl } from "../../utils/asset";
 
 export default function MediaViewerModal({ open, item, onClose }) {
   const theme = useTheme();
   if (!item) return null;
 
   const hasVideo = Boolean(item.video_url || (item.content_type === "diagram_and_video" && item.video_path));
-  const hasDiagram = Boolean(item.image_url);
-  const mediaUrl = item.video_url || item.image_url || (hasVideo ? item.stream_url : null);
+  const rawImgUrl = item.image_url || item.imageUrl || item.image_path;
+  const diagramUrl = rawImgUrl ? getAssetUrl(rawImgUrl) : null;
+  const hasDiagram = Boolean(diagramUrl);
+
+  const [activeMedia, setActiveMedia] = useState(hasVideo ? "video" : "diagram");
+
+  useEffect(() => {
+    if (hasVideo) {
+      setActiveMedia("video");
+    } else if (hasDiagram) {
+      setActiveMedia("diagram");
+    }
+  }, [hasVideo, hasDiagram, item?.id]);
+
+  const activeMediaUrl = activeMedia === "video"
+    ? (item.video_url || item.stream_url)
+    : (diagramUrl || item.video_url || item.stream_url);
 
   return (
     <Dialog
@@ -73,7 +92,7 @@ export default function MediaViewerModal({ open, item, onClose }) {
           <Close />
         </IconButton>
 
-        {/* Center Title & Subject Chip */}
+        {/* Center Title, Subject Chip, and Dual-Media Toggle Buttons */}
         <Box sx={{ flex: 1, minWidth: 0, textAlign: "center" }}>
           <Typography
             variant="subtitle1"
@@ -87,6 +106,7 @@ export default function MediaViewerModal({ open, item, onClose }) {
           >
             {item.topic}
           </Typography>
+
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mt: 0.5 }}>
             <Chip
               label={item.subject_name || "General"}
@@ -100,26 +120,71 @@ export default function MediaViewerModal({ open, item, onClose }) {
                 borderRadius: `${tokens.radius.sm}px`,
               }}
             />
-            <Chip
-              label={hasVideo ? "Video" : "Diagram"}
-              size="small"
-              sx={{
-                bgcolor: "rgba(255, 255, 255, 0.2)",
-                color: "#ffffff",
-                fontWeight: 700,
-                fontSize: "0.65rem",
-                height: 20,
-                borderRadius: `${tokens.radius.sm}px`,
-              }}
-            />
+
+            {hasVideo && hasDiagram ? (
+              /* Toggle Buttons when both Video and Picture/Diagram are generated */
+              <Box sx={{ display: "inline-flex", bgcolor: "rgba(255, 255, 255, 0.15)", borderRadius: "12px", p: "2px" }}>
+                <Button
+                  size="small"
+                  onClick={() => setActiveMedia("video")}
+                  startIcon={<OndemandVideo sx={{ fontSize: 14 }} />}
+                  sx={{
+                    px: 1.2,
+                    py: 0.2,
+                    minHeight: 22,
+                    fontSize: "0.65rem",
+                    fontWeight: 800,
+                    textTransform: "none",
+                    borderRadius: "10px",
+                    bgcolor: activeMedia === "video" ? theme.palette.primary.main : "transparent",
+                    color: activeMedia === "video" ? "#ffffff" : "rgba(255,255,255,0.7)",
+                    "&:hover": { bgcolor: activeMedia === "video" ? theme.palette.primary.main : "rgba(255,255,255,0.2)" },
+                  }}
+                >
+                  AI Video
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => setActiveMedia("diagram")}
+                  startIcon={<ImageOutlined sx={{ fontSize: 14 }} />}
+                  sx={{
+                    px: 1.2,
+                    py: 0.2,
+                    minHeight: 22,
+                    fontSize: "0.65rem",
+                    fontWeight: 800,
+                    textTransform: "none",
+                    borderRadius: "10px",
+                    bgcolor: activeMedia === "diagram" ? theme.palette.primary.main : "transparent",
+                    color: activeMedia === "diagram" ? "#ffffff" : "rgba(255,255,255,0.7)",
+                    "&:hover": { bgcolor: activeMedia === "diagram" ? theme.palette.primary.main : "rgba(255,255,255,0.2)" },
+                  }}
+                >
+                  Labeled Picture
+                </Button>
+              </Box>
+            ) : (
+              <Chip
+                label={hasVideo ? "Video" : "Diagram"}
+                size="small"
+                sx={{
+                  bgcolor: "rgba(255, 255, 255, 0.2)",
+                  color: "#ffffff",
+                  fontWeight: 700,
+                  fontSize: "0.65rem",
+                  height: 20,
+                  borderRadius: `${tokens.radius.sm}px`,
+                }}
+              />
+            )}
           </Box>
         </Box>
 
-        {/* Top-Right Download Icon Button (44x44px target) */}
-        {mediaUrl ? (
+        {/* Top-Right Download Icon Button */}
+        {activeMediaUrl ? (
           <IconButton
             component="a"
-            href={mediaUrl}
+            href={activeMediaUrl}
             download
             target="_blank"
             rel="noopener noreferrer"
@@ -154,7 +219,19 @@ export default function MediaViewerModal({ open, item, onClose }) {
           bgcolor: "#000000",
         }}
       >
-        {hasVideo ? (
+        {item.status === "processing" ? (
+          <Box sx={{ textAlign: "center", color: "#94a3b8", p: 4, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <CircularProgress size={48} sx={{ color: theme.palette.primary.main }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#ffffff" }}>
+              {item.contentType === "diagram_and_video" || item.content_type === "diagram_and_video"
+                ? "Generating AI Video & Labeled Diagram..."
+                : "Generating Labeled Educational Diagram..."}
+            </Typography>
+            <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: 600 }}>
+              This may take a few moments. You can close this view and check back anytime.
+            </Typography>
+          </Box>
+        ) : activeMedia === "video" && hasVideo ? (
           <video
             src={item.video_url || item.stream_url}
             controls
@@ -169,7 +246,7 @@ export default function MediaViewerModal({ open, item, onClose }) {
           />
         ) : hasDiagram ? (
           <img
-            src={item.image_url}
+            src={diagramUrl}
             alt={item.topic}
             style={{
               maxWidth: "100%",
@@ -179,10 +256,10 @@ export default function MediaViewerModal({ open, item, onClose }) {
             }}
           />
         ) : (
-          <Box sx={{ textAlign: "center", color: "#94a3b8", p: 3 }}>
-            <OndemandVideo sx={{ fontSize: 48, mb: 1, color: "#64748b" }} />
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              Content generation is processing...
+          <Box sx={{ textAlign: "center", color: "#94a3b8", p: 4, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <CircularProgress size={48} sx={{ color: theme.palette.primary.main }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#ffffff" }}>
+              Loading media content...
             </Typography>
           </Box>
         )}

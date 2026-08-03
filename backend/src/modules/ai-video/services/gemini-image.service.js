@@ -101,49 +101,69 @@ export async function generateEducationalDiagram({ topic, classLevel, subjectNam
     logger.info("DIAGRAM_PROMPT_READY", `Imagen prompt built for "${topic}"`, { imagePrompt: imagePrompt.slice(0, 120) });
 
     const ai = getGenAIClient();
-    const imagenModel = process.env.IMAGEN_MODEL_NAME || "gemini-2.5-flash-image";
+    const candidateModels = [
+      process.env.IMAGEN_MODEL_NAME,
+      "imagen-3.0-generate-002",
+      "imagen-3.0-fast-generate-001",
+      "gemini-2.5-flash",
+    ].filter(Boolean);
+
+    // Deduplicate candidate models
+    const uniqueModels = Array.from(new Set(candidateModels));
 
     let imageBuffer = null;
+    let lastError = null;
 
-    if (imagenModel.includes("flash-image") || imagenModel.startsWith("gemini-")) {
-      const imageResponse = await ai.models.generateContent({
-        model: imagenModel,
-        contents: imagePrompt,
-        config: {
-          responseModalities: ["IMAGE"],
-          imageConfig: {
-            aspectRatio: "1:1",
-          },
-        },
-      });
+    for (const modelName of uniqueModels) {
+      try {
+        if (modelName.startsWith("gemini-")) {
+          const imageResponse = await ai.models.generateContent({
+            model: modelName,
+            contents: imagePrompt,
+            config: {
+              responseModalities: ["IMAGE"],
+              imageConfig: {
+                aspectRatio: "1:1",
+              },
+            },
+          });
 
-      const candidates = imageResponse?.candidates || [];
-      const parts = candidates[0]?.content?.parts || imageResponse?.parts || [];
-      const imagePart = parts.find((part) => part.inlineData || part.inline_data);
-      const base64Data = imagePart?.inlineData?.data || imagePart?.inline_data?.data;
+          const candidates = imageResponse?.candidates || [];
+          const parts = candidates[0]?.content?.parts || imageResponse?.parts || [];
+          const imagePart = parts.find((part) => part.inlineData || part.inline_data);
+          const base64Data = imagePart?.inlineData?.data || imagePart?.inline_data?.data;
 
-      if (!base64Data) {
-        throw new Error("Model returned a response but no image data was found.");
+          if (base64Data) {
+            imageBuffer = Buffer.from(base64Data, "base64");
+            logger.info("DIAGRAM_GEN_SUCCESS", `Diagram generated using model "${modelName}"`);
+            break;
+          }
+        } else {
+          const imageResponse = await ai.models.generateImages({
+            model: modelName,
+            prompt: imagePrompt,
+            config: { numberOfImages: 1, outputMimeType: "image/png" },
+          });
+
+          const generatedImage = imageResponse?.generatedImages?.[0]?.image;
+          if (generatedImage?.imageBytes) {
+            imageBuffer = Buffer.from(generatedImage.imageBytes, "base64");
+            logger.info("DIAGRAM_GEN_SUCCESS", `Diagram generated using model "${modelName}"`);
+            break;
+          }
+        }
+      } catch (mErr) {
+        logger.warn("DIAGRAM_MODEL_RETRY", `Diagram generation model "${modelName}" failed: ${mErr.message}. Trying next candidate model.`);
+        lastError = mErr;
       }
+    }
 
-      imageBuffer = Buffer.from(base64Data, "base64");
-    } else {
-      const imageResponse = await ai.models.generateImages({
-        model: imagenModel,
-        prompt: imagePrompt,
-        config: { numberOfImages: 1, outputMimeType: "image/png" },
-      });
-
-      const generatedImage = imageResponse?.generatedImages?.[0]?.image;
-      if (!generatedImage?.imageBytes) {
-        throw new Error("Imagen returned no image bytes");
-      }
-
-      imageBuffer = Buffer.from(generatedImage.imageBytes, "base64");
+    if (!imageBuffer) {
+      throw lastError || new Error("All image generation candidate models failed.");
     }
 
     const rawGcsBase = getGcsOutputUri();
-    const bucketMatch = rawGcsBase.match(/^gs:\/\/([^/]+)\//);
+    const bucketMatch = rawGcsBase.match(/^gs:\/\/([^/]+)/);
     if (!bucketMatch) throw new Error(`Cannot parse bucket from GCS_OUTPUT_URI: ${rawGcsBase}`);
     const bucketName = bucketMatch[1];
 

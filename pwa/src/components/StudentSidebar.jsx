@@ -55,7 +55,6 @@ export default function StudentSidebar({ open, onClose }) {
   ];
 
   const schoolLifeItems = [
-    { label: "My Bus",       icon: <DirectionsBus />, path: "/student/transport" },
     { label: "Group Chat",   icon: <Chat />,          path: "/student/group-chat" },
     { label: "Lost & Found", icon: <Search />,        path: "/student/lost-found" },
   ];

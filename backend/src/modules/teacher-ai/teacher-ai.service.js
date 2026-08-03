@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import { getAiClient, getGeminiModel } from "../rag/shared/aiClient.js";
 import { getTeacherChapter } from "../rag/runtime/getTeacherChapter.js";
 import { isLanguageSubject } from "../rag/runtime/detectSubject.js";
@@ -478,6 +479,31 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
     await recordTeacherUsage(quizPrompt, result.text, "quiz");
 
     const parsed = parseGeminiJson(result.text || "");
+    const quizTitle = parsed.title || safeTitle || `${finalSubject} Quiz`;
+
+    // Idempotency check: prevent duplicate quiz creation within 15 seconds
+    const fifteenSecsAgo = new Date(Date.now() - 15000);
+    const existingQuiz = await TeacherQuiz.findOne({
+      where: {
+        school_id: user.school_id,
+        teacher_id: user.id,
+        class_id: classId,
+        title: quizTitle,
+        created_at: { [Op.gte]: fifteenSecsAgo },
+      },
+      order: [["created_at", "DESC"]],
+    });
+
+    if (existingQuiz) {
+      return {
+        feature: "teacher_quiz",
+        quizId: existingQuiz.id,
+        data: parsed,
+        publishedToClassId: classId,
+        message: "Quiz homework successfully created and published to students!",
+        meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount },
+      };
+    }
 
     // Create TeacherQuiz in Database
     const quiz = await TeacherQuiz.create({
@@ -487,7 +513,7 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
       section_id: sectionId || null,
       subject: finalSubject,
       chapter: chapList.join(", "),
-      title: parsed.title || safeTitle || `${finalSubject} Quiz`,
+      title: quizTitle,
       instructions: parsed.instructions || safeInstructions || "Complete the quiz assignment.",
       difficulty,
       total_marks: (parsed.questions || []).reduce((sum, q) => sum + (q.marks || 1), 0),
@@ -536,6 +562,23 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
 export async function saveTeacherAiDocumentService({ user, type, title, board, grade, subject, chapters, content, status = "saved" }) {
   if (!type || !title || !content) {
     throw new AppError("Type, title, and content are required to save document", 400);
+  }
+
+  // Idempotency check: block duplicate document saving for exact same title, type, and teacher within 15 seconds
+  const fifteenSecsAgo = new Date(Date.now() - 15000);
+  const existingDoc = await TeacherAiDocument.findOne({
+    where: {
+      teacher_id: user.id,
+      school_id: user.school_id,
+      type,
+      title,
+      created_at: { [Op.gte]: fifteenSecsAgo },
+    },
+    order: [["created_at", "DESC"]],
+  });
+
+  if (existingDoc) {
+    return existingDoc;
   }
 
   const doc = await TeacherAiDocument.create({

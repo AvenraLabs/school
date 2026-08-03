@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   Box,
   Typography,
@@ -520,6 +520,7 @@ export default function TeacherAIToolsPage() {
 
   const [selectedToolKey, setSelectedToolKey] = useState(null); // null | 'question_paper' | 'lesson_plan' | 'lesson_summary' | 'teacher_quiz' | 'saved_drafts'
   const [loading, setLoading] = useState(false);
+  const isGeneratingRef = useRef(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
@@ -927,7 +928,8 @@ export default function TeacherAIToolsPage() {
   }, []);
 
   const handleGenerate = async () => {
-    if (!selectedToolKey || selectedToolKey === "saved_drafts" || loading) return;
+    if (!selectedToolKey || selectedToolKey === "saved_drafts" || loading || isGeneratingRef.current) return;
+    isGeneratingRef.current = true;
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
@@ -1106,6 +1108,7 @@ export default function TeacherAIToolsPage() {
       setErrorMsg(err.response?.data?.message || err.message || "Failed to generate AI content. Please try again.");
     } finally {
       setLoading(false);
+      isGeneratingRef.current = false;
     }
   };
 
