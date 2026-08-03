@@ -109,7 +109,7 @@ export async function createVideoGeneration(req, res, next) {
     const cleanLanguage = language || "English";
     const resolvedSubjectName = subjectName ? subjectName.trim() : "General";
 
-    // Idempotency Check: Block rapid duplicate requests for the same topic within 15 seconds
+    // Idempotency Check: Return completed job for identical request within 15 seconds
     const fifteenSecsAgo = new Date(Date.now() - 15000);
     const existingJob = await VideoGeneration.findOne({
       where: {
@@ -117,6 +117,7 @@ export async function createVideoGeneration(req, res, next) {
         topic: topic.trim(),
         subject_name: resolvedSubjectName,
         content_type,
+        status: "completed",
         createdAt: { [Op.gte]: fifteenSecsAgo },
       },
       order: [["createdAt", "DESC"]],
@@ -125,10 +126,10 @@ export async function createVideoGeneration(req, res, next) {
     if (existingJob) {
       return res.status(200).json({
         status: "success",
-        message: existingJob.status === "completed" ? "Diagram generated successfully" : "Generation request is already in progress",
+        message: "Diagram generated successfully",
         data: {
           jobId: existingJob.id,
-          status: existingJob.status,
+          status: "completed",
           contentType: existingJob.content_type,
           topic: existingJob.topic,
           imageUrl: existingJob.image_url,
@@ -292,6 +293,26 @@ export async function getTeacherVideos(req, res, next) {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
     const offset = (page - 1) * limit;
     const subjectFilter = req.query.subjectName || req.query.subject;
+
+    // Auto-cleanup: Mark any stale jobs stuck in "processing" for > 10 minutes as "failed" and refund quotas
+    const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const staleJobs = await VideoGeneration.findAll({
+      where: {
+        status: "processing",
+        createdAt: { [Op.lt]: tenMinsAgo },
+      },
+    });
+
+    for (const staleJob of staleJobs) {
+      if (req.user?.id) {
+        try {
+          await refundGenerationQuotas({ userId: req.user.id, generationId: staleJob.id });
+        } catch (rErr) {
+          // ignore refund errors if already refunded
+        }
+      }
+      await staleJob.update({ status: "failed", error_message: "Generation timed out" });
+    }
 
     let baseWhere = {
       status: { [Op.in]: ["completed", "processing"] },
