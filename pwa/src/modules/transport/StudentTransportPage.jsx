@@ -171,67 +171,59 @@ export default function StudentTransportPage() {
     setMapsLoaded(false);
   }, [googleMapsEnabled]);
 
-  // Dynamic Map Script Loader (Google Maps or Leaflet)
+  // Dynamic Leaflet OpenStreetMap Loader
   useEffect(() => {
-    if (googleMapsEnabled) {
-      if (window.google && window.google.maps) {
-        setMapsLoaded(true);
-        return;
-      }
-      // Load Google Maps API script
-      const scriptId = "google-maps-api-script";
-      if (document.getElementById(scriptId)) {
-        const checkExist = setInterval(() => {
-          if (window.google && window.google.maps) {
-            setMapsLoaded(true);
-            clearInterval(checkExist);
+    // Add pulse animation style to document head if not already present
+    if (!document.getElementById("leaflet-pulse-style")) {
+      const style = document.createElement("style");
+      style.id = "leaflet-pulse-style";
+      style.innerHTML = `
+        @keyframes marker-pulse {
+          0% {
+            transform: scale(0.6);
+            opacity: 0.9;
           }
-        }, 100);
-        return;
-      }
-      const script = document.createElement("script");
-      script.id = scriptId;
-      const key = import.meta.env.VITE_GOOGLE_MAPS_KEY || "";
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${key}`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => setMapsLoaded(true);
-      document.head.appendChild(script);
-    } else {
-      // Add pulse animation style to document head if not already present
-      if (!document.getElementById("leaflet-pulse-style")) {
-        const style = document.createElement("style");
-        style.id = "leaflet-pulse-style";
-        style.innerHTML = `
-          @keyframes marker-pulse {
-            0% {
-              transform: scale(0.6);
-              opacity: 0.9;
-            }
-            100% {
-              transform: scale(2.2);
-              opacity: 0;
-            }
+          100% {
+            transform: scale(2.2);
+            opacity: 0;
           }
-        `;
-        document.head.appendChild(style);
-      }
-
-      if (window.L) {
-        setMapsLoaded(true);
-        return;
-      }
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(link);
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js";
-      script.async = true;
-      script.onload = () => setMapsLoaded(true);
-      document.head.appendChild(script);
+        }
+      `;
+      document.head.appendChild(style);
     }
-  }, [googleMapsEnabled]);
+
+    if (window.L) {
+      setMapsLoaded(true);
+      return;
+    }
+
+    const leafletCssId = "leaflet-css-styles";
+    if (!document.getElementById(leafletCssId)) {
+      const link = document.createElement("link");
+      link.id = leafletCssId;
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    const scriptId = "leaflet-js-script";
+    if (document.getElementById(scriptId)) {
+      const checkExist = setInterval(() => {
+        if (window.L) {
+          setMapsLoaded(true);
+          clearInterval(checkExist);
+        }
+      }, 100);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = scriptId;
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.async = true;
+    script.onload = () => setMapsLoaded(true);
+    document.head.appendChild(script);
+  }, []);
 
   // Update Map marker
   useEffect(() => {

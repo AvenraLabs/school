@@ -186,15 +186,20 @@ export async function generateTeacherAiService({
     await assertHasTokenBalance(user.id);
   }
 
-  async function recordTeacherUsage(promptText, resText, aiType, refId = null) {
+  async function recordTeacherUsage(promptText, resText, aiType, refId = null, resultObj = null) {
     if (!user?.id) return;
-    const tokensUsed = Math.max(150, Math.ceil(((promptText?.length || 0) + (resText?.length || 0)) / 4));
+    const usage = resultObj?.usageMetadata || {};
+    const promptTokens = usage.promptTokenCount || 0;
+    const candidateTokens = usage.candidatesTokenCount || 0;
+    const tokensUsed = usage.totalTokenCount || (promptTokens + candidateTokens);
     
     const log = await AiChatLog.create({
       user_id: user.id,
       user_query: String(title || topic || feature || "Teacher AI").slice(0, 250),
       ai_response: String(resText || "").slice(0, 500),
       tokens_used: tokensUsed,
+      prompt_tokens: promptTokens,
+      candidate_tokens: candidateTokens,
       model_used: GEMINI_MODEL,
       ai_type: aiType,
       class_level: String(finalGrade || ""),
@@ -292,7 +297,7 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
 `;
 
     const result = await safeGenerateContent(ai, GEMINI_MODEL, paperPrompt);
-    await recordTeacherUsage(paperPrompt, result.text, "question_paper");
+    await recordTeacherUsage(paperPrompt, result.text, "question_paper", null, result);
 
     const parsed = parseGeminiJson(result.text || "");
     return {
@@ -365,7 +370,7 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
 `;
 
     const result = await safeGenerateContent(ai, GEMINI_MODEL, planPrompt);
-    await recordTeacherUsage(planPrompt, result.text, "lesson_summary");
+    await recordTeacherUsage(planPrompt, result.text, "lesson_summary", null, result);
 
     const parsed = parseGeminiJson(result.text || "");
     return {
@@ -422,7 +427,7 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
 `;
 
     const result = await safeGenerateContent(ai, GEMINI_MODEL, summaryPrompt);
-    await recordTeacherUsage(summaryPrompt, result.text, "summary");
+    await recordTeacherUsage(summaryPrompt, result.text, "summary", null, result);
 
     const parsed = parseGeminiJson(result.text || "");
     return {
@@ -476,7 +481,7 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
 `;
 
     const result = await safeGenerateContent(ai, GEMINI_MODEL, quizPrompt);
-    await recordTeacherUsage(quizPrompt, result.text, "quiz");
+    await recordTeacherUsage(quizPrompt, result.text, "quiz", null, result);
 
     const parsed = parseGeminiJson(result.text || "");
     const quizTitle = parsed.title || safeTitle || `${finalSubject} Quiz`;

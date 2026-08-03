@@ -87,16 +87,6 @@ export function FinanceDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Top Action Bar */}
-      <Card className="p-3">
-        <div className="flex items-center justify-between gap-3 text-xs">
-          <span className="font-bold text-[#14213D]">Real-Time Cash Flow & Analytics</span>
-          <Button variant="outline" size="sm" icon={RefreshCw} onClick={fetchDashboardData}>
-            Refresh Stats
-          </Button>
-        </div>
-      </Card>
-
       {/* KPI Cards Grid — 6 Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatsCard

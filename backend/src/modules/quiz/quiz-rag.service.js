@@ -78,9 +78,10 @@ export async function generateQuizFromAi({
     throw new AppError("AI returned invalid quiz format", 500);
   }
 
-  const tokensUsed =
-    result.usageMetadata?.totalTokenCount ||
-    Math.max(150, Math.ceil((prompt.length + text.length) / 4));
+  const usage = result.usageMetadata || {};
+  const promptTokens = usage.promptTokenCount || 0;
+  const candidateTokens = usage.candidatesTokenCount || 0;
+  const tokensUsed = usage.totalTokenCount || (promptTokens + candidateTokens);
 
   const quiz = await Quiz.create({
     title: parsed.title || topic,
@@ -96,6 +97,8 @@ export async function generateQuizFromAi({
       user_query: topic,
       ai_response: text.slice(0, 500),
       tokens_used: tokensUsed,
+      prompt_tokens: promptTokens,
+      candidate_tokens: candidateTokens,
       model_used: GEMINI_MODEL,
       ai_type: "quiz",
       class_level: String(safeClassLevel),

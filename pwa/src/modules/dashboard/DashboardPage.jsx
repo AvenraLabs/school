@@ -178,6 +178,11 @@ export default function DashboardPage() {
     const videoUsed = aiVideoSec.used ?? 0;
     const videoTotal = aiVideoSec.total ?? 0;
 
+    const aiDiagrams = data?.ai_diagram_images || { remaining: 0, used: 0, total: 0 };
+    const diagramRemaining = aiDiagrams.remaining ?? 0;
+    const diagramUsed = aiDiagrams.used ?? 0;
+    const diagramTotal = aiDiagrams.total ?? 0;
+
     const homeworkSummary = data?.homework_summary || [];
     const pendingHomeworkCount = homeworkSummary.reduce((sum, hw) => sum + (hw.pending || 0), 0);
     const pendingReportCardsCount = data?.pending_report_cards ?? 0;
@@ -196,7 +201,7 @@ export default function DashboardPage() {
             boxShadow: (theme) => `0 4px 20px ${alpha(theme.palette.primary.main, 0.25)}`
           }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2.5 }}>
             <Stack direction="row" alignItems="center" spacing={1.5}>
               <Avatar src={getAssetUrl(user.avatar_url)} sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 40, height: 40 }}>
                 {user.name?.[0] || "T"}
@@ -212,16 +217,17 @@ export default function DashboardPage() {
             </Stack>
           </Stack>
 
-          {/* Stats Grid inside header */}
-          <Grid container spacing={1.2}>
+          {/* Stats Grid inside header - Compact 3-card single row */}
+          <Grid container spacing={1}>
+            {/* 1. AI Tokens */}
             <Grid item xs={4}>
               <Paper
                 sx={{
-                  p: { xs: 1.2, sm: 2 },
+                  p: { xs: 1, sm: 1.5 },
                   bgcolor: 'rgba(255,255,255,0.12)',
                   backdropFilter: 'blur(12px)',
                   color: 'white',
-                  borderRadius: '16px',
+                  borderRadius: '14px',
                   border: '1px solid rgba(255,255,255,0.15)',
                   height: '100%',
                   display: 'flex',
@@ -230,29 +236,30 @@ export default function DashboardPage() {
                 }}
               >
                 <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: { xs: '0.55rem', sm: '0.68rem' }, fontWeight: 700, letterSpacing: '0.3px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.85, fontSize: { xs: '0.52rem', sm: '0.65rem' }, fontWeight: 700, letterSpacing: '0.2px', textTransform: 'uppercase', display: 'block', mb: 0.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     AI Tokens
                   </Typography>
-                  <Typography sx={{ fontSize: { xs: '1rem', sm: '1.4rem' }, fontWeight: 950, lineHeight: 1.2 }}>
+                  <Typography sx={{ fontSize: { xs: '0.95rem', sm: '1.3rem' }, fontWeight: 950, lineHeight: 1.1 }}>
                     {aiRemaining}
                   </Typography>
                 </Box>
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.52rem', sm: '0.65rem' } }}>
+                <Box sx={{ mt: 0.8 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.48rem', sm: '0.60rem' }, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     Used: {aiUsed} / {aiTotal}
                   </Typography>
                 </Box>
               </Paper>
             </Grid>
 
+            {/* 2. AI Video Sec */}
             <Grid item xs={4}>
               <Paper
                 sx={{
-                  p: { xs: 1.2, sm: 2 },
+                  p: { xs: 1, sm: 1.5 },
                   bgcolor: 'rgba(255,255,255,0.12)',
                   backdropFilter: 'blur(12px)',
                   color: 'white',
-                  borderRadius: '16px',
+                  borderRadius: '14px',
                   border: '1px solid rgba(255,255,255,0.15)',
                   height: '100%',
                   display: 'flex',
@@ -261,21 +268,52 @@ export default function DashboardPage() {
                 }}
               >
                 <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8, fontSize: { xs: '0.55rem', sm: '0.68rem' }, fontWeight: 700, letterSpacing: '0.3px', textTransform: 'uppercase', display: 'block', mb: 0.5 }}>
-                    AI Video Sec
+                  <Typography variant="caption" sx={{ opacity: 0.85, fontSize: { xs: '0.52rem', sm: '0.65rem' }, fontWeight: 700, letterSpacing: '0.2px', textTransform: 'uppercase', display: 'block', mb: 0.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    AI Video
                   </Typography>
-                  <Typography sx={{ fontSize: { xs: '1rem', sm: '1.4rem' }, fontWeight: 950, lineHeight: 1.2 }}>
+                  <Typography sx={{ fontSize: { xs: '0.95rem', sm: '1.3rem' }, fontWeight: 950, lineHeight: 1.1 }}>
                     {videoRemaining}s
                   </Typography>
                 </Box>
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.52rem', sm: '0.65rem' } }}>
+                <Box sx={{ mt: 0.8 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.48rem', sm: '0.60rem' }, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     Used: {videoUsed}s / {videoTotal}s
                   </Typography>
                 </Box>
               </Paper>
             </Grid>
 
+            {/* 3. AI Diagrams */}
+            <Grid item xs={4}>
+              <Paper
+                sx={{
+                  p: { xs: 1, sm: 1.5 },
+                  bgcolor: 'rgba(255,255,255,0.12)',
+                  backdropFilter: 'blur(12px)',
+                  color: 'white',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <Box>
+                  <Typography variant="caption" sx={{ opacity: 0.85, fontSize: { xs: '0.52rem', sm: '0.65rem' }, fontWeight: 700, letterSpacing: '0.2px', textTransform: 'uppercase', display: 'block', mb: 0.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    AI Diagrams
+                  </Typography>
+                  <Typography sx={{ fontSize: { xs: '0.95rem', sm: '1.3rem' }, fontWeight: 950, lineHeight: 1.1 }}>
+                    {diagramRemaining}
+                  </Typography>
+                </Box>
+                <Box sx={{ mt: 0.8 }}>
+                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.48rem', sm: '0.60rem' }, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Used: {diagramUsed} / {diagramTotal}
+                  </Typography>
+                </Box>
+              </Paper>
+            </Grid>
           </Grid>
         </Box>
 

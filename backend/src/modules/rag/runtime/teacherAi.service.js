@@ -259,13 +259,17 @@ ${customInstructions ? `Additional Teacher Directive: ${customInstructions}` : "
 
   if (user?.id) {
     const usage = result.usageMetadata || {};
-    const tokensUsed = usage.totalTokenCount || Math.max(150, Math.ceil(((systemPrompt?.length || 0) + generatedText.length) / 4));
+    const promptTokens = usage.promptTokenCount || 0;
+    const candidateTokens = usage.candidatesTokenCount || 0;
+    const tokensUsed = usage.totalTokenCount || (promptTokens + candidateTokens);
 
     const log = await AiChatLog.create({
       user_id: user.id,
       user_query: String(title || chapter || tool).slice(0, 250),
       ai_response: generatedText.slice(0, 500),
       tokens_used: tokensUsed,
+      prompt_tokens: promptTokens,
+      candidate_tokens: candidateTokens,
       model_used: GEMINI_MODEL,
       ai_type: tool === "question_paper" ? "question_paper" : tool === "student_quiz" ? "quiz" : "lesson_summary",
       class_level: String(finalGrade || ""),

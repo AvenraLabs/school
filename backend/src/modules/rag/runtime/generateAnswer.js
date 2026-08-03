@@ -33,7 +33,9 @@ export async function generateAnswer(prompt) {
 
     const duration_ms = Date.now() - startTime;
     const usage = result.usageMetadata || {};
-    const tokensUsed = usage.totalTokenCount || 0;
+    const promptTokens = usage.promptTokenCount || 0;
+    const candidateTokens = usage.candidatesTokenCount || 0;
+    const tokensUsed = usage.totalTokenCount || (promptTokens + candidateTokens);
     const rawText =
       result.text ||
       result?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") ||
@@ -46,12 +48,14 @@ export async function generateAnswer(prompt) {
       action: "rag_answer",
       status: "success",
       duration_ms,
-      meta: { modelUsed: GEMINI_MODEL, tokensUsed },
+      meta: { modelUsed: GEMINI_MODEL, tokensUsed, promptTokens, candidateTokens },
     });
 
     return {
       text,
       tokensUsed,
+      promptTokens,
+      candidateTokens,
       modelUsed: GEMINI_MODEL,
     };
   } catch (e) {

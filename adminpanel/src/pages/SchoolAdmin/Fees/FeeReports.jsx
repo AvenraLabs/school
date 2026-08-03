@@ -86,8 +86,8 @@ export function FeeReports() {
 
       {/* Filter Bar */}
       <Card className="p-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1.5">
               <Input
                 type="date"
@@ -117,42 +117,29 @@ export function FeeReports() {
               <option value="bank_transfer">Bank Transfer</option>
               <option value="cheque">Cheque</option>
             </Select>
-            <Input
-              icon={Search}
-              placeholder="Search student or receipt..."
-              className="w-56 text-xs"
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-            />
+            <div className="w-64">
+              <Input
+                icon={Search}
+                placeholder="Search student or receipt..."
+                className="w-full text-xs"
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
             {!reportDate && (
-              <span className="text-xs font-medium text-[#2F6F5E] bg-[#EAF3F0] px-2.5 py-1 rounded-full border border-[#2F6F5E]/20">
+              <span className="text-xs font-medium text-[#2F6F5E] bg-[#EAF3F0] px-2.5 py-1 rounded-full border border-[#2F6F5E]/20 shrink-0">
                 All-Time Records
               </span>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              icon={RefreshCw}
-              onClick={loadReport}
-              loading={loading}
-            >
-              Refresh
-            </Button>
           </div>
         </div>
       </Card>
 
       {/* Audit Log Table */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle>
-            {isFilteredByDate ? `Collection Audit Receipts (${formatDate(reportDate)})` : 'All-Time Collection Audit Receipts'}
-            <span className="ml-2 text-xs font-normal text-[#52607D]">({totalItems} total)</span>
-          </CardTitle>
-        </CardHeader>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">

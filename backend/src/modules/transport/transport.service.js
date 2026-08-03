@@ -589,10 +589,6 @@ export const getTeacherClassTransportService = async ({ school_id, teacher_user_
 };
 
 export const getDashboardStatsService = async ({ school_id }) => {
-  const School = (await import("../schools/school.model.js")).default;
-  const school = await School.findByPk(school_id, { attributes: ["google_maps_enabled"] });
-  const google_maps_enabled = school?.google_maps_enabled || false;
-
   const totalVehicles = await Vehicle.count({ where: { school_id } });
   const activeTrips = await Trip.count({ where: { school_id, status: "active" } });
   const totalDrivers = await Driver.count({ where: { school_id } });
@@ -664,7 +660,6 @@ export const getDashboardStatsService = async ({ school_id }) => {
       running: runningToday,
       notStarted: notStartedToday,
     },
-    google_maps_enabled,
   };
 };
 

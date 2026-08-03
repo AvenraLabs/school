@@ -130,7 +130,7 @@ export const getTeacherDashboardService = async ({
   await ensureTokenAccount(user_id);
   const tokenAccount = await TokenAccount.findOne({
     where: { user_id },
-    attributes: ["balance", "video_seconds_balance"],
+    attributes: ["balance", "video_seconds_balance", "image_generation_balance"],
   });
 
   const usedTotal = await AiChatLog.sum("tokens_used", {
@@ -143,15 +143,21 @@ export const getTeacherDashboardService = async ({
   // Video Seconds Calculation
   const videoRemaining = tokenAccount?.video_seconds_balance ?? 0;
   let videoUsed = 0;
+  let imageUsed = 0;
   if (teacher_id) {
     const VideoGeneration = (await import("../ai-video/video-generation.model.js")).default;
     const videos = await VideoGeneration.findAll({
       where: { teacher_id },
-      attributes: ["duration"],
+      attributes: ["duration", "content_type", "image_url"],
     });
     videoUsed = videos.reduce((sum, v) => sum + (parseInt(v.duration, 10) || 5), 0);
+    imageUsed = videos.filter((v) => v.content_type === "diagram_only" || Boolean(v.image_url)).length;
   }
   const videoTotal = videoUsed + videoRemaining;
+
+  // Diagram / Image Generation Calculation
+  const imageRemaining = tokenAccount?.image_generation_balance ?? 0;
+  const imageTotal = imageUsed + imageRemaining;
 
   return {
     classes,
@@ -160,5 +166,6 @@ export const getTeacherDashboardService = async ({
     pending_report_cards: pendingReportCards,
     ai_tokens: { total, used, remaining },
     ai_video_seconds: { total: videoTotal, used: videoUsed, remaining: videoRemaining },
+    ai_diagram_images: { total: imageTotal, used: imageUsed, remaining: imageRemaining },
   };
 };

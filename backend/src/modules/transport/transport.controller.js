@@ -245,11 +245,9 @@ export const getStudentTransport = asyncHandler(async (req, res) => {
     school_id: req.user.school_id,
     student_id: Number(req.params.student_id),
   });
-  const School = (await import("../schools/school.model.js")).default;
-  const school = await School.findByPk(req.user.school_id, { attributes: ["google_maps_enabled"] });
   res.json({
     success: true,
-    data: result ? { ...result, google_maps_enabled: school?.google_maps_enabled || false } : null,
+    data: result || null,
   });
 });
 
@@ -285,11 +283,9 @@ export const getStudentTransportDetails = asyncHandler(async (req, res) => {
     school_id: req.user.school_id,
     student_user_id: req.user.id,
   });
-  const School = (await import("../schools/school.model.js")).default;
-  const school = await School.findByPk(req.user.school_id, { attributes: ["google_maps_enabled"] });
   res.json({
     success: true,
-    data: result ? { ...(typeof result.toJSON === "function" ? result.toJSON() : result), google_maps_enabled: school?.google_maps_enabled || false } : null,
+    data: result ? (typeof result.toJSON === "function" ? result.toJSON() : result) : null,
   });
 });
 

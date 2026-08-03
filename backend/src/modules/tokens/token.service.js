@@ -11,7 +11,7 @@ import Trip from "../transport/trip.model.js";
 import TransportRequest from "../transport/transport-request.model.js";
 import School from "../schools/school.model.js";
 import db from "../../config/db.js";
-import { fn, col, literal } from "sequelize";
+import { fn, col, literal, cast, Op } from "sequelize";
 
 export async function ensureTokenAccount(userId, transaction = null) {
   const tOpt = transaction ? { transaction } : {};
@@ -19,9 +19,8 @@ export async function ensureTokenAccount(userId, transaction = null) {
   if (!user) return null;
 
   let account = await TokenAccount.findOne({ where: { user_id: userId }, ...tOpt });
-  if (account) return account;
 
-  // Check for school-specific policy first, fall back to global (school_id: null)
+  // Find policy
   let policy = null;
   if (user.school_id) {
     policy = await TokenPolicy.findOne({
@@ -35,6 +34,22 @@ export async function ensureTokenAccount(userId, transaction = null) {
       where: { role: user.role, school_id: null },
       ...tOpt,
     });
+  }
+
+  if (account) {
+    let needsSave = false;
+    if (account.image_generation_balance === null || account.image_generation_balance === undefined) {
+      account.image_generation_balance = policy?.annual_image_generations ?? (user.role === "teacher" ? 500 : 0);
+      needsSave = true;
+    }
+    if (account.video_seconds_balance === null || account.video_seconds_balance === undefined) {
+      account.video_seconds_balance = policy?.annual_video_seconds ?? 0;
+      needsSave = true;
+    }
+    if (needsSave) {
+      await account.save(tOpt);
+    }
+    return account;
   }
 
   if (!policy) {
@@ -685,12 +700,16 @@ export async function getBillingSummaryService({ school_id = null }) {
       "status",
       "whatsapp_annual_limit",
       "whatsapp_sent_count",
-      "google_maps_enabled",
     ],
     order: [["id", "ASC"]],
   });
 
   const result = [];
+  let totalPlatformTokens = 0;
+  let totalPlatformVideoSecs = 0;
+  let totalPlatformDiagrams = 0;
+  let totalPlatformWhatsappSent = 0;
+  let totalPlatformMapsCalls = 0;
 
   for (const sch of schools) {
     const sid = sch.id;
@@ -698,8 +717,8 @@ export async function getBillingSummaryService({ school_id = null }) {
     // 1. AI Tokens usage
     const aiStats = await AiChatLog.findAll({
       attributes: [
-        [fn("COUNT", col("id")), "total_calls"],
-        [fn("SUM", literal("COALESCE(prompt_tokens, 0) + COALESCE(candidate_tokens, 0)")), "total_tokens"],
+        [fn("COUNT", col("ai_chat_log.id")), "total_calls"],
+        [fn("SUM", col("tokens_used")), "total_tokens"],
       ],
       include: [
         {
@@ -714,23 +733,26 @@ export async function getBillingSummaryService({ school_id = null }) {
 
     const aiCalls = Number(aiStats[0]?.total_calls || 0);
     const aiTokens = Number(aiStats[0]?.total_tokens || 0);
+    totalPlatformTokens += aiTokens;
     const estAiCost = Number(((aiTokens / 1000) * 0.05).toFixed(2));
 
     // 2. AI Video seconds usage
     const videoStats = await VideoGeneration.findAll({
       attributes: [
         [fn("COUNT", col("id")), "total_videos"],
-        [fn("SUM", col("duration")), "total_seconds"],
+        [fn("SUM", cast(col("duration"), "integer")), "total_seconds"],
       ],
       where: {
         school_id: sid,
-        status: ["completed", "success"],
+        status: "completed",
+        content_type: "diagram_and_video",
       },
       raw: true,
     });
 
     const videoCount = Number(videoStats[0]?.total_videos || 0);
     const videoSecs = Number(videoStats[0]?.total_seconds || 0);
+    totalPlatformVideoSecs += videoSecs;
     const estVideoCost = Number(((videoSecs / 60) * 2.0).toFixed(2));
 
     // 2b. AI Image / Diagram generation usage
@@ -738,12 +760,13 @@ export async function getBillingSummaryService({ school_id = null }) {
       attributes: [[fn("COUNT", col("id")), "total_diagrams"]],
       where: {
         school_id: sid,
-        status: ["completed", "success"],
+        status: "completed",
         [Op.or]: [{ content_type: "diagram_only" }, { image_url: { [Op.ne]: null } }],
       },
       raw: true,
     });
     const diagramCount = Number(imageStats[0]?.total_diagrams || 0);
+    totalPlatformDiagrams += diagramCount;
     const estDiagramCost = Number((diagramCount * 1.0).toFixed(2));
 
     // 3. WhatsApp messages usage
@@ -752,37 +775,17 @@ export async function getBillingSummaryService({ school_id = null }) {
       attributes: [[fn("COUNT", col("id")), "sent_count"]],
       where: {
         school_id: sid,
-        status: ["sent", "success", "delivered"],
+        status: {
+          [Op.in]: ["sent", "success", "delivered", "Sent", "Success", "Delivered", "SENT", "SUCCESS", "DELIVERED"],
+        },
       },
       raw: true,
     });
     const whatsappSent = Number(waCountResult[0]?.sent_count || 0);
+    totalPlatformWhatsappSent += whatsappSent;
     const estWhatsappCost = Number((whatsappSent * 0.75).toFixed(2));
 
-    // 4. Google Maps API calls
-    const locStats = await TripLocation.findAll({
-      attributes: [[fn("COUNT", col("trip_location.id")), "location_updates"]],
-      include: [
-        {
-          model: Trip,
-          attributes: [],
-          where: { school_id: sid },
-          required: true,
-        },
-      ],
-      raw: true,
-    });
-
-    const reqStats = await TransportRequest.findAll({
-      attributes: [[fn("COUNT", col("id")), "requests"]],
-      where: { school_id: sid },
-      raw: true,
-    });
-
-    const mapsCalls = Number(locStats[0]?.location_updates || 0) + Number(reqStats[0]?.requests || 0);
-    const estMapsCost = Number(((mapsCalls / 1000) * 400).toFixed(2));
-
-    const totalCost = Number((estAiCost + estVideoCost + estDiagramCost + estWhatsappCost + estMapsCost).toFixed(2));
+    const totalCost = Number((estAiCost + estVideoCost + estDiagramCost + estWhatsappCost).toFixed(2));
 
     result.push({
       school_id: sid,
@@ -808,16 +811,19 @@ export async function getBillingSummaryService({ school_id = null }) {
         percentage_used: whatsappLimit > 0 ? Math.round((whatsappSent / whatsappLimit) * 100) : 0,
         estimated_cost_inr: estWhatsappCost,
       },
-      google_maps: {
-        api_calls_count: mapsCalls,
-        enabled: sch.google_maps_enabled,
-        estimated_cost_inr: estMapsCost,
-      },
       total_estimated_cost_inr: totalCost,
     });
   }
 
-  return result;
+  return {
+    summary: {
+      ai: { tokens_used: totalPlatformTokens },
+      video: { seconds_used: totalPlatformVideoSecs },
+      diagram: { count: totalPlatformDiagrams },
+      whatsapp: { sent_count: totalPlatformWhatsappSent },
+    },
+    items: result,
+  };
 }
 
 export async function getApiLogsFeedService({ school_id = null, type = "all", limit = 50, offset = 0 }) {
@@ -861,21 +867,29 @@ export async function getApiLogsFeedService({ school_id = null, type = "all", li
       ],
     });
     aiLogs.forEach((l) => {
-      const tokens = (l.prompt_tokens || 0) + (l.candidate_tokens || 0);
+      const pTokens = Number(l.prompt_tokens) || 0;
+      const cTokens = Number(l.candidate_tokens) || 0;
+      const totalTok = Number(l.tokens_used) || (pTokens + cTokens);
+      const detailStr = (pTokens > 0 || cTokens > 0)
+        ? `${totalTok} tokens (${pTokens} in / ${cTokens} out)`
+        : `${totalTok} tokens (${l.model_used || 'Gemini'})`;
+
       logs.push({
         id: `ai_${l.id}`,
         category: "AI Chat Tokens",
         school_name: l.user?.school?.school_name || `School #${l.user?.school_id || 'System'}`,
         recipient: l.user?.name || `User #${l.user_id}`,
         status: "success",
-        details: `${tokens} tokens (${l.model || 'Gemini'})`,
+        details: detailStr,
+        prompt_tokens: pTokens,
+        candidate_tokens: cTokens,
         error: null,
         created_at: l.createdAt,
       });
     });
   }
 
-  if (type === "all" || type === "video") {
+  if (type === "all" || type === "video" || type === "diagram") {
     const vWhere = school_id ? { school_id } : {};
     const vLogs = await VideoGeneration.findAll({
       where: vWhere,
@@ -885,13 +899,14 @@ export async function getApiLogsFeedService({ school_id = null, type = "all", li
       include: [{ model: School, attributes: ["school_name"] }],
     });
     vLogs.forEach((l) => {
+      const isDiagramOnly = l.content_type === "diagram_only";
       logs.push({
-        id: `vid_${l.id}`,
-        category: "AI Video Gen",
+        id: isDiagramOnly ? `dia_${l.id}` : `vid_${l.id}`,
+        category: isDiagramOnly ? "AI Diagram Gen" : "AI Video Gen",
         school_name: l.school?.school_name || `School #${l.school_id}`,
-        recipient: l.topic ? l.topic.slice(0, 60) : "Video topic",
+        recipient: l.topic ? l.topic.slice(0, 60) : "Media topic",
         status: l.status,
-        details: `${l.duration || 5}s video (${l.render_engine || 'default'})`,
+        details: isDiagramOnly ? "1 image (2D Educational Diagram)" : `${l.duration || 6}s video (Veo 3)`,
         error: l.error_message || null,
         created_at: l.createdAt,
       });

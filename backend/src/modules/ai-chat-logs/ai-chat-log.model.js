@@ -35,6 +35,18 @@ const AiChatLog = db.define(
       defaultValue: 0,
     },
 
+    prompt_tokens: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+
+    candidate_tokens: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+
     model_used: {
       type: DataTypes.STRING,
       allowNull: false,

@@ -67,6 +67,7 @@ export const Select = forwardRef(({
   ...props
 }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const containerRef = useRef(null);
   const hiddenSelectRef = useRef(null);
 
@@ -82,6 +83,18 @@ export const Select = forwardRef(({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 220 && rect.top > 200) {
+        setOpenUpward(true);
+      } else {
+        setOpenUpward(false);
+      }
+    }
+  }, [isOpen]);
 
   const handleSelect = (optValue) => {
     if (disabled) return;
@@ -139,7 +152,7 @@ export const Select = forwardRef(({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E4E1D8] rounded-[8px] shadow-dropdown z-50 max-h-56 overflow-y-auto py-1">
+        <div className={`absolute left-0 right-0 ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'} bg-white border border-[#E4E1D8] rounded-[8px] shadow-lg z-50 max-h-56 overflow-y-auto py-1`}>
           {parsedOptions.map((opt, idx) => {
             const isSelected = String(opt.value) === String(value);
             return (

@@ -73,11 +73,6 @@ const School = db.define(
       defaultValue: 0,
     },
 
-    google_maps_enabled: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-
     promotion_wizard_enabled: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

@@ -80,23 +80,31 @@ export function SuperAdminBillingLogs() {
     toast.success('Custom billing unit rates updated!');
   };
 
-  const summaryItem = Array.isArray(billingSummary?.items)
-    ? billingSummary.items[0]
-    : (Array.isArray(billingSummary) ? billingSummary[0] : billingSummary);
+  const topSummary = billingSummary?.summary || billingSummary?.items?.summary || billingSummary?.data?.summary || {};
+  const itemsList = Array.isArray(billingSummary?.items) 
+    ? billingSummary.items 
+    : (Array.isArray(billingSummary?.items?.items)
+      ? billingSummary.items.items
+      : (Array.isArray(billingSummary) ? billingSummary : []));
 
   const roleBreakdown = aiSchoolData?.role_breakdown || [];
   const roleSumTokens = roleBreakdown.reduce((acc, r) => acc + (Number(r.total_tokens) || 0), 0);
 
-  const tokensUsed = (summaryItem?.ai?.tokens_used && summaryItem.ai.tokens_used > 0)
-    ? summaryItem.ai.tokens_used
-    : (summaryItem?.total_tokens_used && summaryItem.total_tokens_used > 0)
-      ? summaryItem.total_tokens_used
-      : roleSumTokens;
+  const tokensUsed = topSummary?.ai?.tokens_used 
+    || itemsList.reduce((acc, sch) => acc + (sch.ai?.tokens_used || 0), 0) 
+    || roleSumTokens;
 
-  const whatsappSent = summaryItem?.whatsapp?.sent_count || summaryItem?.whatsapp_sent_count || 0;
-  const videoSeconds = summaryItem?.video?.seconds_used || summaryItem?.total_video_seconds || 0;
-  const diagramCount = summaryItem?.diagram?.count || summaryItem?.total_diagrams || 0;
-  const mapsRequests = summaryItem?.google_maps?.api_calls_count || summaryItem?.total_maps_requests || 0;
+  const whatsappSent = topSummary?.whatsapp?.sent_count 
+    || itemsList.reduce((acc, sch) => acc + (sch.whatsapp?.sent_count || 0), 0);
+
+  const videoSeconds = topSummary?.video?.seconds_used 
+    || itemsList.reduce((acc, sch) => acc + (sch.video?.seconds_used || 0), 0);
+
+  const diagramCount = topSummary?.diagram?.count 
+    || itemsList.reduce((acc, sch) => acc + (sch.diagram?.count || 0), 0);
+
+  const mapsRequests = topSummary?.google_maps?.api_calls_count 
+    || itemsList.reduce((acc, sch) => acc + (sch.google_maps?.api_calls_count || 0), 0);
 
   // Calculated Costs in INR (₹)
   const whatsappCost = whatsappSent * (rates.whatsappRate || 0.75);
@@ -109,8 +117,20 @@ export function SuperAdminBillingLogs() {
 
   // Service Log Filtering
   const videoLogs = apiLogs.filter((l) => l.category?.includes('Video') || l.id?.startsWith('vid_'));
+  const diagramLogs = apiLogs.filter((l) => l.category?.includes('Diagram') || l.id?.startsWith('dia_'));
   const whatsappLogs = apiLogs.filter((l) => l.category?.includes('WhatsApp') || l.id?.startsWith('wa_'));
   const aiChatLogs = apiLogs.filter((l) => l.category?.includes('AI Chat') || l.id?.startsWith('ai_'));
+  const mapsLogs = apiLogs.filter((l) => l.category?.includes('Maps') || l.id?.startsWith('map_'));
+
+  const activeLogs = serviceTab === 'video'
+    ? videoLogs
+    : serviceTab === 'diagram'
+      ? diagramLogs
+      : serviceTab === 'whatsapp'
+        ? whatsappLogs
+        : serviceTab === 'maps'
+          ? mapsLogs
+          : aiChatLogs;
 
   return (
     <div className="space-y-4">
@@ -151,7 +171,7 @@ export function SuperAdminBillingLogs() {
       </div>
 
       {/* Billable API Services Overview Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Gemini AI Chat Tokens */}
         <Card
           onClick={() => setServiceTab('ai')}
@@ -231,26 +251,6 @@ export function SuperAdminBillingLogs() {
             {whatsappSent.toLocaleString()} sent
           </div>
         </Card>
-
-        {/* Google Maps API */}
-        <Card
-          onClick={() => setServiceTab('maps')}
-          className={`p-3 space-y-1.5 cursor-pointer transition-all ${
-            serviceTab === 'maps' ? 'border-[#2F6F5E] bg-[#EAF3F0]/40 shadow-xs' : 'hover:border-[#D3E6E0]'
-          }`}
-        >
-          <div className="flex items-center justify-between text-[#52607D]">
-            <span className="font-bold text-xs text-[#14213D] flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#2F6F5E]" /> Google Maps
-            </span>
-          </div>
-          <div className="font-display font-bold text-base text-[#14213D]">
-            ₹{mapsCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div className="text-[10px] text-[#52607D] font-mono">
-            {mapsRequests.toLocaleString()} calls
-          </div>
-        </Card>
       </div>
 
       {/* Service Telemetry & Detailed Log Tables */}
@@ -267,7 +267,6 @@ export function SuperAdminBillingLogs() {
               { id: 'video', label: 'AI Video', icon: Film },
               { id: 'diagram', label: 'Diagrams', icon: ImageIcon },
               { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
-              { id: 'maps', label: 'Google Maps', icon: MapPin },
             ].map((t) => (
               <button
                 key={t.id}
@@ -298,7 +297,7 @@ export function SuperAdminBillingLogs() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
-                {(serviceTab === 'video' ? videoLogs : serviceTab === 'whatsapp' ? whatsappLogs : aiChatLogs).length === 0 ? (
+                {activeLogs.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center">
                       <EmptyState
@@ -309,7 +308,7 @@ export function SuperAdminBillingLogs() {
                     </td>
                   </tr>
                 ) : (
-                  (serviceTab === 'video' ? videoLogs : serviceTab === 'whatsapp' ? whatsappLogs : aiChatLogs).map((log) => (
+                  activeLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-[#FAFAF8] transition-colors">
                       <td className="px-4 py-2.5 font-bold text-[#14213D]">{log.category}</td>
                       <td className="px-4 py-2.5 text-[#52607D]">{log.school_name}</td>

@@ -49,7 +49,9 @@ Output ONLY the raw JSON object. No extra text.`;
     const rawText = (response.text || "").trim();
 
     const usage = response.usageMetadata || {};
-    const tokensUsed = usage.totalTokenCount || Math.max(50, Math.ceil(((systemPrompt?.length || 0) + rawText.length) / 4));
+    const promptTokens = usage.promptTokenCount || 0;
+    const candidateTokens = usage.candidatesTokenCount || 0;
+    const tokensUsed = usage.totalTokenCount || (promptTokens + candidateTokens);
 
     if (userId) {
       try {
@@ -65,6 +67,8 @@ Output ONLY the raw JSON object. No extra text.`;
           user_query: `Diagram prompt for "${topic}"`,
           ai_response: rawText.slice(0, 500),
           tokens_used: tokensUsed,
+          prompt_tokens: promptTokens,
+          candidate_tokens: candidateTokens,
           model_used: model,
           ai_type: "summary",
           class_level: String(classLevel || ""),

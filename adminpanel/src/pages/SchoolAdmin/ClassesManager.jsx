@@ -201,13 +201,11 @@ export function ClassesManager() {
                       <span className="text-[10px] font-semibold text-[#8C97AB]">
                         {cls.sections?.length || 0} Section{cls.sections?.length !== 1 ? 's' : ''}
                       </span>
-                      {cls.bellScheduleTemplate ? (
+                      {cls.bellScheduleTemplate && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#2F6F5E] bg-[#EAF3F0] px-1.5 py-0.5 rounded">
                           <Clock className="w-2.5 h-2.5" />
                           {cls.bellScheduleTemplate.name}
                         </span>
-                      ) : (
-                        <span className="text-[10px] text-gray-400 italic">No Bell Schedule</span>
                       )}
                     </div>
                   </div>
@@ -302,17 +300,6 @@ export function ClassesManager() {
               onChange={(e) => setNewClassName(e.target.value)}
             />
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-[#14213D] mb-1">Bell Schedule Template (Optional)</label>
-            <Select
-              value={newBellScheduleId}
-              onChange={(e) => setNewBellScheduleId(e.target.value)}
-              options={[
-                { value: '', label: '-- None (Assign Later) --' },
-                ...bellSchedules.map((b) => ({ value: b.id, label: `${b.name} (${b.working_days_per_week} Days/Wk)` })),
-              ]}
-            />
-          </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
             <Button variant="outline" type="button" onClick={() => setShowAddClass(false)}>Cancel</Button>
             <Button variant="primary" type="submit" loading={saving}>Create Class</Button>
@@ -329,17 +316,6 @@ export function ClassesManager() {
               required
               value={editClassName}
               onChange={(e) => setEditClassName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-[#14213D] mb-1">Bell Schedule Template</label>
-            <Select
-              value={editBellScheduleId}
-              onChange={(e) => setEditBellScheduleId(e.target.value)}
-              options={[
-                { value: '', label: '-- None (Unassigned) --' },
-                ...bellSchedules.map((b) => ({ value: b.id, label: `${b.name} (${b.working_days_per_week} Days/Wk)` })),
-              ]}
             />
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">

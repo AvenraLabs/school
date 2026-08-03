@@ -25,6 +25,5 @@ export const updateSchoolSchema = z.object({
   zip: z.string().optional(),
   email: z.union([z.string().email(), z.literal('')]).optional(),
   contact_phone: z.string().optional(),
-  google_maps_enabled: z.boolean().optional(),
   promotion_wizard_enabled: z.boolean().optional(),
 });

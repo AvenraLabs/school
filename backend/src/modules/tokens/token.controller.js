@@ -172,7 +172,11 @@ export const adjustUserTokenBalance = asyncHandler(async (req, res) => {
 export const getBillingSummary = asyncHandler(async (req, res) => {
   const school_id = req.query.school_id ? Number(req.query.school_id) : null;
   const result = await getBillingSummaryService({ school_id });
-  res.json({ success: true, items: result });
+  res.json({
+    success: true,
+    summary: result.summary,
+    items: result.items,
+  });
 });
 
 export const getApiLogsFeed = asyncHandler(async (req, res) => {

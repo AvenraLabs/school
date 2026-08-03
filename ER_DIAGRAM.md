@@ -75,7 +75,7 @@ Central multi-tenant organizational entity.
 - `logo_url` (TEXT)
 - `status` (ENUM: 'pending', 'active', 'suspended', 'expired')
 - `whatsapp_annual_limit` (INTEGER), `whatsapp_sent_count` (INTEGER)
-- `google_maps_enabled` (BOOLEAN), `promotion_wizard_enabled` (BOOLEAN)
+- `promotion_wizard_enabled` (BOOLEAN)
 - `risk_attendance_cutoff` (INT), `risk_academic_cutoff` (INT), `risk_grade_drop_margin` (INT)
 - `library_loan_period_days` (INT), `library_overdue_fine_per_day` (DECIMAL(10,2))
 - `fee_receipt_counter` (INT)

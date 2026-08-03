@@ -7,14 +7,12 @@ import { Card } from '../../components/ui/Card';
 import { SuperAdminSchoolsTab } from './SuperAdminSchoolsTab';
 import { SuperAdminQuotaTab } from './SuperAdminQuotaTab';
 import { SuperAdminAnalyticsTab } from './SuperAdminAnalyticsTab';
-import { SuperAdminBillingLogs } from './SuperAdminBillingLogs';
 
 // Icons
 import {
   School,
   Coins,
   BarChart3,
-  IndianRupee,
   RefreshCw
 } from 'lucide-react';
 
@@ -52,28 +50,12 @@ export function SuperAdminPage() {
 
   return (
     <div className="space-y-4">
-      {/* Compact Action Bar */}
-      <Card className="p-3">
-        <div className="flex items-center justify-between gap-3 text-xs">
-          <span className="font-bold text-[#14213D]">Super Admin Platform Console</span>
-
-          <button
-            type="button"
-            onClick={loadData}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[#2F6F5E] hover:text-[#14213D] transition-colors cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </button>
-        </div>
-      </Card>
-
       {/* Navigation Tabs */}
       <div className="flex gap-1 border-b border-[#E4E1D8] overflow-x-auto pb-px">
         {[
           { id: 'schools', label: 'Schools', icon: School },
           { id: 'quotas', label: 'Quotas', icon: Coins },
           { id: 'analytics', label: 'Telemetry', icon: BarChart3 },
-          { id: 'billing', label: 'Billing Logs', icon: IndianRupee },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -105,10 +87,6 @@ export function SuperAdminPage() {
 
       {activeTab === 'analytics' && (
         <SuperAdminAnalyticsTab schools={schools} />
-      )}
-
-      {activeTab === 'billing' && (
-        <SuperAdminBillingLogs />
       )}
     </div>
   );

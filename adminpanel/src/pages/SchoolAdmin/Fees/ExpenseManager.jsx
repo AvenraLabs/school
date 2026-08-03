@@ -191,16 +191,18 @@ export function ExpenseManager() {
 
       {/* Filter Bar */}
       <Card className="p-3">
-        <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center gap-3 text-xs">
-          <Input
-            icon={Search}
-            placeholder="Search voucher, vendor..."
-            className="w-48 text-xs"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2.5 flex-wrap text-xs">
+          <div className="w-52">
+            <Input
+              icon={Search}
+              placeholder="Search voucher, vendor..."
+              className="w-full text-xs"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
           <Select
-            className="w-40 text-xs"
+            className="w-36 text-xs"
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
           >
@@ -210,7 +212,7 @@ export function ExpenseManager() {
             ))}
           </Select>
           <Select
-            className="w-36 text-xs"
+            className="w-32 text-xs"
             value={selectedMode}
             onChange={(e) => setSelectedMode(e.target.value)}
           >
@@ -219,26 +221,27 @@ export function ExpenseManager() {
             <option value="upi">UPI</option>
             <option value="bank_transfer">Bank Transfer</option>
           </Select>
-          <Input
-            type="date"
-            className="w-36 text-xs"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-          <Input
-            type="date"
-            className="w-36 text-xs"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
+          <div className="w-36">
+            <Input
+              type="date"
+              className="w-full text-xs"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+          <div className="w-36">
+            <Input
+              type="date"
+              className="w-full text-xs"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
         </form>
       </Card>
 
       {/* Expenses Data Table */}
       <Card>
-        <CardHeader className="py-2.5 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
-          <CardTitle className="text-xs font-bold uppercase text-[#52607D]">Voucher Register Ledger</CardTitle>
-        </CardHeader>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead className="bg-[#FAFAF8] border-b border-[#E4E1D8] text-[#52607D] font-semibold uppercase">

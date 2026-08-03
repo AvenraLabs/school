@@ -39,7 +39,6 @@ export function SuperAdminSchoolSettings() {
     zip: '',
     email: '',
     contact_phone: '',
-    google_maps_enabled: false,
     promotion_wizard_enabled: false,
   });
 
@@ -84,7 +83,6 @@ export function SuperAdminSchoolSettings() {
           zip: s.zip || '',
           email: s.email || '',
           contact_phone: s.contact_phone || s.phone || '',
-          google_maps_enabled: Boolean(s.google_maps_enabled),
           promotion_wizard_enabled: Boolean(s.promotion_wizard_enabled),
         });
 
@@ -150,21 +148,6 @@ export function SuperAdminSchoolSettings() {
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Header Action Bar */}
-        <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-4 shadow-xs flex items-center justify-between gap-4">
-          <div>
-            <h2 className="font-display font-bold text-base text-[#14213D] flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-[#2F6F5E]" /> School System Configuration & Feature Toggles
-            </h2>
-            <p className="text-xs text-[#52607D]">
-              Configure board affiliation, licensed feature modules, third-party API services, and system preferences.
-            </p>
-          </div>
-
-          <Button variant="primary" type="submit" loading={saving} icon={Save}>
-            Save Profile Settings
-          </Button>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Institutional Profile */}
@@ -297,30 +280,14 @@ export function SuperAdminSchoolSettings() {
               </CardContent>
             </Card>
 
-            {/* Map & License Settings */}
+            {/* System Preferences */}
             <Card>
               <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
                 <CardTitle className="text-sm font-bold text-[#14213D] flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#2F6F5E]" /> Map & System Preferences
+                  <Sliders className="w-4 h-4 text-[#2F6F5E]" /> System Preferences
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 text-xs space-y-3">
-                <label className="flex items-start gap-3 p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] cursor-pointer hover:bg-[#EAF3F0] transition-colors">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 mt-0.5 rounded text-[#2F6F5E] accent-[#2F6F5E] focus:ring-[#2F6F5E] border-[#E4E1D8] cursor-pointer"
-                    checked={form.google_maps_enabled}
-                    onChange={(e) => handleToggleField('google_maps_enabled', e.target.checked, 'Google Maps integration')}
-                  />
-                  <div>
-                    <span className="font-bold text-[#14213D] block">
-                      {form.google_maps_enabled ? 'Google Maps API Enabled' : 'Leaflet Maps (OpenStreetMap) Active'}
-                    </span>
-                    <span className="text-[11px] text-[#52607D] block">
-                      Enable Google Maps for live bus tracking (uses free Leaflet Maps if disabled).
-                    </span>
-                  </div>
-                </label>
 
                 <label className="flex items-start gap-3 p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] cursor-pointer hover:bg-[#EAF3F0] transition-colors">
                   <input
@@ -338,6 +305,13 @@ export function SuperAdminSchoolSettings() {
                 </label>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Bottom Action Bar */}
+          <div className="flex justify-end pt-2">
+            <Button variant="primary" type="submit" loading={saving} icon={Save} className="px-6 py-2">
+              Save Profile Settings
+            </Button>
           </div>
         </div>
       </form>

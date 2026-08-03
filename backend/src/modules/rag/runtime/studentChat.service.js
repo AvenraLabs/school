@@ -100,7 +100,8 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
   let answer = "";
   let sources = [];
   let tokensUsed = 0;
-  let sourceType = "rag";
+  let promptTokens = 0;
+  let candidateTokens = 0;
 
   try {
     if (isGreeting) {
@@ -114,7 +115,9 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
       const prompt = buildLanguageDirectPrompt({ question, grade, subject });
       const res = await generateAnswer(prompt);
       answer = res.text;
-      tokensUsed = res.tokensUsed;
+      tokensUsed = res.tokensUsed || 0;
+      promptTokens = res.promptTokens || 0;
+      candidateTokens = res.candidateTokens || 0;
     } else {
       // Core Subject RAG Route: Always search RAG chunks matching student's class and board
       const { chunks, metadatas } = await searchStudentChunks({
@@ -138,7 +141,9 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
 
         const res = await generateAnswer(prompt);
         answer = res.text;
-        tokensUsed = res.tokensUsed;
+        tokensUsed = res.tokensUsed || 0;
+        promptTokens = res.promptTokens || 0;
+        candidateTokens = res.candidateTokens || 0;
 
         sources = Array.from(
           new Set(
@@ -153,7 +158,9 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
         const prompt = buildGeneralCurriculumPrompt({ question, grade, subject, board });
         const res = await generateAnswer(prompt);
         answer = res.text;
-        tokensUsed = res.tokensUsed;
+        tokensUsed = res.tokensUsed || 0;
+        promptTokens = res.promptTokens || 0;
+        candidateTokens = res.candidateTokens || 0;
       }
     }
   } catch (aiErr) {
@@ -161,6 +168,8 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
     answer = "I'm sorry, I encountered a temporary connection issue while answering your question. Please try again in a few moments!";
     sourceType = "direct_curriculum_fallback";
     tokensUsed = 0;
+    promptTokens = 0;
+    candidateTokens = 0;
   }
 
   // Record assistant response message in database
@@ -192,6 +201,8 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
     user_query: question,
     ai_response: answer,
     tokens_used: tokensUsed,
+    prompt_tokens: promptTokens,
+    candidate_tokens: candidateTokens,
     model_used: process.env.GEMINI_MODEL || "gemini-2.5-flash-lite",
     ai_type: safeAiType,
     class_level: grade,
