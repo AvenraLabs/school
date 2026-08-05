@@ -24,6 +24,7 @@ import {
   OndemandVideo,
   Person,
   Chat,
+  Biotech,
 } from "@mui/icons-material";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
@@ -48,6 +49,7 @@ export default function StudentSidebar({ open, onClose }) {
     { label: "My Classes",        icon: <CalendarMonth />, path: "/student/timetable" },
     { label: "Attendance",       icon: <FactCheck />,     path: "/student/attendance" },
     { label: "Homework",         icon: <Book />,          path: "/student/diary" },
+    { label: "3D Anatomy",       icon: <Biotech />,       path: "/student/anatomy" },
     { label: "Class Videos",     icon: <OndemandVideo />, path: "/student/videos" },
     { label: "Exams & Reports",  icon: <Assessment />,    path: "/student/report-cards" },
     { label: "Fees & Billing",   icon: <ReceiptLong />,   path: "/student/fees" },

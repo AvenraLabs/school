@@ -7,10 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "generate-certs": "node scripts/generate-certs.js",
-    "dev:https": "npm run generate-certs && vite --host",
-    "preview:https": "npm run generate-certs && vite preview --host"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",

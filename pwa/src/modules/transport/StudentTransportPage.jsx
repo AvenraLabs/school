@@ -600,7 +600,7 @@ export default function StudentTransportPage() {
                 🟢 Bus is Live / Moving
               </Typography>
               <Typography variant="caption" color="textSecondary">
-                Running: {activeTrip.trip_type} Trip
+                Bus is currently on route
               </Typography>
 
               {gpsLocation && (
@@ -686,23 +686,6 @@ export default function StudentTransportPage() {
                     Bus is Currently Parked
                   </Typography>
                 </Box>
-                {lastTrip && (
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      px: 1.2,
-                      py: 0.4,
-                      borderRadius: 1.5,
-                      bgcolor: alpha(theme.palette.primary.main, 0.08),
-                      color: "primary.main",
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                      textTransform: "uppercase"
-                    }}
-                  >
-                    {lastTrip.trip_type ? `${lastTrip.trip_type} Trip` : "Last Trip"}
-                  </Paper>
-                )}
               </Box>
 
               {lastTrip ? (

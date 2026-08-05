@@ -88,6 +88,10 @@ const LibraryPage = lazy(() =>
 const AboutPage = lazy(() =>
   import("../modules/about/AboutPage")
 );
+const AnatomyPage = lazy(() =>
+  import("../modules/anatomy/AnatomyPage")
+);
+
 
 
 export default function StudentApp() {
@@ -141,6 +145,7 @@ export default function StudentApp() {
 
               <Route path="lost-found" element={<LostFoundPage />} />
               <Route path="feedback" element={<FeedbackPage />} />
+              <Route path="anatomy" element={<AnatomyPage />} />
               <Route path="about" element={<AboutPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>

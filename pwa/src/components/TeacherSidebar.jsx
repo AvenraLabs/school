@@ -43,8 +43,8 @@ export default function TeacherSidebar({ open, onClose }) {
 
   const teachingItems = [
     { label: "My Classes",       icon: <School />,      path: "/teacher/timetable" },
-    { label: "Approvals",     icon: <Assignment />,  path: "/teacher/approvals" },
-    { label: "Exams & Reports", icon: <Assessment />, path: "/teacher/exams/create" },
+    { label: "Approvals",        icon: <Assignment />,  path: "/teacher/approvals" },
+    { label: "Exams & Reports",  icon: <Assessment />,  path: "/teacher/exams/create" },
   ];
 
   const schoolLifeItems = [
