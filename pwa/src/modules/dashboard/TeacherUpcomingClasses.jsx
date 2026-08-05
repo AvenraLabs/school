@@ -49,11 +49,11 @@ export default function TeacherUpcomingClasses() {
         overflow: 'hidden'
       }}
     >
-      <CardContent sx={{ p: { xs: 1.75, sm: 2.5 } }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CalendarMonth sx={{ color: 'primary.main', fontSize: '1.25rem' }} />
-            <Typography variant="subtitle1" sx={{ fontWeight: 850, letterSpacing: '-0.3px', fontSize: '1.05rem', color: 'text.primary' }}>
+      <CardContent sx={{ p: { xs: 1.25, sm: 2.5 }, '&:last-child': { pb: { xs: 1.5, sm: 2.5 } } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <CalendarMonth sx={{ color: 'primary.main', fontSize: '1.15rem' }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 850, letterSpacing: '-0.3px', fontSize: { xs: '0.95rem', sm: '1.05rem' }, color: 'text.primary' }}>
               Today's Schedule
             </Typography>
           </Box>
@@ -64,13 +64,13 @@ export default function TeacherUpcomingClasses() {
               fontWeight: 800, 
               bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12), 
               color: 'primary.main', 
-              fontSize: '0.7rem',
+              fontSize: '0.65rem',
               height: 20
             }} 
           />
         </Box>
  
-        <Stack spacing={2} sx={{ mt: 1 }}>
+        <Stack spacing={1.5} sx={{ mt: 1 }}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
               <Typography variant="caption" color="text.secondary">Loading classes...</Typography>
@@ -88,20 +88,20 @@ export default function TeacherUpcomingClasses() {
           ) : (
             classes.map((c, index) => (
               <Box key={c.id}>
-                {index > 0 && <Divider sx={{ my: 1.5, borderColor: 'rgba(0,0,0,0.04)' }} />}
+                {index > 0 && <Divider sx={{ my: 1.25, borderColor: 'rgba(0,0,0,0.04)' }} />}
                 <Box 
                   sx={{ 
                     display: 'flex', 
                     justifyContent: 'space-between', 
                     alignItems: 'center',
-                    gap: { xs: 1, sm: 1.5 }
+                    gap: { xs: 0.75, sm: 1.5 }
                   }}
                 >
-                  <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', gap: { xs: 0.75, sm: 1.5 }, flex: 1, minWidth: 0 }}>
                     {/* Left vertical status line */}
                     <Box 
                       sx={{ 
-                        width: 4, 
+                        width: 3.5, 
                         borderRadius: 2, 
                         bgcolor: 'primary.main', 
                         alignSelf: 'stretch' 
@@ -109,26 +109,26 @@ export default function TeacherUpcomingClasses() {
                     />
                     
                     <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography variant="body2" noWrap sx={{ fontWeight: 900, color: 'text.primary', fontSize: { xs: '0.85rem', sm: '0.92rem' }, mb: 0.3 }}>
+                      <Typography variant="body2" noWrap sx={{ fontWeight: 900, color: 'text.primary', fontSize: { xs: '0.82rem', sm: '0.92rem' }, mb: 0.3 }}>
                         {c.subject?.name || "Subject"}
                       </Typography>
                       
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, flexWrap: 'wrap' }}>
                         <Chip 
                           label={`Class ${c.class?.class_name || c.class?.name || c.class_id} (${c.section?.name ?? c.section_id})`}
                           size="small"
                           sx={{ 
                             height: 18, 
-                            fontSize: '0.62rem', 
+                            fontSize: '0.60rem', 
                             fontWeight: 800, 
                             bgcolor: '#f1f5f9', 
                             color: '#475569',
                             borderRadius: '4px'
                           }}
                         />
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: 'text.secondary' }}>
-                          <AccessTime sx={{ fontSize: 13 }} />
-                          <Typography variant="caption" sx={{ fontSize: '0.72rem', fontWeight: 600 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, color: 'text.secondary' }}>
+                          <AccessTime sx={{ fontSize: 12 }} />
+                          <Typography variant="caption" sx={{ fontSize: '0.68rem', fontWeight: 600 }}>
                             {formatTime(c.start_time)}
                           </Typography>
                         </Box>
@@ -143,9 +143,9 @@ export default function TeacherUpcomingClasses() {
                     sx={{ 
                       borderRadius: '8px', 
                       fontWeight: 800, 
-                      fontSize: { xs: '0.62rem', sm: '0.68rem' }, 
-                      py: { xs: 0.5, sm: 0.6 },
-                      px: { xs: 1, sm: 1.5 },
+                      fontSize: { xs: '0.60rem', sm: '0.68rem' }, 
+                      py: { xs: 0.4, sm: 0.6 },
+                      px: { xs: 0.75, sm: 1.5 },
                       boxShadow: 'none',
                       flexShrink: 0
                     }}

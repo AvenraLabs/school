@@ -39,7 +39,7 @@ export async function ensureTokenAccount(userId, transaction = null) {
   if (account) {
     let needsSave = false;
     if (account.image_generation_balance === null || account.image_generation_balance === undefined) {
-      account.image_generation_balance = policy?.annual_image_generations ?? (user.role === "teacher" ? 500 : 0);
+      account.image_generation_balance = policy?.annual_image_generations ?? 0;
       needsSave = true;
     }
     if (account.video_seconds_balance === null || account.video_seconds_balance === undefined) {
@@ -53,9 +53,9 @@ export async function ensureTokenAccount(userId, transaction = null) {
   }
 
   if (!policy) {
-    const defaultTokens = user.role === "student" ? 3000000 : (user.role === "teacher" ? 10000000 : 0);
+    const defaultTokens = 0;
     const defaultVideoSeconds = 0;
-    const defaultImageGenerations = user.role === "teacher" ? 500 : 0;
+    const defaultImageGenerations = 0;
     policy = await TokenPolicy.create({
       role: user.role,
       school_id: null,

@@ -126,15 +126,35 @@ export const getTeacherDashboardService = async ({
   /* 5) Pending report cards */
   const pendingReportCards = 0;
 
-  // 6) AI Tokens & AI Video Seconds (lifetime used + current balance)
+  // 6) AI Tokens & AI Video Seconds (current academic year used + current balance)
   await ensureTokenAccount(user_id);
   const tokenAccount = await TokenAccount.findOne({
     where: { user_id },
     attributes: ["balance", "video_seconds_balance", "image_generation_balance"],
   });
 
+  // Resolve current academic year date boundaries to scope usage strictly to current year
+  let yearWhere = {};
+  try {
+    const { getCurrentAcademicYear } = await import("../academic-years/academic-year.helper.js");
+    const currentYear = await getCurrentAcademicYear(school_id);
+    if (currentYear && currentYear.start_date && currentYear.end_date) {
+      const Op = (await import("sequelize")).Op;
+      yearWhere = {
+        createdAt: {
+          [Op.between]: [
+            new Date(`${currentYear.start_date}T00:00:00.000Z`),
+            new Date(`${currentYear.end_date}T23:59:59.999Z`),
+          ],
+        },
+      };
+    }
+  } catch (err) {
+    // If no active academic year, default to all-time
+  }
+
   const usedTotal = await AiChatLog.sum("tokens_used", {
-    where: { user_id },
+    where: { user_id, ...yearWhere },
   });
   const used = usedTotal || 0;
   const remaining = tokenAccount?.balance ?? 0;
@@ -147,7 +167,7 @@ export const getTeacherDashboardService = async ({
   if (teacher_id) {
     const VideoGeneration = (await import("../ai-video/video-generation.model.js")).default;
     const videos = await VideoGeneration.findAll({
-      where: { teacher_id },
+      where: { teacher_id, ...yearWhere },
       attributes: ["duration", "content_type", "image_url"],
     });
     videoUsed = videos.reduce((sum, v) => sum + (parseInt(v.duration, 10) || 5), 0);

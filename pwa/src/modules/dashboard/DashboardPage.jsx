@@ -192,8 +192,8 @@ export default function DashboardPage() {
       <Box sx={{ pb: 2, bgcolor: 'background.default' }}>
         <Box
           sx={{
-            p: { xs: 2, sm: 3 },
-            pt: 4,
+            p: { xs: 1.5, sm: 3 },
+            pt: { xs: 3, sm: 4 },
             background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary?.main || theme.palette.primary.dark} 100%)`,
             color: 'white',
             borderBottomLeftRadius: 24,
@@ -201,7 +201,7 @@ export default function DashboardPage() {
             boxShadow: (theme) => `0 4px 20px ${alpha(theme.palette.primary.main, 0.25)}`
           }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2.5 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
             <Stack direction="row" alignItems="center" spacing={1.5}>
               <Avatar src={getAssetUrl(user.avatar_url)} sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 40, height: 40 }}>
                 {user.name?.[0] || "T"}
@@ -217,107 +217,110 @@ export default function DashboardPage() {
             </Stack>
           </Stack>
 
-          {/* Stats Grid inside header - Compact 3-card single row */}
-          <Grid container spacing={1}>
+          {/* Stats Grid inside header - Strict 3-card single row that scales to 320px */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: { xs: 0.75, sm: 1.25 }
+            }}
+          >
             {/* 1. AI Tokens */}
-            <Grid item xs={4}>
-              <Paper
-                sx={{
-                  p: { xs: 1, sm: 1.5 },
-                  bgcolor: 'rgba(255,255,255,0.12)',
-                  backdropFilter: 'blur(12px)',
-                  color: 'white',
-                  borderRadius: '14px',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-              >
-                <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.85, fontSize: { xs: '0.52rem', sm: '0.65rem' }, fontWeight: 700, letterSpacing: '0.2px', textTransform: 'uppercase', display: 'block', mb: 0.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    AI Tokens
-                  </Typography>
-                  <Typography sx={{ fontSize: { xs: '0.95rem', sm: '1.3rem' }, fontWeight: 950, lineHeight: 1.1 }}>
-                    {aiRemaining}
-                  </Typography>
-                </Box>
-                <Box sx={{ mt: 0.8 }}>
-                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.48rem', sm: '0.60rem' }, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    Used: {aiUsed} / {aiTotal}
-                  </Typography>
-                </Box>
-              </Paper>
-            </Grid>
+            <Paper
+              sx={{
+                p: { xs: 0.75, sm: 1.25 },
+                bgcolor: 'rgba(255,255,255,0.12)',
+                backdropFilter: 'blur(12px)',
+                color: 'white',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.15)',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minWidth: 0
+              }}
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="caption" sx={{ opacity: 0.85, fontSize: { xs: '0.50rem', sm: '0.65rem' }, fontWeight: 700, letterSpacing: '0.1px', textTransform: 'uppercase', display: 'block', mb: 0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  AI Tokens
+                </Typography>
+                <Typography sx={{ fontSize: { xs: '0.85rem', sm: '1.25rem' }, fontWeight: 950, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {aiRemaining}
+                </Typography>
+              </Box>
+              <Box sx={{ mt: 0.6, minWidth: 0 }}>
+                <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.45rem', sm: '0.60rem' }, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Used: {aiUsed} / {aiTotal}
+                </Typography>
+              </Box>
+            </Paper>
 
             {/* 2. AI Video Sec */}
-            <Grid item xs={4}>
-              <Paper
-                sx={{
-                  p: { xs: 1, sm: 1.5 },
-                  bgcolor: 'rgba(255,255,255,0.12)',
-                  backdropFilter: 'blur(12px)',
-                  color: 'white',
-                  borderRadius: '14px',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-              >
-                <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.85, fontSize: { xs: '0.52rem', sm: '0.65rem' }, fontWeight: 700, letterSpacing: '0.2px', textTransform: 'uppercase', display: 'block', mb: 0.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    AI Video
-                  </Typography>
-                  <Typography sx={{ fontSize: { xs: '0.95rem', sm: '1.3rem' }, fontWeight: 950, lineHeight: 1.1 }}>
-                    {videoRemaining}s
-                  </Typography>
-                </Box>
-                <Box sx={{ mt: 0.8 }}>
-                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.48rem', sm: '0.60rem' }, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    Used: {videoUsed}s / {videoTotal}s
-                  </Typography>
-                </Box>
-              </Paper>
-            </Grid>
+            <Paper
+              sx={{
+                p: { xs: 0.75, sm: 1.25 },
+                bgcolor: 'rgba(255,255,255,0.12)',
+                backdropFilter: 'blur(12px)',
+                color: 'white',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.15)',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minWidth: 0
+              }}
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="caption" sx={{ opacity: 0.85, fontSize: { xs: '0.50rem', sm: '0.65rem' }, fontWeight: 700, letterSpacing: '0.1px', textTransform: 'uppercase', display: 'block', mb: 0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  AI Video
+                </Typography>
+                <Typography sx={{ fontSize: { xs: '0.85rem', sm: '1.25rem' }, fontWeight: 950, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {videoRemaining}s
+                </Typography>
+              </Box>
+              <Box sx={{ mt: 0.6, minWidth: 0 }}>
+                <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.45rem', sm: '0.60rem' }, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Used: {videoUsed}s / {videoTotal}s
+                </Typography>
+              </Box>
+            </Paper>
 
             {/* 3. AI Diagrams */}
-            <Grid item xs={4}>
-              <Paper
-                sx={{
-                  p: { xs: 1, sm: 1.5 },
-                  bgcolor: 'rgba(255,255,255,0.12)',
-                  backdropFilter: 'blur(12px)',
-                  color: 'white',
-                  borderRadius: '14px',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-              >
-                <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.85, fontSize: { xs: '0.52rem', sm: '0.65rem' }, fontWeight: 700, letterSpacing: '0.2px', textTransform: 'uppercase', display: 'block', mb: 0.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    AI Diagrams
-                  </Typography>
-                  <Typography sx={{ fontSize: { xs: '0.95rem', sm: '1.3rem' }, fontWeight: 950, lineHeight: 1.1 }}>
-                    {diagramRemaining}
-                  </Typography>
-                </Box>
-                <Box sx={{ mt: 0.8 }}>
-                  <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.48rem', sm: '0.60rem' }, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    Used: {diagramUsed} / {diagramTotal}
-                  </Typography>
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
+            <Paper
+              sx={{
+                p: { xs: 0.75, sm: 1.25 },
+                bgcolor: 'rgba(255,255,255,0.12)',
+                backdropFilter: 'blur(12px)',
+                color: 'white',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.15)',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minWidth: 0
+              }}
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="caption" sx={{ opacity: 0.85, fontSize: { xs: '0.50rem', sm: '0.65rem' }, fontWeight: 700, letterSpacing: '0.1px', textTransform: 'uppercase', display: 'block', mb: 0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  AI Diagrams
+                </Typography>
+                <Typography sx={{ fontSize: { xs: '0.85rem', sm: '1.25rem' }, fontWeight: 950, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {diagramRemaining}
+                </Typography>
+              </Box>
+              <Box sx={{ mt: 0.6, minWidth: 0 }}>
+                <Typography variant="caption" sx={{ opacity: 0.75, fontSize: { xs: '0.45rem', sm: '0.60rem' }, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Used: {diagramUsed} / {diagramTotal}
+                </Typography>
+              </Box>
+            </Paper>
+          </Box>
         </Box>
 
-        <Container sx={{ mt: 3 }}>
+        <Container sx={{ mt: 2.5, px: { xs: 1.5, sm: 3 } }}>
           {renderPosters()}
           <TeacherDashboard data={data} />
         </Container>

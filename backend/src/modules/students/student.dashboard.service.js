@@ -228,15 +228,34 @@ export const getStudentDashboardService = async ({ student_user_id }) => {
         },
     });
 
-    // 2. AI Tokens (real)
+    // 2. AI Tokens (current academic year used + current balance)
     await ensureTokenAccount(student_user_id);
     const tokenAccount = await TokenAccount.findOne({
         where: { user_id: student_user_id },
         attributes: ["balance"],
     });
     const remaining = tokenAccount?.balance ?? 0;
+
+    let yearWhere = {};
+    try {
+        const { getCurrentAcademicYear } = await import("../academic-years/academic-year.helper.js");
+        const currentYear = await getCurrentAcademicYear(student.school_id);
+        if (currentYear && currentYear.start_date && currentYear.end_date) {
+            yearWhere = {
+                createdAt: {
+                    [Op.between]: [
+                        new Date(`${currentYear.start_date}T00:00:00.000Z`),
+                        new Date(`${currentYear.end_date}T23:59:59.999Z`),
+                    ],
+                },
+            };
+        }
+    } catch (err) {
+        // If no active academic year, default to all-time
+    }
+
     const usedTotal = await AiChatLog.sum("tokens_used", {
-        where: { user_id: student_user_id },
+        where: { user_id: student_user_id, ...yearWhere },
     });
     const used = usedTotal || 0;
     const total = used + remaining;
