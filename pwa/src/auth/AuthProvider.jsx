@@ -7,7 +7,7 @@ import { getSharedSocket } from "../services/socket.service";
 import { io } from "socket.io-client";
 import { SOCKET_BASE_URL } from "../api/config";
 
-import { registerAndSubscribePush } from "../utils/pushManager";
+import { registerAndSubscribePush, unsubscribePushDevice } from "../utils/pushManager";
 
 const AuthContext = createContext(null);
 
@@ -323,6 +323,7 @@ export function AuthProvider({ children }) {
     logoutRef.current = logout; // keep ref current
     try {
       setError(null);
+      await unsubscribePushDevice();
       await logoutApi();
     } catch (error) {
       console.warn("Logout API call failed:", error);

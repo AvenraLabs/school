@@ -64,7 +64,8 @@ self.addEventListener('notificationclick', function (event) {
       }
       // Otherwise open a new tab/window to the target URL
       if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
+        const fullUrl = new URL(targetUrl, self.location.origin).href;
+        return clients.openWindow(fullUrl);
       }
     })
   );
