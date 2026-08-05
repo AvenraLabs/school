@@ -200,6 +200,9 @@ CRUD for the school-wide subject catalog.
 
 - `POST /api/homework` | `GET /api/homework` | `POST /api/homework/:id/submit` — Homework module.
 - `POST /api/notifications` | `GET /api/notifications` | `POST /api/notifications/:id/ack` — Notifications & Posters.
+- `POST /api/notifications/push-subscribe` — Save device VAPID Push subscription (`{ subscription: { endpoint, keys: { p256dh, auth } } }`).
+- `POST /api/notifications/push-unsubscribe` — Unsubscribe device from background push (`{ endpoint }`).
+- `GET /api/notifications/vapid-public-key` — Returns server VAPID public key (`{ publicKey }`).
 - `GET /api/group-chat/rooms` | `GET /api/group-chat/rooms/:id/messages` — Group chat threads.
 - `POST /api/lost-found` | `GET /api/lost-found` — Lost & Found.
 - `POST /api/feedback` | `GET /api/feedback` — System feedback & bug reports.

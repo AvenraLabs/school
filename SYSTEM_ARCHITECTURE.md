@@ -69,12 +69,14 @@ SchoolIQ is a multi-tenant, enterprise-grade AI-powered School Management ERP sy
 - **Role-based Access Control (RBAC)**: `allowRoles("super_admin", "school_admin", "teacher", "student", "driver")` middleware guards endpoints.
 - **Identity Caching**: Auth identities are cached in Redis (`auth:identity:<userId>`) for 5 minutes to ensure high performance without database spam.
 
-### Real-Time Communications (WebSockets)
-Powered by `socket.io` with distinct namespace handlers:
+### Real-Time Communications & Dual Push Architecture
+Powered by `socket.io` and standard **VAPID Web Push API**:
 1. `initGameSocket(io)` — Multiplayer live Kahoot-style classroom quiz competition.
 2. `initGroupChatSocket(io)` — Real-time class, subject, and section group messaging with media attachments.
-3. `initNotificationSocket(io)` — Live push notification broadcasts and poster popups.
+3. `initNotificationSocket(io)` — Active foreground real-time socket broadcasts and poster popups (`notification:new`).
 4. `initTransportSocket(io)` — High-frequency live GPS vehicle location streaming for bus tracking.
+5. **Background Web Push (VAPID)** — True offline/background PWA system notifications powered by `web-push` library, custom Service Worker `sw-push.js` event listeners (`push` and `notificationclick`), and PostgreSQL `push_subscriptions` endpoint store. Automatically cleans up expired/revoked (404/410) push tokens.
+
 
 ### AI & RAG Engine Architecture
 1. **Curriculum Knowledge Ingestion**: Textbook PDFs (CBSE/State Board) parsed and chunked via `pdfjs-dist` into `textbook_chapters` metadata table and `ChromaDB` vector embeddings.

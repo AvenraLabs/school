@@ -5,6 +5,11 @@ import {
   listNotificationsForUserService,
 } from "./notification.service.js";
 import * as whatsappService from "../whatsapp/whatsapp.service.js";
+import {
+  savePushSubscription,
+  removePushSubscription,
+  dispatchTargetedPushNotification,
+} from "./webpush.service.js";
 
 /* ADMIN / TEACHER: CREATE */
 export const createNotification = asyncHandler(async (req, res) => {
@@ -35,6 +40,21 @@ export const createNotification = asyncHandler(async (req, res) => {
     });
   }
 
+  // Dispatch background Web Push notifications to offline/background devices
+  dispatchTargetedPushNotification({
+    school_id: req.user.school_id,
+    target_role: notification.target_role,
+    class_id: notification.class_id,
+    section_id: notification.section_id,
+    target_user_id: notification.target_user_id,
+    title: notification.title,
+    message: notification.message,
+    deep_link: notification.deep_link,
+    notification_id: notification.id,
+  }).catch((err) => {
+    console.error("WebPush background dispatch error:", err);
+  });
+
   if (send_whatsapp) {
     // Resolve and send in the background
     whatsappService.resolveAnnouncementRecipients({
@@ -59,6 +79,55 @@ export const createNotification = asyncHandler(async (req, res) => {
     data: notification,
   });
 });
+
+/* PUSH NOTIFICATION SUBSCRIPTION CONTROLLERS */
+export const subscribePush = asyncHandler(async (req, res) => {
+  const { subscription } = req.body;
+  if (!subscription || !subscription.endpoint) {
+    throw new AppError("Subscription payload with endpoint is required", 400);
+  }
+
+  const userAgent = req.headers["user-agent"];
+
+  await savePushSubscription({
+    school_id: req.user.school_id,
+    user_id: req.user.id,
+    subscription,
+    user_agent: userAgent,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Push subscription saved successfully",
+  });
+});
+
+export const unsubscribePush = asyncHandler(async (req, res) => {
+  const { endpoint } = req.body;
+  if (!endpoint) {
+    throw new AppError("Subscription endpoint is required", 400);
+  }
+
+  await removePushSubscription({
+    user_id: req.user.id,
+    endpoint,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Push subscription removed successfully",
+  });
+});
+
+export const getVapidPublicKey = asyncHandler(async (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: {
+      publicKey: process.env.VAPID_PUBLIC_KEY || "",
+    },
+  });
+});
+
 
 /* ALL USERS: LIST */
 export const listNotifications = asyncHandler(async (req, res) => {

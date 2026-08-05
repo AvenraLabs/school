@@ -7,6 +7,8 @@ import { getSharedSocket } from "../services/socket.service";
 import { io } from "socket.io-client";
 import { SOCKET_BASE_URL } from "../api/config";
 
+import { registerAndSubscribePush } from "../utils/pushManager";
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -211,14 +213,12 @@ export function AuthProvider({ children }) {
     };
   }, [token, user?.role]);
 
-  // Request browser notification permission on token change
+  // Register device for true background Web Push Notifications on login
   useEffect(() => {
-    if (token && "Notification" in window) {
-      if (Notification.permission === "default") {
-        Notification.requestPermission();
-      }
+    if (token && user) {
+      registerAndSubscribePush();
     }
-  }, [token]);
+  }, [token, user?.id]);
 
   // Connect to notification socket for push alerts
   useEffect(() => {

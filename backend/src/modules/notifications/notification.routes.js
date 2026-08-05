@@ -14,6 +14,9 @@ import {
   listNotifications,
   markAllNotificationsAsRead,
   getActivePosters,
+  subscribePush,
+  unsubscribePush,
+  getVapidPublicKey,
 } from "./notification.controller.js";
 import {
   acknowledgeNotification,
@@ -23,6 +26,12 @@ import {
 const router = express.Router();
 
 router.use(protect);
+
+/* PUSH SUBSCRIPTION ROUTES */
+router.post("/push-subscribe", subscribePush);
+router.post("/push-unsubscribe", unsubscribePush);
+router.get("/vapid-public-key", getVapidPublicKey);
+
 
 /* admin & teacher */
 router.post(

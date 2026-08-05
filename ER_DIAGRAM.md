@@ -312,6 +312,7 @@ Maps teachers to specific Class + Section + Subject combinations.
 - `books`, `book_issues`: Library cataloging & loan tracking.
 - `expenses`, `expense_categories`: School operational expenditure vouchers.
 - `notifications`, `notification_acks`: Targeting broadcasts & receipt acknowledgments.
+- `push_subscriptions`: Stores VAPID Web Push endpoints (`school_id`, `user_id`, `endpoint`, `p256dh`, `auth`, `user_agent`) for background PWA device notifications. Unique index on `(user_id, endpoint)`.
 - `group_chats`, `group_chat_members`, `group_chat_messages`: Real-time class/subject chat channels.
 - `profile_update_requests`, `audit_logs`: Governance and administrative change tracking.
 - `lost_found_items`, `feedbacks`: Operational student tools.
