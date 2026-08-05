@@ -199,7 +199,6 @@ export const bulkSaveReportCardMarksService = async ({
     where: { id: exam_id, school_id, class_id },
   });
   if (!exam) throw new AppError("EXAM_NOT_FOUND", 404);
-  if (exam.is_locked) throw new AppError("EXAM_LOCKED", 400);
 
   const academicYearId = await getCurrentAcademicYearId(school_id);
 

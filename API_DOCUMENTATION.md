@@ -237,4 +237,13 @@ CRUD for the school-wide subject catalog.
 - `GET /api/timetable-generation/:jobId` — Check generation job status and retrieve generated candidate draft schedule.
 - `POST /api/timetable-generation/:jobId/confirm` — Confirm, collision-verify, and publish candidate timetable draft into live `timetables` database table inside a transaction.
 
+---
+
+## 13. 3D Anatomy Explorer Module (`/student/anatomy`, `/teacher/anatomy`)
+
+- Isolated client-side PWA module (`pwa/src/modules/anatomy/`) running natively with `@react-three/fiber` & Three.js.
+- Interactive 3D Human Anatomy Models: Heart, Brain, Lungs, Kidneys, Eye, Liver, Skeleton, Skin.
+- Features: Touch camera orbit controls, 3D hotspot annotations, clinical considerations, system category filters, organ search, and self-assessment quizzes.
+
+
 

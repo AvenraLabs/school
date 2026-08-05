@@ -261,7 +261,7 @@ Maps teachers to specific Class + Section + Subject combinations.
 
 #### `exam_masters`, `exams`, `exam_subjects`, `exam_marks`, `grading_scales`
 - `exam_masters`: Institution-wide standardized exam templates.
-- `exams`: Specific exam term instances for a class (and optional section stream). Columns: `id`, `school_id`, `academic_year_id`, `class_id`, `section_id` (Nullable FK -> `sections.id`), `name`, `exam_master_id`, `is_locked`.
+- `exams`: Specific exam term instances for a class (and optional section stream). Columns: `id`, `school_id`, `academic_year_id`, `class_id`, `section_id` (Nullable FK -> `sections.id`), `name`, `exam_master_id`.
 - `exam_subjects`: Max marks & syllabus for each subject in an exam.
 - `exam_marks`: Score per student, subject, and exam. Unique `[exam_id, subject_id, student_id]`.
 - `grading_scales`: Grade boundaries (e.g. 'A+', min percentage: 90, color_code).

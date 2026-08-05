@@ -178,7 +178,7 @@ export const getSectionRoster = asyncHandler(async (req, res) => {
       },
       {
         model: Exam,
-        attributes: ["id", "name", "createdAt", "is_locked"],
+        attributes: ["id", "name", "createdAt"],
         include: [
           { model: ExamMaster, as: "master", attributes: ["id", "name"] },
           {
@@ -315,7 +315,7 @@ export const getStudentProfile = asyncHandler(async (req, res) => {
       },
       {
         model: Exam,
-        attributes: ["id", "name", "createdAt", "is_locked"],
+        attributes: ["id", "name", "createdAt"],
         include: [
           { model: ExamMaster, as: "master", attributes: ["id", "name"] },
           {

@@ -43,7 +43,6 @@ export const createExamService = async ({
       throw new AppError("EXAM_EXISTS", 409);
     }
 
-    if (exam.is_locked) throw new AppError("EXAM_LOCKED", 400);
     if (subjects.length > 0) {
       await assertSubjectsBelongToSchool(subjects.map((s) => s.subject_id), school_id, t);
 
@@ -78,7 +77,6 @@ export const upsertExamSubjectService = async ({
 }) => {
   const exam = await Exam.findOne({ where: { id: exam_id, school_id } });
   if (!exam) throw new AppError("EXAM_NOT_FOUND", 404);
-  if (exam.is_locked) throw new AppError("EXAM_LOCKED", 400);
 
   await assertSubjectsBelongToSchool([subject_id], school_id);
 
@@ -103,24 +101,19 @@ export const removeExamSubjectService = async ({
 }) => {
   const exam = await Exam.findOne({ where: { id: exam_id, school_id } });
   if (!exam) throw new AppError("EXAM_NOT_FOUND", 404);
-  if (exam.is_locked) throw new AppError("EXAM_LOCKED", 400);
 
   await ExamSubject.destroy({ where: { exam_id, subject_id } });
   return true;
 };
 
 /* =========================
-   LOCK / UNLOCK
+   LOCK / UNLOCK (DEPRECATED - ALWAYS ACTIVE)
 ========================= */
 export const lockExamService = async ({ exam_id, school_id, is_locked }) => {
   const exam = await Exam.findOne({
     where: { id: exam_id, school_id },
   });
   if (!exam) throw new AppError("EXAM_NOT_FOUND", 404);
-
-  exam.is_locked = is_locked;
-  await exam.save();
-
   return exam;
 };
 
@@ -197,7 +190,6 @@ const assertSubjectsBelongToSchool = async (subjectIds, school_id, transaction) 
 export const deleteExamService = async ({ exam_id, school_id }) => {
   const exam = await Exam.findOne({ where: { id: exam_id, school_id } });
   if (!exam) throw new AppError("EXAM_NOT_FOUND", 404);
-  if (exam.is_locked) throw new AppError("EXAM_LOCKED", 400);
 
   const ExamMark = (await import("./exam-mark.model.js")).default;
 

@@ -13,11 +13,9 @@ import {
   CheckCircle2,
   ClipboardList,
   FileText,
-  Lock,
   Pencil,
   Plus,
   Trash2,
-  Unlock,
   HelpCircle,
 } from 'lucide-react';
 import { formatDate } from '../../utils/date';
@@ -270,16 +268,6 @@ export function ExamsManager() {
     }
   };
 
-  const toggleLock = async (exam) => {
-    try {
-      await examsAPI.lock(exam.id, !exam.is_locked);
-      toast.success(`Exam ${!exam.is_locked ? 'locked' : 'unlocked'}`);
-      await loadExams(selectedClass);
-    } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed to update exam lock');
-    }
-  };
-
   const removeSubject = async (exam, slot) => {
     try {
       await examsAPI.removeSubject(exam.id, slot.subject_id);
@@ -529,7 +517,6 @@ export function ExamsManager() {
                       {slots.length} subject test{slots.length === 1 ? '' : 's'} scheduled
                     </p>
                   </div>
-                  <StatusBadge status={exam.is_locked ? 'inactive' : 'active'} size="sm" />
                 </CardHeader>
 
                 <CardContent className="p-4 space-y-2 flex-1">
@@ -545,22 +532,20 @@ export function ExamsManager() {
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-[#14213D]">{getSubjectName(slot)}</span>
-                          {!exam.is_locked && (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => openSchedule(exam, slot)}
-                                className="text-[#8C97AB] hover:text-[#2F6F5E] p-1 cursor-pointer"
-                              >
-                                <Pencil className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={() => removeSubject(exam, slot)}
-                                className="text-[#8C97AB] hover:text-[#B0403A] p-1 cursor-pointer"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => openSchedule(exam, slot)}
+                              className="text-[#8C97AB] hover:text-[#2F6F5E] p-1 cursor-pointer"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => removeSubject(exam, slot)}
+                              className="text-[#8C97AB] hover:text-[#B0403A] p-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                         <p className="text-[10px] font-mono text-[#52607D] flex items-center gap-1">
                           <CalendarDays className="w-3 h-3 text-[#2F6F5E]" />
@@ -582,7 +567,6 @@ export function ExamsManager() {
                       variant="outline"
                       size="sm"
                       icon={Plus}
-                      disabled={exam.is_locked}
                       onClick={() => openSchedule(exam)}
                     >
                       Add Test
@@ -590,7 +574,7 @@ export function ExamsManager() {
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={exam.is_locked || saving}
+                      disabled={saving}
                       onClick={() => handleAutoPopulateSubjects(exam)}
                       title="Auto-fill all class/section subjects into this exam"
                     >
@@ -602,16 +586,7 @@ export function ExamsManager() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      icon={exam.is_locked ? Unlock : Lock}
-                      onClick={() => toggleLock(exam)}
-                    >
-                      {exam.is_locked ? 'Unlock' : 'Lock'}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
                       className="text-[#B0403A] hover:bg-[#FDF2F1]"
-                      disabled={exam.is_locked}
                       onClick={() => handleDeleteExam(exam)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />

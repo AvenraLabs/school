@@ -4,13 +4,11 @@ import { allowRoles } from "../../shared/middlewares/role.js";
 import { validate } from "../../shared/middlewares/validate.js";
 import {
   createExamSchema,
-  lockExamSchema,
   upsertExamSubjectSchema,
 } from "./exam.schema.js";
 
 import {
   createExam,
-  lockExam,
   listExamsByClass,
   upsertExamSubject,
   removeExamSubject,
@@ -23,9 +21,6 @@ router.use(protect);
 
 /* ADMIN/TEACHER: Create exam with subject schedule */
 router.post("/", allowRoles("teacher", "school_admin"), validate(createExamSchema), createExam);
-
-/* ADMIN: Lock / unlock */
-router.post("/:id/lock", allowRoles("school_admin"), validate(lockExamSchema), lockExam);
 
 /* ADMIN/TEACHER: Manage subjects in an exam */
 router.put("/:id/subjects", allowRoles("teacher", "school_admin"), validate(upsertExamSubjectSchema), upsertExamSubject);

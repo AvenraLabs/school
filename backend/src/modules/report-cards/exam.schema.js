@@ -16,10 +16,6 @@ export const createExamSchema = z.object({
     .default([]),
 });
 
-export const lockExamSchema = z.object({
-  is_locked: z.boolean(),
-});
-
 export const upsertExamSubjectSchema = z.object({
   subject_id: z.coerce.number().int().positive(),
   exam_date: z.string().min(1),

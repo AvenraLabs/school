@@ -1,6 +1,7 @@
 # Workspace Agent Rules & Design Guidelines
 
 ## 1. Page Header & Layout Rule
+- **Full Design System Specifications**: Refer to [`UI_guidelines.md`](file:///c:/Users/nessi/Desktop/schooliq/UI_guidelines.md) for complete details on colors, components, states, tables, and mobile PWA responsiveness.
 - **Top Bar Priority**: Page title and breadcrumbs are ALREADY rendered in the top navbar. Do NOT render redundant dark blue/indigo hero banners or giant text descriptions on top of subpages.
 - **Compact Page Header / Action Bar**: If a page needs a header toolbar, keep it ultra-compact with title and action buttons on a single row:
   ```jsx

@@ -4,7 +4,6 @@ import Student from "../students/student.model.js";
 
 import {
   createExamService,
-  lockExamService,
   listExamsByClassService,
   upsertExamSubjectService,
   removeExamSubjectService,
@@ -19,20 +18,6 @@ export const createExam = asyncHandler(async (req, res) => {
   });
 
   res.status(201).json({
-    success: true,
-    data: exam,
-  });
-});
-
-/* ADMIN: Lock / unlock exam */
-export const lockExam = asyncHandler(async (req, res) => {
-  const exam = await lockExamService({
-    exam_id: Number(req.params.id),
-    school_id: req.user.school_id,
-    is_locked: req.body.is_locked,
-  });
-
-  res.json({
     success: true,
     data: exam,
   });

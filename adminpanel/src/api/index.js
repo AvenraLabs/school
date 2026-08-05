@@ -671,13 +671,6 @@ export const examsAPI = {
     return response.data;
   },
 
-  lock: async (id, isLocked) => {
-    const response = await axiosInstance.post(`/exams/${id}/lock`, {
-      is_locked: isLocked,
-    });
-    return response.data;
-  },
-
   // Add/update a single subject slot within an exam
   upsertSubject: async (examId, subjectId, examDate, syllabus) => {
     const response = await axiosInstance.put(`/exams/${examId}/subjects`, {
