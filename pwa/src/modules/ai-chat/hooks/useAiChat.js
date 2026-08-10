@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   sendChatMessage,
+  sendChatMessageStreamApi,
   fetchChatSessions,
   fetchSessionMessages,
   deleteChatSession,
@@ -64,7 +65,7 @@ export function useAiChat() {
     }
   }, []);
 
-  // Send message in current active session or auto-create a new one
+  // Send message in current active session with real-time token streaming
   async function sendMessage(text) {
     if (!text || !text.trim() || isSendingRef.current) return;
     
@@ -75,38 +76,73 @@ export function useAiChat() {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const aiMsg = {
+      role: "ai",
+      text: "",
+      sources: [],
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMsg, aiMsg]);
     setLoading(true);
+
+    let streamText = "";
 
     try {
       const currentSessionId = activeSessionIdRef.current;
-      const res = await sendChatMessage({
+      const meta = await sendChatMessageStreamApi({
         question: text,
         sessionId: currentSessionId,
+        onChunk: (chunk) => {
+          streamText += chunk;
+          setMessages((prev) => {
+            const copy = [...prev];
+            if (copy.length > 0 && copy[copy.length - 1].role === "ai") {
+              copy[copy.length - 1] = {
+                ...copy[copy.length - 1],
+                text: streamText,
+              };
+            }
+            return copy;
+          });
+        },
       });
 
-      const { sessionId, answer, sources } = res.data;
+      if (meta) {
+        setMessages((prev) => {
+          const copy = [...prev];
+          if (copy.length > 0 && copy[copy.length - 1].role === "ai") {
+            copy[copy.length - 1] = {
+              ...copy[copy.length - 1],
+              text: meta.answer || streamText,
+              sources: meta.sources || [],
+            };
+          }
+          return copy;
+        });
 
-      const aiMsg = {
-        role: "ai",
-        text: answer,
-        sources: sources || [],
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, aiMsg]);
-
-      if (sessionId) {
-        activeSessionIdRef.current = sessionId;
-        if (activeSessionId !== sessionId) {
-          setActiveSessionId(sessionId);
+        if (meta.sessionId) {
+          activeSessionIdRef.current = meta.sessionId;
+          if (activeSessionId !== meta.sessionId) {
+            setActiveSessionId(meta.sessionId);
+          }
+          await loadSessions();
         }
-        await loadSessions();
       }
 
-      return aiMsg.text;
+      return streamText;
     } catch (e) {
       console.error("Error sending AI chat message:", e);
+      setMessages((prev) => {
+        const copy = [...prev];
+        if (copy.length > 0 && copy[copy.length - 1].role === "ai" && !copy[copy.length - 1].text) {
+          copy[copy.length - 1] = {
+            ...copy[copy.length - 1],
+            text: e.message || "I'm sorry, I encountered a temporary connection issue while answering your question. Please try again in a few moments!",
+          };
+        }
+        return copy;
+      });
     } finally {
       setLoading(false);
       isSendingRef.current = false;

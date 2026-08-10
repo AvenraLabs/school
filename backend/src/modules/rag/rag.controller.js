@@ -27,6 +27,31 @@ export const sendChatMessage = asyncHandler(async (req, res) => {
   res.json(result);
 });
 
+// Student Chat API (Streaming SSE Token Response)
+export const sendChatMessageStream = asyncHandler(async (req, res) => {
+  const { question, sessionId } = req.body;
+  if (!question) {
+    throw new AppError("Question is required", 400);
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const result = await processStudentChatMessage({
+    userId: req.user.id,
+    schoolId: req.user.school_id,
+    sessionId,
+    question,
+    onChunk: (chunk) => {
+      res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+    },
+  });
+
+  res.write(`data: ${JSON.stringify({ done: true, meta: result })}\n\n`);
+  res.end();
+});
+
 // List Chat Sessions
 export const listChatSessions = asyncHandler(async (req, res) => {
   const sessions = await getStudentChatSessions(req.user.id);

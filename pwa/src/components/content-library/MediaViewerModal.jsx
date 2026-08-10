@@ -237,6 +237,7 @@ export default function MediaViewerModal({ open, item, onClose }) {
             controls
             autoPlay
             playsInline
+            preload="metadata"
             style={{
               width: "100%",
               maxHeight: "100vh",

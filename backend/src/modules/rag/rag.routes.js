@@ -3,6 +3,7 @@ import { protect } from "../../shared/middlewares/auth.js";
 import { allowRoles } from "../../shared/middlewares/role.js";
 import {
   sendChatMessage,
+  sendChatMessageStream,
   listChatSessions,
   getSessionMessages,
   deleteSession,
@@ -19,6 +20,7 @@ router.use(protect);
 
 // Student AI Chat Routes
 router.post("/chat", sendChatMessage);
+router.post("/chat/stream", sendChatMessageStream);
 router.get("/chat/sessions", listChatSessions);
 router.get("/chat/sessions/:sessionId", getSessionMessages);
 router.delete("/chat/sessions/:sessionId", deleteSession);

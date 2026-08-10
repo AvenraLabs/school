@@ -109,7 +109,8 @@ export async function generateEducationalDiagram({ topic, classLevel, subjectNam
       process.env.IMAGEN_MODEL_NAME,
       "imagen-3.0-generate-002",
       "imagen-3.0-fast-generate-001",
-      "gemini-2.5-flash",
+      "imagen-3.0-generate-001",
+      "gemini-2.0-flash-exp",
     ].filter(Boolean);
 
     // Deduplicate candidate models

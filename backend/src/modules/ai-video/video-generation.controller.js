@@ -111,16 +111,16 @@ export async function createVideoGeneration(req, res, next) {
     const cleanLanguage = language || "English";
     const resolvedSubjectName = subjectName ? subjectName.trim() : "General";
 
-    // Idempotency Check: Return completed job for identical request within 15 seconds
-    const fifteenSecsAgo = new Date(Date.now() - 15000);
+    // Idempotency Check: Prevent duplicate jobs for identical topic/subject within 30 seconds
+    const thirtySecsAgo = new Date(Date.now() - 30000);
     const existingJob = await VideoGeneration.findOne({
       where: {
         teacher_id: teacherId,
         topic: topic.trim(),
         subject_name: resolvedSubjectName,
         content_type,
-        status: "completed",
-        createdAt: { [Op.gte]: fifteenSecsAgo },
+        status: { [Op.in]: ["completed", "processing"] },
+        createdAt: { [Op.gte]: thirtySecsAgo },
       },
       order: [["createdAt", "DESC"]],
     });
@@ -128,14 +128,14 @@ export async function createVideoGeneration(req, res, next) {
     if (existingJob) {
       return res.status(200).json({
         status: "success",
-        message: "Diagram generated successfully",
+        message: existingJob.status === "completed" ? "Diagram generated successfully" : "Generation already in progress",
         data: {
           jobId: existingJob.id,
-          status: "completed",
+          status: existingJob.status,
           contentType: existingJob.content_type,
           topic: existingJob.topic,
-          imageUrl: existingJob.image_url,
-          summary: existingJob.summary,
+          imageUrl: existingJob.image_url || null,
+          summary: existingJob.summary || null,
         },
       });
     }

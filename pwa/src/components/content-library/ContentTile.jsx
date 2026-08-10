@@ -98,6 +98,20 @@ export default function ContentTile({
               display: "block",
             }}
           />
+        ) : hasVideo ? (
+          <video
+            src={item.video_url || item.stream_url}
+            preload="metadata"
+            muted
+            playsInline
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+              pointerEvents: "none",
+            }}
+          />
         ) : (
           <Box
             sx={{
@@ -110,11 +124,7 @@ export default function ContentTile({
               color: theme.palette.primary.main,
             }}
           >
-            {hasVideo ? (
-              <OndemandVideo sx={{ fontSize: 32 }} />
-            ) : (
-              <ImageOutlined sx={{ fontSize: 32 }} />
-            )}
+            <ImageOutlined sx={{ fontSize: 32 }} />
           </Box>
         )}
 

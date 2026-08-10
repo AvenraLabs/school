@@ -32,11 +32,16 @@ let storageInstance = null;
 
 export function getGenAIClient() {
   if (!aiInstance) {
-    aiInstance = new GoogleGenAI({
-      vertexai: true,
-      project: getGcpProject(),
-      location: getGcpLocation(),
-    });
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (apiKey && process.env.USE_VERTEX_AI !== "true") {
+      aiInstance = new GoogleGenAI({ apiKey });
+    } else {
+      aiInstance = new GoogleGenAI({
+        vertexai: true,
+        project: getGcpProject(),
+        location: getGcpLocation(),
+      });
+    }
   }
   return aiInstance;
 }

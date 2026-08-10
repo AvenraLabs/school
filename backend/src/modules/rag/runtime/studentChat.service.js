@@ -10,7 +10,7 @@ import { deductTokens, assertHasTokenBalance } from "../../tokens/token.service.
 import { detectSubject } from "./detectSubject.js";
 import { searchStudentChunks } from "./searchStudentChunks.js";
 import { buildStudentRagPrompt, buildLanguageDirectPrompt, buildGeneralCurriculumPrompt } from "./buildPrompt.js";
-import { generateAnswer } from "./generateAnswer.js";
+import { generateAnswer, generateAnswerStream } from "./generateAnswer.js";
 
 /**
  * Normalizes class name (e.g. "Class 6 - A" -> "6", "Grade 10" -> "10")
@@ -25,7 +25,7 @@ function normalizeGrade(className) {
  * Handles student question sending in a chat session.
  * Manages chat session history, language bypass vs RAG routing, token usage, and persistence.
  */
-export async function processStudentChatMessage({ userId, schoolId, sessionId, question }) {
+export async function processStudentChatMessage({ userId, schoolId, sessionId, question, onChunk }) {
   if (!question || !question.trim()) {
     throw new Error("Question is required");
   }
@@ -102,18 +102,22 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
   let tokensUsed = 0;
   let promptTokens = 0;
   let candidateTokens = 0;
+  let sourceType = "rag";
+
+  const runner = onChunk ? (prompt) => generateAnswerStream(prompt, onChunk) : generateAnswer;
 
   try {
     if (isGreeting) {
       // Direct Greeting Response - no RAG search or disclaimers
       sourceType = "greeting";
       answer = `Hello! I am your AI Study Assistant for Grade ${grade}. How can I help you with your studies today?`;
+      if (onChunk) onChunk(answer);
       tokensUsed = 0;
     } else if (isLanguage) {
       // Language direct explanation route
       sourceType = "direct_language";
       const prompt = buildLanguageDirectPrompt({ question, grade, subject });
-      const res = await generateAnswer(prompt);
+      const res = await runner(prompt);
       answer = res.text;
       tokensUsed = res.tokensUsed || 0;
       promptTokens = res.promptTokens || 0;
@@ -139,7 +143,7 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
           subject,
         });
 
-        const res = await generateAnswer(prompt);
+        const res = await runner(prompt);
         answer = res.text;
         tokensUsed = res.tokensUsed || 0;
         promptTokens = res.promptTokens || 0;
@@ -156,7 +160,7 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
         // Fallback directly to Gemini if vector matching finds no textbook chunks
         sourceType = "direct_curriculum_fallback";
         const prompt = buildGeneralCurriculumPrompt({ question, grade, subject, board });
-        const res = await generateAnswer(prompt);
+        const res = await runner(prompt);
         answer = res.text;
         tokensUsed = res.tokensUsed || 0;
         promptTokens = res.promptTokens || 0;
@@ -166,6 +170,7 @@ export async function processStudentChatMessage({ userId, schoolId, sessionId, q
   } catch (aiErr) {
     console.error("[processStudentChatMessage] AI generation error:", aiErr.message || aiErr);
     answer = "I'm sorry, I encountered a temporary connection issue while answering your question. Please try again in a few moments!";
+    if (onChunk) onChunk(answer);
     sourceType = "direct_curriculum_fallback";
     tokensUsed = 0;
     promptTokens = 0;
