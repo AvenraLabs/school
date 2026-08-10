@@ -183,46 +183,52 @@ export async function createVideoGeneration(req, res, next) {
 
     // ── DIAGRAM ONLY: handle synchronously and respond immediately ──────────────
     if (!isDiagramAndVideo) {
-      const diagramResult = await generateEducationalDiagram({
-        topic: videoGen.topic,
-        classLevel: targetClassId,
-        subjectName: videoGen.subject_name,
-        classId: targetClassId,
-        userId: req.user?.id,
-        refId: videoGen.id,
-      });
-
-      if (diagramResult) {
-        await videoGen.update({
-          status: "completed",
-          image_path: diagramResult.imagePath,
-          image_url: diagramResult.imageUrl,
-          summary: diagramResult.summary,
-          completed_at: new Date(),
+      try {
+        const diagramResult = await generateEducationalDiagram({
+          topic: videoGen.topic,
+          classLevel: targetClassId,
+          subjectName: videoGen.subject_name,
+          classId: targetClassId,
+          userId: req.user?.id,
+          refId: videoGen.id,
         });
 
-        return res.status(201).json({
-          status: "success",
-          message: "Diagram generated successfully",
-          data: {
-            jobId: videoGen.id,
+        if (diagramResult) {
+          await videoGen.update({
             status: "completed",
-            contentType: "diagram_only",
-            topic: videoGen.topic,
-            imageUrl: diagramResult.imageUrl,
+            image_path: diagramResult.imagePath,
+            image_url: diagramResult.imageUrl,
             summary: diagramResult.summary,
-          },
-        });
-      } else {
+            completed_at: new Date(),
+          });
+
+          return res.status(201).json({
+            status: "success",
+            message: "Diagram generated successfully",
+            data: {
+              jobId: videoGen.id,
+              status: "completed",
+              contentType: "diagram_only",
+              topic: videoGen.topic,
+              imageUrl: diagramResult.imageUrl,
+              summary: diagramResult.summary,
+            },
+          });
+        } else {
+          throw new Error("Diagram generation returned no result");
+        }
+      } catch (diagErr) {
         if (req.user?.id) {
-          await refundGenerationQuotas({ userId: req.user.id, generationId: videoGen.id });
+          try {
+            await refundGenerationQuotas({ userId: req.user.id, generationId: videoGen.id });
+          } catch (rErr) {}
         }
         await videoGen.update({
           status: "failed",
-          error_message: "Diagram generation failed. Please try again.",
+          error_message: diagErr.message || "Diagram generation failed. Please try again.",
         });
 
-        throw new AppError("Diagram generation failed. Please try again.", 500);
+        throw new AppError(diagErr.message || "Diagram generation failed. Please try again.", 500);
       }
     }
 
@@ -284,12 +290,12 @@ export async function getTeacherVideos(req, res, next) {
     const offset = (page - 1) * limit;
     const subjectFilter = req.query.subjectName || req.query.subject;
 
-    // Auto-cleanup: Mark any stale jobs stuck in "processing" for > 10 minutes as "failed" and refund quotas
-    const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);
+    // Auto-cleanup: Mark any stale jobs stuck in "processing" for > 3 minutes as "failed" and refund quotas
+    const threeMinsAgo = new Date(Date.now() - 3 * 60 * 1000);
     const staleJobs = await VideoGeneration.findAll({
       where: {
         status: "processing",
-        createdAt: { [Op.lt]: tenMinsAgo },
+        createdAt: { [Op.lt]: threeMinsAgo },
       },
     });
 

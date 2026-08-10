@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Check if user is already logged in
+  // Check if user is already logged in & listen for silent token refreshes
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
@@ -18,6 +18,17 @@ export function AuthProvider({ children }) {
       setUser(JSON.parse(savedUser));
     }
     setLoading(false);
+
+    const handleRefreshed = (e) => {
+      if (e.detail?.token) {
+        setToken(e.detail.token);
+      }
+    };
+
+    window.addEventListener('auth:token-refreshed', handleRefreshed);
+    return () => {
+      window.removeEventListener('auth:token-refreshed', handleRefreshed);
+    };
   }, []);
 
   const login = (userData, authToken, refreshToken = null) => {

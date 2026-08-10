@@ -61,15 +61,15 @@ const VideoGeneration = db.define(
       allowNull: true,
     },
     video_path: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
     },
     video_url: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
     },
     thumbnail_path: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
     },
     prompt: {
@@ -86,14 +86,14 @@ const VideoGeneration = db.define(
       allowNull: true,
       defaultValue: "diagram_only",
     },
-    // GCS gs:// URI for the labeled 2D diagram PNG
+    // GCS gs:// URI or Data URI for the labeled 2D diagram PNG
     image_path: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
     },
-    // Public HTTPS URL for the diagram PNG (CDN-served from GCS)
+    // Public HTTPS URL or Data URI for the diagram PNG
     image_url: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
     },
     // Student-facing one-liner "what you'll learn" caption (≤15 words)

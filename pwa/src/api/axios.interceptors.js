@@ -119,6 +119,12 @@ export function setupAxiosInterceptors({ onLogout, onTokenRefresh }) {
           return api(originalRequest);
         } catch (refreshErr) {
           processQueue(refreshErr, null);
+          // Force-clear all auth tokens so the user isn't stuck in a 401 loop
+          // even if onLogout fails or is a no-op
+          localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("accounts");
+          localStorage.removeItem("activeUserId");
           onLogout();
           return Promise.reject(refreshErr);
         } finally {

@@ -102,6 +102,10 @@ axiosInstance.interceptors.response.use(
         axiosInstance.defaults.headers.common.Authorization = `Bearer ${newToken}`;
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
 
+        window.dispatchEvent(
+          new CustomEvent('auth:token-refreshed', { detail: { token: newToken, refreshToken: newRefreshToken } })
+        );
+
         processQueue(null, newToken);
         return axiosInstance(originalRequest);
       } catch (refreshErr) {

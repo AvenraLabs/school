@@ -124,7 +124,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   // ---------- axios interceptors (ONCE, stable ref avoids stale closure) ----------
-  // Keep logoutRef current so interceptor always calls the latest logout
 
   useEffect(() => {
     setupAxiosInterceptors({
@@ -153,6 +152,12 @@ export function AuthProvider({ children }) {
       },
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep logoutRef always pointing to the latest logout function
+  // so the interceptor's onLogout callback never fires on a stale/null ref
+  useEffect(() => {
+    logoutRef.current = logout;
+  });
 
   // ---------- hydrate user profile (name/avatar) ----------
   useEffect(() => {
@@ -320,7 +325,6 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    logoutRef.current = logout; // keep ref current
     try {
       setError(null);
       await unsubscribePushDevice();
@@ -340,23 +344,19 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Note: Actual token refresh is handled by the axios interceptor (axios.interceptors.js)
+  // which calls POST /auth/refresh-token and rotates tokens automatically on 401.
+  // This method only checks local token validity without triggering logout.
   async function refreshToken() {
-    try {
-      const currentToken = localStorage.getItem("token");
-      if (!currentToken || !validateToken(currentToken)) {
-        throw new Error("No valid token to refresh");
-      }
-      const decoded = decodeToken(currentToken);
-      if (decoded && !isTokenExpired(decoded)) {
-        return decoded;
-      } else {
-        throw new Error("Token expired");
-      }
-    } catch (error) {
-      setError(error.message);
-      logout();
-      throw error;
+    const currentToken = localStorage.getItem("token");
+    if (!currentToken) return null;
+    const decoded = decodeToken(currentToken);
+    if (decoded && !isTokenExpired(decoded)) {
+      return decoded;
     }
+    // Token expired — don't logout here; let the interceptor handle
+    // the silent refresh via the stored refreshToken in localStorage.
+    return null;
   }
 
   // Switch to another logged-in user profile

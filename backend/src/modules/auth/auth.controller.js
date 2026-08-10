@@ -116,7 +116,7 @@ export const login = asyncHandler(async (req, res) => {
   const refreshToken = jwt.sign(
     { id: user.id, token_type: "refresh" },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" }
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "365d" }
   );
 
   // ── 5. Save refresh token & update last_login ─────────────────────
@@ -230,7 +230,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
   const newRefreshToken = jwt.sign(
     { id: user.id, token_type: "refresh" },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" }
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "365d" }
   );
 
   await tokenRecord.destroy();

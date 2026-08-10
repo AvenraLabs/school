@@ -223,7 +223,7 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     const refreshToken = jwt.sign(
       { id: updatedUser.id, token_type: "refresh" },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" }
+      { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "365d" }
     );
 
     await RefreshToken.create({
@@ -323,7 +323,7 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
   };
 
   const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "15m" });
-  const refreshToken = jwt.sign({ id: updatedUser.id, token_type: "refresh" }, process.env.JWT_SECRET, { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" });
+  const refreshToken = jwt.sign({ id: updatedUser.id, token_type: "refresh" }, process.env.JWT_SECRET, { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "365d" });
 
   await RefreshToken.create({
     user_id: updatedUser.id,
