@@ -31,6 +31,8 @@ function serializeVideoGen(v) {
       }
     } else if (json.image_path.startsWith("http://") || json.image_path.startsWith("https://")) {
       json.image_url = json.image_path;
+    } else if (json.image_path.startsWith("data:")) {
+      json.image_url = json.image_path;
     }
   } else if (json.image_url && json.image_url.startsWith("gs://")) {
     const match = json.image_url.match(/^gs:\/\/([^/]+)\/(.+)$/);
@@ -256,25 +258,13 @@ export async function getVideoGenerationStatus(req, res, next) {
       throw new AppError("Video generation job not found", 404);
     }
 
-    const streamUrl = `/api/ai/videos/stream/${videoGen.id}`;
+    // Use serializeVideoGen for consistent field naming (snake_case + camelCase aliases)
+    // and proper gs:// → HTTPS / data: URI resolution — matches getTeacherVideos/getStudentClassVideos
+    const serialized = serializeVideoGen(videoGen);
 
     res.json({
       status: "success",
-      data: {
-        id: videoGen.id,
-        status: videoGen.status,
-        contentType: videoGen.content_type || "diagram_and_video",
-        videoUrl: videoGen.video_url || streamUrl,
-        streamUrl,
-        gcsPublicUrl: videoGen.video_url,
-        imageUrl: videoGen.image_url || null,
-        summary: videoGen.summary || null,
-        topic: videoGen.topic,
-        subjectName: videoGen.subject_name,
-        duration: videoGen.duration,
-        errorMessage: videoGen.error_message,
-        completedAt: videoGen.completed_at,
-      },
+      data: serialized,
     });
   } catch (error) {
     next(error);
