@@ -143,7 +143,7 @@ export default function AiChatPage() {
       >
         <ChatList messages={messages} userAvatar={getAssetUrl(user?.avatar_url)} />
 
-        {loading && (
+        {loading && messages.length === 0 && (
           <Box sx={{ p: 2, display: "flex", gap: 1.5, alignItems: "center" }}>
             <Avatar
               sx={{

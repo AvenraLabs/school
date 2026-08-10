@@ -40,6 +40,9 @@ export default function MessageBubble({ message, userAvatar }) {
         }
     };
 
+    const textContent = (message.text || message.content || "").trim();
+    const hasText = textContent.length > 0;
+
     return (
         <Box
             sx={{
@@ -48,6 +51,11 @@ export default function MessageBubble({ message, userAvatar }) {
                 mb: 2,
                 gap: 1.5,
                 alignItems: "flex-end", // Align avatars to bottom
+                "@keyframes typingBlink": {
+                    "0%": { opacity: 0.2 },
+                    "20%": { opacity: 1 },
+                    "100%": { opacity: 0.2 },
+                },
             }}
         >
             {/* AI Avatar */}
@@ -81,38 +89,46 @@ export default function MessageBubble({ message, userAvatar }) {
                         : theme.palette.primary.contrastText,
                 }}
             >
-                <Stack direction="row" spacing={1.5} alignItems="flex-start" justifyContent="space-between">
-                    <Typography
-                        variant="body1"
-                        component="div"
-                        sx={{
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                            lineHeight: 1.6,
-                            flex: 1,
-                        }}
-                    >
-                        {formatChatMessage(message.text || message.content)}
-                    </Typography>
-                    {isAi && (
-                        <IconButton
-                            size="small"
-                            onClick={handleSpeakToggle}
+                {!hasText && isAi ? (
+                    <Box sx={{ display: "flex", alignItems: "center", py: 0.5, px: 0.5, gap: 0.6 }}>
+                        <Box component="span" sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: theme.palette.text.secondary, animation: "typingBlink 1.4s infinite both" }} />
+                        <Box component="span" sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: theme.palette.text.secondary, animation: "typingBlink 1.4s infinite both", animationDelay: "0.2s" }} />
+                        <Box component="span" sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: theme.palette.text.secondary, animation: "typingBlink 1.4s infinite both", animationDelay: "0.4s" }} />
+                    </Box>
+                ) : (
+                    <Stack direction="row" spacing={1.5} alignItems="flex-start" justifyContent="space-between">
+                        <Typography
+                            variant="body1"
+                            component="div"
                             sx={{
-                                color: isPlaying ? theme.palette.primary.main : theme.palette.text.secondary,
-                                alignSelf: "flex-start",
-                                mt: -0.5,
-                                mr: -1,
-                                "&:hover": {
-                                    bgcolor: theme.palette.action.hover,
-                                },
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-word",
+                                lineHeight: 1.6,
+                                flex: 1,
                             }}
-                            title={isPlaying ? "Stop listening" : "Listen to answer"}
                         >
-                            {isPlaying ? <VolumeOff fontSize="small" /> : <VolumeUp fontSize="small" />}
-                        </IconButton>
-                    )}
-                </Stack>
+                            {formatChatMessage(message.text || message.content)}
+                        </Typography>
+                        {isAi && hasText && (
+                            <IconButton
+                                size="small"
+                                onClick={handleSpeakToggle}
+                                sx={{
+                                    color: isPlaying ? theme.palette.primary.main : theme.palette.text.secondary,
+                                    alignSelf: "flex-start",
+                                    mt: -0.5,
+                                    mr: -1,
+                                    "&:hover": {
+                                        bgcolor: theme.palette.action.hover,
+                                    },
+                                }}
+                                title={isPlaying ? "Stop listening" : "Listen to answer"}
+                            >
+                                {isPlaying ? <VolumeOff fontSize="small" /> : <VolumeUp fontSize="small" />}
+                            </IconButton>
+                        )}
+                    </Stack>
+                )}
 
                 {isAi && message.sources && message.sources.length > 0 && (
                     <Box
