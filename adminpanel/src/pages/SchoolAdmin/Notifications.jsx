@@ -240,14 +240,25 @@ export function Notifications() {
     }
   };
 
+  const [ackMetrics, setAckMetrics] = useState(null);
+
   const loadAcks = async (notif) => {
     setShowAcks(notif);
     setAcks(null);
+    setAckMetrics(null);
     try {
       const res = await notificationsAPI.getAcknowledgements(notif.id);
-      setAcks(res.data || []);
+      const ackData = res?.data || res;
+      const rawRows = ackData?.rows || ackData?.items || (Array.isArray(ackData) ? ackData : []);
+      setAcks(Array.isArray(rawRows) ? rawRows : []);
+      setAckMetrics({
+        seenCount: ackData?.seenCount ?? (Array.isArray(rawRows) ? rawRows.length : 0),
+        unseenCount: ackData?.unseenCount ?? 0,
+        totalCount: ackData?.totalCount ?? (Array.isArray(rawRows) ? rawRows.length : 0),
+      });
     } catch (e) {
       toast.error('Failed to load acknowledgements');
+      setAcks([]);
     }
   };
 
@@ -732,8 +743,25 @@ export function Notifications() {
       </Modal>
 
       {/* Modal: Acknowledgements */}
-      <Modal isOpen={!!showAcks} onClose={() => setShowAcks(null)} title="Read Receipts & Acknowledgements">
+      <Modal isOpen={!!showAcks} onClose={() => { setShowAcks(null); setAcks(null); setAckMetrics(null); }} title="Read Receipts & Acknowledgements">
         <div className="space-y-3 text-xs">
+          {ackMetrics && (
+            <div className="grid grid-cols-3 gap-2 p-2.5 bg-[#EAF3F0] border border-[#D3E6E0] rounded-[8px] text-center font-mono">
+              <div>
+                <span className="text-[10px] text-[#52607D] block font-sans">Total Audience</span>
+                <span className="font-bold text-[#14213D] text-xs">{ackMetrics.totalCount}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-[#2F6F5E] block font-sans">Acknowledged</span>
+                <span className="font-bold text-[#2F6F5E] text-xs">{ackMetrics.seenCount}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-[#8C97AB] block font-sans">Pending</span>
+                <span className="font-bold text-[#52607D] text-xs">{ackMetrics.unseenCount}</span>
+              </div>
+            </div>
+          )}
+
           {!acks ? (
             <p className="text-[#8C97AB] text-center py-4">Loading receipts...</p>
           ) : acks.length === 0 ? (
@@ -742,8 +770,17 @@ export function Notifications() {
             <div className="divide-y divide-[#EDEAE1] max-h-60 overflow-y-auto">
               {acks.map((a) => (
                 <div key={a.id} className="py-2 flex items-center justify-between">
-                  <span className="font-semibold text-[#14213D]">{a.user?.name || `User #${a.user_id}`}</span>
-                  <span className="font-mono text-[10px] text-[#8C97AB]">{formatDate(a.read_at)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-[#14213D]">{a.user?.name || a.User?.name || `User #${a.user_id}`}</span>
+                    {(a.user?.role || a.User?.role || a.user_role) && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase bg-[#EAF3F0] text-[#2F6F5E]">
+                        {a.user?.role || a.User?.role || a.user_role}
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-mono text-[10px] text-[#8C97AB]">
+                    {formatDate(a.acknowledged_at || a.read_at || a.created_at)}
+                  </span>
                 </div>
               ))}
             </div>
