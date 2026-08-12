@@ -48,6 +48,17 @@ Output ONLY the raw JSON object. No extra text.`;
     const response = await Promise.race([generatePromise, timeoutPromise]);
     const rawText = (response.text || "").trim();
 
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("No valid JSON object found in Gemini response");
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    if (!parsed.imagePrompt || !parsed.summary) {
+      throw new Error("Gemini returned JSON but missing required keys ('imagePrompt' or 'summary')");
+    }
+
     const usage = response.usageMetadata || {};
     const promptTokens = usage.promptTokenCount || 0;
     const candidateTokens = usage.candidatesTokenCount || 0;
@@ -78,13 +89,10 @@ Output ONLY the raw JSON object. No extra text.`;
       }
     }
 
-    const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-    const parsed = JSON.parse(cleaned);
-
-    if (parsed.imagePrompt && parsed.summary) {
-      return { imagePrompt: String(parsed.imagePrompt), summary: String(parsed.summary).slice(0, 200) };
-    }
-    throw new Error("Gemini returned JSON but missing required keys");
+    return {
+      imagePrompt: String(parsed.imagePrompt),
+      summary: String(parsed.summary).slice(0, 200),
+    };
   } catch (err) {
     logger.warn("DIAGRAM_PROMPT_FALLBACK", `Gemini diagram prompt failed: ${err.message}. Using fallback.`);
     return {
@@ -167,10 +175,9 @@ export async function generateEducationalDiagram({ topic, classLevel, subjectNam
       throw lastError || new Error("All image generation candidate models failed.");
     }
 
-    const rawGcsBase = getGcsOutputUri();
-    const bucketMatch = rawGcsBase.match(/^gs:\/\/([^/]+)/);
-    if (!bucketMatch) throw new Error(`Cannot parse bucket from GCS_OUTPUT_URI: ${rawGcsBase}`);
-    const bucketName = bucketMatch[1];
+    const rawGcsBase = getGcsOutputUri() || "";
+    const bucketName = rawGcsBase.replace(/^gs:\/\//, "").split("/")[0];
+    if (!bucketName) throw new Error(`Cannot parse bucket from GCS_OUTPUT_URI: ${rawGcsBase}`);
 
     const envFolder = process.env.NODE_ENV === "production" ? "prod" : "dev";
     const classFolder = `class_${classId || "all"}`;
