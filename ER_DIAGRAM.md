@@ -180,7 +180,7 @@ Per-section subject overrides — only populated for sections that differ from t
 - `school_id` (BIGINT, FK -> `schools.id`)
 - `class_id` (BIGINT, FK -> `classes.id`), `section_id` (BIGINT, FK -> `sections.id`)
 - `roll_no` (INT), `admission_no` (STRING)
-- `dob` (DATEONLY), `gender` (ENUM), `blood_group` (STRING), `aadhar_no` (STRING, Unique)
+- `dob` (DATEONLY), `gender` (ENUM), `blood_group` (STRING)
 - `father_name` (STRING), `mother_name` (STRING), `guardian_name` (STRING)
 - `residential_status` (ENUM: 'dayscholar', 'hosteler')
 - `is_active` (BOOLEAN)

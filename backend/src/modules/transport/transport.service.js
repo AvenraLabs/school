@@ -257,6 +257,7 @@ export const listRequestsService = async ({ school_id, query }) => {
     include: [
       {
         model: Student,
+        attributes: ["id", "roll_no", "admission_no"],
         include: [
           { model: User, attributes: ["id", "name"] },
           { model: Class, attributes: ["id", "class_name"] },
@@ -266,10 +267,12 @@ export const listRequestsService = async ({ school_id, query }) => {
       {
         model: Vehicle,
         as: "CurrentVehicle",
+        attributes: ["id", "vehicle_number", "vehicle_name"],
       },
       {
         model: Vehicle,
         as: "RequestedVehicle",
+        attributes: ["id", "vehicle_number", "vehicle_name"],
       },
     ],
     limit,

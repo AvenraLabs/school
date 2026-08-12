@@ -631,7 +631,7 @@ export function TransportManager() {
               {/* Requests Filter Bar */}
               <div className="p-3 bg-[#FAFAF8] border-b border-[#E4E1D8] flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#14213D]">Status Filter:</span>
+                  <span className="font-bold text-[#14213D]">Status:</span>
                   <Select value={requestFilter} onChange={(e) => setRequestFilter(e.target.value)}>
                     <option value="all">All Requests</option>
                     <option value="pending">Pending Review ({pendingRequestsCount})</option>
@@ -668,7 +668,7 @@ export function TransportManager() {
                         <tr key={r.id} className="hover:bg-[#FAFAF8]">
                           <td className="px-4 py-2.5 font-semibold text-[#14213D]">{r.student?.user?.name || `Student #${r.student_id}`}</td>
                           <td className="px-4 py-2.5 font-mono text-[#52607D]">
-                            {r.student?.class?.class_name || 'Class'} {r.student?.section?.name ? `- Section ${r.student.section.name}` : ''}
+                            {r.student?.class?.class_name ? `${r.student.class.class_name}${r.student.section?.name ? `-${r.student.section.name}` : ''}` : '—'}
                           </td>
                           <td className="px-4 py-2.5 font-mono text-[#52607D]">
                             {r.CurrentVehicle ? `${r.CurrentVehicle.vehicle_name} (${r.CurrentVehicle.vehicle_number})` : 'Unassigned'}
@@ -677,10 +677,14 @@ export function TransportManager() {
                             {r.RequestedVehicle ? `${r.RequestedVehicle.vehicle_name} (${r.RequestedVehicle.vehicle_number})` : `Bus #${r.requested_vehicle_id}`}
                           </td>
                           <td className="px-4 py-2.5 font-mono text-[#52607D]">
-                            {r.created_at ? formatDate(r.created_at) : 'Recent'}
+                            {formatDate(r.createdAt || r.created_at)}
                           </td>
                           <td className="px-4 py-2.5">
-                            <StatusBadge status={r.status === 'approved' ? 'active' : r.status === 'rejected' ? 'inactive' : 'pending'} size="sm" />
+                            <StatusBadge
+                              status={r.status === 'approved' ? 'active' : r.status === 'rejected' ? 'danger' : 'warning'}
+                              label={r.status === 'approved' ? 'Approved' : r.status === 'rejected' ? 'Rejected' : 'Pending'}
+                              size="sm"
+                            />
                           </td>
                           <td className="px-4 py-2.5 text-right">
                             {r.status === 'pending' ? (
@@ -705,8 +709,8 @@ export function TransportManager() {
                                 </Button>
                               </div>
                             ) : (
-                              <span className="text-[11px] text-[#8C97AB] italic capitalize">
-                                Processed
+                              <span className={`text-[11px] font-bold capitalize ${r.status === 'approved' ? 'text-[#2F6F5E]' : 'text-[#D92D20]'}`}>
+                                {r.status === 'approved' ? 'Approved' : 'Rejected'}
                               </span>
                             )}
                           </td>

@@ -303,10 +303,6 @@ export function SchoolAnalyticsPage() {
         title="Configure At-Risk Student Thresholds"
       >
         <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
-          <p className="text-[#52607D]">
-            Set custom risk thresholds for your institution. Students falling below these cutoffs will automatically be flagged as At-Risk in analytics and dashboard reports.
-          </p>
-
           <div className="space-y-3 pt-2">
             <div>
               <label className="block text-[11px] font-semibold text-[#14213D] mb-1">

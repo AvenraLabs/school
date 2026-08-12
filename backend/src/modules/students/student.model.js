@@ -73,12 +73,6 @@ const Student = db.define(
 
     blood_group: DataTypes.STRING,
 
-    aadhar_no: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      unique: true,
-    },
-
     emergency_contact: DataTypes.STRING,
 
     residential_status: {

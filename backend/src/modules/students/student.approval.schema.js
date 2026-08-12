@@ -13,7 +13,6 @@ export const requestStudentProfileUpdateSchema = z.object({
     guardian_name: z.string().optional(),
     address: z.string().optional(),
     blood_group: z.string().optional(),
-    aadhar_no: z.string().optional(),
   }),
 });
 

@@ -17,7 +17,6 @@ export const createStudentSchema = z.object({
   mother_name: z.string().optional(),
   guardian_name: z.string().optional(),
   address: z.string().optional(),
-  aadhar_no: z.string().optional(),
   emergency_contact: z.string().optional(),
   residential_status: z.enum(["dayscholar", "hosteler"]).optional(),
 });

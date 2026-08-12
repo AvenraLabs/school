@@ -34,7 +34,6 @@ export const createStudent = asyncHandler(async (req, res) => {
     guardian_name: req.body.guardian_name,
     guardian_phone: req.body.guardian_phone,
     address: req.body.address,
-    aadhar_no: req.body.aadhar_no,
     emergency_contact: req.body.emergency_contact,
     residential_status: req.body.residential_status,
     admission_no: req.body.admission_no,
