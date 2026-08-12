@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { classesAPI, authAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { generateRosterPDF } from '../../utils/pdfGenerator';
@@ -8,7 +8,7 @@ import { EmptyState } from '../../components/common/EmptyState';
 import { Button } from '../../components/ui/Button';
 import { Select, Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { Download, ClipboardList, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Download, ClipboardList, KeyRound, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function LoginRoster() {
   const [data, setData] = useState(null);
@@ -21,10 +21,13 @@ export function LoginRoster() {
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [page, setPage] = useState(0);
+  const LIMIT = 15;
   const toast = useToast();
 
   useEffect(() => { loadClasses(); loadRoster(); }, []);
   useEffect(() => { loadRoster(); }, [filterClass, filterSection]);
+  useEffect(() => { setPage(0); }, [filterRole, filterClass, filterSection]);
 
   const loadClasses = async () => {
     try {
@@ -44,6 +47,47 @@ export function LoginRoster() {
       setLoading(false);
     }
   };
+
+  const allRows = useMemo(() => {
+    if (!data) return [];
+    const list = [];
+    if (filterRole === 'all' || filterRole === 'teachers') {
+      (data.teachers || []).forEach((t) => {
+        list.push({
+          key: `teacher-${t.id}`,
+          type: 'teacher',
+          userId: t.user?.id,
+          name: t.user?.name || '—',
+          username: t.user?.username || '—',
+          roleLabel: 'Teacher',
+          placement: 'Faculty Staff',
+        });
+      });
+    }
+    if (filterRole === 'all' || filterRole === 'students') {
+      (data.classes || []).forEach((c) => {
+        (c.sections || []).forEach((sec) => {
+          (sec.students || []).forEach((st) => {
+            list.push({
+              key: `student-${st.id}`,
+              type: 'student',
+              userId: st.user?.id,
+              name: st.user?.name || '—',
+              username: st.user?.username || '—',
+              roleLabel: 'Student',
+              placement: `${c.class_name} - Sec ${sec.name}`,
+            });
+          });
+        });
+      });
+    }
+    return list;
+  }, [data, filterRole]);
+
+  const totalPages = Math.ceil(allRows.length / LIMIT);
+  const paginatedRows = useMemo(() => {
+    return allRows.slice(page * LIMIT, (page + 1) * LIMIT);
+  }, [allRows, page, LIMIT]);
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
@@ -144,7 +188,7 @@ export function LoginRoster() {
       {/* Credentials Roster Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Master User Login Directory</CardTitle>
+          <CardTitle>Master User Login Directory ({allRows.length})</CardTitle>
         </CardHeader>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
@@ -160,56 +204,61 @@ export function LoginRoster() {
             <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
               {loading ? (
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-[#8C97AB]">Loading login roster...</td></tr>
-              ) : !data ? (
+              ) : allRows.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-12 text-center"><EmptyState icon={ClipboardList} title="No user accounts" description="No login credentials found." /></td></tr>
               ) : (
-                <>
-                  {(filterRole === 'all' || filterRole === 'teachers') && (data.teachers || []).map((t) => (
-                    <tr key={`teacher-${t.id}`} className="hover:bg-[#FAFAF8]">
-                      <td className="px-4 py-2.5 font-bold text-[#14213D]">{t.user?.name || '—'}</td>
-                      <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{t.user?.username || '—'}</td>
-                      <td className="px-4 py-2.5"><StatusBadge status="active" label="Teacher" size="sm" /></td>
-                      <td className="px-4 py-2.5 text-[#52607D]">Faculty Staff</td>
-                      <td className="px-4 py-2.5 text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          icon={KeyRound}
-                          onClick={() => setResetModal({ userId: t.user?.id, name: t.user?.name })}
-                        >
-                          Reset Password
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {(filterRole === 'all' || filterRole === 'students') && (data.classes || []).flatMap((c) =>
-                    (c.sections || []).flatMap((sec) =>
-                      (sec.students || []).map((st) => (
-                        <tr key={`student-${st.id}`} className="hover:bg-[#FAFAF8]">
-                          <td className="px-4 py-2.5 font-bold text-[#14213D]">{st.user?.name || '—'}</td>
-                          <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{st.user?.username || '—'}</td>
-                          <td className="px-4 py-2.5"><StatusBadge status="warning" label="Student" size="sm" /></td>
-                          <td className="px-4 py-2.5 text-[#52607D]">{c.class_name} - Sec {sec.name}</td>
-                          <td className="px-4 py-2.5 text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              icon={KeyRound}
-                              onClick={() => setResetModal({ userId: st.user?.id, name: st.user?.name })}
-                            >
-                              Reset Password
-                            </Button>
-                          </td>
-                        </tr>
-                      ))
-                    )
-                  )}
-                </>
+                paginatedRows.map((item) => (
+                  <tr key={item.key} className="hover:bg-[#FAFAF8]">
+                    <td className="px-4 py-2.5 font-bold text-[#14213D]">{item.name}</td>
+                    <td className="px-4 py-2.5 font-mono text-[#2F6F5E]">{item.username}</td>
+                    <td className="px-4 py-2.5">
+                      <StatusBadge status={item.type === 'teacher' ? 'active' : 'warning'} label={item.roleLabel} size="sm" />
+                    </td>
+                    <td className="px-4 py-2.5 text-[#52607D]">{item.placement}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={KeyRound}
+                        onClick={() => setResetModal({ userId: item.userId, name: item.name })}
+                      >
+                        Reset Password
+                      </Button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="px-4 py-3 bg-[#FAFAF8] border-t border-[#E4E1D8] flex items-center justify-between text-xs text-[#52607D]">
+            <span>
+              Page <strong className="text-[#14213D] font-mono">{page + 1}</strong> of <strong className="text-[#14213D] font-mono">{totalPages}</strong> ({allRows.length} Total Users)
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={ChevronLeft}
+                onClick={() => setPage(Math.max(0, page - 1))}
+                disabled={page === 0}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                iconRight={ChevronRight}
+                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                disabled={page >= totalPages - 1}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Modal: Reset Password */}

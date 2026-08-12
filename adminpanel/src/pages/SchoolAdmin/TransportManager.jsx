@@ -540,7 +540,7 @@ export function TransportManager() {
               {/* Filter Controls Bar */}
               <div className="p-3 bg-[#FAFAF8] border-b border-[#E4E1D8] flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-3">
-                  <span className="font-bold text-[#14213D]">Class Filter:</span>
+                  <span className="font-bold text-[#14213D]">Class:</span>
                   <Select value={filterClass} onChange={(e) => { setFilterClass(e.target.value); setFilterSection(''); setPage(0); }}>
                     <option value="">All Classes</option>
                     {classes.map((c) => (
@@ -709,9 +709,7 @@ export function TransportManager() {
                                 </Button>
                               </div>
                             ) : (
-                              <span className={`text-[11px] font-bold capitalize ${r.status === 'approved' ? 'text-[#2F6F5E]' : 'text-[#D92D20]'}`}>
-                                {r.status === 'approved' ? 'Approved' : 'Rejected'}
-                              </span>
+                              <span className="text-[#8C97AB] font-mono">—</span>
                             )}
                           </td>
                         </tr>
