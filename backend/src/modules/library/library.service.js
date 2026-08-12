@@ -55,7 +55,11 @@ export const getLibrarySettingsService = async (school_id) => {
 export const updateLibrarySettingsService = async (school_id, payload) => {
   const school = await School.findByPk(school_id);
   if (!school) throw new AppError("School not found", 404);
-  await school.update(payload);
+  const updates = {};
+  if (payload.library_loan_period_days !== undefined) updates.library_loan_period_days = payload.library_loan_period_days;
+  if (payload.library_overdue_reminder_days !== undefined) updates.library_overdue_reminder_days = payload.library_overdue_reminder_days;
+  if (payload.library_overdue_fine_per_day !== undefined) updates.library_overdue_fine_per_day = payload.library_overdue_fine_per_day;
+  await school.update(updates);
   return await getLibrarySettingsService(school_id);
 };
 
@@ -129,7 +133,7 @@ export const addBookService = async (school_id, created_by, { book_no, book_name
 };
 
 
-export const editBookService = async (bookId, school_id, { book_name, total_copies, image_url }) => {
+export const editBookService = async (bookId, school_id, { book_no, book_name, total_copies, image_url }) => {
   const t = await db.transaction();
   try {
     const book = await Book.findOne({
@@ -144,6 +148,13 @@ export const editBookService = async (bookId, school_id, { book_name, total_copi
     if (book_name !== undefined) updates.book_name = book_name;
     if (image_url !== undefined) updates.image_url = image_url;
 
+    if (book_no !== undefined && book_no !== book.book_no) {
+      const existing = await Book.findOne({ where: { school_id, book_no }, transaction: t });
+      if (existing && existing.id !== Number(bookId)) {
+        throw new AppError(`Book number '${book_no}' already exists`, 400);
+      }
+      updates.book_no = book_no;
+    }
 
     if (total_copies !== undefined) {
       // Recalculate available: new_available = new_total - currently_issued
@@ -199,7 +210,7 @@ export const unarchiveBookService = async (bookId, school_id) => {
 export const issueBookService = async (
   school_id,
   issued_by,
-  { borrower_type = "student", student_id, teacher_id, book_id, due_date }
+  { borrower_type = "student", student_id, teacher_id, user_id, book_id, due_date }
 ) => {
   const t = await db.transaction();
   try {
@@ -215,27 +226,75 @@ export const issueBookService = async (
       throw new AppError("No copies available for this book", 400);
     }
 
-    // 2. Validate borrower
+    // 2. Default due_date if omitted using school settings
+    let finalDueDate = due_date;
+    if (!finalDueDate) {
+      const school = await School.findByPk(school_id, {
+        attributes: ["library_loan_period_days"],
+        transaction: t,
+      });
+      const loanPeriod = Number(school?.library_loan_period_days) || 14;
+      finalDueDate = addDays(loanPeriod);
+    }
+
+    // 3. Resolve borrower
     let targetStudentId = null;
     let targetTeacherId = null;
+    let actualBorrowerType = borrower_type;
 
-    if (borrower_type === "teacher") {
-      if (!teacher_id) throw new AppError("Teacher ID is required", 400);
-      const teacher = await Teacher.findOne({ where: { id: teacher_id, school_id }, transaction: t });
-      if (!teacher) throw new AppError("Teacher not found", 404);
-      targetTeacherId = teacher.id;
+    if (actualBorrowerType === "teacher") {
+      let teacher = null;
+      if (teacher_id) {
+        teacher = await Teacher.findOne({ where: { id: teacher_id, school_id }, transaction: t });
+      } else if (user_id) {
+        teacher = await Teacher.findOne({ where: { user_id, school_id }, transaction: t });
+      }
 
+      if (!teacher && user_id) {
+        // Fallback: check if user_id belongs to a student
+        const student = await Student.findOne({ where: { user_id, school_id }, transaction: t });
+        if (student) {
+          actualBorrowerType = "student";
+          targetStudentId = student.id;
+        }
+      } else if (teacher) {
+        targetTeacherId = teacher.id;
+      }
+
+      if (!targetTeacherId && !targetStudentId) {
+        throw new AppError("Teacher not found", 404);
+      }
+    } else {
+      let student = null;
+      if (student_id) {
+        student = await Student.findOne({ where: { id: student_id, school_id }, transaction: t });
+      } else if (user_id) {
+        student = await Student.findOne({ where: { user_id, school_id }, transaction: t });
+      }
+
+      if (!student && user_id) {
+        // Fallback: check if user_id belongs to a teacher
+        const teacher = await Teacher.findOne({ where: { user_id, school_id }, transaction: t });
+        if (teacher) {
+          actualBorrowerType = "teacher";
+          targetTeacherId = teacher.id;
+        }
+      } else if (student) {
+        targetStudentId = student.id;
+      }
+
+      if (!targetStudentId && !targetTeacherId) {
+        throw new AppError("Student not found", 404);
+      }
+    }
+
+    if (actualBorrowerType === "teacher") {
       const alreadyIssued = await BookIssue.findOne({
         where: { school_id, teacher_id: targetTeacherId, book_id, status: "issued" },
         transaction: t,
       });
       if (alreadyIssued) throw new AppError("Teacher already has this book issued", 400);
     } else {
-      if (!student_id) throw new AppError("Student ID is required", 400);
-      const student = await Student.findOne({ where: { id: student_id, school_id }, transaction: t });
-      if (!student) throw new AppError("Student not found", 404);
-      targetStudentId = student.id;
-
       const alreadyIssued = await BookIssue.findOne({
         where: { school_id, student_id: targetStudentId, book_id, status: "issued" },
         transaction: t,
@@ -243,16 +302,16 @@ export const issueBookService = async (
       if (alreadyIssued) throw new AppError("Student already has this book issued", 400);
     }
 
-    // 3. Create issue
+    // 4. Create issue record
     const issue = await BookIssue.create(
       {
         school_id,
         book_id,
-        borrower_type,
+        borrower_type: actualBorrowerType,
         student_id: targetStudentId,
         teacher_id: targetTeacherId,
         issue_date: todayStr(),
-        due_date,
+        due_date: finalDueDate,
         status: "issued",
         issued_by,
       },

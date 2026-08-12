@@ -490,13 +490,16 @@ const initAssociations = () => {
 
 initAssociations();
 
-// Ensure notifications table has target_user_id column & schools table has whatsapp quota columns & token_policies has annual_video_seconds
+// Ensure notifications table has target_user_id column & schools table has whatsapp/library columns & token_policies has annual_video_seconds
 db.query(`
   ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_user_id BIGINT;
   CREATE INDEX IF NOT EXISTS idx_notifications_target_user ON notifications(target_user_id);
   ALTER TABLE schools ADD COLUMN IF NOT EXISTS whatsapp_annual_limit INTEGER DEFAULT 10000;
   ALTER TABLE schools ADD COLUMN IF NOT EXISTS whatsapp_sent_count INTEGER DEFAULT 0;
   ALTER TABLE token_policies ADD COLUMN IF NOT EXISTS annual_video_seconds INTEGER DEFAULT 0;
+  ALTER TABLE schools ADD COLUMN IF NOT EXISTS library_loan_period_days INTEGER DEFAULT 14;
+  ALTER TABLE schools ADD COLUMN IF NOT EXISTS library_overdue_reminder_days INTEGER DEFAULT 1;
+  ALTER TABLE schools ADD COLUMN IF NOT EXISTS library_overdue_fine_per_day NUMERIC(10, 2) DEFAULT 0.00;
 `).catch((err) => console.error("[InitModels] Schema patch error:", err.message));
 
 export default db;

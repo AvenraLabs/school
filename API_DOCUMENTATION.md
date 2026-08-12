@@ -217,7 +217,7 @@ CRUD for the school-wide subject catalog.
 - `GET /api/library/settings` | `PATCH /api/library/settings` — Get and update library configuration (loan period, overdue reminder days, fine per day).
 - `GET /api/library/books` | `POST /api/library/books` | `PATCH /api/library/books/:id` — Manage catalog books.
 - `PATCH /api/library/books/:id/archive` | `PATCH /api/library/books/:id/unarchive` — Archive or restore catalog book.
-- `POST /api/library/issues` — Issue a book copy to a student or teacher.
+- `POST /api/library/issues` — Issue a book copy to a student or teacher. Payload: `{ book_id: number, borrower_type?: "student"|"teacher", student_id?: number, teacher_id?: number, user_id?: number, due_date?: string }`. Automatically calculates `due_date` using school `library_loan_period_days` (default 14 days) if omitted. Dynamically resolves borrower ID if `user_id` is supplied.
 - `PATCH /api/library/issues/:id/return` — Return or process action on issued book. Payload: `{ status: "returned" | "lost" | "damaged", fine_amount?: number, remarks?: string }`. Default status is `"returned"`. Automatically calculates overdue fine based on per-day rate if `fine_amount` is omitted.
 - `PATCH /api/library/issues/:id/cancel` — Cancel an issue record.
 - `PATCH /api/library/issues/:id/undo-return` — Undo a return action.

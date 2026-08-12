@@ -8,6 +8,7 @@ export const addBookSchema = z.object({
 });
 
 export const editBookSchema = z.object({
+  book_no: z.string().trim().min(1).max(50).optional(),
   book_name: z.string().trim().min(1).max(255).optional(),
   total_copies: z.coerce.number().int().min(1).optional(),
   image_url: z.string().trim().max(500).optional().nullable(),
@@ -19,11 +20,12 @@ export const issueBookSchema = z.object({
   borrower_type: z.enum(["student", "teacher"]).default("student"),
   student_id: z.coerce.number().int().positive().optional().nullable(),
   teacher_id: z.coerce.number().int().positive().optional().nullable(),
+  user_id: z.coerce.number().int().positive().optional().nullable(),
   book_id: z.coerce.number().int().positive("Book ID required"),
-  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Due date must be YYYY-MM-DD"),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Due date must be YYYY-MM-DD").optional().nullable(),
 }).refine((data) => {
-  if (data.borrower_type === "teacher") return !!data.teacher_id;
-  return !!data.student_id;
+  if (data.borrower_type === "teacher") return !!(data.teacher_id || data.user_id);
+  return !!(data.student_id || data.user_id);
 }, {
   message: "Selected borrower ID is required",
 });

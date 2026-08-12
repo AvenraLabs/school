@@ -12,7 +12,6 @@ export function LibrarySettings() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     library_loan_period_days: 14,
-    library_overdue_whatsapp_enabled: true,
     library_overdue_reminder_days: 1,
     library_overdue_fine_per_day: 0,
   });
@@ -22,7 +21,6 @@ export function LibrarySettings() {
       .then((s) => {
         setForm({
           library_loan_period_days: s.library_loan_period_days ?? 14,
-          library_overdue_whatsapp_enabled: s.library_overdue_whatsapp_enabled ?? true,
           library_overdue_reminder_days: s.library_overdue_reminder_days ?? 1,
           library_overdue_fine_per_day: s.library_overdue_fine_per_day ?? 0,
         });
@@ -37,7 +35,6 @@ export function LibrarySettings() {
     try {
       await libraryAPI.updateSettings({
         library_loan_period_days: parseInt(form.library_loan_period_days, 10),
-        library_overdue_whatsapp_enabled: Boolean(form.library_overdue_whatsapp_enabled),
         library_overdue_reminder_days: parseInt(form.library_overdue_reminder_days, 10),
         library_overdue_fine_per_day: parseFloat(form.library_overdue_fine_per_day || 0),
       });

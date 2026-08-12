@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { libraryAPI, studentsAPI, teachersAPI, classesAPI, sectionsAPI } from '../../../api';
+import { libraryAPI, studentsAPI, teachersAPI, classesAPI } from '../../../api';
 import { useToast } from '../../../context/ToastContext';
 import { Button } from '../../../components/ui/Button';
-import { Select, Input } from '../../../components/ui/Input';
+import { Input } from '../../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
-import { Search, BookOpen, UserCheck, BookPlus, GraduationCap, CheckCircle2 } from 'lucide-react';
+import { Search, BookPlus, CheckCircle2, Calendar } from 'lucide-react';
 import { BorrowerSearchInput } from '../../../components/common/BorrowerSearchInput';
+
+const getDefaultDueDateStr = (days = 14) => {
+  const d = new Date();
+  d.setDate(d.getDate() + Number(days || 14));
+  return d.toISOString().split('T')[0];
+};
 
 export function LibraryIssue() {
   const [borrowerType, setBorrowerType] = useState('student');
@@ -13,6 +19,8 @@ export function LibraryIssue() {
   const [bookQuery, setBookQuery] = useState('');
   const [bookResults, setBookResults] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
+  const [settings, setSettings] = useState(null);
+  const [dueDate, setDueDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const toast = useToast();
 
@@ -29,6 +37,17 @@ export function LibraryIssue() {
         setClasses(Array.isArray(raw) ? raw : []);
       })
       .catch(() => setClasses([]));
+
+    libraryAPI
+      .getSettings()
+      .then((s) => {
+        setSettings(s);
+        const days = s?.library_loan_period_days || 14;
+        setDueDate(getDefaultDueDateStr(days));
+      })
+      .catch(() => {
+        setDueDate(getDefaultDueDateStr(14));
+      });
   }, []);
 
   const searchBorrower = useCallback(async () => {
@@ -89,13 +108,19 @@ export function LibraryIssue() {
     try {
       await libraryAPI.issueBook({
         book_id: selectedBook.id,
+        borrower_type: borrowerType,
+        student_id: borrowerType === 'student' ? selectedBorrower.id : undefined,
+        teacher_id: borrowerType === 'teacher' ? selectedBorrower.id : undefined,
         user_id: selectedBorrower.user_id || selectedBorrower.user?.id || selectedBorrower.id,
+        due_date: dueDate || undefined,
       });
       toast.success(`"${selectedBook.book_name}" issued successfully`);
       setSelectedBook(null);
       setSelectedBorrower(null);
       setBookQuery('');
       setBorrowerQuery('');
+      const defaultDays = settings?.library_loan_period_days || 14;
+      setDueDate(getDefaultDueDateStr(defaultDays));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to issue book');
     } finally {
@@ -158,11 +183,35 @@ export function LibraryIssue() {
             )}
           </div>
 
+          {/* Return Due Date Input */}
+          <div className="space-y-1.5 pt-2 border-t border-[#EDEAE1]">
+            <label className="block font-semibold text-[#14213D] flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-[#2F6F5E]" /> Return Due Date
+              </span>
+              {settings?.library_loan_period_days && (
+                <span className="text-[10px] text-[#8C97AB] font-normal">
+                  School Policy: {settings.library_loan_period_days} Days Loan Period
+                </span>
+              )}
+            </label>
+            <Input
+              type="date"
+              value={dueDate}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-full sm:w-64 font-mono text-xs"
+            />
+            <p className="text-[10px] text-[#8C97AB]">
+              Pre-filled based on school policy settings. You can adjust the due date for custom borrowing terms.
+            </p>
+          </div>
+
           <div className="flex justify-end pt-2 border-t border-[#EDEAE1]">
             <Button
               variant="primary"
               icon={CheckCircle2}
-              disabled={!selectedBorrower || !selectedBook}
+              disabled={!selectedBorrower || !selectedBook || !dueDate}
               loading={submitting}
               onClick={handleIssue}
             >
