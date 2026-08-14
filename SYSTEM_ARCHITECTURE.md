@@ -79,10 +79,11 @@ Powered by `socket.io` and standard **VAPID Web Push API**:
 
 
 ### AI & RAG Engine Architecture
-1. **Curriculum Knowledge Ingestion**: Textbook PDFs (CBSE/State Board) parsed and chunked via `pdfjs-dist` into `textbook_chapters` metadata table and `ChromaDB` vector embeddings.
-2. **Teacher AI Tools**: AI Question Paper generator, Lesson Planner, Lesson Summarizer leveraging `@google/genai` (Gemini Flash & Pro models).
-3. **AI Video Generation**: Google Vertex AI (Veo 3: `veo-3.0-fast-001`) integration for generating educational topic videos asynchronously.
-4. **Token Economics**: Token quotas, accounts, policies, and ledger transactions per school/role to control AI API costs.
+1. **Curriculum Knowledge Ingestion**: Textbook PDFs (CBSE/State Board) parsed and chunked directly into `ChromaDB` vector embeddings (`textbook_chunks` and `cbse_books`) with deterministic chunk IDs and rich metadata (`board`, `grade`, `subject`, `chapter`, `chapterTitle`).
+2. **Hybrid RAG & In-Memory Curriculum Discovery**: High-speed in-memory curriculum catalog (`curriculum-cache.service.js`) delivers instant `<5ms` subject and chapter discovery. Supports hybrid querying: exact chapter metadata filtering and semantic vector similarity search for custom teacher topics.
+3. **Teacher AI Tools**: AI Question Paper generator, Lesson Planner, Lesson Summarizer leveraging `@google/genai` (Gemini Flash & Pro models).
+4. **AI Video Generation**: Google Vertex AI (Veo 3: `veo-3.0-fast-001`) integration for generating educational topic videos asynchronously.
+5. **Token Economics**: Token quotas, accounts, policies, and ledger transactions per school/role to control AI API costs.
 
 ---
 

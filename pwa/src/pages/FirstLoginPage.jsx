@@ -486,18 +486,13 @@ export default function FirstLoginPage() {
 
           <Button
             onClick={async () => {
-              const nextUser = await logout();
-              if (nextUser) {
-                const basePath = nextUser.role === "teacher" ? "/teacher" : nextUser.role === "driver" ? "/driver" : "/student";
-                window.location.href = `${basePath}/dashboard`;
-              } else {
-                window.location.href = "/login";
-              }
+              await logout();
+              navigate("/login", { replace: true });
             }}
             fullWidth
             variant="text"
             size="small"
-            sx={{ mt: 1, fontSize: 12, color: "text.secondary" }}
+            sx={{ mt: 1, fontSize: 13, textTransform: "none", color: "text.secondary" }}
             disabled={loading || uploading}
           >
             Logout

@@ -295,8 +295,8 @@ Maps teachers to specific Class + Section + Subject combinations.
 #### `game_sessions`, `game_session_players`, `player_answers`
 - Live multiplayer kahoot-style classroom quiz competition.
 
-#### `textbook_chapters`, `student_chat_sessions`, `student_chat_messages`, `ai_chat_logs`
-- RAG architecture: Textbook metadata linked to vector DB (ChromaDB) and chat histories.
+#### `student_chat_sessions`, `student_chat_messages`, `ai_chat_logs`
+- RAG architecture: Student AI Tutor chat sessions, message logs, and vector store context retrieval (ChromaDB `textbook_chunks` & `cbse_books`).
 
 #### `video_generations`, `teacher_ai_documents`
 - AI content generation jobs: labeled 2D educational diagrams (Vertex AI Imagen) and optional Veo 3 video clips.

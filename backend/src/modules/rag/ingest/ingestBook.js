@@ -4,12 +4,10 @@ import { detectChapters } from "./detectChapters.js";
 import { chunkText } from "./chunkText.js";
 import { embedChunks } from "./embedChunks.js";
 import { storeChunks, filterExistingChunks } from "./storeChunks.js";
-import { upsertTextbookChapter } from "./upsertTextbookChapter.js";
 
 /**
  * End-to-end ingestion pipeline for a single textbook PDF.
- * Writes chapter metadata → PostgreSQL (textbook_chapters)
- * Writes chunk text + embeddings → ChromaDB (textbook_chunks)
+ * Writes chunk text + embeddings + metadata directly to ChromaDB (textbook_chunks)
  */
 export async function ingestBook({ board, grade, subject, pdfPath, filename, relPath }) {
   const bookIdentifier = relPath || filename;
@@ -36,17 +34,6 @@ export async function ingestBook({ board, grade, subject, pdfPath, filename, rel
 
   // Step 4: Process each virtual chapter
   for (const vChap of virtualChapters) {
-    // Step 4a: Save chapter metadata to PostgreSQL BEFORE chunking
-    // This ensures dropdowns work even if ChromaDB embedding partially fails
-    await upsertTextbookChapter({
-      board,
-      grade,
-      subject,
-      chapterNumber: vChap.chapterNumber,
-      chapterTitle: vChap.chapterTitle,
-      bookName: bookIdentifier,
-    });
-
     // Step 5: Chunk text (chunk_size=700, chunk_overlap=100)
     const chunks = chunkText({ virtualChapter: vChap });
     if (chunks.length === 0) continue;

@@ -327,10 +327,18 @@ export function AuthProvider({ children }) {
   async function logout() {
     try {
       setError(null);
-      await unsubscribePushDevice();
-      await logoutApi();
+      try {
+        await unsubscribePushDevice();
+      } catch (pushErr) {
+        console.warn("Push unsubscribe note:", pushErr);
+      }
+      try {
+        await logoutApi();
+      } catch (apiErr) {
+        console.warn("Logout API note:", apiErr);
+      }
     } catch (error) {
-      console.warn("Logout API call failed:", error);
+      console.warn("Logout error:", error);
     } finally {
       disconnectSharedSocket();
       localStorage.removeItem("token");

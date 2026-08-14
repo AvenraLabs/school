@@ -115,10 +115,10 @@ cd ~/schooliq/backend
 node src/modules/rag/ingest/ingestAllBooks.js
 ```
 *This command automatically:*
-1. Parses PDFs and extracts chapter titles.
-2. Upserts metadata into **PostgreSQL** (`textbook_chapters` table).
-3. Embeds text chunks via **Gemini Embedding API**.
-4. Stores vector chunks in **ChromaDB** (`http://localhost:8000`).
+1. Parses PDFs and extracts chapter structures.
+2. Embeds text chunks via **Gemini Embedding API** (`text-embedding-004`).
+3. Stores vector chunks and metadata in **ChromaDB** (`http://localhost:8000`).
+4. Automatically updates the in-memory curriculum discovery cache.
 
 ---
 

@@ -49,7 +49,6 @@ import StudentQuizSubmission from "../modules/quiz/student-quiz-submission.model
 import AiChatLog from "../modules/ai-chat-logs/ai-chat-log.model.js";
 import StudentChatSession from "../modules/rag/models/student-chat-session.model.js";
 import StudentChatMessage from "../modules/rag/models/student-chat-message.model.js";
-import TextbookChapter from "../modules/rag/models/textbook-chapter.model.js";
 import VideoGeneration from "../modules/ai-video/video-generation.model.js";
 import TeacherAiDocument from "../modules/teacher-ai/teacher-ai-document.model.js";
 

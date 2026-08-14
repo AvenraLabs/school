@@ -1,7 +1,5 @@
 import asyncHandler from "../../shared/asyncHandler.js";
 import AppError from "../../shared/appError.js";
-import { Op } from "sequelize";
-import TextbookChapter from "./models/textbook-chapter.model.js";
 import {
   processStudentChatMessage,
   getStudentChatSessions,
@@ -9,6 +7,12 @@ import {
   deleteStudentChatSession,
   ingestAllBooks,
 } from "./rag.service.js";
+import {
+  getAvailableSubjects,
+  getAvailableChapters,
+  getAvailableGrades,
+  invalidateCurriculumCache,
+} from "./curriculum-cache.service.js";
 
 // Student Chat API
 export const sendChatMessage = asyncHandler(async (req, res) => {
@@ -78,8 +82,10 @@ export const triggerIngestion = asyncHandler(async (req, res) => {
     throw new AppError("Forbidden", 403);
   }
 
-  // Trigger ingestion asynchronously
-  ingestAllBooks().catch((err) => console.error("RAG Ingestion error:", err));
+  // Trigger ingestion asynchronously and invalidate cache
+  ingestAllBooks()
+    .then(() => invalidateCurriculumCache())
+    .catch((err) => console.error("RAG Ingestion error:", err));
 
   res.json({ message: "Textbook RAG ingestion pipeline started in background." });
 });
@@ -95,14 +101,12 @@ export const runTeacherAiContent = asyncHandler(async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────
-//  CURRICULUM METADATA ENDPOINTS
-//  Power the Teacher AI Tools dropdowns from PostgreSQL.
-//  Fast — no ChromaDB calls.
+//  CURRICULUM METADATA ENDPOINTS (Direct from ChromaDB)
 // ─────────────────────────────────────────────────
 
 /**
  * GET /api/rag/curriculum/subjects?board=CBSE&grade=6
- * Returns distinct subjects ingested for the given board + grade.
+ * Returns distinct subjects ingested in ChromaDB for the given board + grade.
  */
 export const getCurriculumSubjects = asyncHandler(async (req, res) => {
   let { board, grade } = req.query;
@@ -118,26 +122,17 @@ export const getCurriculumSubjects = asyncHandler(async (req, res) => {
     }
   }
 
-  const targetBoard = String(board || "CBSE").toUpperCase().trim();
+  const rawBoard = String(board || "").toUpperCase().trim();
+  const targetBoard = (!rawBoard || rawBoard === "1" || rawBoard.includes("CBSE")) ? "CBSE" : rawBoard;
+  const gradeNum = String(grade).replace(/\D/g, "") || "6";
 
-  const rows = await TextbookChapter.findAll({
-    attributes: ["subject"],
-    where: {
-      board: targetBoard,
-      grade: parseInt(String(grade).replace(/\D/g, ""), 10),
-    },
-    group: ["subject"],
-    order: [["subject", "ASC"]],
-    raw: true,
-  });
-
-  const subjects = rows.map((r) => r.subject);
+  const subjects = await getAvailableSubjects(targetBoard, gradeNum);
   res.json({ subjects, board: targetBoard });
 });
 
 /**
  * GET /api/rag/curriculum/chapters?board=CBSE&grade=6&subject=Science
- * Returns all chapters for board + grade + subject, sorted by chapter_number.
+ * Returns all chapters in ChromaDB for board + grade + subject.
  */
 export const getCurriculumChapters = asyncHandler(async (req, res) => {
   let { board, grade, subject } = req.query;
@@ -153,49 +148,17 @@ export const getCurriculumChapters = asyncHandler(async (req, res) => {
     }
   }
 
-  const targetBoard = String(board || "CBSE").toUpperCase().trim();
+  const rawBoard = String(board || "").toUpperCase().trim();
+  const targetBoard = (!rawBoard || rawBoard === "1" || rawBoard.includes("CBSE")) ? "CBSE" : rawBoard;
+  const gradeNum = String(grade).replace(/\D/g, "") || "6";
 
-  const rows = await TextbookChapter.findAll({
-    attributes: ["chapter_number", "chapter_title"],
-    where: {
-      board: targetBoard,
-      grade: parseInt(String(grade).replace(/\D/g, ""), 10),
-      subject: String(subject).trim(),
-    },
-    order: [["chapter_number", "ASC"]],
-    raw: true,
-  });
-
-  const seenKeys = new Set();
-  const chapters = [];
-
-  for (const r of rows) {
-    const rawTitle = String(r.chapter_title || "").trim();
-    const cleanTitle = rawTitle
-      .replace(/^(chapter|unit|chap|ch)\s*\d+[:\s\-\.]*/i, "")
-      .trim() || rawTitle || `Chapter ${r.chapter_number}`;
-
-    const dedupKey = `${r.chapter_number}_${cleanTitle.toLowerCase()}`;
-    const titleKey = cleanTitle.toLowerCase();
-
-    // Deduplicate by chapter number AND title
-    if (!seenKeys.has(dedupKey) && !seenKeys.has(titleKey)) {
-      seenKeys.add(dedupKey);
-      seenKeys.add(titleKey);
-      chapters.push({
-        number: r.chapter_number,
-        title: cleanTitle,
-        label: cleanTitle,
-      });
-    }
-  }
-
+  const chapters = await getAvailableChapters(targetBoard, gradeNum, subject);
   res.json({ chapters, board: targetBoard });
 });
 
 /**
  * GET /api/rag/curriculum/grades?board=CBSE
- * Returns distinct grades that have at least one ingested book for the board.
+ * Returns distinct grades that have ingested books in ChromaDB.
  */
 export const getCurriculumGrades = asyncHandler(async (req, res) => {
   let { board } = req.query;
@@ -208,19 +171,10 @@ export const getCurriculumGrades = asyncHandler(async (req, res) => {
     }
   }
 
-  const targetBoard = String(board || "CBSE").toUpperCase().trim();
+  const rawBoard = String(board || "").toUpperCase().trim();
+  const targetBoard = (!rawBoard || rawBoard === "1" || rawBoard.includes("CBSE")) ? "CBSE" : rawBoard;
 
-  const rows = await TextbookChapter.findAll({
-    attributes: ["grade"],
-    where: {
-      board: targetBoard,
-    },
-    group: ["grade"],
-    order: [["grade", "ASC"]],
-    raw: true,
-  });
-
-  const grades = rows.map((r) => r.grade);
+  const grades = await getAvailableGrades(targetBoard);
   res.json({ grades, board: targetBoard });
 });
 

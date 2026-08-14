@@ -35,11 +35,6 @@ import {
   Check,
 } from 'lucide-react';
 
-const BOARDS = [
-  { value: 'CBSE', label: 'CBSE' },
-  { value: 'STATE', label: 'State Board' },
-];
-
 const GRADES = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
   label: `Class ${i + 1}`,
@@ -413,33 +408,23 @@ export function QuestionPaperGenerator() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-3">
-                {/* Board & Grade Selectors */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider mb-1 font-mono">
-                      Board *
-                    </label>
-                    <Select value={board} onChange={(e) => setBoard(e.target.value)}>
-                      {BOARDS.map((b) => (
-                        <option key={b.value} value={b.value}>
-                          {b.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider mb-1 font-mono">
+                {/* Grade Selector with School Board Affiliation */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
                       Class / Grade *
                     </label>
-                    <Select value={grade} onChange={(e) => setGrade(e.target.value)}>
-                      {GRADES.map((g) => (
-                        <option key={g.value} value={g.value}>
-                          {g.label}
-                        </option>
-                      ))}
-                    </Select>
+                    <span className="text-[10px] font-mono text-[#2F6F5E] bg-[#EAF3F0] px-2 py-0.5 rounded font-semibold border border-[#D3E6E0]">
+                      Board: {board}
+                    </span>
                   </div>
+                  <Select value={grade} onChange={(e) => setGrade(e.target.value)}>
+                    {GRADES.map((g) => (
+                      <option key={g.value} value={g.value}>
+                        {g.label}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
 
                 {/* Subject Selector */}

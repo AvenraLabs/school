@@ -23,7 +23,7 @@ import {
 } from "@mui/icons-material";
 
 export function ChangePasswordPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { completeProfile, loading, error, clearError } = useProfileCompletion();
   const navigate = useNavigate();
   const location = useLocation();
@@ -140,6 +140,20 @@ export function ChangePasswordPage() {
             sx={{ mt: 1, py: 1.2, fontWeight: 700, textTransform: "none", bgcolor: "#2F6F5E", "&:hover": { bgcolor: "#245749" } }}
           >
             {loading ? <CircularProgress size={20} color="inherit" /> : "Update Password & Proceed"}
+          </Button>
+
+          <Button
+            onClick={async () => {
+              await logout();
+              navigate("/login", { replace: true });
+            }}
+            fullWidth
+            variant="text"
+            size="small"
+            sx={{ mt: 0.5, textTransform: "none", color: "text.secondary", fontSize: 13 }}
+            disabled={loading}
+          >
+            Logout
           </Button>
         </Box>
       </Paper>

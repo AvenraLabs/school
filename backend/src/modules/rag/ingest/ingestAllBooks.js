@@ -52,18 +52,7 @@ export async function ingestAllBooks(booksDir = DEFAULT_BOOKS_DIR, options = {})
     console.log("1. Clearing ChromaDB collection 'textbook_chunks'...");
     await resetChromaCollection();
 
-    console.log("2. Clearing PostgreSQL 'textbook_chapters' table...");
-    try {
-      const TextbookChapter = (await import("../models/textbook-chapter.model.js")).default;
-      await TextbookChapter.destroy({ where: {}, truncate: true, cascade: true }).catch(async () => {
-        await TextbookChapter.destroy({ where: {} });
-      });
-      console.log("[RAG Ingest] Cleared PostgreSQL textbook_chapters table.");
-    } catch (e) {
-      console.warn("[RAG Ingest] Note clearing textbook_chapters table:", e.message);
-    }
-
-    console.log("3. Clearing ingestion-progress.json log...");
+    console.log("2. Clearing ingestion-progress.json log...");
     saveProgress(progress);
     console.log("==================================================\n");
   }
@@ -118,6 +107,11 @@ export async function ingestAllBooks(booksDir = DEFAULT_BOOKS_DIR, options = {})
   console.log(`- Errors: ${errorCount}`);
   console.log(`- Time Elapsed: ${durationSec}s`);
   console.log(`==================================================\n`);
+
+  try {
+    const { invalidateCurriculumCache } = await import("../curriculum-cache.service.js");
+    invalidateCurriculumCache();
+  } catch {}
 
   return { bookCount: bookTasks.length, skippedCount, chunkCount: totalIngested, errorCount };
 }
