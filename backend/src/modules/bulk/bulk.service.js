@@ -24,8 +24,13 @@ const defaultPassword = (username) => `${username}@123`;
 export const bulkCreateDataService = async ({
   school_id,
   classes,
-  teacher_count = 10,
+  teacher_count = 0,
 }) => {
+  const finalTeacherCount =
+    teacher_count === undefined || teacher_count === null || teacher_count === ''
+      ? 0
+      : Math.max(0, Number(teacher_count) || 0);
+
   return db.transaction(async (t) => {
     const school = await School.findByPk(school_id, { transaction: t });
     if (!school) {
@@ -58,59 +63,63 @@ export const bulkCreateDataService = async ({
     const usernameSet = new Set(existingUsers.map((u) => u.username));
 
     /* ================================
-       2️⃣ CREATE TEACHERS
+       2️⃣ CREATE TEACHERS (IF REQUESTED)
     ================================= */
-    const existingTeacherCount = await Teacher.count({
-      where: { school_id },
-      transaction: t,
-    });
-
-    for (let i = 1; i <= teacher_count; i++) {
-      let isUnique = false;
-      let serial = existingTeacherCount + i;
-      let username = "";
-      while (!isUnique) {
-        username = buildTeacherUsername(school_id, serial);
-        if (!usernameSet.has(username)) {
-          isUnique = true;
-          usernameSet.add(username);
-        } else {
-          serial++;
-        }
-      }
-
-      const user = await User.create(
-        {
-          school_id,
-          role: "teacher",
-          username,
-          password: defaultPassword(username),
-          is_active: true,
-          first_login: true,
-          must_change_password: true,
-          name: `Teacher ${serial}`,
-        },
-        { transaction: t }
-      );
-
-      const teacher = await Teacher.create(
-        {
-          user_id: user.id,
-          school_id,
-          employee_id: username,
-          joining_date: new Date(),
-          approval_status: "pending",
-          is_active: true,
-        },
-        { transaction: t }
-      );
-
-      response.teachers.push({
-        teacher_id: teacher.id,
-        username,
+    if (finalTeacherCount > 0) {
+      const existingTeacherCount = await Teacher.count({
+        where: { school_id },
+        transaction: t,
       });
 
-      response.summary.teachers_created++;
+      for (let i = 1; i <= finalTeacherCount; i++) {
+        let isUnique = false;
+        let serial = existingTeacherCount + i;
+        let username = "";
+        while (!isUnique) {
+          username = buildTeacherUsername(school_id, serial);
+          if (!usernameSet.has(username)) {
+            isUnique = true;
+            usernameSet.add(username);
+          } else {
+            serial++;
+          }
+        }
+
+        const user = await User.create(
+          {
+            school_id,
+            role: "teacher",
+            username,
+            password: defaultPassword(username),
+            is_active: true,
+            first_login: true,
+            must_change_password: true,
+            name: `Teacher ${serial}`,
+          },
+          { transaction: t }
+        );
+
+        const teacher = await Teacher.create(
+          {
+            user_id: user.id,
+            school_id,
+            employee_id: username,
+            joining_date: new Date(),
+            approval_status: "pending",
+            is_active: true,
+          },
+          { transaction: t }
+        );
+
+        response.teachers.push({
+          teacher_id: teacher.id,
+          username,
+          password: defaultPassword(username),
+          name: user.name,
+        });
+      }
+
+      response.summary.teachers_created = finalTeacherCount;
     }
 
     /* ================================
@@ -126,6 +135,11 @@ export const bulkCreateDataService = async ({
        3️⃣ CREATE CLASSES, SECTIONS,
            STUDENTS
     ================================= */
+    const initialStudentCount = await Student.count({
+      where: { school_id },
+      transaction: t,
+    });
+
     for (const classData of classEntries) {
       const [dbClass, classCreated] = await Class.findOrCreate({
         where: {
@@ -166,14 +180,9 @@ export const bulkCreateDataService = async ({
           await dbSection.update({ is_active: true }, { transaction: t });
         }
 
-        const existingStudentCount = await Student.count({
-          where: { school_id },
-          transaction: t,
-        });
-
         for (let i = 1; i <= sectionData.students; i++) {
           let isUnique = false;
-          let serial = existingStudentCount + response.summary.students_created + 1;
+          let serial = initialStudentCount + response.summary.students_created + 1;
           let stuUsername = "";
           while (!isUnique) {
             stuUsername = buildStudentUsername(school_id, dbSection.id, serial);

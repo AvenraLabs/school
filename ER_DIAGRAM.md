@@ -69,9 +69,9 @@ erDiagram
 Central multi-tenant organizational entity.
 - `id` (BIGINT, PK, Auto-Increment)
 - `school_name` (STRING, Non-Null)
-- `board` (STRING, Default: 'CBSE')
-- `address` (TEXT), `city` (STRING), `state` (STRING), `zip` (STRING)
-- `contact_phone` (STRING), `email` (STRING, Unique)
+- `code` (STRING(30), Unique, Auto-generated sequential '1', '2', '3'...)
+- `board` (STRING, Default: 'CBSE', 'CBSE' | 'STATE')
+- `contact_phone` (STRING)
 - `logo_url` (TEXT)
 - `status` (ENUM: 'pending', 'active', 'suspended', 'expired')
 - `whatsapp_annual_limit` (INTEGER), `whatsapp_sent_count` (INTEGER)
@@ -80,6 +80,7 @@ Central multi-tenant organizational entity.
 - `library_loan_period_days` (INT), `library_overdue_fine_per_day` (DECIMAL(10,2))
 - `fee_receipt_counter` (INT)
 - `enabled_modules` (JSONB, Non-Null, Default: `{"transport":true,"library":true,"finance":true,"ai_tutor":true,"ai_tools":true,"ai_video":true,"whatsapp":true}`)
+
 
 #### `users`
 System-wide credential and auth profile entity.

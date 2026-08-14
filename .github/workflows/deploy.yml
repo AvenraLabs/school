@@ -20,31 +20,25 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            
+
             cd ~/school
             git fetch origin
             git reset --hard origin/main
-            
-            # 1. Backend dependencies & database migrations
-            cd ~/school/backend
-            npm install --production=false
-            npm run migrate || echo "Migration warning (continuing deployment)"
-            
-            # 2. Zero-downtime PM2 reload / restart (avoid explicit stop)
-            pm2 reload school-backend --update-env || pm2 restart school-backend --update-env || pm2 start server.js --name school-backend
+
+            cd backend
+            npm install
+            pm2 stop school-backend || true
+            pm2 restart school-backend || pm2 start server.js --name school-backend
             pm2 save
 
-            # 3. Build Admin Panel
-            cd ~/school/adminpanel
+            cd ../adminpanel
             npm install
             npm run build
 
-            # 4. Build PWA App
-            cd ~/school/pwa
+            cd ../pwa
             npm install
             npm run build
 
-            # 5. Reload Caddy web server
-            sudo systemctl reload caddy || sudo systemctl restart caddy
-            
+            sudo systemctl restart caddy
+
             echo "Deployment to Mumbai Server Finished Successfully!"

@@ -50,10 +50,10 @@ const schoolAdminGroups = [
     defaultOpen: true,
     items: [
       { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/admin/fees', icon: IndianRupee, label: 'Fee Management' },
-      { to: '/admin/library', icon: Library, label: 'Library' },
+      { to: '/admin/fees', icon: IndianRupee, label: 'Fee Management', moduleKey: 'finance' },
+      { to: '/admin/library', icon: Library, label: 'Library', moduleKey: 'library' },
       { to: '/admin/notifications', icon: Bell, label: 'Announcements' },
-      { to: '/admin/transport', icon: Truck, label: 'Transport' },
+      { to: '/admin/transport', icon: Truck, label: 'Transport', moduleKey: 'transport' },
       { to: '/admin/lost-found', icon: Search, label: 'Lost & Found' },
       { to: '/admin/analytics', icon: BarChart3, label: 'School Analytics' },
     ],
@@ -67,6 +67,7 @@ const schoolAdminGroups = [
       { to: '/admin/subjects', icon: BookOpen, label: 'Subjects' },
       { to: '/admin/assignments', icon: ClipboardList, label: 'Class & Subject Teachers' },
       { to: '/admin/exams', icon: FileText, label: 'Exams' },
+      { to: '/admin/question-papers', icon: Sparkles, label: 'Question Papers (AI)', moduleKey: 'ai_tools' },
     ],
   },
   {
@@ -77,7 +78,6 @@ const schoolAdminGroups = [
       { to: '/admin/teachers', icon: UserCog, label: 'Teachers' },
       { to: '/admin/approvals', icon: UserCheck, label: 'Approvals' },
       { to: '/admin/directory', icon: School, label: 'School Registry' },
-      { to: '/admin/academic-year', icon: Calendar, label: 'Academic Year' },
       { to: '/admin/login-roster', icon: ClipboardList, label: 'Login Roster' },
       { to: '/admin/feedback', icon: MessageSquare, label: 'Feedback' },
     ],
@@ -92,7 +92,6 @@ const superAdminLinks = [
   { to: '/super-admin/feedback', icon: MessageSquare, label: 'Support & Feedback' },
 
   { section: 'System Management' },
-  { to: '/super-admin/classes', icon: BookOpen, label: 'Classes & Sections' },
   { to: '/super-admin/seeder', icon: Database, label: 'Seeder' },
 ];
 
@@ -281,9 +280,17 @@ export function Sidebar({ isOpen, onClose, isCollapsed, setIsCollapsed }) {
                 );
               })
             ) : (
-              /* School Admin: collapsible groups */
+              /* School Admin: collapsible groups filtered by licensed modules */
               schoolAdminGroups.map((grp) => {
                 const isOpen = openGroups[grp.group];
+                const enabledModules = user?.enabled_modules || user?.school?.enabled_modules || {};
+                const visibleItems = grp.items.filter((item) => {
+                  if (!item.moduleKey) return true;
+                  return enabledModules[item.moduleKey] !== false;
+                });
+
+                if (visibleItems.length === 0) return null;
+
                 return (
                   <div key={grp.group}>
                     {/* Group header toggle */}
@@ -314,7 +321,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, setIsCollapsed }) {
                           transition={{ duration: 0.18, ease: 'easeInOut' }}
                           className="overflow-hidden space-y-0.5"
                         >
-                          {grp.items.map((item) => {
+                          {visibleItems.map((item) => {
                             const Icon = item.icon;
                             return (
                               <NavLink

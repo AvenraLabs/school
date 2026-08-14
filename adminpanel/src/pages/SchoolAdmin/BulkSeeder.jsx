@@ -78,7 +78,6 @@ export function BulkSeeder() {
         if (!sec.students || Number(sec.students) < 1) { toast.error('All sections need a student count'); return; }
       }
     }
-    if (teacherCount === '' || tc < 0) { toast.error('Enter teacher count'); return; }
 
     setLoading(true);
     try {
@@ -218,7 +217,8 @@ export function BulkSeeder() {
             <div className="flex items-center gap-3">
               <Input
                 type="number"
-                placeholder="Faculty Count"
+                min="0"
+                placeholder="Faculty (0 to skip)"
                 value={teacherCount}
                 onChange={(e) => setTeacherCount(e.target.value)}
                 className="w-36 text-xs font-mono"

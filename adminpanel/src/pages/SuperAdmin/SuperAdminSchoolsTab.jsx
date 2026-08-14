@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { schoolAPI, tokenPoliciesAPI, authAPI } from '../../api';
+import { schoolAPI, authAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -12,53 +12,50 @@ import {
   Plus,
   Edit2,
   KeyRound,
-  Coins,
-  MessageSquare,
-  Search,
-  CheckCircle2,
-  XCircle,
   Building2,
-  Users,
-  GraduationCap
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
-export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
+export function SuperAdminSchoolsTab({ schools = [], loading, onRefresh }) {
   const toast = useToast();
   const navigate = useNavigate();
-  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const currentYear = new Date().getFullYear();
+  const defaultYearName = `${currentYear}-${currentYear + 1}`;
+
   const [createForm, setCreateForm] = useState({
     name: '',
-    code: '',
-    address: '',
+    board: 'CBSE',
+    academic_year_name: defaultYearName,
+    academic_year_start: `${currentYear}-06-01`,
+    academic_year_end: `${currentYear + 1}-05-31`,
     phone: '',
-    email: '',
     admin_username: '',
     admin_password: '',
-    admin_name: '',
   });
 
-  const [showQuotaModal, setShowQuotaModal] = useState(false);
-  const [quotaSchool, setQuotaSchool] = useState(null);
-  const [quotaForm, setQuotaForm] = useState({
-    annual_limit: 10000,
-    annual_tokens: 500000,
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editSchool, setEditSchool] = useState(null);
+  const [editForm, setEditForm] = useState({
+    school_name: '',
+    board: 'CBSE',
+    contact_phone: '',
   });
 
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetSchool, setResetSchool] = useState(null);
   const [newPassword, setNewPassword] = useState('');
 
-  const filteredSchools = (schools || []).filter((s) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    const sName = (s.school_name || s.name || '').toLowerCase();
-    const sCode = (s.code || s.board || '').toLowerCase();
-    const sAdmin = (s.admin_username || s.users?.[0]?.username || '').toLowerCase();
-    return sName.includes(q) || sCode.includes(q) || sAdmin.includes(q);
-  });
+  const totalSchools = schools?.length || 0;
+  const totalPages = Math.max(1, Math.ceil(totalSchools / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedSchools = (schools || []).slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
@@ -73,18 +70,19 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
         ...createForm,
         name: createForm.name.trim(),
         admin_username: createForm.admin_username.trim(),
+        board: createForm.board || 'CBSE',
       });
-      toast.success(`School "${createForm.name}" registered successfully!`);
+      toast.success(`School "${createForm.name}" registered successfully with initial Academic Year ${createForm.academic_year_name}!`);
       setShowCreateModal(false);
       setCreateForm({
         name: '',
-        code: '',
-        address: '',
+        board: 'CBSE',
+        academic_year_name: defaultYearName,
+        academic_year_start: `${currentYear}-06-01`,
+        academic_year_end: `${currentYear + 1}-05-31`,
         phone: '',
-        email: '',
         admin_username: '',
         admin_password: '',
-        admin_name: '',
       });
       onRefresh();
     } catch (err) {
@@ -94,21 +92,35 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
     }
   };
 
-  const handleQuotaSubmit = async (e) => {
+  const handleOpenEdit = (school) => {
+    setEditSchool(school);
+    setEditForm({
+      school_name: school.school_name || school.name || '',
+      board: school.board || 'CBSE',
+      contact_phone: school.contact_phone || school.phone || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    if (!quotaSchool) return;
+    if (!editSchool) return;
+    if (!editForm.school_name.trim()) {
+      toast.error('School name is required');
+      return;
+    }
     setSubmitting(true);
     try {
-      await tokenPoliciesAPI.updateWhatsAppQuota(
-        quotaSchool.id,
-        Number(quotaForm.annual_limit),
-        'replace'
-      );
-      toast.success(`WhatsApp annual limit updated to ${quotaForm.annual_limit} messages!`);
-      setShowQuotaModal(false);
+      await schoolAPI.update(editSchool.id, {
+        school_name: editForm.school_name.trim(),
+        board: editForm.board || 'CBSE',
+        contact_phone: editForm.contact_phone ? editForm.contact_phone.trim() : null,
+      });
+      toast.success(`School "${editForm.school_name}" updated successfully!`);
+      setShowEditModal(false);
       onRefresh();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update quota');
+      toast.error(err.response?.data?.message || 'Failed to update school');
     } finally {
       setSubmitting(false);
     }
@@ -123,7 +135,7 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
     setSubmitting(true);
     try {
       await authAPI.resetUserPassword(resetSchool.admin_user_id || resetSchool.id, newPassword);
-      toast.success(`Admin password for ${resetSchool.name} reset successfully!`);
+      toast.success(`Admin password for ${resetSchool.name || resetSchool.school_name} reset successfully!`);
       setShowResetModal(false);
       setNewPassword('');
     } catch (err) {
@@ -149,17 +161,8 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
   return (
     <div className="space-y-4">
       {/* Controls Header */}
-      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Input
-            icon={Search}
-            placeholder="Search school name, code, admin..."
-            className="w-64 text-xs"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <span className="text-xs text-[#8C97AB] font-mono">Showing {filteredSchools.length} of {schools?.length || 0} registered schools</span>
-        </div>
+      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-3 shadow-xs flex items-center justify-between gap-3">
+        <h3 className="font-display font-bold text-sm text-[#14213D]">Registered Institutions</h3>
 
         <Button
           variant="primary"
@@ -179,8 +182,7 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
               <th className="px-4 py-3">School Name</th>
               <th className="px-4 py-3">Code / ID</th>
               <th className="px-4 py-3">Admin Handle</th>
-              <th className="px-4 py-3">Contact Email & Phone</th>
-              <th className="px-4 py-3">WhatsApp Usage</th>
+              <th className="px-4 py-3">Contact Phone</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
@@ -188,29 +190,25 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
           <tbody className="divide-y divide-[#EDEAE1] text-[#14213D]">
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-[#8C97AB]">
+                <td colSpan={6} className="px-4 py-8 text-center text-[#8C97AB]">
                   Loading institutional registry...
                 </td>
               </tr>
-            ) : filteredSchools.length === 0 ? (
+            ) : paginatedSchools.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center">
+                <td colSpan={6} className="px-4 py-12 text-center">
                   <EmptyState
                     icon={Building2}
-                    title="No schools found"
-                    description="No registered schools match your search query."
+                    title="No schools registered"
+                    description="No educational institutions have been registered yet."
                   />
                 </td>
               </tr>
             ) : (
-              filteredSchools.map((s) => {
+              paginatedSchools.map((s) => {
                 const schoolName = s.school_name || s.name || 'School';
                 const adminUsername = s.admin_username || s.users?.[0]?.username || s.admin_user?.username || `admin_${s.id}`;
-                const contactEmail = s.email || '—';
                 const contactPhone = s.contact_phone || s.phone || '—';
-                const sentCount = s.whatsapp_sent_count || 0;
-                const limitCount = s.whatsapp_annual_limit || 10000;
-                const pct = Math.min(100, Math.round((sentCount / limitCount) * 100));
 
                 return (
                   <tr key={s.id} className="hover:bg-[#FAFAF8] transition-colors">
@@ -222,7 +220,7 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
                         <div>
                           <span className="font-bold text-[#14213D] block text-xs">{schoolName}</span>
                           <span className="text-[10px] text-[#52607D] block">
-                            {s.address || 'Main Campus'} · {s.studentsCount ?? s.dataValues?.studentsCount ?? 0} Students · {s.teachersCount ?? s.dataValues?.teachersCount ?? 0} Teachers
+                            {s.studentsCount ?? s.dataValues?.studentsCount ?? 0} Students · {s.teachersCount ?? s.dataValues?.teachersCount ?? 0} Teachers
                           </span>
                         </div>
                       </div>
@@ -231,25 +229,8 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
                     <td className="px-4 py-3 font-mono text-[#52607D]">
                       @{adminUsername}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs">
-                      <span className="block text-[#14213D]">{contactEmail}</span>
-                      <span className="block text-[#8C97AB]">{contactPhone}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="w-32 space-y-1">
-                        <div className="flex justify-between text-[10px] font-mono">
-                          <span className="text-[#2F6F5E] font-bold">{sentCount} sent</span>
-                          <span className="text-[#8C97AB]">/ {limitCount}</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-[#EDEAE1] rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              pct >= 90 ? 'bg-[#B0403A]' : pct >= 70 ? 'bg-[#B8860B]' : 'bg-[#2F6F5E]'
-                            }`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
+                    <td className="px-4 py-3 font-mono text-xs text-[#14213D]">
+                      {contactPhone}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={String(s.status || '').toLowerCase() === 'active' || s.is_active ? 'active' : 'inactive'} size="sm" />
@@ -260,19 +241,8 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
                           variant="ghost"
                           size="sm"
                           icon={Edit2}
-                          title="Edit School Profile & Settings"
-                          onClick={() => navigate('/super-admin/settings')}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon={MessageSquare}
-                          title="Configure WhatsApp Quota"
-                          onClick={() => {
-                            setQuotaSchool(s);
-                            setQuotaForm({ annual_limit: s.whatsapp_annual_limit || 10000, annual_tokens: 500000 });
-                            setShowQuotaModal(true);
-                          }}
+                          title="Edit School Details"
+                          onClick={() => handleOpenEdit(s)}
                         />
                         <Button
                           variant="ghost"
@@ -303,74 +273,129 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
         </table>
       </div>
 
-      {/* Modal: Register New School */}
-      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Register New Educational Institution">
-        <form onSubmit={handleCreateSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-semibold text-[#14213D] mb-1">School Full Name *</label>
-            <Input
-              required
-              placeholder="e.g. St. Xavier International Academy"
-              value={createForm.name}
-              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-[#14213D] mb-1">School Code / Identifier</label>
-              <Input
-                placeholder="e.g. SXIA-01"
-                value={createForm.code}
-                onChange={(e) => setCreateForm({ ...createForm, code: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-[#14213D] mb-1">Official Email</label>
-              <Input
-                type="email"
-                placeholder="admin@school.edu"
-                value={createForm.email}
-                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-[#14213D] mb-1">Contact Phone</label>
-              <Input
-                placeholder="10-digit phone number"
-                value={createForm.phone}
-                onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-[#14213D] mb-1">Campus Address</label>
-              <Input
-                placeholder="City, State, Location"
-                value={createForm.address}
-                onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-[#EDEAE1] space-y-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C97AB] font-mono block">
-              SCHOOL ADMIN ACCOUNT CREDENTIALS
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-2 py-2 text-xs text-[#52607D]">
+          <span>
+            Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalSchools)} of {totalSchools} schools
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={ChevronLeft}
+              disabled={currentPage <= 1}
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            >
+              Previous
+            </Button>
+            <span className="px-2 font-mono text-xs font-semibold text-[#14213D]">
+              {currentPage} / {totalPages}
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={ChevronRight}
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Register New School */}
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Register School">
+        <form onSubmit={handleCreateSubmit} className="space-y-4 text-xs max-h-[80vh] overflow-y-auto pr-1">
+          {/* Section 1: Institution Details */}
+          <div className="space-y-3">
+            <h4 className="font-bold text-xs text-[#14213D]">1. Institution Details</h4>
+
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">School Name *</label>
+              <Input
+                required
+                placeholder="e.g. Delhi Public School"
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-semibold text-[#14213D] mb-1">Admin Username *</label>
+                <label className="block font-semibold text-[#14213D] mb-1">Board *</label>
+                <Select
+                  value={createForm.board}
+                  onChange={(e) => setCreateForm({ ...createForm, board: e.target.value })}
+                >
+                  <option value="CBSE">CBSE</option>
+                  <option value="STATE">State Board</option>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#14213D] mb-1">Contact Phone</label>
+                <Input
+                  placeholder="10-digit phone number"
+                  value={createForm.phone}
+                  onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Academic Year */}
+          <div className="pt-3 border-t border-[#EDEAE1] space-y-3">
+            <h4 className="font-bold text-xs text-[#14213D]">2. Academic Year</h4>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block font-semibold text-[#14213D] mb-1">Year *</label>
                 <Input
                   required
-                  placeholder="e.g. sxia_admin"
+                  placeholder="e.g. 2026-2027"
+                  value={createForm.academic_year_name}
+                  onChange={(e) => setCreateForm({ ...createForm, academic_year_name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-[#14213D] mb-1">Start Date *</label>
+                <Input
+                  required
+                  type="date"
+                  value={createForm.academic_year_start}
+                  onChange={(e) => setCreateForm({ ...createForm, academic_year_start: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-[#14213D] mb-1">End Date *</label>
+                <Input
+                  required
+                  type="date"
+                  value={createForm.academic_year_end}
+                  onChange={(e) => setCreateForm({ ...createForm, academic_year_end: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Primary Admin Account */}
+          <div className="pt-3 border-t border-[#EDEAE1] space-y-3">
+            <h4 className="font-bold text-xs text-[#14213D]">3. School Admin</h4>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-[#14213D] mb-1">Username *</label>
+                <Input
+                  required
+                  placeholder="e.g. dps_admin"
                   value={createForm.admin_username}
                   onChange={(e) => setCreateForm({ ...createForm, admin_username: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block font-semibold text-[#14213D] mb-1">Admin Initial Password *</label>
+                <label className="block font-semibold text-[#14213D] mb-1">Password *</label>
                 <Input
                   required
                   type="password"
@@ -382,43 +407,52 @@ export function SuperAdminSchoolsTab({ schools, loading, onRefresh }) {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[#EDEAE1]">
             <Button variant="outline" type="button" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-            <Button variant="primary" type="submit" loading={submitting}>Register School</Button>
+            <Button variant="primary" type="submit" loading={submitting}>Register & Initialize School</Button>
           </div>
         </form>
       </Modal>
 
-      {/* Modal: Configure WhatsApp Quota */}
-      {showQuotaModal && quotaSchool && (
-        <Modal isOpen={showQuotaModal} onClose={() => setShowQuotaModal(false)} title={`Configure Quota — ${quotaSchool.name}`}>
-          <form onSubmit={handleQuotaSubmit} className="space-y-4 text-xs">
-            <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] space-y-1">
-              <span className="text-[10px] text-[#8C97AB] font-mono uppercase block">CURRENT WHATSAPP USAGE</span>
-              <div className="flex justify-between items-center font-bold text-[#14213D]">
-                <span>Messages Sent This Year:</span>
-                <span className="font-mono text-[#2F6F5E]">{quotaSchool.whatsapp_sent_count || 0} messages</span>
+      {/* Modal: Edit School Profile */}
+      {showEditModal && editSchool && (
+        <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title={`Edit School — ${editSchool.school_name || editSchool.name || 'School'}`}>
+          <form onSubmit={handleEditSubmit} className="space-y-4 text-xs">
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">School Name *</label>
+              <Input
+                required
+                placeholder="e.g. Delhi Public School"
+                value={editForm.school_name}
+                onChange={(e) => setEditForm({ ...editForm, school_name: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-[#14213D] mb-1">Board *</label>
+                <Select
+                  value={editForm.board}
+                  onChange={(e) => setEditForm({ ...editForm, board: e.target.value })}
+                >
+                  <option value="CBSE">CBSE</option>
+                  <option value="STATE">State Board</option>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#14213D] mb-1">Contact Phone</label>
+                <Input
+                  placeholder="10-digit phone number"
+                  value={editForm.contact_phone}
+                  onChange={(e) => setEditForm({ ...editForm, contact_phone: e.target.value })}
+                />
               </div>
             </div>
 
-            <div>
-              <label className="block font-semibold text-[#14213D] mb-1">Annual WhatsApp Message Limit *</label>
-              <Input
-                type="number"
-                required
-                min="0"
-                placeholder="e.g. 10000"
-                value={quotaForm.annual_limit}
-                onChange={(e) => setQuotaForm({ ...quotaForm, annual_limit: e.target.value })}
-              />
-              <span className="text-[10px] text-[#8C97AB] mt-1 block">
-                Outbound announcements and alerts will be paused for this school if usage reaches this threshold.
-              </span>
-            </div>
-
             <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
-              <Button variant="outline" type="button" onClick={() => setShowQuotaModal(false)}>Cancel</Button>
-              <Button variant="primary" type="submit" loading={submitting}>Save Quota</Button>
+              <Button variant="outline" type="button" onClick={() => setShowEditModal(false)}>Cancel</Button>
+              <Button variant="primary" type="submit" loading={submitting}>Save Changes</Button>
             </div>
           </form>
         </Modal>

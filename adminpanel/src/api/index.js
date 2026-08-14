@@ -54,6 +54,13 @@ export const schoolAPI = {
     return response.data;
   },
 
+  updateModules: async (schoolId, enabledModules) => {
+    const response = await axiosInstance.patch(`/schools/${schoolId}/modules`, {
+      enabled_modules: enabledModules,
+    });
+    return response.data;
+  },
+
   updateStatus: async (schoolId, status) => {
     const response = await axiosInstance.patch(`/schools/${schoolId}/status`, { status });
     return response.data;
@@ -853,8 +860,10 @@ export const tokenPoliciesAPI = {
 
 // Analytics API
 export const analyticsAPI = {
-  getAISchoolData: async () => {
-    const response = await axiosInstance.get('/analytics/ai/school');
+  getAISchoolData: async (schoolId = null) => {
+    const params = {};
+    if (schoolId) params.school_id = schoolId;
+    const response = await axiosInstance.get('/analytics/ai/school', { params });
     return response.data;
   },
 
@@ -1276,6 +1285,65 @@ export const libraryAPI = {
   },
   reportLost: async (params = {}) => {
     const response = await axiosInstance.get('/library/reports/lost', { params });
+    return response.data;
+  },
+};
+
+// Curriculum / RAG API
+export const curriculumAPI = {
+  getSubjects: async (board, grade) => {
+    const gradeNum = String(grade).replace(/\D/g, '');
+    const response = await axiosInstance.get('/rag/curriculum/subjects', {
+      params: { board: String(board || 'CBSE').toUpperCase(), grade: gradeNum },
+    });
+    return response.data?.subjects || response.data || [];
+  },
+
+  getChapters: async (board, grade, subject) => {
+    const gradeNum = String(grade).replace(/\D/g, '');
+    const response = await axiosInstance.get('/rag/curriculum/chapters', {
+      params: { board: String(board || 'CBSE').toUpperCase(), grade: gradeNum, subject },
+    });
+    return response.data?.chapters || response.data || [];
+  },
+
+  getGrades: async (board) => {
+    const response = await axiosInstance.get('/rag/curriculum/grades', {
+      params: { board: String(board || 'CBSE').toUpperCase() },
+    });
+    return response.data?.grades || response.data || [];
+  },
+};
+
+// Teacher AI / Question Paper API
+export const teacherAiAPI = {
+  generate: async (payload) => {
+    const response = await axiosInstance.post('/teacher-ai/generate', payload);
+    return response.data;
+  },
+
+  saveDocument: async (payload) => {
+    const response = await axiosInstance.post('/teacher-ai/documents', payload);
+    return response.data;
+  },
+
+  listDocuments: async (params = {}) => {
+    const response = await axiosInstance.get('/teacher-ai/documents', { params });
+    return response.data?.documents || response.data || [];
+  },
+
+  getDocument: async (id) => {
+    const response = await axiosInstance.get(`/teacher-ai/documents/${id}`);
+    return response.data;
+  },
+
+  updateDocument: async (id, payload) => {
+    const response = await axiosInstance.put(`/teacher-ai/documents/${id}`, payload);
+    return response.data;
+  },
+
+  deleteDocument: async (id) => {
+    const response = await axiosInstance.delete(`/teacher-ai/documents/${id}`);
     return response.data;
   },
 };

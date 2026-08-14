@@ -4,6 +4,7 @@ import Student from "../students/student.model.js";
 import Teacher from "../teachers/teacher.model.js";
 import Class from "../classes/classes.model.js";
 import Section from "../sections/section.model.js";
+import AcademicYear from "../academic-years/academic-year.model.js";
 import WhatsappLog from "../whatsapp/whatsapp-log.model.js";
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
@@ -339,19 +340,18 @@ export const createSchoolService = async ({
   name,
   code,
   board,
-  address,
   phone,
-  email,
+  academic_year_name,
+  academic_year_start,
+  academic_year_end,
   admin_username,
   admin_password,
-  admin_name,
 }) => {
   const transaction = await db.transaction();
 
   try {
     const schoolName = name ? name.trim() : "";
     const username = admin_username ? admin_username.trim() : "";
-    const cleanEmail = email && email.trim() ? email.trim().toLowerCase() : null;
 
     if (!schoolName) {
       throw new AppError("School name is required", 400);
@@ -363,7 +363,37 @@ export const createSchoolService = async ({
       throw new AppError("Admin password is required", 400);
     }
 
-    // Check if username is already taken
+    // 1. Resolve / Autogenerate Simple Numeric School Code (1, 2, 3...)
+    let schoolCode = code ? String(code).trim() : "";
+    if (!schoolCode) {
+      const totalSchools = await School.count({ transaction });
+      let candidateCode = String(totalSchools + 1);
+      let isCodeUnique = false;
+      let counter = totalSchools + 1;
+      while (!isCodeUnique) {
+        candidateCode = String(counter);
+        const existingCode = await School.findOne({
+          where: { code: candidateCode },
+          transaction,
+        });
+        if (!existingCode) {
+          isCodeUnique = true;
+        } else {
+          counter++;
+        }
+      }
+      schoolCode = candidateCode;
+    } else {
+      const existingCode = await School.findOne({
+        where: { code: schoolCode },
+        transaction,
+      });
+      if (existingCode) {
+        throw new AppError(`School code "${schoolCode}" is already taken`, 400);
+      }
+    }
+
+    // 2. Check if username is already taken
     const existingUser = await User.findOne({
       where: { username },
       transaction,
@@ -372,39 +402,45 @@ export const createSchoolService = async ({
       throw new AppError(`Username "${username}" is already taken`, 400);
     }
 
-    // Check if school email is already registered (if email provided)
-    if (cleanEmail) {
-      const existingSchoolEmail = await School.findOne({
-        where: { email: cleanEmail },
-        transaction,
-      });
-      if (existingSchoolEmail) {
-        throw new AppError(`School with email "${cleanEmail}" already exists`, 400);
-      }
-    }
-
-    // Create school instance
+    // 3. Create School Instance
+    const finalBoard = (board || "CBSE").trim().toUpperCase() || "CBSE";
     const school = await School.create(
       {
         school_name: schoolName,
-        board: (board || code || "CBSE").trim().toUpperCase() || "CBSE",
-        address: address ? address.trim() : null,
+        code: schoolCode,
+        board: finalBoard,
         contact_phone: phone ? phone.trim() : null,
-        email: cleanEmail,
         status: "active",
       },
       { transaction }
     );
 
-    // Create school admin user
+    // 4. Automatically create initial Academic Year (so school admin doesn't need to manually configure on first startup)
+    const currentYear = new Date().getFullYear();
+    const defaultYearName = `${currentYear}-${currentYear + 1}`;
+    const yearName = (academic_year_name && academic_year_name.trim()) || defaultYearName;
+    const startDate = academic_year_start || `${currentYear}-06-01`;
+    const endDate = academic_year_end || `${currentYear + 1}-05-31`;
+
+    const academicYear = await AcademicYear.create(
+      {
+        school_id: school.id,
+        name: yearName,
+        start_date: startDate,
+        end_date: endDate,
+        is_current: true,
+      },
+      { transaction }
+    );
+
+    // 5. Create School Admin user
     const adminUser = await User.create(
       {
         school_id: school.id,
         role: "school_admin",
         username,
         password: admin_password,
-        name: (admin_name && admin_name.trim()) || username || "School Admin",
-        email: cleanEmail,
+        name: username || "School Admin",
         phone: phone ? phone.trim() : null,
         is_active: true,
         first_login: true,
@@ -416,6 +452,7 @@ export const createSchoolService = async ({
 
     return {
       school,
+      academicYear,
       admin: {
         id: adminUser.id,
         username: adminUser.username,

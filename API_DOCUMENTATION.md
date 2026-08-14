@@ -251,5 +251,18 @@ CRUD for the school-wide subject catalog.
 - Interactive 3D Human Anatomy Models: Heart, Brain, Lungs, Kidneys, Eye, Liver, Skeleton, Skin.
 - Features: Touch camera orbit controls, 3D hotspot annotations, clinical considerations, system category filters, organ search, and self-assessment quizzes.
 
+---
+
+## 14. Teacher AI & RAG Question Paper Generator (`/api/teacher-ai`, `/api/rag/curriculum`)
+
+- `POST /api/teacher-ai/generate` — Generate curriculum-aligned structured content (Question Papers with marking schemes, Lesson Plans, Summaries) using textbook RAG context & Gemini AI. Accessible by `school_admin`, `teacher`, and `super_admin`.
+- `POST /api/teacher-ai/documents` — Save generated question papers and teaching drafts to the school library.
+- `GET /api/teacher-ai/documents` — List saved teacher AI documents and question papers filtered by type (`type=question_paper`).
+- `GET /api/teacher-ai/documents/:id` | `PUT /api/teacher-ai/documents/:id` | `DELETE /api/teacher-ai/documents/:id` — CRUD operations for saved question papers and teaching documents.
+- `GET /api/rag/curriculum/subjects` — Retrieve distinct subjects with indexed textbook chapters for a board & grade.
+- `GET /api/rag/curriculum/chapters` — Retrieve indexed syllabus chapters for a board, grade, and subject.
+- `GET /api/rag/curriculum/grades` — Retrieve available ingested grades for a board.
+
+
 
 

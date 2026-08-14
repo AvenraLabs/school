@@ -2,45 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { schoolAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Input, Select } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Input';
+import { StatusBadge } from '../../components/common/StatusBadge';
 import {
   Building2,
   MessageSquare,
-  MapPin,
   Sparkles,
-  Save,
-  GraduationCap,
-  CheckCircle2,
-  Phone,
-  Mail,
-  Sliders,
-  Layers,
   Video,
   BookOpen,
   DollarSign,
   Bus,
   Bot,
-  Wand2
+  Wand2,
+  CheckCircle2,
+  XCircle,
+  Sliders,
 } from 'lucide-react';
 
 export function SuperAdminSchoolSettings() {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [school, setSchool] = useState(null);
-
-  const [form, setForm] = useState({
-    school_name: '',
-    board: 'CBSE',
-    address: '',
-    city: '',
-    state: '',
-    zip: '',
-    email: '',
-    contact_phone: '',
-    promotion_wizard_enabled: false,
-  });
+  const [schools, setSchools] = useState([]);
+  const [selectedSchoolId, setSelectedSchoolId] = useState('');
+  const [selectedSchool, setSelectedSchool] = useState(null);
 
   const [modules, setModules] = useState({
     transport: true,
@@ -53,87 +37,120 @@ export function SuperAdminSchoolSettings() {
   });
 
   const moduleDefinitions = [
-    { key: 'transport', label: 'Transport & Bus GPS Tracking', icon: Bus, desc: 'Bus routes, vehicles, driver profiles, student allocations, live GPS tracking.' },
-    { key: 'library', label: 'Library Management System', icon: BookOpen, desc: 'Book cataloging, issue/return loans, overdue tracking, fine rules.' },
-    { key: 'finance', label: 'Fees & Expense Management', icon: DollarSign, desc: 'Fee structures, student ledgers, concessions, receipts, expense vouchers.' },
-    { key: 'ai_tutor', label: 'Student AI Tutor Chat', icon: Bot, desc: 'Student RAG AI tutor assistant and textbook chapter context search.' },
-    { key: 'ai_tools', label: 'Teacher AI Tools & Quizzes', icon: Wand2, desc: 'AI Question Paper Generator, Lesson Planner, Homework Quizzes, Kahoot games.' },
-    { key: 'ai_video', label: 'Google Veo 3 Video Generation', icon: Video, desc: '3D Educational video generation using Google Vertex AI Veo 3.' },
-    { key: 'whatsapp', label: 'WhatsApp Cloud API Alerts (Paid API)', icon: MessageSquare, desc: 'Meta WhatsApp absentee alerts and fee receipts dispatches.' },
+    {
+      key: 'transport',
+      label: 'Transport & Bus GPS Tracking',
+      icon: Bus,
+      desc: 'Bus routes, vehicles, driver profiles, student allocations, live GPS tracking.',
+    },
+    {
+      key: 'library',
+      label: 'Library Management System',
+      icon: BookOpen,
+      desc: 'Book cataloging, issue/return loans, overdue tracking, fine rules.',
+    },
+    {
+      key: 'finance',
+      label: 'Fees & Expense Management',
+      icon: DollarSign,
+      desc: 'Fee structures, student ledgers, concessions, receipts, expense vouchers.',
+    },
+    {
+      key: 'ai_tutor',
+      label: 'Student AI Tutor Chat',
+      icon: Bot,
+      desc: 'Student RAG AI tutor assistant and textbook chapter context search.',
+    },
+    {
+      key: 'ai_tools',
+      label: 'Teacher AI Tools & Quizzes',
+      icon: Wand2,
+      desc: 'AI Question Paper Generator, Lesson Planner, Homework Quizzes, Kahoot games.',
+    },
+    {
+      key: 'ai_video',
+      label: 'Google Veo 3 Video Generation',
+      icon: Video,
+      desc: '3D Educational video generation using Google Vertex AI Veo 3.',
+    },
+    {
+      key: 'whatsapp',
+      label: 'WhatsApp Cloud API Alerts (Paid API)',
+      icon: MessageSquare,
+      desc: 'Meta WhatsApp absentee alerts and fee receipts dispatches.',
+    },
   ];
 
   useEffect(() => {
-    loadSchoolData();
+    loadSchools();
   }, []);
 
-  const loadSchoolData = async () => {
+  const loadSchools = async () => {
     setLoading(true);
     try {
       const res = await schoolAPI.list();
       const rawList = res.items || (Array.isArray(res) ? res : [res]);
+      setSchools(rawList);
       if (rawList.length > 0) {
-        const s = rawList[0];
-        setSchool(s);
-        setForm({
-          school_name: s.school_name || s.name || '',
-          board: s.board || 'CBSE',
-          address: s.address || '',
-          city: s.city || '',
-          state: s.state || '',
-          zip: s.zip || '',
-          email: s.email || '',
-          contact_phone: s.contact_phone || s.phone || '',
-          promotion_wizard_enabled: Boolean(s.promotion_wizard_enabled),
-        });
-
-        if (s.enabled_modules) {
-          setModules((prev) => ({ ...prev, ...s.enabled_modules }));
+        const first = rawList[0];
+        setSelectedSchoolId(first.id);
+        setSelectedSchool(first);
+        if (first.enabled_modules) {
+          setModules({
+            transport: true,
+            library: true,
+            finance: true,
+            ai_tutor: true,
+            ai_tools: true,
+            ai_video: true,
+            whatsapp: true,
+            ...first.enabled_modules,
+          });
         }
       }
     } catch (err) {
-      toast.error('Failed to load school settings');
+      toast.error('Failed to load schools');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleField = async (field, value, label) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (!school) return;
-    try {
-      await schoolAPI.update(school.id, { [field]: value });
-      toast.success(`${label} ${value ? 'enabled' : 'disabled'}`);
-    } catch (err) {
-      toast.error(err.response?.data?.message || `Failed to update ${label}`);
-      setForm((prev) => ({ ...prev, [field]: !value }));
+  const handleSelectSchool = (schoolId) => {
+    setSelectedSchoolId(schoolId);
+    const found = schools.find((s) => String(s.id) === String(schoolId));
+    if (found) {
+      setSelectedSchool(found);
+      setModules({
+        transport: true,
+        library: true,
+        finance: true,
+        ai_tutor: true,
+        ai_tools: true,
+        ai_video: true,
+        whatsapp: true,
+        ...(found.enabled_modules || {}),
+      });
     }
   };
 
   const handleToggleModule = async (moduleKey, value, label) => {
+    if (!selectedSchool) return;
     const updatedModules = { ...modules, [moduleKey]: value };
     setModules(updatedModules);
-    if (!school) return;
-    try {
-      await schoolAPI.updateModules(school.id, updatedModules);
-      toast.success(`Module '${label}' ${value ? 'enabled' : 'disabled'} for this school.`);
-    } catch (err) {
-      toast.error(err.response?.data?.message || `Failed to update module '${label}'`);
-      setModules((prev) => ({ ...prev, [moduleKey]: !value }));
-    }
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!school) return;
-    setSaving(true);
+    // Optimistically update local school item
+    const updatedSchools = schools.map((s) =>
+      s.id === selectedSchool.id ? { ...s, enabled_modules: updatedModules } : s
+    );
+    setSchools(updatedSchools);
+    setSelectedSchool((prev) => (prev ? { ...prev, enabled_modules: updatedModules } : null));
+
     try {
-      await schoolAPI.update(school.id, form);
-      toast.success('School configuration updated successfully!');
-      await loadSchoolData();
+      await schoolAPI.updateModules(selectedSchool.id, updatedModules);
+      toast.success(`Module "${label}" ${value ? 'enabled' : 'disabled'} for ${selectedSchool.school_name || selectedSchool.name}`);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update settings');
-    } finally {
-      setSaving(false);
+      toast.error(err.response?.data?.message || `Failed to update module "${label}"`);
+      setModules((prev) => ({ ...prev, [moduleKey]: !value }));
     }
   };
 
@@ -145,176 +162,102 @@ export function SuperAdminSchoolSettings() {
     );
   }
 
+  const schoolName = selectedSchool?.school_name || selectedSchool?.name || 'Selected School';
+  const schoolCode = selectedSchool?.code || selectedSchool?.id || '1';
+  const schoolBoard = selectedSchool?.board || 'CBSE';
+  const schoolStatus = selectedSchool?.status || 'active';
+
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Institutional Profile */}
-          <Card>
-            <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
-              <CardTitle className="text-sm font-bold text-[#14213D] flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[#2F6F5E]" /> Institutional Profile & Board Setup
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-[#14213D] mb-1">School Full Name *</label>
-                <Input
-                  required
-                  value={form.school_name}
-                  onChange={(e) => setForm({ ...form, school_name: e.target.value })}
-                  placeholder="e.g. Bharathi CBSE Senior Secondary School"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-[#14213D] mb-1">Education Board Affiliation *</label>
-                <Select
-                  value={form.board}
-                  onChange={(e) => setForm({ ...form, board: e.target.value })}
-                >
-                  <option value="CBSE">CBSE — Central Board of Secondary Education</option>
-                  <option value="STATEBOARD">State Board</option>
-                  <option value="ICSE">ICSE — Indian Certificate of Secondary Education</option>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-[#14213D] mb-1">Official Email</label>
-                  <Input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    placeholder="admin@school.edu"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-[#14213D] mb-1">Contact Phone</label>
-                  <Input
-                    value={form.contact_phone}
-                    onChange={(e) => setForm({ ...form, contact_phone: e.target.value })}
-                    placeholder="+91 9876543210"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-[#14213D] mb-1">Campus Address</label>
-                <Input
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  placeholder="Street / Campus address"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-semibold text-[#14213D] mb-1">City</label>
-                  <Input
-                    value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    placeholder="City"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-[#14213D] mb-1">State</label>
-                  <Input
-                    value={form.state}
-                    onChange={(e) => setForm({ ...form, state: e.target.value })}
-                    placeholder="State"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-[#14213D] mb-1">Zip / Pincode</label>
-                  <Input
-                    value={form.zip}
-                    onChange={(e) => setForm({ ...form, zip: e.target.value })}
-                    placeholder="Pincode"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Licensed Feature Modules Checklist */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
-                <CardTitle className="text-sm font-bold text-[#14213D] flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-[#2F6F5E]" /> Licensed Feature Modules Checklist
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 text-xs space-y-3">
-                {moduleDefinitions.map((mod) => {
-                  const IconComp = mod.icon;
-                  const isChecked = modules[mod.key] !== false;
-                  return (
-                    <label
-                      key={mod.key}
-                      className={`flex items-start gap-3 p-3 rounded-[8px] border transition-colors cursor-pointer ${
-                        isChecked
-                          ? 'bg-[#EAF3F0] border-[#D3E6E0]'
-                          : 'bg-[#FAFAF8] border-[#E4E1D8] opacity-75 hover:opacity-100'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 mt-0.5 rounded text-[#2F6F5E] accent-[#2F6F5E] focus:ring-[#2F6F5E] border-[#E4E1D8] cursor-pointer"
-                        checked={isChecked}
-                        onChange={(e) => handleToggleModule(mod.key, e.target.checked, mod.label)}
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-1.5 font-bold text-[#14213D]">
-                          <IconComp className="w-3.5 h-3.5 text-[#2F6F5E]" />
-                          <span>{mod.label}</span>
-                        </div>
-                        <span className="text-[11px] text-[#52607D] block mt-0.5">
-                          {mod.desc}
-                        </span>
-                      </div>
-                    </label>
-                  );
-                })}
-              </CardContent>
-            </Card>
-
-            {/* System Preferences */}
-            <Card>
-              <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
-                <CardTitle className="text-sm font-bold text-[#14213D] flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-[#2F6F5E]" /> System Preferences
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 text-xs space-y-3">
-
-                <label className="flex items-start gap-3 p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] cursor-pointer hover:bg-[#EAF3F0] transition-colors">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 mt-0.5 rounded text-[#2F6F5E] accent-[#2F6F5E] focus:ring-[#2F6F5E] border-[#E4E1D8] cursor-pointer"
-                    checked={form.promotion_wizard_enabled}
-                    onChange={(e) => handleToggleField('promotion_wizard_enabled', e.target.checked, 'Promotion wizard')}
-                  />
-                  <div>
-                    <span className="font-bold text-[#14213D] block">Student Promotion & Graduation Wizard</span>
-                    <span className="text-[11px] text-[#52607D] block">
-                      Enable Student Promotion & Graduation Wizard in School Admin panel for end-of-year batch rollover.
-                    </span>
-                  </div>
-                </label>
-              </CardContent>
-            </Card>
+      {/* Top Toolbar / School Selector */}
+      <div className="bg-white border border-[#E4E1D8] rounded-[10px] p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-[8px] bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold font-display border border-[#D3E6E0] shrink-0">
+            <Sliders className="w-5 h-5" />
           </div>
-
-          {/* Bottom Action Bar */}
-          <div className="flex justify-end pt-2">
-            <Button variant="primary" type="submit" loading={saving} icon={Save} className="px-6 py-2">
-              Save Profile Settings
-            </Button>
+          <div>
+            <h2 className="font-display font-bold text-base text-[#14213D]">Licensed Modules & Feature Access</h2>
+            <p className="text-xs text-[#52607D]">Select an institution to enable or restrict licensed ERP feature modules.</p>
           </div>
         </div>
-      </form>
+
+        {/* School Dropdown */}
+        <div className="w-72">
+          <Select
+            value={selectedSchoolId}
+            onChange={(e) => handleSelectSchool(e.target.value)}
+            className="w-full text-xs"
+          >
+            {schools.map((s) => {
+              const sName = s.school_name || s.name || `School #${s.id}`;
+              const sCode = s.code ? `Code: ${s.code}` : `ID: ${s.id}`;
+              return (
+                <option key={s.id} value={s.id}>
+                  {sName} ({sCode})
+                </option>
+              );
+            })}
+          </Select>
+        </div>
+      </div>
+
+      {/* Feature Modules Checklist */}
+      <Card>
+        <CardHeader className="py-3 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
+          <CardTitle className="text-sm font-bold text-[#14213D] flex items-center justify-between">
+            <span>Licensed Feature Modules</span>
+            <span className="text-xs font-normal text-[#8C97AB] font-mono">
+              {Object.values(modules).filter(Boolean).length} of {moduleDefinitions.length} modules active
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 space-y-3">
+          <div className="space-y-3">
+            {moduleDefinitions.map((mod) => {
+              const isEnabled = Boolean(modules[mod.key]);
+              const Icon = mod.icon;
+
+              return (
+                <div
+                  key={mod.key}
+                  onClick={() => handleToggleModule(mod.key, !isEnabled, mod.label)}
+                  className={`p-3 rounded-[8px] border transition-all cursor-pointer flex items-center justify-between gap-4 ${
+                    isEnabled
+                      ? 'bg-[#F2F8F6] border-[#D3E6E0] shadow-xs'
+                      : 'bg-white border-[#E4E1D8] opacity-75 hover:opacity-100 hover:border-[#CBD5E1]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-[6px] ${
+                        isEnabled ? 'bg-[#2F6F5E] text-white' : 'bg-[#EDEAE1] text-[#52607D]'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <span className="font-bold text-[#14213D] text-xs">{mod.label}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={isEnabled}
+                      onChange={(e) => handleToggleModule(mod.key, e.target.checked, mod.label)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 rounded text-[#2F6F5E] focus:ring-[#2F6F5E] accent-[#2F6F5E] cursor-pointer"
+                    />
+                    <span className={`text-[11px] font-mono font-bold ${isEnabled ? 'text-[#2F6F5E]' : 'text-[#8C97AB]'}`}>
+                      {isEnabled ? 'Active' : 'Disabled'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
+export default SuperAdminSchoolSettings;

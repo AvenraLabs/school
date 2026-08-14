@@ -42,7 +42,6 @@ const navigationItems = [
 
   { group: 'System Configuration', label: 'Subject Catalog', to: '/admin/subjects', icon: BookOpen },
   { group: 'System Configuration', label: 'Teacher Allocations', to: '/admin/assignments', icon: ClipboardList },
-  { group: 'System Configuration', label: 'Academic Year Setup', to: '/admin/academic-year', icon: Calendar },
   { group: 'System Configuration', label: 'Login Credentials Roster', to: '/admin/login-roster', icon: ClipboardList },
   { group: 'System Configuration', label: 'System Audit Logs', to: '/admin/audit-logs', icon: Sparkles },
   { group: 'System Configuration', label: 'Feedback & Support', to: '/admin/feedback', icon: MessageSquare },

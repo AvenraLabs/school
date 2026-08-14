@@ -1,40 +1,47 @@
-import School from "../../modules/schools/school.model.js";
 import AppError from "../appError.js";
-import asyncHandler from "../asyncHandler.js";
+import School from "../../modules/schools/school.model.js";
 
 /**
- * Middleware factory to enforce Super-Admin module toggles per school.
- * Returns HTTP 403 Forbidden if target module is disabled for user's school.
- * 
- * @param {string} moduleKey - transport | library | finance | ai_tutor | ai_tools | ai_video | whatsapp
+ * Middleware to enforce school-level feature module licensing.
+ * If the user's school has explicitly disabled `moduleKey`, requests are rejected with 403.
+ * SuperAdmin is exempt and bypasses all module restrictions.
  */
-export function requireModuleEnabled(moduleKey) {
-  return asyncHandler(async (req, res, next) => {
-    // Super Admins bypass module restriction checks
-    if (req.user?.role === "super_admin") {
-      return next();
+export const requireModule = (moduleKey) => {
+  return async (req, res, next) => {
+    try {
+      // SuperAdmin has full platform access
+      if (req.user?.role === "super_admin") {
+        return next();
+      }
+
+      const schoolId = req.user?.school_id;
+      if (!schoolId) {
+        return next(new AppError("No school associated with this account", 403));
+      }
+
+      const school = await School.findByPk(schoolId);
+      if (!school) {
+        return next(new AppError("School not found or inactive", 404));
+      }
+
+      const enabledModules = school.enabled_modules || {};
+
+      // If module is explicitly set to false in the school's licensed module configuration
+      if (enabledModules[moduleKey] === false) {
+        return next(
+          new AppError(
+            `The '${moduleKey}' module is not licensed for your institution. Please contact your platform administrator.`,
+            403
+          )
+        );
+      }
+
+      next();
+    } catch (err) {
+      next(err);
     }
+  };
+};
 
-    const schoolId = req.user?.school_id;
-    if (!schoolId) {
-      return next();
-    }
-
-    const school = await School.findByPk(schoolId, { attributes: ["id", "enabled_modules"] });
-    if (!school) {
-      return next();
-    }
-
-    const enabledModules = school.enabled_modules || {};
-    // Default to true if key is unconfigured in legacy JSON
-    const isEnabled = enabledModules[moduleKey] !== false;
-
-    if (!isEnabled) {
-      throw new AppError(`Module '${moduleKey}' is currently disabled for your school.`, 403);
-    }
-
-    next();
-  });
-}
-
-export default requireModuleEnabled;
+export const requireModuleEnabled = requireModule;
+export default requireModule;

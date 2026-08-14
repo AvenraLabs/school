@@ -30,10 +30,10 @@ import { SubstituteTeachers } from './pages/SchoolAdmin/SubstituteTeachers';
 import { TimetableModule } from './pages/SchoolAdmin/TimetableModule';
 import { Notifications } from './pages/SchoolAdmin/Notifications';
 import { ExamsManager } from './pages/SchoolAdmin/ExamsManager';
+import { QuestionPaperGenerator } from './pages/SchoolAdmin/QuestionPaperGenerator';
 import { AuditLogs } from './pages/SchoolAdmin/AuditLogs';
 import { SchoolRegistry } from './pages/SchoolAdmin/SchoolRegistry';
 import { TransportManager } from './pages/SchoolAdmin/TransportManager';
-import { AcademicYearManager } from './pages/SchoolAdmin/AcademicYearManager';
 import { FeeManager } from './pages/SchoolAdmin/Fees';
 import { LibraryManager } from './pages/SchoolAdmin/Library';
 import PrivacyPolicy from './pages/Public/PrivacyPolicy';
@@ -70,7 +70,6 @@ function App() {
               <Route path="/super-admin/billing" element={<SuperAdminBillingLogs />} />
               <Route path="/super-admin/feedback" element={<FeedbackManager />} />
               <Route path="/super-admin/ai-analytics" element={<SuperAdminAiAnalytics />} />
-              <Route path="/super-admin/classes" element={<ClassesManager />} />
               <Route path="/super-admin/seeder" element={<BulkSeeder />} />
             </Route>
             {/* Redirect any old bookmarked sub-routes */}
@@ -104,7 +103,7 @@ function App() {
               <Route path="/admin/transport" element={<TransportManager />} />
               <Route path="/admin/notifications" element={<Notifications />} />
               <Route path="/admin/exams" element={<ExamsManager />} />
-              <Route path="/admin/academic-year" element={<AcademicYearManager />} />
+              <Route path="/admin/question-papers" element={<QuestionPaperGenerator />} />
               <Route path="/admin/audit-logs" element={<AuditLogs />} />
               <Route path="/admin/lost-found" element={<LostFoundManager />} />
               <Route path="/admin/feedback" element={<FeedbackSubmit />} />

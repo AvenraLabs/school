@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { tokenPoliciesAPI, analyticsAPI } from '../../api';
+import { tokenPoliciesAPI, analyticsAPI, schoolAPI } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { Input, Select } from '../../components/ui/Input';
 import { Modal } from '../../components/common/Modal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -12,11 +12,11 @@ import {
   Video,
   Image as ImageIcon,
   MessageSquare,
-  MapPin,
   RefreshCw,
   Settings2,
   Activity,
-  Film
+  Film,
+  Building2
 } from 'lucide-react';
 
 const DEFAULT_RATES = {
@@ -30,6 +30,8 @@ const DEFAULT_RATES = {
 export function SuperAdminBillingLogs() {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
+  const [schools, setSchools] = useState([]);
+  const [selectedSchoolId, setSelectedSchoolId] = useState('');
   const [billingSummary, setBillingSummary] = useState(null);
   const [apiLogs, setApiLogs] = useState([]);
 
@@ -50,16 +52,26 @@ export function SuperAdminBillingLogs() {
   const [tempRates, setTempRates] = useState(rates);
 
   useEffect(() => {
-    loadTelemetryData();
+    schoolAPI.list()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data.schools || data.data || [];
+        setSchools(list);
+      })
+      .catch((err) => console.error('Failed to load schools for billing filter:', err));
   }, []);
 
-  const loadTelemetryData = async () => {
+  useEffect(() => {
+    loadTelemetryData(selectedSchoolId);
+  }, [selectedSchoolId]);
+
+  const loadTelemetryData = async (schoolId = selectedSchoolId) => {
     setLoading(true);
+    const targetSchoolId = schoolId ? Number(schoolId) : null;
     try {
       const [summaryRes, logsRes, aiRes] = await Promise.all([
-        tokenPoliciesAPI.getBillingSummary().catch(() => null),
-        tokenPoliciesAPI.getApiLogs('all').catch(() => null),
-        analyticsAPI.getAISchoolData().catch(() => null),
+        tokenPoliciesAPI.getBillingSummary(targetSchoolId).catch(() => null),
+        tokenPoliciesAPI.getApiLogs('all', targetSchoolId).catch(() => null),
+        analyticsAPI.getAISchoolData(targetSchoolId).catch(() => null),
       ]);
 
       setBillingSummary(summaryRes?.data || summaryRes);
@@ -146,6 +158,23 @@ export function SuperAdminBillingLogs() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Select
+            value={selectedSchoolId}
+            onChange={(e) => setSelectedSchoolId(e.target.value)}
+            className="w-56 text-xs"
+          >
+            <option value="">All Schools (Platform Total)</option>
+            {schools.map((s) => {
+              const sName = s.school_name || s.name || `School #${s.id}`;
+              const sCode = s.code || s.board || s.id;
+              return (
+                <option key={s.id} value={String(s.id)}>
+                  {sName} (Code: {sCode})
+                </option>
+              );
+            })}
+          </Select>
+
           <Button
             variant="outline"
             size="sm"
@@ -162,7 +191,7 @@ export function SuperAdminBillingLogs() {
             variant="outline"
             size="sm"
             icon={RefreshCw}
-            onClick={loadTelemetryData}
+            onClick={() => loadTelemetryData(selectedSchoolId)}
             loading={loading}
           >
             Refresh

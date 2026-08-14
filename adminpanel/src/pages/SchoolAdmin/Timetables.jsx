@@ -8,7 +8,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import { ReadinessCheckPanel } from '../../components/Timetable/ReadinessCheckPanel';
 import { GeneratedDraftReviewModal } from '../../components/Timetable/GeneratedDraftReviewModal';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck, AlertTriangle, Check, Printer, Copy, Clock, Wand2, ShieldCheck, Sparkles, RefreshCw } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck, AlertTriangle, Check, Printer, Copy, Clock, Wand2, ShieldCheck, Sparkles, RefreshCw, Download } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { generateClassTimetablePDF } from '../../utils/pdfGenerator';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -44,6 +46,7 @@ export function Timetables({
   const [generating, setGenerating] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
+  const { user } = useAuth();
   const toast = useToast();
 
   useEffect(() => {
@@ -294,6 +297,17 @@ export function Timetables({
   const selectedClassName = classes.find((c) => String(c.id) === String(selectedClass))?.class_name || '';
   const selectedSectionName = selectedSections.find((s) => String(s.id) === String(selectedSection))?.name || '';
 
+  const handleDownloadPDF = () => {
+    const schoolName = user?.school?.school_name || user?.school_name || 'School Management System';
+    generateClassTimetablePDF({
+      schoolName,
+      className: selectedClassName,
+      sectionName: selectedSectionName,
+      timetable,
+    });
+    toast.success('Class timetable PDF circular generated!');
+  };
+
   const handleLoadFromBellSchedule = async () => {
     const currentClassObj = classes.find((c) => String(c.id) === String(selectedClass));
     let templateId = currentClassObj?.bell_schedule_template_id || currentClassObj?.bellScheduleTemplate?.id;
@@ -409,9 +423,20 @@ export function Timetables({
               Pre-flight Readiness
             </Button>
             {selectedClass && selectedSection && (
-              <Button variant="outline" size="sm" icon={Printer} onClick={() => window.print()}>
-                Print Schedule
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={Download}
+                  onClick={handleDownloadPDF}
+                  className="text-[#2F6F5E] border-[#2F6F5E] hover:bg-[#EAF3F0]"
+                >
+                  Download PDF Circular
+                </Button>
+                <Button variant="outline" size="sm" icon={Printer} onClick={() => window.print()}>
+                  Print Schedule
+                </Button>
+              </>
             )}
             {!isEmbedded && (
               <>

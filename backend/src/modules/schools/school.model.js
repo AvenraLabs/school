@@ -16,30 +16,16 @@ const School = db.define(
       allowNull: false,
     },
 
+    code: {
+      type: DataTypes.STRING(30),
+      allowNull: true,
+      unique: true,
+    },
+
     board: {
       type: DataTypes.STRING,
       allowNull: false,
       defaultValue: "CBSE",
-    },
-
-    address: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-
-    city: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-
-    state: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-
-    zip: {
-      type: DataTypes.STRING,
-      allowNull: true,
     },
 
     contact_phone: {
@@ -50,12 +36,6 @@ const School = db.define(
     logo_url: {
       type: DataTypes.TEXT,
       allowNull: true,
-    },
-
-    email: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      unique: true,
     },
 
     status: {
@@ -135,8 +115,6 @@ const School = db.define(
     underscored: true,
     indexes: [
       { fields: ["status"] },
-      { fields: ["city"] },
-      { fields: ["state"] },
     ],
   }
 );

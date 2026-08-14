@@ -63,9 +63,21 @@ export const sendTemplateMessage = async ({
 
   if (schoolId) {
     const school = await School.findByPk(schoolId, {
-      attributes: ["id", "whatsapp_annual_limit", "whatsapp_sent_count"],
+      attributes: ["id", "whatsapp_annual_limit", "whatsapp_sent_count", "enabled_modules"],
     });
     if (school) {
+      if (school.enabled_modules?.whatsapp === false) {
+        const errorMsg = "WhatsApp module is not licensed for this institution";
+        await WhatsappLog.create({
+          status: "skipped",
+          phone,
+          message: fallbackText || `Template: ${templateName}`,
+          error: errorMsg,
+          school_id: schoolId,
+        });
+        return { success: false, status: "skipped", error: errorMsg };
+      }
+
       const limit = school.whatsapp_annual_limit ?? 10000;
       const sent = school.whatsapp_sent_count ?? 0;
       if (sent >= limit) {

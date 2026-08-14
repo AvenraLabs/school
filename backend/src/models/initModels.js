@@ -7,27 +7,30 @@ import User from "../modules/users/user.model.js";
 import RefreshToken from "../modules/auth/refresh-token.model.js";
 import LostFoundItem from "../modules/lost-found/lost-found.model.js";
 import Feedback from "../modules/feedback/feedback.model.js";
+import ProfileUpdateRequest from "../modules/approvals/profile-update-request.model.js";
+import AuditLog from "../modules/audit/audit-log.model.js";
 
 /* ===================== PEOPLE ===================== */
 import Teacher from "../modules/teachers/teacher.model.js";
 import Student from "../modules/students/student.model.js";
 import TeacherAssignment from "../modules/teacher-assignments/teacher-assignment.model.js";
-
+import StudentEnrollment from "../modules/students/student-enrollment.model.js";
 
 /* ===================== ACADEMICS ===================== */
 import Class from "../modules/classes/classes.model.js";
 import Subject from "../modules/subjects/subject.model.js";
+import Section from "../modules/sections/section.model.js";
+import ClassSubject from "../modules/subjects/class-subject.model.js";
+import SectionSubjectOverride from "../modules/subjects/section-subject-override.model.js";
 import Timetable from "../modules/timetables/timetable.model.js";
 import TimetableSubstitution from "../modules/timetables/timetable-substitution.model.js";
 import BellScheduleTemplate from "../modules/timetables/bell-schedule-template.model.js";
 import BellSchedulePeriod from "../modules/timetables/bell-schedule-period.model.js";
 import TimetableGenerationJob from "../modules/timetables/timetable-generation-job.model.js";
-import Section from "../modules/sections/section.model.js";
 
-//homework
+/* ===================== HOMEWORK ===================== */
 import Homework from "../modules/homework/homework.model.js";
 import HomeworkSubmission from "../modules/homework/homework-submission.model.js";
-
 
 /* ===================== ACTIVITY ===================== */
 import Attendance from "../modules/attendance/attendance.model.js";
@@ -38,19 +41,17 @@ import QuizQuestion from "../modules/quiz/quiz-question.model.js";
 import GameSession from "../modules/game/game-session.model.js";
 import GameSessionPlayer from "../modules/game/game-session-player.model.js";
 import PlayerAnswer from "../modules/game/player-answer.model.js";
+import TeacherQuiz from "../modules/quiz/teacher-quiz.model.js";
+import TeacherQuizQuestion from "../modules/quiz/teacher-quiz-question.model.js";
+import StudentQuizSubmission from "../modules/quiz/student-quiz-submission.model.js";
 
 /* ===================== AI / LOGS / CHAT ===================== */
 import AiChatLog from "../modules/ai-chat-logs/ai-chat-log.model.js";
-import AuditLog from "../modules/audit/audit-log.model.js";
 import StudentChatSession from "../modules/rag/models/student-chat-session.model.js";
 import StudentChatMessage from "../modules/rag/models/student-chat-message.model.js";
 import TextbookChapter from "../modules/rag/models/textbook-chapter.model.js";
 import VideoGeneration from "../modules/ai-video/video-generation.model.js";
-
-/* ===================== QUIZZES / HOMEWORK ===================== */
-import TeacherQuiz from "../modules/quiz/teacher-quiz.model.js";
-import TeacherQuizQuestion from "../modules/quiz/teacher-quiz-question.model.js";
-import StudentQuizSubmission from "../modules/quiz/student-quiz-submission.model.js";
+import TeacherAiDocument from "../modules/teacher-ai/teacher-ai-document.model.js";
 
 /* ===================== TOKENS / BILLING ===================== */
 import TokenAccount from "../modules/tokens/token-account.model.js";
@@ -64,15 +65,14 @@ import ExamSubject from "../modules/report-cards/exam-subject.model.js";
 import ExamMark from "../modules/report-cards/exam-mark.model.js";
 import GradingScale from "../modules/report-cards/grading-scale.model.js";
 
-/* ===================== MISC ===================== */
+/* ===================== NOTIFICATIONS & LOGS ===================== */
 import Notification from "../modules/notifications/notification.model.js";
 import NotificationAck from "../modules/notifications/notification-ack.model.js";
+import PushSubscription from "../modules/notifications/push-subscription.model.js";
 import WhatsappLog from "../modules/whatsapp/whatsapp-log.model.js";
-import ProfileUpdateRequest from "../modules/approvals/profile-update-request.model.js";
 
 /* ===================== GROUP CHAT ===================== */
 import GroupChat from "../modules/group-chat/group-chat.model.js";
-
 import GroupChatMember from "../modules/group-chat/group-chat-member.model.js";
 import GroupChatMessage from "../modules/group-chat/group-chat-message.model.js";
 
@@ -86,7 +86,6 @@ import TransportRequest from "../modules/transport/transport-request.model.js";
 
 /* ===================== ACADEMIC YEARS & STATUS ===================== */
 import AcademicYear from "../modules/academic-years/academic-year.model.js";
-import StudentEnrollment from "../modules/students/student-enrollment.model.js";
 
 /* ===================== FEES & EXPENSES ===================== */
 import FeeCategory from "../modules/fees/fee-category.model.js";
@@ -99,8 +98,6 @@ import Expense from "../modules/expenses/expense.model.js";
 /* ===================== LIBRARY ===================== */
 import Book from "../modules/library/book.model.js";
 import BookIssue from "../modules/library/book-issue.model.js";
-
-
 
 const initAssociations = () => {
   /* ==================== SCHOOL ==================== */
@@ -143,15 +140,13 @@ const initAssociations = () => {
   User.hasMany(RefreshToken, { foreignKey: "user_id", onDelete: "CASCADE" });
   RefreshToken.belongsTo(User, { foreignKey: "user_id" });
 
-  /* ==================== STUDENT (LEGACY – KEEP) ==================== */
+  /* ==================== STUDENT ==================== */
   Student.belongsTo(School, { foreignKey: "school_id" });
   Student.belongsTo(Class, { foreignKey: "class_id" });
   Student.belongsTo(Section, { foreignKey: "section_id" });
 
   Class.hasMany(Student, { foreignKey: "class_id" });
   Section.hasMany(Student, { foreignKey: "section_id" });
-
-  Student.hasMany(Attendance, { foreignKey: "student_id" });
 
   /* ==================== REPORT CARDS ==================== */
   ExamMaster.belongsTo(School, { foreignKey: "school_id" });
@@ -174,17 +169,11 @@ const initAssociations = () => {
   ExamMark.belongsTo(Subject, { foreignKey: "subject_id" });
   Student.hasMany(ExamMark, { foreignKey: "student_id", onDelete: "CASCADE" });
 
-
-
-
-
-
   /* ==================== TEACHER ==================== */
   Teacher.belongsTo(School, { foreignKey: "school_id" });
   Teacher.belongsTo(User, { foreignKey: "user_id" });
   Teacher.hasMany(Class, { foreignKey: "class_teacher_id" });
   Teacher.hasMany(TeacherAssignment, { foreignKey: "teacher_id" });
-
 
   /* ==================== ATTENDANCE ==================== */
   Attendance.belongsTo(School, { foreignKey: "school_id" });
@@ -195,7 +184,6 @@ const initAssociations = () => {
   Attendance.belongsTo(User, { as: "Creator", foreignKey: "created_by" });
   Attendance.belongsTo(User, { as: "Updater", foreignKey: "updated_by" });
 
-  // Reverse associations
   Student.hasMany(Attendance, { foreignKey: "student_id" });
 
   /* ==================== CLASS ==================== */
@@ -233,9 +221,6 @@ const initAssociations = () => {
   TimetableSubstitution.belongsTo(Teacher, { as: "OriginalTeacher", foreignKey: "original_teacher_id" });
   TimetableSubstitution.belongsTo(Teacher, { as: "SubstituteTeacher", foreignKey: "substitute_teacher_id" });
 
-
-  /* ==================== CHAPTER / TOPIC (REMOVED - UNUSED) ==================== */
-
   /* ==================== QUIZ / GAME ==================== */
   Quiz.belongsTo(User, { foreignKey: "owner_user_id" });
   Quiz.hasMany(QuizQuestion, { foreignKey: "quiz_id" });
@@ -248,6 +233,7 @@ const initAssociations = () => {
 
   GameSessionPlayer.belongsTo(GameSession, { foreignKey: "session_id" });
   GameSessionPlayer.belongsTo(User, { foreignKey: "user_id" });
+
   GameSessionPlayer.hasMany(PlayerAnswer, {
     foreignKey: "session_player_id",
   });
@@ -262,6 +248,9 @@ const initAssociations = () => {
   AuditLog.belongsTo(User, { foreignKey: "performed_by" });
   User.hasMany(AuditLog, { foreignKey: "performed_by" });
 
+  TeacherAiDocument.belongsTo(School, { foreignKey: "school_id" });
+  TeacherAiDocument.belongsTo(User, { foreignKey: "teacher_id" });
+  User.hasMany(TeacherAiDocument, { foreignKey: "teacher_id" });
 
   /* ==================== HOMEWORK ==================== */
   Homework.belongsTo(Class, { foreignKey: "class_id" });
@@ -271,7 +260,6 @@ const initAssociations = () => {
   Homework.belongsTo(User, { foreignKey: "created_by" });
   Homework.hasMany(HomeworkSubmission, { foreignKey: "homework_id" });
 
-  // Reverse associations
   Class.hasMany(Homework, { foreignKey: "class_id" });
   Section.hasMany(Homework, { foreignKey: "section_id" });
   TeacherAssignment.hasMany(Homework, { foreignKey: "teacher_assignment_id" });
@@ -282,7 +270,6 @@ const initAssociations = () => {
     foreignKey: "homework_id",
     onDelete: "CASCADE",
   });
-
 
   /* ==================== TOKENS ==================== */
   TokenAccount.belongsTo(User, { foreignKey: "user_id" });
@@ -305,6 +292,11 @@ const initAssociations = () => {
   Notification.hasMany(NotificationAck, {
     foreignKey: "notification_id",
   });
+
+  PushSubscription.belongsTo(User, { foreignKey: "user_id", onDelete: "CASCADE" });
+  PushSubscription.belongsTo(School, { foreignKey: "school_id", onDelete: "CASCADE" });
+  User.hasMany(PushSubscription, { foreignKey: "user_id", onDelete: "CASCADE" });
+  School.hasMany(PushSubscription, { foreignKey: "school_id", onDelete: "CASCADE" });
 
   /* ==================== WHATSAPP LOGS ==================== */
   School.hasMany(WhatsappLog, { foreignKey: "school_id" });
@@ -489,17 +481,5 @@ const initAssociations = () => {
 };
 
 initAssociations();
-
-// Ensure notifications table has target_user_id column & schools table has whatsapp/library columns & token_policies has annual_video_seconds
-db.query(`
-  ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_user_id BIGINT;
-  CREATE INDEX IF NOT EXISTS idx_notifications_target_user ON notifications(target_user_id);
-  ALTER TABLE schools ADD COLUMN IF NOT EXISTS whatsapp_annual_limit INTEGER DEFAULT 10000;
-  ALTER TABLE schools ADD COLUMN IF NOT EXISTS whatsapp_sent_count INTEGER DEFAULT 0;
-  ALTER TABLE token_policies ADD COLUMN IF NOT EXISTS annual_video_seconds INTEGER DEFAULT 0;
-  ALTER TABLE schools ADD COLUMN IF NOT EXISTS library_loan_period_days INTEGER DEFAULT 14;
-  ALTER TABLE schools ADD COLUMN IF NOT EXISTS library_overdue_reminder_days INTEGER DEFAULT 1;
-  ALTER TABLE schools ADD COLUMN IF NOT EXISTS library_overdue_fine_per_day NUMERIC(10, 2) DEFAULT 0.00;
-`).catch((err) => console.error("[InitModels] Schema patch error:", err.message));
 
 export default db;

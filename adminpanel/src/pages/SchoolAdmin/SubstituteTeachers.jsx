@@ -19,8 +19,12 @@ import {
   Award,
   UserCheck,
   Zap,
+  Download,
+  Printer,
 } from 'lucide-react';
 import { formatDate } from '../../utils/date';
+import { useAuth } from '../../hooks/useAuth';
+import { generateSubstitutionCircularPDF } from '../../utils/pdfGenerator';
 
 export function SubstituteTeachers({
   selectedClass: propSelectedClass,
@@ -30,6 +34,7 @@ export function SubstituteTeachers({
   isEmbedded = false
 } = {}) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const toast = useToast();
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -190,6 +195,53 @@ export function SubstituteTeachers({
 
   const selectedTeacherObj = teachers.find((t) => String(t.id) === String(selectedTeacherId));
 
+  const handleDownloadDailyCircular = async () => {
+    try {
+      const schoolName = user?.school?.school_name || user?.school_name || 'School Management System';
+      let subsList = [];
+
+      try {
+        const res = await substitutionAPI.getTodaySubstitutions(todayStr);
+        subsList = res.data || res || [];
+      } catch (err) {
+        console.warn('Failed to fetch today substitutions from server:', err);
+      }
+
+      // If server has no saved records yet, but user has selected substitutes in current view:
+      if (subsList.length === 0 && periods.length > 0) {
+        const absentName = selectedTeacherObj?.user?.name || selectedTeacherObj?.User?.name || 'Faculty Member';
+        subsList = periods
+          .filter((p) => selectedSubstitutes[p.timetable_id])
+          .map((p) => {
+            const chosenId = selectedSubstitutes[p.timetable_id];
+            const cand = (candidatesMap[p.timetable_id] || []).find((c) => String(c.teacher_id) === String(chosenId));
+            const subTeacherName = cand ? cand.name : teachers.find((t) => String(t.id) === String(chosenId))?.user?.name || 'Assigned Teacher';
+            return {
+              start_time: p.start_time,
+              end_time: p.end_time,
+              class_name: p.class_name,
+              section_name: p.section_name,
+              original_teacher_name: absentName,
+              subject_name: p.subject_name,
+              substitute_teacher_name: subTeacherName,
+            };
+          });
+      }
+
+      generateSubstitutionCircularPDF({
+        schoolName,
+        date: todayStr,
+        dayOfWeek: dayOfWeek || new Date().toLocaleDateString('en-US', { weekday: 'long' }),
+        substitutions: subsList,
+        absentTeacherName: selectedTeacherObj?.user?.name || selectedTeacherObj?.User?.name || '',
+      });
+
+      toast.success('Substitution circular PDF downloaded successfully!');
+    } catch {
+      toast.error('Failed to generate substitution circular PDF');
+    }
+  };
+
   return (
     <div className="space-y-4 text-xs">
       {/* Compact Action Bar */}
@@ -207,6 +259,15 @@ export function SubstituteTeachers({
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={Download}
+              onClick={handleDownloadDailyCircular}
+              className="text-[#2F6F5E] border-[#2F6F5E] hover:bg-[#EAF3F0]"
+            >
+              Download Circular PDF
+            </Button>
             {periods.length > 0 && (
               <>
                 <Button variant="outline" size="sm" icon={Zap} onClick={handleAutoAssignAll}>
