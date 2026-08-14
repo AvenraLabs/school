@@ -6,6 +6,7 @@ import { validate } from "../../shared/middlewares/validate.js";
 import {
   getActiveSchool,
   getAllSchools,
+  createSchool,
   getSchoolStats,
   updateSchoolStatus,
   updateSchoolAdminStatus,
@@ -26,6 +27,7 @@ import {
 } from "./school.directory.controller.js";
 
 import {
+  createSchoolSchema,
   updateSchoolStatusSchema,
   updateSchoolAdminStatusSchema,
   resetSchoolAdminPasswordSchema,
@@ -46,7 +48,9 @@ router.patch("/my-settings", protect, allowRoles("school_admin"), updateSchoolSe
 router.use(protect, allowRoles("super_admin"));
 
 router.get("/all", getAllSchools);
+router.post("/", validate(createSchoolSchema), createSchool);
 router.get("/", getActiveSchool);
+
 router.get("/:id/stats", getSchoolStats);
 router.patch("/:id/status", validate(updateSchoolStatusSchema), updateSchoolStatus);
 router.patch("/:id/modules", updateSchoolModules);

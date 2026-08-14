@@ -8,6 +8,8 @@ import WhatsappLog from "../whatsapp/whatsapp-log.model.js";
 import AppError from "../../shared/appError.js";
 import { getPagination } from "../../shared/utils/pagination.js";
 import { Op } from "sequelize";
+import db from "../../config/db.js";
+
 
 /* =========================
    SUPER ADMIN: GET THE ACTIVE SINGLE SCHOOL
@@ -329,3 +331,100 @@ export const updateSchoolModulesService = async (school_id, enabled_modules) => 
   await school.save();
   return school;
 };
+
+/* =========================
+   SUPER ADMIN: CREATE NEW SCHOOL & ADMIN
+========================= */
+export const createSchoolService = async ({
+  name,
+  code,
+  board,
+  address,
+  phone,
+  email,
+  admin_username,
+  admin_password,
+  admin_name,
+}) => {
+  const transaction = await db.transaction();
+
+  try {
+    const schoolName = name ? name.trim() : "";
+    const username = admin_username ? admin_username.trim() : "";
+    const cleanEmail = email && email.trim() ? email.trim().toLowerCase() : null;
+
+    if (!schoolName) {
+      throw new AppError("School name is required", 400);
+    }
+    if (!username) {
+      throw new AppError("Admin username is required", 400);
+    }
+    if (!admin_password) {
+      throw new AppError("Admin password is required", 400);
+    }
+
+    // Check if username is already taken
+    const existingUser = await User.findOne({
+      where: { username },
+      transaction,
+    });
+    if (existingUser) {
+      throw new AppError(`Username "${username}" is already taken`, 400);
+    }
+
+    // Check if school email is already registered (if email provided)
+    if (cleanEmail) {
+      const existingSchoolEmail = await School.findOne({
+        where: { email: cleanEmail },
+        transaction,
+      });
+      if (existingSchoolEmail) {
+        throw new AppError(`School with email "${cleanEmail}" already exists`, 400);
+      }
+    }
+
+    // Create school instance
+    const school = await School.create(
+      {
+        school_name: schoolName,
+        board: (board || code || "CBSE").trim().toUpperCase() || "CBSE",
+        address: address ? address.trim() : null,
+        contact_phone: phone ? phone.trim() : null,
+        email: cleanEmail,
+        status: "active",
+      },
+      { transaction }
+    );
+
+    // Create school admin user
+    const adminUser = await User.create(
+      {
+        school_id: school.id,
+        role: "school_admin",
+        username,
+        password: admin_password,
+        name: (admin_name && admin_name.trim()) || username || "School Admin",
+        email: cleanEmail,
+        phone: phone ? phone.trim() : null,
+        is_active: true,
+        first_login: true,
+      },
+      { transaction }
+    );
+
+    await transaction.commit();
+
+    return {
+      school,
+      admin: {
+        id: adminUser.id,
+        username: adminUser.username,
+        name: adminUser.name,
+      },
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};
+

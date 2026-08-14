@@ -2,6 +2,7 @@ import asyncHandler from "../../shared/asyncHandler.js";
 import {
   getActiveSchoolService,
   getAllSchoolsService,
+  createSchoolService,
   updateSchoolStatusService,
   updateSchoolAdminStatusService,
   resetSchoolAdminPasswordService,
@@ -11,8 +12,20 @@ import {
   updateSchoolModulesService,
 } from "./school.service.js";
 
+/* CREATE NEW SCHOOL (SUPER ADMIN ONLY) */
+export const createSchool = asyncHandler(async (req, res) => {
+  const result = await createSchoolService(req.body);
+  res.status(201).json({
+    success: true,
+    message: "School created successfully",
+    data: result.school,
+    admin: result.admin,
+  });
+});
+
 /* GET ACTIVE SINGLE SCHOOL */
 export const getActiveSchool = asyncHandler(async (req, res) => {
+
   const school = await getActiveSchoolService();
   res.json({
     success: true,
