@@ -22,10 +22,11 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
 
 ### Schools (`/api/schools`)
 - `GET /` (Super Admin): List all registered schools.
-- `POST /` (Super Admin): Create new school instance.
+- `POST /` (Super Admin): Create new school instance and school admin user. Payload: `{ name, code?, board?, address?, phone?, email?, admin_username, admin_password, admin_name? }`.
 - `GET /:id` (Admin): Get school details and configuration settings.
 - `PATCH /:id` (Admin): Update school settings, logo, risk thresholds, library rules.
 - `PATCH /:id/modules` (Super Admin): Update `enabled_modules` JSON payload (7 core module toggles).
+
 
 ### Academic Years (`/api/academic-years`)
 - `GET /` | `POST /` | `PATCH /:id/set-current` | `DELETE /:id`
@@ -83,6 +84,7 @@ CRUD for the school-wide subject catalog.
 - `GET /audit-logs` — Audit history of approval decisions.
 
 ### Bulk Operations (`/api/bulk`)
+- `POST /bulk-create` (Super Admin, School Admin) — Bulk institutional data seeder. Accepts `{ school_id?, classes: [{ name, sections: [{ name, students }] }], teacher_count? }`. Resolves `school_id` from payload body, `x-school-id` header, or authenticated user session. Performs transactional creation of classes, sections, student accounts, and teacher accounts.
 - `POST /teachers/import` — CSV/Excel bulk teacher import.
 - `POST /students/import` — CSV/Excel bulk student import.
 - `POST /promotion/execute` — Term/Year student class promotion wizard.

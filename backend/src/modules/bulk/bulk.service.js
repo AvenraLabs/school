@@ -1,4 +1,5 @@
 import db from "../../config/db.js";
+import School from "../schools/school.model.js";
 import Class from "../classes/classes.model.js";
 import Section from "../sections/section.model.js";
 import User from "../users/user.model.js";
@@ -26,6 +27,11 @@ export const bulkCreateDataService = async ({
   teacher_count = 10,
 }) => {
   return db.transaction(async (t) => {
+    const school = await School.findByPk(school_id, { transaction: t });
+    if (!school) {
+      throw new AppError(`School with ID ${school_id} not found`, 404);
+    }
+
     /* ================================
        RESPONSE STRUCTURE
     ================================= */

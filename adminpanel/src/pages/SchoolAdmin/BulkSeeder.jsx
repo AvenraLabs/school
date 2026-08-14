@@ -1,23 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { bulkAPI } from '../../api';
+import { bulkAPI, schoolAPI } from '../../api';
+import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { generateBulkCredentialsPDF } from '../../utils/pdfGenerator';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
+import { Input, Select } from '../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { Plus, Trash2, Database, Download, Layers, GraduationCap, CheckCircle, UserCog, BookOpen } from 'lucide-react';
+import { Plus, Trash2, Database, Download, Layers, GraduationCap, CheckCircle, UserCog, BookOpen, Building2 } from 'lucide-react';
 
 const emptyClass = () => ({ name: '', sections: [emptySection()] });
 const emptySection = () => ({ name: '', students: '' });
 
 export function BulkSeeder() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [classes, setClasses] = useState([emptyClass()]);
   const [teacherCount, setTeacherCount] = useState('');
+  const [schools, setSchools] = useState([]);
+  const [selectedSchoolId, setSelectedSchoolId] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const toast = useToast();
+
+  useEffect(() => {
+    if (user?.role === 'super_admin') {
+      schoolAPI
+        .list()
+        .then((data) => {
+          const list = Array.isArray(data) ? data : data.schools || data.data || [];
+          setSchools(list);
+          if (list.length > 0) {
+            setSelectedSchoolId(String(list[0].id));
+          }
+        })
+        .catch(() => {
+          toast.error('Failed to load schools list for seeding');
+        });
+    }
+  }, [user?.role]);
 
   const addClass = () => setClasses((p) => [...p, emptyClass()]);
   const removeClass = (ci) => setClasses((p) => (p.length <= 1 ? p : p.filter((_, i) => i !== ci)));
@@ -44,6 +65,12 @@ export function BulkSeeder() {
   const tc = Number(teacherCount) || 0;
 
   const handleSubmit = async () => {
+    const targetSchoolId = user?.role === 'super_admin' ? selectedSchoolId : (user?.school_id || selectedSchoolId);
+    if (user?.role === 'super_admin' && !targetSchoolId) {
+      toast.error('Please select a target school');
+      return;
+    }
+
     for (const cls of classes) {
       if (!cls.name.trim()) { toast.error('All classes must have a name'); return; }
       for (const sec of cls.sections) {
@@ -55,13 +82,18 @@ export function BulkSeeder() {
 
     setLoading(true);
     try {
-      const res = await bulkAPI.createData({
+      const payload = {
         classes: classes.map((c) => ({
           name: c.name.trim(),
           sections: c.sections.map((s) => ({ name: s.name.trim(), students: Number(s.students) })),
         })),
         teacher_count: tc,
-      });
+      };
+      if (targetSchoolId) {
+        payload.school_id = targetSchoolId;
+      }
+
+      const res = await bulkAPI.createData(payload);
       setResult(res);
       toast.success('All data created!');
     } catch (e) {
@@ -90,7 +122,7 @@ export function BulkSeeder() {
             >
               Download PDF Credentials
             </Button>
-            <Button variant="outline" onClick={() => navigate('/admin')}>
+            <Button variant="outline" onClick={() => navigate(user?.role === 'super_admin' ? '/super-admin' : '/admin')}>
               Go to Dashboard
             </Button>
           </div>
@@ -114,6 +146,27 @@ export function BulkSeeder() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 space-y-4">
+          {user?.role === 'super_admin' && (
+            <div className="bg-[#FAFAF8] p-3 rounded-[8px] border border-[#E4E1D8] mb-2 space-y-1.5">
+              <label className="block text-xs font-bold text-[#14213D] flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-[#2F6F5E]" />
+                Target Institution (Super Admin Mode) *
+              </label>
+              <Select
+                value={selectedSchoolId}
+                onChange={(e) => setSelectedSchoolId(e.target.value)}
+                options={[
+                  { value: '', label: 'Select Target School...' },
+                  ...schools.map((s) => ({
+                    value: String(s.id),
+                    label: `${s.school_name || s.name || 'School #' + s.id} (${s.code || 'ID: ' + s.id})`
+                  }))
+                ]}
+                className="w-full text-xs"
+              />
+            </div>
+          )}
+
           <div className="space-y-4">
             {classes.map((cls, ci) => (
               <Card key={ci} className="p-3 border border-[#E4E1D8] space-y-3">
