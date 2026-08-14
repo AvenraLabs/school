@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
-import { curriculumAPI, teacherAiAPI, classesAPI, schoolAPI } from '../../api';
+import { teacherAiAPI, schoolAPI } from '../../api';
 import { Button } from '../../components/ui/Button';
 import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
@@ -53,12 +53,10 @@ export function QuestionPaperGenerator() {
 
   const [activeTab, setActiveTab] = useState('create'); // 'create' | 'saved'
 
-  // Form State - auto-fills from School Settings
+  // Form State - auto-fills board from School data
   const [board, setBoard] = useState(user?.school?.board || user?.board || 'CBSE');
   const [grade, setGrade] = useState('10');
-  const [subject, setSubject] = useState('');
-  const [customSubject, setCustomSubject] = useState('');
-  const [isOtherSubject, setIsOtherSubject] = useState(false);
+  const [topic, setTopic] = useState('');
 
   // Auto-sync School Board from active school settings on mount
   useEffect(() => {
@@ -76,18 +74,7 @@ export function QuestionPaperGenerator() {
     syncSchoolBoard();
   }, []);
 
-  // RAG Curriculum Data
-  const [curriculumSubjects, setCurriculumSubjects] = useState([]);
-  const [loadingSubjects, setLoadingSubjects] = useState(false);
-  const [curriculumChapters, setCurriculumChapters] = useState([]);
-  const [loadingChapters, setLoadingChapters] = useState(false);
-  const [selectedChapters, setSelectedChapters] = useState([]);
-  const [customTopic, setCustomTopic] = useState('');
-  const [isCustomTopicMode, setIsCustomTopicMode] = useState(false);
-
   // Paper Structure & Question Counts
-  const [title, setTitle] = useState('');
-  const [examName, setExamName] = useState('Term Examination');
   const [difficulty, setDifficulty] = useState('MEDIUM');
 
   const [mcqCount, setMcqCount] = useState(5);
@@ -122,59 +109,6 @@ export function QuestionPaperGenerator() {
     safeMcq * 1 + safeFillBlanks * 1 + safeTrueFalse * 1 + safeShort * 3 + safeLong * 5;
   const suggestedDuration = Math.max(15, Math.ceil(totalCalculatedMarks * 1.2));
 
-  // Load Curriculum Subjects when board or grade changes
-  const loadCurriculumSubjects = useCallback(async () => {
-    if (!board || !grade) return;
-    setLoadingSubjects(true);
-    setSubject('');
-    setCurriculumSubjects([]);
-    setCurriculumChapters([]);
-    setSelectedChapters([]);
-    try {
-      const subs = await curriculumAPI.getSubjects(board, grade);
-      setCurriculumSubjects(subs || []);
-      if (subs && subs.length > 0) {
-        setSubject(subs[0]);
-      }
-    } catch {
-      setCurriculumSubjects([]);
-    } finally {
-      setLoadingSubjects(false);
-    }
-  }, [board, grade]);
-
-  useEffect(() => {
-    loadCurriculumSubjects();
-  }, [loadCurriculumSubjects]);
-
-  // Load Curriculum Chapters when subject changes
-  const loadCurriculumChapters = useCallback(async () => {
-    if (!board || !grade || !subject || isOtherSubject) {
-      setCurriculumChapters([]);
-      setSelectedChapters([]);
-      return;
-    }
-    setLoadingChapters(true);
-    setCurriculumChapters([]);
-    setSelectedChapters([]);
-    try {
-      const chaps = await curriculumAPI.getChapters(board, grade, subject);
-      setCurriculumChapters(chaps || []);
-      if (chaps && chaps.length > 0) {
-        // Select first 2 chapters by default for convenience
-        setSelectedChapters([String(chaps[0].number || chaps[0].id || '1')]);
-      }
-    } catch {
-      setCurriculumChapters([]);
-    } finally {
-      setLoadingChapters(false);
-    }
-  }, [board, grade, subject, isOtherSubject]);
-
-  useEffect(() => {
-    loadCurriculumChapters();
-  }, [loadCurriculumChapters]);
-
   // Load Saved Papers
   const loadSavedPapers = async () => {
     setLoadingSaved(true);
@@ -194,35 +128,10 @@ export function QuestionPaperGenerator() {
     }
   }, [activeTab]);
 
-  const handleToggleChapter = (chapNum) => {
-    setSelectedChapters((prev) =>
-      prev.includes(chapNum) ? prev.filter((c) => c !== chapNum) : [...prev, chapNum]
-    );
-  };
-
-  const handleSelectAllChapters = () => {
-    if (selectedChapters.length === curriculumChapters.length) {
-      setSelectedChapters([]);
-    } else {
-      setSelectedChapters(curriculumChapters.map((c) => String(c.number || c.id)));
-    }
-  };
-
   // Generate Question Paper
   const handleGenerate = async () => {
-    const resolvedSubject = isOtherSubject ? customSubject.trim() : subject;
-    if (!resolvedSubject) {
-      toast.error('Please select or specify a subject');
-      return;
-    }
-
-    if (!isCustomTopicMode && selectedChapters.length === 0) {
-      toast.error('Please select at least one syllabus chapter or switch to Custom Topic');
-      return;
-    }
-
-    if (isCustomTopicMode && !customTopic.trim()) {
-      toast.error('Please enter a topic description');
+    if (!topic.trim()) {
+      toast.error('Please enter a topic or syllabus keyword (e.g. Algebra, Thermodynamics, Photosynthesis)');
       return;
     }
 
@@ -237,7 +146,7 @@ export function QuestionPaperGenerator() {
     }
 
     const schoolName = user?.school?.school_name || user?.school_name || 'School Management System';
-    const paperTitle = title.trim() || `${resolvedSubject} ${examName}`;
+    const paperTitle = `${topic.trim()} Question Paper`;
 
     setGenerating(true);
     setGeneratedPaper(null);
@@ -248,12 +157,8 @@ export function QuestionPaperGenerator() {
         feature: 'question_paper',
         board,
         grade: `Class ${grade}`,
-        subject: resolvedSubject,
-        topic: isCustomTopicMode ? customTopic.trim() : '',
-        chapters: isCustomTopicMode ? [] : selectedChapters,
-        skipRag: isCustomTopicMode || isOtherSubject,
+        topic: topic.trim(),
         title: paperTitle,
-        examName,
         totalMarks: totalCalculatedMarks,
         duration: suggestedDuration,
         numQuestions: totalQuestions,
@@ -278,13 +183,12 @@ export function QuestionPaperGenerator() {
         meta: {
           board,
           grade: `Class ${grade}`,
-          subject: resolvedSubject,
-          chapters: selectedChapters,
+          topic: topic.trim(),
         },
       };
 
       setGeneratedPaper(fullPaper);
-      toast.success('Question paper generated successfully using RAG!');
+      toast.success('Question paper generated successfully using Vector RAG search!');
 
       // Automatically auto-save draft document
       try {
@@ -293,8 +197,7 @@ export function QuestionPaperGenerator() {
           title: paperTitle,
           board,
           grade: `Class ${grade}`,
-          subject: resolvedSubject,
-          chapters: selectedChapters,
+          subject: topic.trim(),
           content: fullPaper,
           status: 'saved',
         });
@@ -361,10 +264,10 @@ export function QuestionPaperGenerator() {
           </div>
           <div>
             <h2 className="font-display font-bold text-base text-[#14213D]">
-              AI Question Paper Generator (RAG)
+              AI Question Paper Generator (Vector RAG)
             </h2>
             <p className="text-[11px] text-[#8C97AB]">
-              Generate curriculum-aligned exam papers with answer keys using textbook RAG embeddings
+              Generate curriculum-aligned exam papers directly from your textbook vector database
             </p>
           </div>
         </div>
@@ -404,7 +307,7 @@ export function QuestionPaperGenerator() {
               <CardHeader className="py-2.5 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8] flex items-center justify-between">
                 <CardTitle className="text-xs font-bold uppercase text-[#52607D] flex items-center gap-1.5">
                   <Sliders className="w-3.5 h-3.5 text-[#2F6F5E]" />
-                  1. Curriculum & Syllabus
+                  1. Target Grade & Topic
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-3">
@@ -427,406 +330,240 @@ export function QuestionPaperGenerator() {
                   </Select>
                 </div>
 
-                {/* Subject Selector */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
-                      Subject *
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsOtherSubject(!isOtherSubject);
-                        if (!isOtherSubject) setIsCustomTopicMode(true);
-                      }}
-                      className="text-[10px] text-[#2F6F5E] hover:underline cursor-pointer"
-                    >
-                      {isOtherSubject ? 'Choose from Curriculum' : 'Custom / Unlisted Subject'}
-                    </button>
-                  </div>
-
-                  {isOtherSubject ? (
-                    <Input
-                      placeholder="e.g. Computer Applications, Sanskrit..."
-                      value={customSubject}
-                      onChange={(e) => setCustomSubject(e.target.value)}
-                    />
-                  ) : (
-                    <Select
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      disabled={loadingSubjects}
-                    >
-                      {loadingSubjects ? (
-                        <option value="">Loading curriculum subjects...</option>
-                      ) : curriculumSubjects.length === 0 ? (
-                        <option value="">No RAG textbook found for this grade</option>
-                      ) : (
-                        curriculumSubjects.map((sub) => (
-                          <option key={sub} value={sub}>
-                            {sub}
-                          </option>
-                        ))
-                      )}
-                    </Select>
-                  )}
+                {/* Topic / Search Keywords */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
+                    Topic / Syllabus Keywords *
+                  </label>
+                  <Input
+                    placeholder="e.g. Algebra, Thermodynamics, French Revolution, Light & Optics..."
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    required
+                  />
                 </div>
 
-                {/* Chapter & Topic RAG Selection */}
-                {!isOtherSubject && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
-                        Chapters / Units (RAG Ingested)
-                      </label>
-                      {curriculumChapters.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={handleSelectAllChapters}
-                          className="text-[10px] text-[#2F6F5E] hover:underline cursor-pointer"
-                        >
-                          {selectedChapters.length === curriculumChapters.length
-                            ? 'Deselect All'
-                            : 'Select All Chapters'}
-                        </button>
-                      )}
-                    </div>
-
-                    {loadingChapters ? (
-                      <p className="text-[11px] text-[#8C97AB] py-3 text-center">Loading chapters...</p>
-                    ) : curriculumChapters.length === 0 ? (
-                      <div className="p-3 bg-[#FAFAF8] rounded-[6px] border border-[#E4E1D8] text-[11px] text-[#8C97AB]">
-                        No specific chapters indexed for this subject. AI will generate based on grade standard curriculum.
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 max-h-44 overflow-y-auto p-2 bg-[#FAFAF8] rounded-[6px] border border-[#E4E1D8]">
-                        {curriculumChapters.map((chap) => {
-                          const chapId = String(chap.number || chap.id);
-                          const isChecked = selectedChapters.includes(chapId);
-                          return (
-                            <label
-                              key={chapId}
-                              className={`flex items-start gap-2 p-1.5 rounded cursor-pointer transition-colors text-[11px] ${
-                                isChecked
-                                  ? 'bg-[#EAF3F0] text-[#2F6F5E] font-medium'
-                                  : 'text-[#14213D] hover:bg-white'
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => handleToggleChapter(chapId)}
-                                className="mt-0.5 rounded accent-[#2F6F5E]"
-                              />
-                              <span>
-                                Chapter {chap.number || chapId}: {chap.title || chap.label}
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Custom Topic Mode */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
-                      Topic Focus / Custom Scope
-                    </label>
-                    <label className="flex items-center gap-1 text-[10px] text-[#52607D] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isCustomTopicMode}
-                        onChange={(e) => setIsCustomTopicMode(e.target.checked)}
-                        className="rounded accent-[#2F6F5E]"
-                      />
-                      <span>Custom Topic Only</span>
-                    </label>
-                  </div>
-                  {isCustomTopicMode && (
-                    <Input
-                      placeholder="e.g. Thermodynamics, Linear Equations, World War II..."
-                      value={customTopic}
-                      onChange={(e) => setCustomTopic(e.target.value)}
-                    />
-                  )}
+                {/* Difficulty Level */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
+                    Difficulty Level
+                  </label>
+                  <Select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+                    {DIFFICULTIES.map((d) => (
+                      <option key={d.value} value={d.value}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
               </CardContent>
             </Card>
 
             {/* Paper Structure & Question Counts */}
             <Card>
-              <CardHeader className="py-2.5 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8]">
+              <CardHeader className="py-2.5 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8] flex items-center justify-between">
                 <CardTitle className="text-xs font-bold uppercase text-[#52607D] flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-[#2F6F5E]" />
-                  2. Exam Specs & Question Distribution
+                  <Layers className="w-3.5 h-3.5 text-[#2F6F5E]" />
+                  2. Question Breakdown
                 </CardTitle>
+                <span className="text-[10px] font-mono font-bold text-[#2F6F5E] bg-[#EAF3F0] px-2 py-0.5 rounded">
+                  {totalQuestions} Questions · {totalCalculatedMarks} Marks
+                </span>
               </CardHeader>
               <CardContent className="p-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider mb-1 font-mono">
-                      Exam Type / Heading
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
+                      MCQs (1 Mark)
                     </label>
                     <Input
-                      placeholder="e.g. Unit Test 1, Mid-Term..."
-                      value={examName}
-                      onChange={(e) => setExamName(e.target.value)}
+                      type="number"
+                      min="0"
+                      max="30"
+                      value={mcqCount}
+                      onChange={(e) => setMcqCount(e.target.value)}
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider mb-1 font-mono">
-                      Difficulty Level
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
+                      Fill in Blanks (1 Mark)
                     </label>
-                    <Select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
-                      {DIFFICULTIES.map((d) => (
-                        <option key={d.value} value={d.value}>
-                          {d.label}
-                        </option>
-                      ))}
-                    </Select>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={fillBlanksCount}
+                      onChange={(e) => setFillBlanksCount(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
+                      True / False (1 Mark)
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={trueFalseCount}
+                      onChange={(e) => setTrueFalseCount(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
+                      Short Answers (3 Marks)
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={shortAnswerCount}
+                      onChange={(e) => setShortAnswerCount(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1 col-span-2">
+                    <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
+                      Long / Analytical Answers (5 Marks)
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="15"
+                      value={longAnswerCount}
+                      onChange={(e) => setLongAnswerCount(e.target.value)}
+                    />
                   </div>
                 </div>
 
-                {/* Question Section Distribution */}
-                <div className="space-y-2 pt-2 border-t border-[#E4E1D8]">
-                  <p className="text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
-                    Sections & Question Counts:
-                  </p>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    <div className="p-2 bg-[#FAFAF8] rounded border border-[#E4E1D8]">
-                      <label className="block text-[10px] text-[#52607D] mb-1">
-                        MCQ (1 Mark)
-                      </label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={mcqCount}
-                        onChange={(e) => setMcqCount(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="p-2 bg-[#FAFAF8] rounded border border-[#E4E1D8]">
-                      <label className="block text-[10px] text-[#52607D] mb-1">
-                        Fill in Blanks (1M)
-                      </label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={fillBlanksCount}
-                        onChange={(e) => setFillBlanksCount(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="p-2 bg-[#FAFAF8] rounded border border-[#E4E1D8]">
-                      <label className="block text-[10px] text-[#52607D] mb-1">
-                        True / False (1M)
-                      </label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={trueFalseCount}
-                        onChange={(e) => setTrueFalseCount(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="p-2 bg-[#FAFAF8] rounded border border-[#E4E1D8]">
-                      <label className="block text-[10px] text-[#52607D] mb-1">
-                        Short Answer (3M)
-                      </label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={shortAnswerCount}
-                        onChange={(e) => setShortAnswerCount(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="p-2 bg-[#FAFAF8] rounded border border-[#E4E1D8]">
-                      <label className="block text-[10px] text-[#52607D] mb-1">
-                        Long Answer (5M)
-                      </label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={longAnswerCount}
-                        onChange={(e) => setLongAnswerCount(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="p-2 bg-[#EAF3F0] rounded border border-[#2F6F5E]/30 flex flex-col justify-center text-center">
-                      <span className="text-[10px] text-[#2F6F5E] font-bold">Total Marks</span>
-                      <span className="text-sm font-bold text-[#14213D]">{totalCalculatedMarks} M</span>
-                      <span className="text-[9px] text-[#52607D]">{totalQuestions} Qs · {suggestedDuration} Mins</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Teacher Instructions Directive */}
-                <div>
-                  <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider mb-1 font-mono">
-                    Special Teacher Directive (Optional)
+                {/* Additional Instructions */}
+                <div className="space-y-1 pt-1">
+                  <label className="block text-[10px] font-semibold text-[#8C97AB] uppercase tracking-wider font-mono">
+                    Custom Instructions / Directives (Optional)
                   </label>
                   <Textarea
-                    placeholder="e.g. Include 2 diagram-based questions, prioritize numericals..."
+                    placeholder="e.g. Include 1 real-world application question; provide internal choices in Section E..."
+                    rows={2}
                     value={instructions}
                     onChange={(e) => setInstructions(e.target.value)}
-                    rows={2}
                   />
                 </div>
 
-                {/* Generate Button */}
+                {/* Generate Action Button */}
                 <Button
-                  variant="primary"
-                  size="md"
-                  icon={generating ? RefreshCw : Sparkles}
-                  loading={generating}
-                  disabled={generating}
                   onClick={handleGenerate}
-                  className="w-full bg-[#2F6F5E] hover:bg-[#245749] text-white py-2.5 font-bold shadow-xs text-xs"
+                  disabled={generating || totalQuestions === 0}
+                  className="w-full mt-2 font-bold py-2.5 cursor-pointer shadow-sm"
                 >
-                  {generating ? 'Retrieving RAG Context & Generating...' : 'Generate AI Question Paper'}
+                  {generating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Searching Vector DB & Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate Question Paper
+                    </>
+                  )}
                 </Button>
               </CardContent>
             </Card>
           </div>
 
-          {/* Right Column: Question Paper Preview & Actions (7 Cols) */}
-          <div className="lg:col-span-7 space-y-4">
+          {/* Right Column: Generated Paper Preview (7 Cols) */}
+          <div className="lg:col-span-7">
             {generatedPaper ? (
-              <Card className="flex flex-col h-full border-[#E4E1D8]">
-                {/* Paper Toolbar */}
-                <CardHeader className="py-2.5 px-4 bg-[#FAFAF8] border-b border-[#E4E1D8] flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-[#14213D]">
+              <Card className="border-[#2F6F5E]/30 shadow-md">
+                <CardHeader className="py-3 px-4 bg-[#EAF3F0]/60 border-b border-[#D3E6E0] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-sm font-bold text-[#14213D] flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-[#2F6F5E]" />
                       {generatedPaper.title || 'Generated Question Paper'}
-                    </span>
-                    {savedDocId && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-[#2F6F5E] bg-[#EAF3F0] px-2 py-0.5 rounded font-semibold">
-                        <Check className="w-3 h-3" /> Saved to Library
-                      </span>
-                    )}
+                    </CardTitle>
+                    <p className="text-[10px] text-[#52607D]">
+                      {generatedPaper.board || board} · {generatedPaper.grade || `Class ${grade}`} · {suggestedDuration} Mins · {totalCalculatedMarks} Marks
+                    </p>
                   </div>
 
+                  {/* Export / Print Buttons */}
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setShowAnswerKey(!showAnswerKey)}
-                      className={showAnswerKey ? 'bg-[#EAF3F0] text-[#2F6F5E] border-[#2F6F5E]' : ''}
-                    >
-                      <Eye className="w-3.5 h-3.5 mr-1" />
-                      {showAnswerKey ? 'Hide Marking Scheme' : 'Show Marking Scheme'}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      icon={Download}
                       onClick={() => handleDownloadPDF(false)}
-                      className="text-[#2F6F5E] border-[#2F6F5E]"
+                      className="cursor-pointer bg-white text-[11px]"
                     >
+                      <Download className="w-3.5 h-3.5 mr-1" />
                       Student PDF
                     </Button>
 
                     <Button
-                      variant="outline"
                       size="sm"
-                      icon={Download}
                       onClick={() => handleDownloadPDF(true)}
-                      className="text-[#2F6F5E] border-[#2F6F5E]"
+                      className="cursor-pointer text-[11px]"
                     >
-                      Teacher PDF + Key
-                    </Button>
-
-                    <Button variant="outline" size="sm" icon={Printer} onClick={() => window.print()}>
-                      Print
+                      <Award className="w-3.5 h-3.5 mr-1" />
+                      With Answer Key
                     </Button>
                   </div>
                 </CardHeader>
 
-                {/* Printable Paper Document */}
-                <CardContent className="p-6 space-y-5 max-h-[750px] overflow-y-auto bg-white">
-                  {/* Paper Header */}
-                  <div className="text-center border-b-2 border-[#14213D] pb-3 space-y-1">
-                    <h3 className="text-base font-bold uppercase tracking-wide text-[#14213D]">
-                      {generatedPaper.schoolName || user?.school?.school_name || 'School Management System'}
-                    </h3>
-                    <h4 className="text-xs font-bold uppercase text-[#2F6F5E]">
-                      {generatedPaper.title || generatedPaper.exam_name || 'TERM ASSESSMENT'}
-                    </h4>
-                    <div className="flex flex-wrap items-center justify-between text-[11px] font-semibold text-[#52607D] pt-2 px-2">
-                      <span>
-                        {generatedPaper.board || board} · {generatedPaper.grade || `Class ${grade}`} · Subject:{' '}
-                        {generatedPaper.subject || subject}
-                      </span>
-                      <span>
-                        Time: {generatedPaper.duration_mins || suggestedDuration} Mins | Max Marks:{' '}
-                        {generatedPaper.total_marks || totalCalculatedMarks}
-                      </span>
+                <CardContent className="p-5 space-y-6 max-h-[75vh] overflow-y-auto">
+                  {/* Paper Header / Watermark styling */}
+                  <div className="border-b-2 border-[#14213D] pb-4 text-center space-y-1">
+                    <h1 className="font-display font-extrabold text-base uppercase text-[#14213D]">
+                      {user?.school?.school_name || user?.school_name || 'School Management System'}
+                    </h1>
+                    <h2 className="font-bold text-xs text-[#52607D]">
+                      {generatedPaper.grade || `Class ${grade}`} ({board})
+                    </h2>
+                    <div className="flex items-center justify-between pt-2 px-2 text-[11px] font-semibold text-[#14213D]">
+                      <span>Topic: {topic || 'Comprehensive'}</span>
+                      <span>Time: {suggestedDuration} Mins</span>
+                      <span>Max Marks: {totalCalculatedMarks}</span>
                     </div>
                   </div>
 
                   {/* Instructions */}
-                  {generatedPaper.instructions && generatedPaper.instructions.length > 0 && (
-                    <div className="p-3 bg-[#FAFAF8] rounded-[6px] border border-[#E4E1D8]">
-                      <p className="text-[10px] font-bold text-[#8C97AB] uppercase tracking-wider mb-1">
-                        General Instructions:
-                      </p>
-                      <ol className="list-decimal pl-4 space-y-0.5 text-[11px] text-[#52607D]">
-                        {generatedPaper.instructions.map((inst, i) => (
-                          <li key={i}>{inst}</li>
-                        ))}
-                      </ol>
+                  {generatedPaper.instructions && (
+                    <div className="bg-[#FAFAF8] p-3 rounded-lg border border-[#E4E1D8] space-y-1">
+                      <p className="font-bold text-[10px] uppercase text-[#52607D]">General Instructions:</p>
+                      <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-[#52607D]">
+                        {Array.isArray(generatedPaper.instructions)
+                          ? generatedPaper.instructions.map((inst, i) => <li key={i}>{inst}</li>)
+                          : <li>{generatedPaper.instructions}</li>}
+                      </ul>
                     </div>
                   )}
 
-                  {/* Sections & Questions */}
+                  {/* Sections and Questions */}
                   {(generatedPaper.sections || []).map((sec, sIdx) => (
                     <div key={sIdx} className="space-y-3">
-                      <div className="bg-[#EAF3F0] px-3 py-1.5 rounded-[4px] border border-[#2F6F5E]/30 flex justify-between items-center">
-                        <span className="font-bold text-[#2F6F5E] text-xs">
-                          {sec.section_name || `Section ${String.fromCharCode(65 + sIdx)}`}
-                        </span>
+                      <div className="bg-[#14213D] text-white px-3 py-1.5 rounded-md flex items-center justify-between">
+                        <span className="font-bold text-xs">{sec.section_name}</span>
                         {sec.marks_per_question && (
-                          <span className="text-[10px] text-[#2F6F5E] font-semibold">
-                            [{sec.marks_per_question} Mark each]
-                          </span>
+                          <span className="text-[10px] opacity-90">({sec.marks_per_question} Mark each)</span>
                         )}
                       </div>
 
-                      <div className="space-y-3 pl-1">
+                      <div className="space-y-3 pl-2">
                         {(sec.questions || []).map((q, qIdx) => (
-                          <div key={qIdx} className="space-y-1.5">
-                            <div className="flex items-start justify-between gap-3">
-                              <p className="font-semibold text-[#14213D] text-xs">
-                                <span className="font-bold text-[#2F6F5E] mr-1">
-                                  Q{q.q_no || qIdx + 1}.
-                                </span>
-                                {q.question_text}
-                              </p>
-                              <span className="font-mono text-[10px] text-[#8C97AB] font-semibold shrink-0">
-                                [{q.marks || sec.marks_per_question || 1}]
-                              </span>
+                          <div key={qIdx} className="space-y-1 text-[11px]">
+                            <div className="flex items-start gap-1 font-semibold text-[#14213D]">
+                              <span>Q{q.q_no || qIdx + 1}.</span>
+                              <span className="flex-1">{q.question_text}</span>
+                              <span className="text-[10px] text-[#8C97AB] font-mono ml-2">[{q.marks || 1}M]</span>
                             </div>
 
-                            {/* MCQ Options */}
+                            {/* Options for MCQs */}
                             {q.options && q.options.length > 0 && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-4 pt-1">
+                              <div className="grid grid-cols-2 gap-2 pl-4 pt-1">
                                 {q.options.map((opt, oIdx) => (
-                                  <div key={oIdx} className="text-[11px] text-[#52607D] flex items-center gap-1.5">
-                                    <span className="w-4 h-4 rounded-full bg-[#FAFAF8] border border-[#E4E1D8] flex items-center justify-center font-bold text-[9px] text-[#52607D]">
-                                      {String.fromCharCode(65 + oIdx)}
-                                    </span>
+                                  <div key={oIdx} className="text-[#52607D]">
+                                    <span className="font-bold mr-1">({String.fromCharCode(65 + oIdx)})</span>
                                     <span>{opt}</span>
                                   </div>
                                 ))}
@@ -838,152 +575,211 @@ export function QuestionPaperGenerator() {
                     </div>
                   ))}
 
-                  {/* Answer Key & Marking Scheme */}
-                  {showAnswerKey && generatedPaper.answer_key && generatedPaper.answer_key.length > 0 && (
-                    <div className="pt-4 border-t-2 border-dashed border-[#E4E1D8] space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Award className="w-4 h-4 text-[#2F6F5E]" />
-                        <h4 className="font-bold text-xs uppercase text-[#14213D]">
+                  {/* Answer Key */}
+                  {generatedPaper.answer_key && generatedPaper.answer_key.length > 0 && (
+                    <div className="border-t-2 border-dashed border-[#E4E1D8] pt-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-xs text-[#14213D] flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-[#2F6F5E]" />
                           Answer Key & Marking Scheme
-                        </h4>
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => setShowAnswerKey(!showAnswerKey)}
+                          className="text-[10px] text-[#2F6F5E] hover:underline cursor-pointer font-semibold"
+                        >
+                          {showAnswerKey ? 'Hide in Preview' : 'Show in Preview'}
+                        </button>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-2 bg-[#FAFAF8] p-3 rounded-[6px] border border-[#E4E1D8]">
-                        {generatedPaper.answer_key.map((ak, aIdx) => (
-                          <div key={aIdx} className="text-[11px] space-y-0.5">
-                            <span className="font-bold text-[#2F6F5E]">
-                              Q{ak.q_no || aIdx + 1}: {ak.answer}
-                            </span>
-                            {ak.explanation && (
-                              <p className="text-[10px] text-[#8C97AB] pl-2">
-                                {ak.explanation}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                      {showAnswerKey && (
+                        <div className="bg-[#EAF3F0]/30 p-3.5 rounded-lg border border-[#D3E6E0] space-y-2">
+                          {generatedPaper.answer_key.map((ak, aIdx) => (
+                            <div key={aIdx} className="text-[11px] text-[#14213D] flex items-start gap-2">
+                              <span className="font-bold font-mono text-[#2F6F5E]">Q{ak.q_no}:</span>
+                              <div>
+                                <span className="font-bold">{ak.answer}</span>
+                                {ak.explanation && (
+                                  <p className="text-[10px] text-[#52607D] italic mt-0.5">{ak.explanation}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
               </Card>
             ) : (
-              <Card className="p-12 h-full flex items-center justify-center">
+              <Card className="h-full flex items-center justify-center p-8 bg-[#FAFAF8]/50 border-dashed">
                 <EmptyState
                   icon={Sparkles}
-                  title="Configure and Generate Question Paper"
-                  description="Select your syllabus board, grade, subject, and question distribution on the left. AI RAG will pull relevant textbook passages to craft a rigorous, balanced examination paper."
+                  title="No Question Paper Generated Yet"
+                  description="Choose a target Class, enter a Topic or syllabus keyword (e.g. Algebra), configure your question counts, and click 'Generate Question Paper'."
                 />
               </Card>
             )}
           </div>
         </div>
       ) : (
-        /* Tab 2: Saved Question Papers & Archives */
-        <Card className="p-4 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <Input
-              icon={Search}
-              placeholder="Search saved question papers by title, subject, grade..."
-              value={savedSearchQuery}
-              onChange={(e) => setSavedSearchQuery(e.target.value)}
-              className="max-w-md"
-            />
-            <Button variant="outline" size="sm" icon={RefreshCw} onClick={loadSavedPapers}>
-              Refresh
-            </Button>
+        /* Saved Papers Tab */
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#8C97AB]" />
+              <Input
+                placeholder="Search saved papers by title, topic, grade..."
+                value={savedSearchQuery}
+                onChange={(e) => setSavedSearchQuery(e.target.value)}
+                className="pl-8 text-xs"
+              />
+            </div>
+            <span className="text-[11px] text-[#8C97AB]">
+              {filteredSavedPapers.length} saved papers found
+            </span>
           </div>
 
           {loadingSaved ? (
-            <p className="text-xs text-center py-8 text-[#8C97AB]">Loading saved question papers...</p>
+            <div className="p-8 text-center text-[#8C97AB]">Loading saved question papers...</div>
           ) : filteredSavedPapers.length === 0 ? (
             <EmptyState
               icon={Folder}
-              title="No Question Papers Found"
-              description="Generated question papers are automatically saved here for re-printing and distribution."
+              title="No Saved Question Papers"
+              description="Generated question papers are automatically saved here for future reference and re-printing."
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {filteredSavedPapers.map((paper) => {
-                const content = paper.content || {};
-                const qCount = content.sections
-                  ? content.sections.reduce((acc, s) => acc + (s.questions?.length || 0), 0)
-                  : 0;
-
-                return (
-                  <Card key={paper.id} className="flex flex-col justify-between hover:shadow-sm transition-shadow">
-                    <CardHeader className="py-2.5 px-3.5 bg-[#FAFAF8] border-b border-[#E4E1D8] flex items-center justify-between">
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="text-xs font-bold text-[#14213D] truncate">
-                          {paper.title || 'Question Paper'}
-                        </CardTitle>
-                        <p className="text-[10px] text-[#8C97AB] truncate">
-                          {paper.subject || 'Subject'} · {paper.grade || 'Grade'} ({paper.board || 'CBSE'})
+              {filteredSavedPapers.map((paper) => (
+                <Card key={paper.id} className="hover:border-[#2F6F5E]/50 transition-all shadow-xs">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-bold text-xs text-[#14213D] line-clamp-1">{paper.title}</h3>
+                        <p className="text-[10px] text-[#8C97AB] flex items-center gap-1.5 mt-0.5">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(paper.created_at || paper.createdAt)}
                         </p>
                       </div>
+                      <span className="text-[9px] font-mono font-bold text-[#2F6F5E] bg-[#EAF3F0] px-1.5 py-0.5 rounded">
+                        {paper.grade}
+                      </span>
+                    </div>
+
+                    <div className="text-[10px] text-[#52607D] bg-[#FAFAF8] p-2 rounded border border-[#E4E1D8] flex items-center justify-between">
+                      <span>Topic: <strong>{paper.subject || 'Comprehensive'}</strong></span>
+                      <span>Board: <strong>{paper.board || 'CBSE'}</strong></span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-[#E4E1D8]">
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setViewingSavedPaper(paper)}
+                        className="text-[10px] h-7 px-2.5 cursor-pointer"
+                      >
+                        <Eye className="w-3 h-3 mr-1 text-[#2F6F5E]" />
+                        View & Export
+                      </Button>
+
+                      <button
+                        type="button"
                         onClick={() => handleDeleteSavedDoc(paper.id)}
-                        className="text-[#B0403A] hover:bg-[#B0403A]/10 shrink-0"
-                        title="Delete Question Paper"
+                        className="text-[#E63946] hover:text-[#C5221F] p-1 rounded hover:bg-[#FDF2F2] cursor-pointer"
+                        title="Delete saved paper"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </CardHeader>
-
-                    <CardContent className="p-3.5 space-y-3 flex-1 flex flex-col justify-between">
-                      <div className="space-y-1.5 text-[11px] text-[#52607D]">
-                        <div className="flex justify-between">
-                          <span>Questions:</span>
-                          <span className="font-semibold text-[#14213D]">{qCount} Questions</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Total Marks:</span>
-                          <span className="font-semibold text-[#14213D]">{content.total_marks || '—'} Marks</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Saved On:</span>
-                          <span className="text-[#8C97AB]">{formatDate(paper.created_at || paper.createdAt)}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-2 border-t border-[#E4E1D8]">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          icon={Eye}
-                          onClick={() => {
-                            setGeneratedPaper(content);
-                            setSavedDocId(paper.id);
-                            setActiveTab('create');
-                          }}
-                          className="flex-1 text-[#2F6F5E] border-[#2F6F5E]"
-                        >
-                          Open & View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          icon={Download}
-                          onClick={() => {
-                            const schoolName = user?.school?.school_name || user?.school_name || 'School Management System';
-                            generateQuestionPaperPDF({
-                              schoolName,
-                              paperData: content,
-                              includeAnswers: false,
-                            });
-                          }}
-                          title="Download Student PDF"
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
-        </Card>
+        </div>
+      )}
+
+      {/* Viewing Saved Paper Modal */}
+      {viewingSavedPaper && (
+        <Modal
+          isOpen={Boolean(viewingSavedPaper)}
+          onClose={() => setViewingSavedPaper(null)}
+          title={viewingSavedPaper.title || 'Saved Question Paper'}
+          size="lg"
+        >
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto p-1">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <p className="font-bold text-xs text-[#14213D]">{viewingSavedPaper.title}</p>
+                <p className="text-[10px] text-[#8C97AB]">
+                  {viewingSavedPaper.board} · {viewingSavedPaper.grade} · {viewingSavedPaper.subject}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    generateQuestionPaperPDF({
+                      schoolName: user?.school?.school_name || 'School Management System',
+                      paperData: viewingSavedPaper.content,
+                      includeAnswers: false,
+                    });
+                  }}
+                  className="text-[10px]"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  Student PDF
+                </Button>
+
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    generateQuestionPaperPDF({
+                      schoolName: user?.school?.school_name || 'School Management System',
+                      paperData: viewingSavedPaper.content,
+                      includeAnswers: true,
+                    });
+                  }}
+                  className="text-[10px]"
+                >
+                  <Award className="w-3 h-3 mr-1" />
+                  Answer Key PDF
+                </Button>
+              </div>
+            </div>
+
+            {/* Render Saved Content Sections */}
+            {(viewingSavedPaper.content?.sections || []).map((sec, sIdx) => (
+              <div key={sIdx} className="space-y-2">
+                <div className="bg-[#14213D] text-white px-3 py-1 rounded text-[11px] font-bold">
+                  {sec.section_name}
+                </div>
+                <div className="space-y-2 pl-2">
+                  {(sec.questions || []).map((q, qIdx) => (
+                    <div key={qIdx} className="text-[11px]">
+                      <span className="font-bold mr-1">Q{q.q_no || qIdx + 1}.</span>
+                      <span>{q.question_text}</span>
+                      {q.options && (
+                        <div className="grid grid-cols-2 gap-1 pl-4 pt-1 text-[10px] text-[#52607D]">
+                          {q.options.map((opt, oIdx) => (
+                            <div key={oIdx}>
+                              ({String.fromCharCode(65 + oIdx)}) {opt}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Modal>
       )}
     </div>
   );
 }
+
+export default QuestionPaperGenerator;

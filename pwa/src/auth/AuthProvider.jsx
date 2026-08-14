@@ -345,6 +345,9 @@ export function AuthProvider({ children }) {
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("accounts");
       localStorage.removeItem("activeUserId");
+      try {
+        sessionStorage.clear();
+      } catch {}
       setToken(null);
       setUser(null);
       setAccounts({});

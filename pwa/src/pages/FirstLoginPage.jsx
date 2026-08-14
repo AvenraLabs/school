@@ -486,8 +486,12 @@ export default function FirstLoginPage() {
 
           <Button
             onClick={async () => {
-              await logout();
-              navigate("/login", { replace: true });
+              try {
+                await logout();
+              } catch (e) {
+                console.warn("Logout error:", e);
+              }
+              window.location.replace("/login");
             }}
             fullWidth
             variant="text"

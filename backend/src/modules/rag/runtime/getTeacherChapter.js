@@ -52,10 +52,10 @@ export async function getTeacherChapter({ board, grade, subject, chapter, chapte
   const isOther = (Array.isArray(chapters) && chapters.includes("other")) || chapter === "other";
   const searchTopic = (topic || "").trim();
 
-  // Mode 1: Vector similarity search for custom topic
-  if ((isOther || chapters?.length === 0) && searchTopic) {
+  // Mode 1: Vector similarity search for topic / keyword
+  if (searchTopic && (isOther || !chapters || chapters.length === 0 || !chapter)) {
     try {
-      console.log(`[getTeacherChapter] Performing vector search for topic: "${searchTopic}" (${board} Grade ${grade} ${subject})`);
+      console.log(`[getTeacherChapter] Performing vector search for topic: "${searchTopic}" (${board} Grade ${grade} ${subject || "All Subjects"})`);
       const [queryVector] = await embedChunks([searchTopic]);
 
       const vectorWhereConditions = [];
