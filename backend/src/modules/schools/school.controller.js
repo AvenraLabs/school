@@ -113,3 +113,15 @@ export const deleteSectionStudents = asyncHandler(async (req, res) => {
   const result = await deleteSectionStudentsService(req.params.sectionId);
   res.json(result);
 });
+
+/* GET CURRENT USER'S SCHOOL (FOR DYNAMIC MODULE PERMISSIONS) */
+export const getMySchool = asyncHandler(async (req, res) => {
+  const schoolId = req.user?.school_id;
+  if (!schoolId) {
+    return res.json({ success: true, data: null });
+  }
+  const School = (await import("./school.model.js")).default;
+  const school = await School.findByPk(schoolId);
+  res.json({ success: true, data: school });
+});
+

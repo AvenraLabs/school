@@ -46,6 +46,18 @@ import { StyleGuidePage } from './pages/SchoolAdmin/StyleGuidePage';
 
 import './App.css';
 
+function ModuleRouteGuard({ moduleKey, children }) {
+  const { user } = useAuth();
+  if (user?.role === 'super_admin') {
+    return children;
+  }
+  const enabledModules = user?.enabled_modules || user?.school?.enabled_modules || {};
+  if (enabledModules[moduleKey] === false) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  return children;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -85,7 +97,7 @@ function App() {
             >
               <Route path="/admin/dashboard" element={<SchoolAdminDashboard />} />
               <Route path="/admin/analytics" element={<SchoolAnalyticsPage />} />
-              <Route path="/admin/fees" element={<FeeManager />} />
+              <Route path="/admin/fees" element={<ModuleRouteGuard moduleKey="finance"><FeeManager /></ModuleRouteGuard>} />
               <Route path="/admin/directory" element={<SchoolRegistry />} />
               <Route path="/admin/bulk-seeder" element={<BulkSeeder />} />
               <Route path="/admin/classes" element={<ClassesManager />} />
@@ -100,14 +112,14 @@ function App() {
               <Route path="/admin/bell-schedules" element={<BellSchedulesManager />} />
               <Route path="/admin/timetables/substitutions" element={<SubstituteTeachers />} />
               <Route path="/admin/timetable-hub" element={<TimetableModule />} />
-              <Route path="/admin/transport" element={<TransportManager />} />
+              <Route path="/admin/transport" element={<ModuleRouteGuard moduleKey="transport"><TransportManager /></ModuleRouteGuard>} />
               <Route path="/admin/notifications" element={<Notifications />} />
               <Route path="/admin/exams" element={<ExamsManager />} />
-              <Route path="/admin/question-papers" element={<QuestionPaperGenerator />} />
+              <Route path="/admin/question-papers" element={<ModuleRouteGuard moduleKey="ai_tools"><QuestionPaperGenerator /></ModuleRouteGuard>} />
               <Route path="/admin/audit-logs" element={<AuditLogs />} />
               <Route path="/admin/lost-found" element={<LostFoundManager />} />
               <Route path="/admin/feedback" element={<FeedbackSubmit />} />
-              <Route path="/admin/library" element={<LibraryManager />} />
+              <Route path="/admin/library" element={<ModuleRouteGuard moduleKey="library"><LibraryManager /></ModuleRouteGuard>} />
               <Route path="/admin/style-guide" element={<StyleGuidePage />} />
             </Route>
 

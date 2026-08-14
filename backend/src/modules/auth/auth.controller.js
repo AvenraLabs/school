@@ -25,12 +25,22 @@ export const login = asyncHandler(async (req, res) => {
 
   // ── 2. School check (except super_admin) ─────────────────────────
   let schoolBoard = null;
+  let enabledModules = null;
   if (user.role !== "super_admin") {
     const school = await School.findByPk(user.school_id);
     if (!school || school.status !== "active") {
       throw new AppError("School is inactive", 403);
     }
     schoolBoard = school.board || null;
+    enabledModules = school.enabled_modules || {
+      transport: true,
+      library: true,
+      finance: true,
+      ai_tutor: true,
+      ai_tools: true,
+      ai_video: true,
+      whatsapp: true,
+    };
   }
 
   // ── 3. Role-specific profile status checks ────────────────────────
@@ -99,6 +109,7 @@ export const login = asyncHandler(async (req, res) => {
     role:                 user.role,
     school_id:            user.school_id,
     school_board:         schoolBoard,
+    enabled_modules:      enabledModules,
     name:                 user.name,
     username:             user.username,
     phone:                user.phone,
@@ -172,12 +183,22 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
   // Check school status if applicable
   let schoolBoard = null;
+  let enabledModules = null;
   if (user.role !== "super_admin") {
     const school = await School.findByPk(user.school_id);
     if (!school || school.status !== "active") {
       throw new AppError("School is inactive", 403);
     }
     schoolBoard = school.board || null;
+    enabledModules = school.enabled_modules || {
+      transport: true,
+      library: true,
+      finance: true,
+      ai_tutor: true,
+      ai_tools: true,
+      ai_video: true,
+      whatsapp: true,
+    };
   }
 
   // Re-build role-specific additional claims
@@ -213,13 +234,14 @@ export const refreshToken = asyncHandler(async (req, res) => {
   // Generate new Access Token
   const newAccessToken = jwt.sign(
     {
-      id:           user.id,
-      role:         user.role,
-      school_id:    user.school_id,
-      school_board: schoolBoard,
-      name:         user.name,
-      username:     user.username,
-      phone:        user.phone,
+      id:              user.id,
+      role:            user.role,
+      school_id:       user.school_id,
+      school_board:    schoolBoard,
+      enabled_modules: enabledModules,
+      name:            user.name,
+      username:        user.username,
+      phone:           user.phone,
       ...additionalClaims,
     },
     process.env.JWT_SECRET,

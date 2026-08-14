@@ -15,7 +15,20 @@ export function AuthProvider({ children }) {
     const savedUser = localStorage.getItem('user');
     if (savedToken && savedUser) {
       setToken(savedToken);
-      setUser(JSON.parse(savedUser));
+      const parsedUser = JSON.parse(savedUser);
+      setUser(parsedUser);
+
+      // Dynamically re-sync school enabled_modules in background
+      if (parsedUser.role !== 'super_admin' && parsedUser.school_id) {
+        axiosInstance
+          .get('/schools/my-school')
+          .then((res) => {
+            if (res.data?.data?.enabled_modules) {
+              updateUser({ enabled_modules: res.data.data.enabled_modules });
+            }
+          })
+          .catch(() => {});
+      }
     }
     setLoading(false);
 
@@ -40,6 +53,18 @@ export function AuthProvider({ children }) {
     }
     localStorage.setItem('user', JSON.stringify(userData));
     setError(null);
+
+    // Sync latest school enabled_modules immediately after login
+    if (userData.role !== 'super_admin' && userData.school_id) {
+      axiosInstance
+        .get('/schools/my-school')
+        .then((res) => {
+          if (res.data?.data?.enabled_modules) {
+            updateUser({ enabled_modules: res.data.data.enabled_modules });
+          }
+        })
+        .catch(() => {});
+    }
   };
 
   const logout = async () => {

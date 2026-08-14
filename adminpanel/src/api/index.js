@@ -61,6 +61,11 @@ export const schoolAPI = {
     return response.data;
   },
 
+  getMySchool: async () => {
+    const response = await axiosInstance.get('/schools/my-school');
+    return response.data;
+  },
+
   updateStatus: async (schoolId, status) => {
     const response = await axiosInstance.patch(`/schools/${schoolId}/status`, { status });
     return response.data;
