@@ -325,34 +325,28 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
+    setError(null);
+    disconnectSharedSocket();
+    localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("accounts");
+    localStorage.removeItem("activeUserId");
     try {
-      setError(null);
-      try {
-        await unsubscribePushDevice();
-      } catch (pushErr) {
-        console.warn("Push unsubscribe note:", pushErr);
-      }
-      try {
-        await logoutApi();
-      } catch (apiErr) {
-        console.warn("Logout API note:", apiErr);
-      }
-    } catch (error) {
-      console.warn("Logout error:", error);
-    } finally {
-      disconnectSharedSocket();
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("accounts");
-      localStorage.removeItem("activeUserId");
-      try {
-        sessionStorage.clear();
-      } catch {}
-      setToken(null);
-      setUser(null);
-      setAccounts({});
-      return null;
+      sessionStorage.clear();
+    } catch {}
+    setToken(null);
+    setUser(null);
+    setAccounts({});
+
+    // Server and Push unregister in background without blocking navigation
+    try {
+      unsubscribePushDevice().catch(() => {});
+      await logoutApi().catch(() => {});
+    } catch (e) {
+      console.warn("Logout background cleanup note:", e);
     }
+
+    return null;
   }
 
   // Note: Actual token refresh is handled by the axios interceptor (axios.interceptors.js)

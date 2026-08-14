@@ -89,17 +89,20 @@ export async function unsubscribePushDevice() {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
 
   try {
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.getSubscription();
+    const swPromise = navigator.serviceWorker.ready;
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("ServiceWorker ready timeout")), 800)
+    );
+    const registration = await Promise.race([swPromise, timeoutPromise]);
+    const subscription = await registration?.pushManager?.getSubscription();
 
     if (subscription) {
       const endpoint = subscription.endpoint;
-      await subscription.unsubscribe();
-
-      await api.post("/notifications/push-unsubscribe", { endpoint });
+      await subscription.unsubscribe().catch(() => {});
+      await api.post("/notifications/push-unsubscribe", { endpoint }).catch(() => {});
       console.log("[PushManager] Unsubscribed device from push notifications.");
     }
   } catch (error) {
-    console.error("[PushManager] Error unsubscribing device:", error);
+    console.warn("[PushManager] Push unregistration note:", error.message || error);
   }
 }

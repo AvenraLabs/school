@@ -485,13 +485,14 @@ export default function FirstLoginPage() {
           </Stack>
 
           <Button
+            type="button"
             onClick={async () => {
               try {
                 await logout();
               } catch (e) {
                 console.warn("Logout error:", e);
               }
-              window.location.replace("/login");
+              window.location.href = "/login";
             }}
             fullWidth
             variant="text"

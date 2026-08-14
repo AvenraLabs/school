@@ -356,51 +356,51 @@ export default function ProfileForm({
             <Typography variant="subtitle1" sx={{ alignSelf: 'start', fontWeight: 'bold', mt: 1 }}>
               Professional Details
             </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: '100%' }}>
-              <TextField
-                label="Gender"
-                select
-                fullWidth
-                defaultValue={profile?.gender || ""}
-                SelectProps={{ native: true }}
-                InputLabelProps={{ shrink: true }}
-                {...register("gender")}
-              >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </TextField>
-            </Stack>
+            <TextField
+              label="Email"
+              fullWidth
+              required
+              type="email"
+              error={Boolean(errors.email)}
+              helperText={errors.email?.message}
+              {...register("email", {
+                required: "Email is required",
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: "Invalid email address"
+                }
+              })}
+            />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: '100%' }}>
               <TextField
                 label="Qualification"
                 fullWidth
+                placeholder="e.g. M.Sc B.Ed"
                 {...register("qualification")}
               />
               <TextField
                 label="Experience (Years)"
                 type="number"
                 fullWidth
+                placeholder="e.g. 5"
+                inputProps={{ min: 0 }}
                 {...register("experience")}
               />
             </Stack>
-
-             <TextField
-               label="Email"
-               fullWidth
-               required
-               type="email"
-               error={Boolean(errors.email)}
-               helperText={errors.email?.message}
-               {...register("email", {
-                 required: "Email is required",
-                 pattern: {
-                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                   message: "Invalid email address"
-                 }
-               })}
-             />
+            <TextField
+              label="Gender"
+              select
+              fullWidth
+              defaultValue={profile?.gender || ""}
+              SelectProps={{ native: true }}
+              InputLabelProps={{ shrink: true }}
+              {...register("gender")}
+            >
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </TextField>
           </>
         )}
 

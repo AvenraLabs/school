@@ -223,7 +223,7 @@ export default function ProfilePage() {
               </Avatar>
 
               <Stack direction="row" justifyContent="space-around" sx={{ flex: 1, textAlign: "center" }}>
-                {profile.role === "student" ? (
+                {profile.role === "student" && (
                   <>
                     <Box>
                       <Typography variant="body1" fontWeight={900} color="text.primary">
@@ -250,7 +250,35 @@ export default function ProfilePage() {
                       </Typography>
                     </Box>
                   </>
-                ) : null}
+                )}
+                {profile.role === "teacher" && (
+                  <>
+                    <Box>
+                      <Typography variant="body1" fontWeight={900} color="text.primary">
+                        {profile.experience ? `${profile.experience} Yrs` : "—"}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                        Experience
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body1" fontWeight={900} color="text.primary">
+                        {profile.employee_id || "—"}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                        Emp ID
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body1" fontWeight={900} color="text.primary">
+                        {profile.approval_status === "approved" ? "Active" : profile.approval_status ? profile.approval_status.charAt(0).toUpperCase() + profile.approval_status.slice(1) : "Active"}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                        Status
+                      </Typography>
+                    </Box>
+                  </>
+                )}
               </Stack>
             </Stack>
 
@@ -307,43 +335,97 @@ export default function ProfilePage() {
             </Stack>
           </Paper>
 
-          {/* Detailed Read-Only Cards */}
-          <Paper sx={{ p: 3, borderRadius: "16px", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "none" }}>
-            <Typography variant="subtitle1" fontWeight={900} sx={{ mb: 2, fontFamily: "'Outfit', sans-serif" }}>
-              Personal Details
-            </Typography>
-            <Stack spacing={2}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
-                  <CalendarMonth sx={{ fontSize: 16 }} />
-                  <Typography variant="body2">Date of Birth</Typography>
+          {/* Teacher Professional Details Card */}
+          {profile.role === "teacher" && (
+            <Paper sx={{ p: 3, borderRadius: "16px", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "none" }}>
+              <Typography variant="subtitle1" fontWeight={900} sx={{ mb: 2, fontFamily: "'Outfit', sans-serif" }}>
+                Professional Details
+              </Typography>
+              <Stack spacing={2}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
+                    <School sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">Qualifications</Typography>
+                  </Stack>
+                  <Typography variant="body2" fontWeight="bold" align="right">
+                    {profile.qualification || "—"}
+                  </Typography>
                 </Stack>
-                <Typography variant="body2" fontWeight="bold">
-                  {profile.dob ? dayjs(profile.dob).format("DD-MM-YYYY") : "—"}
-                </Typography>
-              </Stack>
-              <Divider />
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
-                  <Wc sx={{ fontSize: 16 }} />
-                  <Typography variant="body2">Gender</Typography>
+                <Divider />
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
+                    <Work sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">Experience</Typography>
+                  </Stack>
+                  <Typography variant="body2" fontWeight="bold">
+                    {profile.experience ? `${profile.experience} Years` : "—"}
+                  </Typography>
                 </Stack>
-                <Typography variant="body2" fontWeight="bold" sx={{ textTransform: "capitalize" }}>
-                  {profile.gender || "—"}
-                </Typography>
-              </Stack>
-              <Divider />
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
-                  <Bloodtype sx={{ fontSize: 16 }} />
-                  <Typography variant="body2">Blood Group</Typography>
+                <Divider />
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
+                    <Wc sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">Gender</Typography>
+                  </Stack>
+                  <Typography variant="body2" fontWeight="bold" sx={{ textTransform: "capitalize" }}>
+                    {profile.gender || "—"}
+                  </Typography>
                 </Stack>
-                <Typography variant="body2" fontWeight="bold">
-                  {profile.blood_group || "—"}
-                </Typography>
+                {profile.joining_date && (
+                  <>
+                    <Divider />
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
+                        <CalendarMonth sx={{ fontSize: 16 }} />
+                        <Typography variant="body2">Joining Date</Typography>
+                      </Stack>
+                      <Typography variant="body2" fontWeight="bold">
+                        {dayjs(profile.joining_date).format("DD-MM-YYYY")}
+                      </Typography>
+                    </Stack>
+                  </>
+                )}
               </Stack>
-              {profile.role === "student" && (
-                <>
+            </Paper>
+          )}
+
+          {/* Student Detailed Read-Only Cards */}
+          {profile.role === "student" && (
+            <>
+              <Paper sx={{ p: 3, borderRadius: "16px", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "none" }}>
+                <Typography variant="subtitle1" fontWeight={900} sx={{ mb: 2, fontFamily: "'Outfit', sans-serif" }}>
+                  Personal Details
+                </Typography>
+                <Stack spacing={2}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
+                      <CalendarMonth sx={{ fontSize: 16 }} />
+                      <Typography variant="body2">Date of Birth</Typography>
+                    </Stack>
+                    <Typography variant="body2" fontWeight="bold">
+                      {profile.dob ? dayjs(profile.dob).format("DD-MM-YYYY") : "—"}
+                    </Typography>
+                  </Stack>
+                  <Divider />
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
+                      <Wc sx={{ fontSize: 16 }} />
+                      <Typography variant="body2">Gender</Typography>
+                    </Stack>
+                    <Typography variant="body2" fontWeight="bold" sx={{ textTransform: "capitalize" }}>
+                      {profile.gender || "—"}
+                    </Typography>
+                  </Stack>
+                  <Divider />
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
+                      <Bloodtype sx={{ fontSize: 16 }} />
+                      <Typography variant="body2">Blood Group</Typography>
+                    </Stack>
+                    <Typography variant="body2" fontWeight="bold">
+                      {profile.blood_group || "—"}
+                    </Typography>
+                  </Stack>
                   <Divider />
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
@@ -354,52 +436,50 @@ export default function ProfilePage() {
                       {profile.residential_status === "hosteler" ? "Hosteler" : "Day Scholar"}
                     </Typography>
                   </Stack>
-                </>
-              )}
-              <Divider />
-              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
-                  <Home sx={{ fontSize: 16 }} />
-                  <Typography variant="body2">Address</Typography>
-                </Stack>
-                <Typography variant="body2" fontWeight="bold" align="right" sx={{ maxWidth: "60%" }}>
-                  {profile.address || "—"}
-                </Typography>
-              </Stack>
-            </Stack>
-          </Paper>
-
-          {profile.role === "student" && (
-            <Paper sx={{ p: 3, borderRadius: "16px", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "none" }}>
-              <Typography variant="subtitle1" fontWeight={900} sx={{ mb: 2, fontFamily: "'Outfit', sans-serif" }}>
-                Family & Contacts
-              </Typography>
-              <Stack spacing={2}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body2" color="text.secondary">Father's Name</Typography>
-                  <Typography variant="body2" fontWeight="bold">{profile.father_name || "—"}</Typography>
-                </Stack>
-                <Divider />
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body2" color="text.secondary">Mother's Name</Typography>
-                  <Typography variant="body2" fontWeight="bold">{profile.mother_name || "—"}</Typography>
-                </Stack>
-                {profile.guardian_name && (
-                  <>
-                    <Divider />
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography variant="body2" color="text.secondary">Guardian Name</Typography>
-                      <Typography variant="body2" fontWeight="bold">{profile.guardian_name || "—"}</Typography>
+                  <Divider />
+                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                    <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
+                      <Home sx={{ fontSize: 16 }} />
+                      <Typography variant="body2">Address</Typography>
                     </Stack>
-                  </>
-                )}
-                <Divider />
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body2" color="text.secondary">Emergency Contact</Typography>
-                  <Typography variant="body2" fontWeight="bold">{profile.emergency_contact || "—"}</Typography>
+                    <Typography variant="body2" fontWeight="bold" align="right" sx={{ maxWidth: "60%" }}>
+                      {profile.address || "—"}
+                    </Typography>
+                  </Stack>
                 </Stack>
-              </Stack>
-            </Paper>
+              </Paper>
+
+              <Paper sx={{ p: 3, borderRadius: "16px", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "none" }}>
+                <Typography variant="subtitle1" fontWeight={900} sx={{ mb: 2, fontFamily: "'Outfit', sans-serif" }}>
+                  Family & Contacts
+                </Typography>
+                <Stack spacing={2}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body2" color="text.secondary">Father's Name</Typography>
+                    <Typography variant="body2" fontWeight="bold">{profile.father_name || "—"}</Typography>
+                  </Stack>
+                  <Divider />
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body2" color="text.secondary">Mother's Name</Typography>
+                    <Typography variant="body2" fontWeight="bold">{profile.mother_name || "—"}</Typography>
+                  </Stack>
+                  {profile.guardian_name && (
+                    <>
+                      <Divider />
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography variant="body2" color="text.secondary">Guardian Name</Typography>
+                        <Typography variant="body2" fontWeight="bold">{profile.guardian_name || "—"}</Typography>
+                      </Stack>
+                    </>
+                  )}
+                  <Divider />
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body2" color="text.secondary">Emergency Contact</Typography>
+                    <Typography variant="body2" fontWeight="bold">{profile.emergency_contact || "—"}</Typography>
+                  </Stack>
+                </Stack>
+              </Paper>
+            </>
           )}
         </Stack>
       )}
