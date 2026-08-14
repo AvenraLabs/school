@@ -73,18 +73,34 @@ export const listAcademicYearsService = async (school_id) => {
 /**
  * CREATE ACADEMIC YEAR
  */
-export const createAcademicYearService = async (school_id, { name, start_date, end_date }) => {
-  const exists = await AcademicYear.findOne({
-    where: { school_id, name },
-  });
-  if (exists) throw new AppError("Academic year name already exists", 400);
+export const createAcademicYearService = async (school_id, { name, start_date, end_date, is_current }) => {
+  if (!name || !start_date || !end_date) {
+    throw new AppError("Session name, start date, and end date are required", 400);
+  }
 
-  return AcademicYear.create({
-    school_id,
-    name,
-    start_date,
-    end_date,
-    is_current: false,
+  const exists = await AcademicYear.findOne({
+    where: { school_id, name: name.trim() },
+  });
+  if (exists) throw new AppError(`Academic year "${name}" already exists`, 400);
+
+  const existingYearsCount = await AcademicYear.count({ where: { school_id } });
+  const shouldBeCurrent = is_current !== undefined ? Boolean(is_current) : existingYearsCount === 0;
+
+  return db.transaction(async (t) => {
+    if (shouldBeCurrent) {
+      await AcademicYear.update(
+        { is_current: false },
+        { where: { school_id }, transaction: t }
+      );
+    }
+
+    return AcademicYear.create({
+      school_id,
+      name: name.trim(),
+      start_date,
+      end_date,
+      is_current: shouldBeCurrent,
+    }, { transaction: t });
   });
 };
 

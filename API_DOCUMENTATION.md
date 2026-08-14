@@ -29,7 +29,11 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
 
 
 ### Academic Years (`/api/academic-years`)
-- `GET /` | `POST /` | `PATCH /:id/set-current` | `DELETE /:id`
+- `GET /` (Admin) — List all academic sessions for the school.
+- `POST /` (Admin) — Create a new academic session. Body: `{ name, start_date, end_date, is_current? }`.
+- `PATCH /:id/current` (Admin) — Set the target academic session as the active current year.
+- `POST /preview` (Admin) — Get student progression and promotion preview report.
+- `POST /promote` (Admin) — Execute annual promotion migration wizard.
 
 ### Classes & Sections (`/api/classes`, `/api/sections`)
 - `GET /api/classes` | `POST /api/classes` | `PATCH /api/classes/:id` | `DELETE /api/classes/:id`

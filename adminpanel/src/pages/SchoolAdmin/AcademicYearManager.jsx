@@ -31,9 +31,18 @@ export function AcademicYearManager() {
   const [showWizard, setShowWizard] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [wizardEnabled, setWizardEnabled] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
   const toast = useToast();
 
   const currentSystemYear = new Date().getFullYear();
+
+  const [createForm, setCreateForm] = useState({
+    name: `${currentSystemYear}-${currentSystemYear + 1}`,
+    start_date: `${currentSystemYear}-06-01`,
+    end_date: `${currentSystemYear + 1}-04-30`,
+    is_current: true,
+  });
 
   const [wizardYears, setWizardYears] = useState({
     startYear: currentSystemYear + 1,
@@ -74,6 +83,35 @@ export function AcademicYearManager() {
   };
 
   const currentYear = academicYears.find((y) => y.is_current);
+
+  const handleCreateAcademicYear = async (e) => {
+    e.preventDefault();
+    if (!createForm.name.trim() || !createForm.start_date || !createForm.end_date) {
+      toast.error('Please enter session name, start date, and end date');
+      return;
+    }
+    if (new Date(createForm.end_date) <= new Date(createForm.start_date)) {
+      toast.error('End date must be after start date');
+      return;
+    }
+
+    setCreateLoading(true);
+    try {
+      await academicYearsAPI.create({
+        name: createForm.name.trim(),
+        start_date: createForm.start_date,
+        end_date: createForm.end_date,
+        is_current: createForm.is_current,
+      });
+      toast.success(`Academic session "${createForm.name}" created successfully!`);
+      setShowCreateModal(false);
+      loadAcademicYears();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create academic year');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
 
   const handleSetCurrent = async (id) => {
     try {
@@ -241,17 +279,35 @@ export function AcademicYearManager() {
     <div className="space-y-6">
       {/* Compact Action Bar */}
       <Card className="p-3">
-        <div className="flex items-center justify-between gap-3 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
             <span className="font-bold text-[#14213D]">Academic Sessions & Year Transitions</span>
             <span className="text-[#8C97AB]">|</span>
             <span className="text-[#52607D]">Active: {currentYear ? currentYear.name : 'None'}</span>
           </div>
-          {wizardEnabled && (
-            <Button variant="primary" size="sm" icon={Sparkles} onClick={startWizard}>
-              Start Promotion Wizard
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={Plus}
+              onClick={() => {
+                setCreateForm({
+                  name: `${currentSystemYear}-${currentSystemYear + 1}`,
+                  start_date: `${currentSystemYear}-06-01`,
+                  end_date: `${currentSystemYear + 1}-04-30`,
+                  is_current: academicYears.length === 0,
+                });
+                setShowCreateModal(true);
+              }}
+            >
+              Add Academic Session
             </Button>
-          )}
+            {wizardEnabled && (
+              <Button variant="primary" size="sm" icon={Sparkles} onClick={startWizard}>
+                Start Promotion Wizard
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -319,7 +375,20 @@ export function AcademicYearManager() {
                     <EmptyState
                       icon={Calendar}
                       title="No academic years found"
-                      description="Start the promotion wizard to establish your first academic term."
+                      description="Create your school's initial academic session (e.g. 2026-2027) to activate timetables, attendance, and student operations."
+                      action={{
+                        label: 'Create Academic Session',
+                        icon: Plus,
+                        onClick: () => {
+                          setCreateForm({
+                            name: `${currentSystemYear}-${currentSystemYear + 1}`,
+                            start_date: `${currentSystemYear}-06-01`,
+                            end_date: `${currentSystemYear + 1}-04-30`,
+                            is_current: true,
+                          });
+                          setShowCreateModal(true);
+                        },
+                      }}
                     />
                   </td>
                 </tr>
@@ -627,6 +696,82 @@ export function AcademicYearManager() {
             </div>
           )}
         </div>
+      </Modal>
+
+      {/* Modal: Create Academic Session */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Academic Session"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleCreateAcademicYear} className="space-y-4 text-xs">
+          <div className="p-3 bg-[#EAF3F0] border border-[#D3E6E0] rounded-[8px] text-[#2F6F5E] flex items-center gap-2">
+            <Calendar className="w-4 h-4 shrink-0" />
+            <span>Establish the initial or upcoming academic session term for your school.</span>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-[#14213D] mb-1">Session Name *</label>
+            <Input
+              required
+              placeholder="e.g. 2026-2027"
+              value={createForm.name}
+              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+            />
+            <span className="text-[10px] text-[#8C97AB] mt-1 block">Format usually: YYYY-YYYY (e.g. 2026-2027)</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">Session Start Date *</label>
+              <Input
+                type="date"
+                required
+                value={createForm.start_date}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const year = val ? new Date(val).getFullYear() : currentSystemYear;
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    start_date: val,
+                    name: `${year}-${year + 1}`,
+                  }));
+                }}
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-[#14213D] mb-1">Session End Date *</label>
+              <Input
+                type="date"
+                required
+                value={createForm.end_date}
+                onChange={(e) => setCreateForm({ ...createForm, end_date: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer pt-2">
+            <input
+              type="checkbox"
+              checked={createForm.is_current}
+              onChange={(e) => setCreateForm({ ...createForm, is_current: e.target.checked })}
+              className="w-4 h-4 rounded border-[#E4E1D8] text-[#2F6F5E] accent-[#2F6F5E] focus:ring-[#2F6F5E] cursor-pointer"
+            />
+            <span className="font-semibold text-[#14213D]">
+              Set as current active academic session
+            </span>
+          </label>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#EDEAE1]">
+            <Button variant="outline" type="button" onClick={() => setShowCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" loading={createLoading}>
+              Create Session
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );
