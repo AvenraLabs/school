@@ -106,7 +106,7 @@ Output ONLY the raw JSON object. No extra text.`;
  * Generate a labeled 2D educational diagram via Vertex AI Imagen,
  * upload the PNG to GCS, and return the GCS URI + public HTTPS URL + summary.
  */
-export async function generateEducationalDiagram({ topic, classLevel, subjectName, classId, userId, refId }) {
+export async function generateEducationalDiagram({ topic, classLevel, subjectName, schoolId, classId, userId, refId }) {
   const startTime = Date.now();
   try {
     const { imagePrompt, summary } = await buildDiagramPromptAndSummary({ topic, classLevel, userId, refId });
@@ -180,11 +180,12 @@ export async function generateEducationalDiagram({ topic, classLevel, subjectNam
     if (!bucketName) throw new Error(`Cannot parse bucket from GCS_OUTPUT_URI: ${rawGcsBase}`);
 
     const envFolder = process.env.NODE_ENV === "production" ? "prod" : "dev";
+    const schoolFolder = `school_${schoolId || "global"}`;
     const classFolder = `class_${classId || "all"}`;
     const subjectSlug = slugify(subjectName || "general");
     const topicSlug = slugify(topic);
 
-    const objectPath = `generations/${envFolder}/${classFolder}/${subjectSlug}/${topicSlug}/diagram.png`;
+    const objectPath = `generations/${envFolder}/${schoolFolder}/${classFolder}/${subjectSlug}/${topicSlug}/diagram.png`;
     const gsUri = `gs://${bucketName}/${objectPath}`;
     const publicUrl = `https://storage.googleapis.com/${bucketName}/${objectPath}`;
 

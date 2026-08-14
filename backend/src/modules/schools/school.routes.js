@@ -5,6 +5,7 @@ import { validate } from "../../shared/middlewares/validate.js";
 
 import {
   getActiveSchool,
+  getMySchool,
   getAllSchools,
   createSchool,
   getSchoolStats,

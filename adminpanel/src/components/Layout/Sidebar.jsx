@@ -72,7 +72,7 @@ const schoolAdminGroups = [
   },
   {
     group: 'People & Settings',
-    defaultOpen: false,
+    defaultOpen: true,
     items: [
       { to: '/admin/students', icon: GraduationCap, label: 'Students' },
       { to: '/admin/teachers', icon: UserCog, label: 'Teachers' },

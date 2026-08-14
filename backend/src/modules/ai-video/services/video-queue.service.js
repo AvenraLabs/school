@@ -61,6 +61,7 @@ export async function processVideoGeneration(generationId) {
         topic: record.topic,
         classLevel: record.class_id,
         subjectName: record.subject_name,
+        schoolId: record.school_id,
         classId: record.class_id,
         userId,
         refId: generationId,
@@ -68,6 +69,7 @@ export async function processVideoGeneration(generationId) {
       submitTextToVideoTask({
         prompt,
         duration: record.duration || "6",
+        schoolId: record.school_id,
         classId: record.class_id,
         subjectName: record.subject_name,
         topic: record.topic,

@@ -13,6 +13,7 @@ import "./src/models/initModels.js";
 import uploadRoutes from "./src/modules/upload/upload.routes.js";
 import { startLibraryCron } from "./src/modules/library/library.cron.js";
 import { startFeeCron } from "./src/modules/fees/fee.cron.js";
+import { runPendingMigrations } from "./src/config/runMigrations.js";
 
 // socket
 import { createServer } from "http";
@@ -258,7 +259,11 @@ try {
   await db.authenticate();
   console.log("DB connected");
 
-  await db.sync({ force: false, alter: true });
+  // Create tables if they do not exist (without destructive schema alterations)
+  await db.sync({ force: false });
+
+  // Execute pending timestamped migrations from backend/migrations/
+  await runPendingMigrations();
 
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server + Socket running on port ${PORT}`);
