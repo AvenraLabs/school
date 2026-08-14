@@ -27,8 +27,7 @@ jobs:
 
             cd backend
             npm install
-            pm2 stop school-backend || true
-            pm2 restart school-backend || pm2 start server.js --name school-backend
+            pm2 restart school-backend --name school-backend
             pm2 save
 
             cd ../adminpanel
@@ -38,7 +37,5 @@ jobs:
             cd ../pwa
             npm install
             npm run build
-
-            sudo systemctl restart caddy
 
             echo "Deployment to Mumbai Server Finished Successfully!"
