@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Textarea } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
 import { useToast } from '../../context/ToastContext';
+import { formatEmployeeId } from '../../utils/format';
 import { generateSingleCredentialPDF } from '../../utils/pdfGenerator';
 import {
   Plus,
