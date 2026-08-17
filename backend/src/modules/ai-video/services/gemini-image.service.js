@@ -218,8 +218,11 @@ export async function generateEducationalDiagram({ topic, classLevel, subjectNam
     throw finalErr;
   }
 
-  const rawGcsBase = getGcsOutputUri() || "";
-  const bucketName = rawGcsBase.replace(/^gs:\/\//, "").split("/")[0];
+  const rawGcsBase = getGcsOutputUri() || "gs://schooliq-video-outputs";
+  const cleanUri = rawGcsBase.replace(/^gs:\/\//, "").replace(/\/+$/, "");
+  const [bucketName, ...prefixParts] = cleanUri.split("/");
+  const basePath = prefixParts.length > 0 ? `${prefixParts.join("/")}/` : "";
+
   if (!bucketName) {
     const gcsErr = new Error(`Cannot parse bucket from GCS_OUTPUT_URI: ${rawGcsBase}`);
     logger.integration({
@@ -238,9 +241,10 @@ export async function generateEducationalDiagram({ topic, classLevel, subjectNam
   const classFolder = `class_${classId || "all"}`;
   const subjectSlug = slugify(subjectName || "general");
   const topicSlug = slugify(topic);
-  const fileIdentifier = refId ? `diagram_${refId}.png` : `diagram_${Date.now()}.png`;
+  const uniqueSuffix = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const fileIdentifier = refId ? `diagram_${refId}_${uniqueSuffix}.png` : `diagram_${uniqueSuffix}.png`;
 
-  const objectPath = `generations/${envFolder}/${schoolFolder}/${userFolder}/${classFolder}/${subjectSlug}/${topicSlug}/${fileIdentifier}`;
+  const objectPath = `${basePath}generations/${envFolder}/${schoolFolder}/${userFolder}/${classFolder}/${subjectSlug}/${topicSlug}/${fileIdentifier}`;
   const gsUri = `gs://${bucketName}/${objectPath}`;
   const publicUrl = `https://storage.googleapis.com/${bucketName}/${objectPath}`;
 

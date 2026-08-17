@@ -22,9 +22,7 @@ function getVeoModelName() {
 }
 
 function getGcsOutputUri() {
-  const uri = process.env.GCS_OUTPUT_URI;
-  if (!uri) throw new AppError("Environment variable GCS_OUTPUT_URI is required in .env", 500);
-  return uri;
+  return process.env.GCS_OUTPUT_URI || "gs://schooliq-video-outputs";
 }
 
 let aiInstance = null;
