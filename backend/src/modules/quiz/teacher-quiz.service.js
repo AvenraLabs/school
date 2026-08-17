@@ -11,6 +11,7 @@ import AppError from "../../shared/appError.js";
 import { getTeacherChapter } from "../rag/runtime/getTeacherChapter.js";
 import { buildTeacherQuizPrompt } from "../rag/runtime/buildPrompt.js";
 import { generateAnswer } from "../rag/runtime/generateAnswer.js";
+import { normalizeBoard } from "../rag/shared/boardUtils.js";
 
 /**
  * Generates AI Quiz questions from full chapter context.
@@ -27,7 +28,7 @@ export async function generateTeacherQuizAI({ user, board, classId, subject, cha
   const grade = gradeMatch ? gradeMatch[0] : "6";
 
   const school = await School.findByPk(user.school_id);
-  const finalBoard = board || school?.board || "CBSE";
+  const finalBoard = normalizeBoard(board || school?.board || "CBSE");
 
   // Fetch full chapter context directly from ChromaDB
   const { fullChapterText } = await getTeacherChapter({

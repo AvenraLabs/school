@@ -1,6 +1,7 @@
 import { ChromaClient } from "chromadb";
 import { getOrGetCollection } from "../ingest/storeChunks.js";
 import { embedChunks } from "../ingest/embedChunks.js";
+import { normalizeBoard } from "../shared/boardUtils.js";
 
 const CHROMA_URL = process.env.CHROMA_URL || "http://localhost:8000";
 const KNOWN_COLLECTIONS = ["textbook_chunks", "cbse_books"];
@@ -9,8 +10,8 @@ const KNOWN_COLLECTIONS = ["textbook_chunks", "cbse_books"];
  * Helper to query all available Chroma collections (handling legacy cbse_books + textbook_chunks)
  */
 async function queryChromaCollections(queryFn) {
-  const primaryCol = await getOrGetCollection();
   try {
+    const primaryCol = await getOrGetCollection();
     const res = await queryFn(primaryCol);
     if (res && res.docs && res.docs.length > 0) {
       return res;
@@ -45,106 +46,48 @@ async function queryChromaCollections(queryFn) {
 }
 
 /**
- * Metadata lookup & Hybrid Vector Search for Teacher AI.
- * Supports exact chapter retrieval OR semantic vector similarity search for custom topics.
+ * RAG Vector Similarity Search for Teacher AI content generation.
+ * Searches textbook chunks for the specified topic, filtered by canonical board, grade, and subject.
+ *
+ * @param {Object} params
+ * @param {string} params.board - Board name (e.g. CBSE, State Board)
+ * @param {string|number} params.grade - Class/Grade level (e.g. 10 or Class 10)
+ * @param {string} params.subject - Subject name (e.g. Economics, Science)
+ * @param {string} params.topic - Free-text topic / focus keywords
+ * @returns {Promise<{ fullChapterText: string, chunksCount: number, chapterTitle: string }>}
  */
-export async function getTeacherChapter({ board, grade, subject, chapter, chapters, topic }) {
-  const isOther = (Array.isArray(chapters) && chapters.includes("other")) || chapter === "other";
+export async function getTeacherChapter({ board, grade, subject, topic }) {
   const searchTopic = (topic || "").trim();
 
-  // Mode 1: Vector similarity search for topic / keyword
-  if (searchTopic && (isOther || !chapters || chapters.length === 0 || !chapter)) {
-    try {
-      console.log(`[getTeacherChapter] Performing vector search for topic: "${searchTopic}" (${board} Grade ${grade} ${subject || "All Subjects"})`);
-      const [queryVector] = await embedChunks([searchTopic]);
+  if (!searchTopic) {
+    return { fullChapterText: "", chunksCount: 0, chapterTitle: "" };
+  }
 
-      const vectorWhereConditions = [];
-      if (board) {
-        const cleanBoard = String(board).toUpperCase();
-        vectorWhereConditions.push({
-          $or: [
-            { board: { $eq: cleanBoard } },
-            { syllabus: { $eq: cleanBoard } },
-          ],
-        });
-      }
-      if (grade) {
-        const gradeNum = String(grade).replace(/\D/g, "");
-        if (gradeNum) {
-          vectorWhereConditions.push({
-            $or: [
-              { grade: { $eq: gradeNum } },
-              { class: { $eq: gradeNum } },
-              { grade: { $eq: `Class ${gradeNum}` } },
-            ],
-          });
-        }
-      }
-      if (subject) {
-        vectorWhereConditions.push({
-          $or: [
-            { subject: { $eq: String(subject) } },
-            { subject: { $eq: String(subject).toLowerCase() } },
-          ],
-        });
-      }
+  try {
+    const cleanBoard = normalizeBoard(board);
+    const gradeNum = String(grade || "").replace(/\D/g, "");
+    console.log(`[getTeacherChapter] Vector search for topic: "${searchTopic}" (${cleanBoard} Grade ${gradeNum || grade} ${subject || "All Subjects"})`);
 
-      const vectorWhere = vectorWhereConditions.length === 1
-        ? vectorWhereConditions[0]
-        : vectorWhereConditions.length > 1
-        ? { $and: vectorWhereConditions }
-        : undefined;
-
-      const searchResults = await queryChromaCollections(async (col) => {
-        const res = await col.query({
-          queryEmbeddings: [queryVector],
-          nResults: 20,
-          where: vectorWhere,
-        });
-        return {
-          docs: (res.documents || []).flat(),
-          metas: (res.metadatas || []).flat(),
-        };
-      });
-
-      const docs = searchResults.docs || [];
-      if (docs.length > 0) {
-        console.log(`[getTeacherChapter] Vector search found ${docs.length} relevant chunks for topic: "${searchTopic}"`);
-        return {
-          fullChapterText: docs.join("\n\n"),
-          chunksCount: docs.length,
-          chapterTitle: searchTopic,
-        };
-      }
-    } catch (e) {
-      console.warn(`[getTeacherChapter] Vector search warning: ${e.message}, falling back to metadata lookup`);
+    const [queryVector] = await embedChunks([searchTopic]);
+    if (!queryVector || queryVector.length === 0) {
+      console.warn(`[getTeacherChapter] Could not generate embedding vector for topic: "${searchTopic}"`);
+      return { fullChapterText: "", chunksCount: 0, chapterTitle: searchTopic };
     }
-  }
 
-  // Mode 2: Standard metadata lookup by chapter number
-  let chapterNumbers = [];
-  if (Array.isArray(chapters) && chapters.length > 0) {
-    chapterNumbers = chapters.map((c) => parseInt(c, 10)).filter((c) => !isNaN(c));
-  } else if (chapter) {
-    const nums = String(chapter).split(",").map((c) => parseInt(c.trim(), 10)).filter((c) => !isNaN(c));
-    chapterNumbers = nums;
-  }
+    const vectorWhereConditions = [];
 
-  const whereConditions = [];
+    if (cleanBoard) {
+      vectorWhereConditions.push({
+        $or: [
+          { board: { $eq: cleanBoard } },
+          { syllabus: { $eq: cleanBoard } },
+          { board: { $eq: cleanBoard.toLowerCase() } },
+        ],
+      });
+    }
 
-  if (board) {
-    const cleanBoard = String(board).toUpperCase();
-    whereConditions.push({
-      $or: [
-        { board: { $eq: cleanBoard } },
-        { syllabus: { $eq: cleanBoard } },
-      ],
-    });
-  }
-  if (grade) {
-    const gradeNum = String(grade).replace(/\D/g, "");
     if (gradeNum) {
-      whereConditions.push({
+      vectorWhereConditions.push({
         $or: [
           { grade: { $eq: gradeNum } },
           { class: { $eq: gradeNum } },
@@ -152,97 +95,75 @@ export async function getTeacherChapter({ board, grade, subject, chapter, chapte
         ],
       });
     }
-  }
-  if (subject) {
-    whereConditions.push({
-      $or: [
-        { subject: { $eq: String(subject) } },
-        { subject: { $eq: String(subject).toLowerCase() } },
-      ],
-    });
-  }
 
-  if (chapterNumbers.length === 1) {
-    whereConditions.push({
-      $or: [
-        { chapter: { $eq: chapterNumbers[0] } },
-        { chapter: { $eq: String(chapterNumbers[0]) } },
-        { chapter: { $eq: `Chap-${chapterNumbers[0]}` } },
-      ],
-    });
-  } else if (chapterNumbers.length > 1) {
-    whereConditions.push({
-      $or: chapterNumbers.map((num) => ({ chapter: { $eq: num } })),
-    });
-  }
-
-  let where = undefined;
-  if (whereConditions.length === 1) {
-    where = whereConditions[0];
-  } else if (whereConditions.length > 1) {
-    where = { $and: whereConditions };
-  }
-
-  try {
-    const searchResults = await queryChromaCollections(async (col) => {
-      let res = await col.get({
-        where,
-        limit: 1500,
-        include: ["documents", "metadatas"],
+    if (subject && String(subject).toLowerCase() !== "general" && String(subject).toLowerCase() !== "other") {
+      vectorWhereConditions.push({
+        $or: [
+          { subject: { $eq: String(subject) } },
+          { subject: { $eq: String(subject).toLowerCase() } },
+        ],
       });
+    }
 
-      let docs = res?.documents || [];
-      let metas = res?.metadatas || [];
+    const vectorWhere = vectorWhereConditions.length === 1
+      ? vectorWhereConditions[0]
+      : vectorWhereConditions.length > 1
+      ? { $and: vectorWhereConditions }
+      : undefined;
 
-      // Fallback: If specific chapter filter produced 0 docs, fallback to subject-level
-      if (docs.length === 0 && chapterNumbers.length > 0) {
-        const fallbackConditions = whereConditions.filter((c) => !c.$or?.some((item) => "chapter" in item));
-        const fallbackWhere = fallbackConditions.length === 1 ? fallbackConditions[0] : fallbackConditions.length > 1 ? { $and: fallbackConditions } : undefined;
-        res = await col.get({
-          where: fallbackWhere,
-          limit: 1500,
-          include: ["documents", "metadatas"],
-        });
-        docs = res?.documents || [];
-        metas = res?.metadatas || [];
-      }
-
-      return { docs, metas };
+    const searchResults = await queryChromaCollections(async (col) => {
+      const res = await col.query({
+        queryEmbeddings: [queryVector],
+        nResults: 20,
+        where: vectorWhere,
+      });
+      return {
+        docs: (res.documents || []).flat(),
+        metas: (res.metadatas || []).flat(),
+      };
     });
 
     const docs = searchResults.docs || [];
-    const metas = searchResults.metas || [];
-
-    if (docs.length === 0) {
-      return { fullChapterText: "", chunksCount: 0, chapterTitle: "" };
+    if (docs.length > 0) {
+      console.log(`[getTeacherChapter] Vector search retrieved ${docs.length} relevant chunks for topic: "${searchTopic}"`);
+      return {
+        fullChapterText: docs.join("\n\n"),
+        chunksCount: docs.length,
+        chapterTitle: searchTopic,
+      };
     }
 
-    const items = [];
-    let chapterTitle = "";
+    // Fallback search without strict subject filter if subject was specific
+    if (vectorWhereConditions.length > 1 && subject) {
+      const relaxedConditions = vectorWhereConditions.filter((c) => !c.$or?.some((item) => "subject" in item));
+      const relaxedWhere = relaxedConditions.length === 1 ? relaxedConditions[0] : relaxedConditions.length > 1 ? { $and: relaxedConditions } : undefined;
 
-    for (let i = 0; i < docs.length; i++) {
-      const meta = metas[i] || {};
-      if (!chapterTitle && meta.chapterTitle) {
-        chapterTitle = meta.chapterTitle;
-      }
-      items.push({
-        text: docs[i],
-        chunkOrder: meta.chunkOrder || i + 1,
+      const fallbackResults = await queryChromaCollections(async (col) => {
+        const res = await col.query({
+          queryEmbeddings: [queryVector],
+          nResults: 15,
+          where: relaxedWhere,
+        });
+        return {
+          docs: (res.documents || []).flat(),
+          metas: (res.metadatas || []).flat(),
+        };
       });
+
+      const fallbackDocs = fallbackResults.docs || [];
+      if (fallbackDocs.length > 0) {
+        console.log(`[getTeacherChapter] Relaxed vector search found ${fallbackDocs.length} chunks for topic: "${searchTopic}"`);
+        return {
+          fullChapterText: fallbackDocs.join("\n\n"),
+          chunksCount: fallbackDocs.length,
+          chapterTitle: searchTopic,
+        };
+      }
     }
 
-    // Sort strictly by chunkOrder
-    items.sort((a, b) => a.chunkOrder - b.chunkOrder);
-
-    const fullChapterText = items.map((it) => it.text).join("\n\n");
-
-    return {
-      fullChapterText,
-      chunksCount: items.length,
-      chapterTitle,
-    };
+    return { fullChapterText: "", chunksCount: 0, chapterTitle: searchTopic };
   } catch (e) {
-    console.error("[getTeacherChapter] Metadata lookup error:", e.message);
-    return { fullChapterText: "", chunksCount: 0, chapterTitle: "" };
+    console.warn(`[getTeacherChapter] Vector search error: ${e.message}`);
+    return { fullChapterText: "", chunksCount: 0, chapterTitle: searchTopic };
   }
 }

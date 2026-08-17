@@ -262,7 +262,6 @@ CRUD for the school-wide subject catalog.
 - `GET /api/teacher-ai/documents` — List saved teacher AI documents and question papers filtered by type (`type=question_paper`).
 - `GET /api/teacher-ai/documents/:id` | `PUT /api/teacher-ai/documents/:id` | `DELETE /api/teacher-ai/documents/:id` — CRUD operations for saved question papers and teaching documents.
 - `GET /api/rag/curriculum/subjects` — Retrieve distinct subjects with indexed textbook chapters for a board & grade from in-memory curriculum cache.
-- `GET /api/rag/curriculum/chapters` — Retrieve indexed syllabus chapters for a board, grade, and subject from in-memory curriculum cache.
 - `GET /api/rag/curriculum/grades` — Retrieve available ingested grades for a board.
 
 

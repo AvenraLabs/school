@@ -1,4 +1,5 @@
 import { ChromaClient } from "chromadb";
+import { normalizeBoard } from "../shared/boardUtils.js";
 
 const CHROMA_URL = process.env.CHROMA_URL || "http://localhost:8000";
 const COLLECTION_NAME = "textbook_chunks";
@@ -51,7 +52,7 @@ export function buildChunkId({ board, grade, subject, bookName, chapterNumber, c
     return `${cleanBookPath}_${chapterNumber}_${chunkOrder}`;
   }
 
-  const cleanBoard = String(board).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+  const cleanBoard = normalizeBoard(board).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
   const cleanGrade = String(grade).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
   const cleanSubject = String(subject).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
   return `${cleanBoard}_${cleanGrade}_${cleanSubject}_${chapterNumber}_${chunkOrder}`;
@@ -143,7 +144,7 @@ export async function storeChunks({
     documents.push(chunk.text);
     validEmbeddings.push(emb);
     metadatas.push({
-      board: String(board).toUpperCase(),
+      board: normalizeBoard(board),
       grade: String(grade),
       subject: String(subject),
       chapter: Number(chapterNumber),

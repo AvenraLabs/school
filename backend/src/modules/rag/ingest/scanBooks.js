@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { normalizeBoard } from "../shared/boardUtils.js";
 
 const LANGUAGE_SUBJECTS = new Set(["english", "tamil", "hindi"]);
 
@@ -28,7 +29,7 @@ export function scanBooks(booksDir) {
         // Case A: {board}/{grade}/{subject}/{filename.pdf}
         // Case B: {board}/{grade}/{filename.pdf} (where subject is derived from filename without .pdf)
         if (parts.length >= 3) {
-          const board = parts[0];
+          const board = normalizeBoard(parts[0]);
           const grade = parts[1];
           const subject = parts[2].toLowerCase().endsWith(".pdf")
             ? parts[2].replace(/\.pdf$/i, "")

@@ -12,17 +12,7 @@ export const getCurriculumSubjects = async (board, grade) => {
   return res.data?.subjects || [];
 };
 
-/**
- * Get chapters for a board + grade + subject, sorted by chapter_number.
- * Each item: { number, title, label }
- */
-export const getCurriculumChapters = async (board, grade, subject) => {
-  const gradeNum = String(grade).replace(/\D/g, "");
-  const res = await api.get("/rag/curriculum/chapters", {
-    params: { board: String(board).toUpperCase(), grade: gradeNum, subject },
-  });
-  return res.data?.chapters || [];
-};
+
 
 /**
  * Get distinct grades that have been ingested for a given board.

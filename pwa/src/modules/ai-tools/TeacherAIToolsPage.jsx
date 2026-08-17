@@ -62,8 +62,7 @@ import {
   listTeacherAiDocumentsApi,
   deleteTeacherAiDocumentApi,
 } from "./teacherAi.api";
-import { getCurriculumSubjects, getCurriculumChapters } from "../../api/curriculum.api";
-import { getAllSubjects } from "../subjects/subjects.api";
+import { getCurriculumSubjects } from "../../api/curriculum.api";
 import { useAuth } from "../../auth/AuthProvider";
 import { useTeacherAssignments } from "../teacher-timetable/useTeacherAssignments";
 import html2pdf from "html2pdf.js";
@@ -87,13 +86,29 @@ function RenderQuestionPaperView({ data }) {
         <Typography variant="h5" sx={{ fontWeight: 900, color: "#0f172a", textTransform: "uppercase" }}>
           {data.title || "Question Paper"}
         </Typography>
-        <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1.5, px: 1 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1.5, px: 1, flexWrap: "wrap", gap: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 700, color: "#475569" }}>
             {data.board || data.meta?.board || "Board"} | {data.grade || "Grade 10"} | {data.subject || "Subject"}
           </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 700, color: "#475569" }}>
-            Time: {data.duration_mins || 60} Mins | Max Marks: {data.total_marks || 50}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {data.is_grounded ? (
+              <Chip
+                label={`Textbook Grounded (${data.chunks_count || "RAG"} Chunks)`}
+                size="small"
+                sx={{ fontWeight: 800, bgcolor: "#d1fae5", color: "#065f46", height: 22, fontSize: 11 }}
+              />
+            ) : (
+              <Chip
+                label="Curriculum Knowledge"
+                title="Generated from curriculum knowledge — not sourced from the school's textbook"
+                size="small"
+                sx={{ fontWeight: 800, bgcolor: "#fef3c7", color: "#b45309", height: 22, fontSize: 11 }}
+              />
+            )}
+            <Typography variant="body2" sx={{ fontWeight: 700, color: "#475569" }}>
+              Time: {data.duration_mins || 60} Mins | Max Marks: {data.total_marks || 50}
+            </Typography>
+          </Box>
         </Box>
       </Box>
 
@@ -541,7 +556,6 @@ export default function TeacherAIToolsPage() {
   const [grade, setGrade] = useState("10");
   const [subject, setSubject] = useState("");
   const [customSubject, setCustomSubject] = useState("");
-  const [selectedChapters, setSelectedChapters] = useState([]);
   const [customTopic, setCustomTopic] = useState("");
   const [title, setTitle] = useState("");
   const [examName, setExamName] = useState("");
@@ -682,9 +696,7 @@ export default function TeacherAIToolsPage() {
 
   // Curriculum metadata state (PostgreSQL)
   const [curriculumSubjects, setCurriculumSubjects] = useState([]);
-  const [curriculumChapters, setCurriculumChapters] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
-  const [loadingChapters, setLoadingChapters] = useState(false);
 
   // Quiz Assignments History & Results State
   const [teacherQuizzes, setTeacherQuizzes] = useState([]);
@@ -751,11 +763,7 @@ export default function TeacherAIToolsPage() {
     return list;
   }, [assignments]);
 
-  const gradeNum = parseInt(String(grade).replace(/\D/g, ""), 10);
-  const isCbsePrimary = schoolBoard.toUpperCase() === "CBSE" && !isNaN(gradeNum) && gradeNum >= 1 && gradeNum <= 5;
-  const isOther = isCbsePrimary || subject === "other";
-  const rawSubject = isOther ? (customSubject.trim() || "General") : subject;
-  const resolvedSubject = (rawSubject || "General").replace(/\b\w/g, (char) => char.toUpperCase());
+  const resolvedSubject = (subject === "other" ? customSubject : (subject || customSubject || "")).trim();
 
   // Strict Form Validation: Prevent click on Generate button until required inputs are selected/typed
   const isFormValid = useMemo(() => {
@@ -769,6 +777,7 @@ export default function TeacherAIToolsPage() {
     }
 
     if (!grade) return false;
+    if (!resolvedSubject) return false;
     if (!customTopic || !customTopic.trim()) return false;
 
     if (selectedToolKey === "question_paper") {
@@ -786,6 +795,7 @@ export default function TeacherAIToolsPage() {
   }, [
     selectedToolKey,
     grade,
+    resolvedSubject,
     customTopic,
     title,
     isQuestionCountExceeded,
@@ -802,8 +812,6 @@ export default function TeacherAIToolsPage() {
     setLoadingSubjects(true);
     setSubject("");
     setCurriculumSubjects([]);
-    setCurriculumChapters([]);
-    setSelectedChapters([]);
     try {
       const subs = await getCurriculumSubjects(schoolBoard, grade);
       setCurriculumSubjects(subs);
@@ -815,40 +823,6 @@ export default function TeacherAIToolsPage() {
   }, [schoolBoard, grade]);
 
   useEffect(() => { fetchSubjects(); }, [fetchSubjects]);
-
-  // Load chapters when subject changes
-  const fetchChapters = useCallback(async () => {
-    if (!schoolBoard || !grade || !subject || subject === "other") {
-      setCurriculumChapters([]);
-      setSelectedChapters([]);
-      return;
-    }
-    setLoadingChapters(true);
-    setCurriculumChapters([]);
-    setSelectedChapters([]);
-    try {
-      const chaps = await getCurriculumChapters(schoolBoard, grade, subject);
-      const seen = new Set();
-      const uniqueChaps = (chaps || []).filter((c) => {
-        const titleKey = String(c.title || c.label || "")
-          .replace(/^(chapter|unit|chap|ch)\s*\d+[:\s\-\.]*/i, "")
-          .trim()
-          .toLowerCase();
-        const key = `${c.number}_${titleKey}`;
-        if (seen.has(key) || (titleKey && seen.has(titleKey))) return false;
-        seen.add(key);
-        if (titleKey) seen.add(titleKey);
-        return true;
-      });
-      setCurriculumChapters(uniqueChaps);
-    } catch (err) {
-      console.warn("[TeacherAI] Could not load curriculum chapters:", err.message);
-    } finally {
-      setLoadingChapters(false);
-    }
-  }, [schoolBoard, grade, subject]);
-
-  useEffect(() => { fetchChapters(); }, [fetchChapters]);
 
   const loadSavedDocs = async () => {
     setLoadingSaved(true);
@@ -905,18 +879,21 @@ export default function TeacherAIToolsPage() {
     setSuccessMsg("");
 
     try {
-      const chaptersList = isOther
-        ? []
-        : selectedChapters.length > 0
-        ? selectedChapters.map(String)
-        : [];
-
       const targetObj = teacherClasses.find((c) => c.key === selectedTargetKey) || teacherClasses[0];
       const targetClassId = targetObj?.classId || null;
       const targetSectionId = targetObj?.sectionId || null;
 
       const userTopic = (customTopic || title || "").trim();
       const formattedTitle = userTopic.replace(/\b\w/g, (char) => char.toUpperCase());
+
+      // Validate required fields for text tools
+      if (selectedToolKey !== "ai_video") {
+        if (!grade || !resolvedSubject || !userTopic) {
+          setErrorMsg("Please complete all required fields (Grade, Subject, and Topic).");
+          setLoading(false);
+          return;
+        }
+      }
 
       // AI Content Generation (diagram ± video)
       if (selectedToolKey === "ai_video") {
@@ -994,11 +971,11 @@ export default function TeacherAIToolsPage() {
         feature: selectedToolKey,
         board: schoolBoard,
         grade: `Class ${grade}`,
-        subject: formattedTitle || "General",
+        subject: resolvedSubject,
         topic: userTopic,
         chapters: [],
         skipRag: false,
-        title: formattedTitle,
+        title: title || `${resolvedSubject} ${selectedTool?.title || "Document"}`,
         totalMarks: safeMarks,
         duration: safeDur,
         numQuestions: safeNumQ,
@@ -1042,7 +1019,7 @@ export default function TeacherAIToolsPage() {
           board: schoolBoard,
           grade: `Class ${grade}`,
           subject: resolvedSubject,
-          chapters: chaptersList,
+          chapters: [],
           content: generatedData,
           status: "saved",
         });
@@ -1669,11 +1646,11 @@ export default function TeacherAIToolsPage() {
                 {selectedToolKey !== "ai_video" && (
                   <>
                     {/* Grade */}
-                    <FormControl size="small" fullWidth>
+                    <FormControl size="small" fullWidth required>
                       <InputLabel sx={{ fontWeight: 700 }}>Grade</InputLabel>
                       <Select
                         value={grade}
-                        label="Grade"
+                        label="Grade *"
                         onChange={(e) => setGrade(e.target.value)}
                         sx={{ borderRadius: "12px" }}
                       >
@@ -1685,6 +1662,48 @@ export default function TeacherAIToolsPage() {
                       </Select>
                     </FormControl>
 
+                    {/* Subject */}
+                    <FormControl size="small" fullWidth required>
+                      <InputLabel sx={{ fontWeight: 700 }}>Subject</InputLabel>
+                      <Select
+                        value={subject}
+                        label="Subject *"
+                        onChange={(e) => {
+                          setSubject(e.target.value);
+                          if (e.target.value !== "other") setCustomSubject("");
+                        }}
+                        sx={{ borderRadius: "12px" }}
+                        disabled={loadingSubjects}
+                      >
+                        {loadingSubjects ? (
+                          <MenuItem disabled>Loading subjects...</MenuItem>
+                        ) : (
+                          (curriculumSubjects.length > 0
+                            ? curriculumSubjects
+                            : ["Mathematics", "Science", "Social Science", "Economics", "History", "Geography", "Physics", "Chemistry", "Biology"]
+                          ).map((s) => (
+                            <MenuItem key={s} value={s}>
+                              {s}
+                            </MenuItem>
+                          ))
+                        )}
+                        <MenuItem value="other">Other / Custom Subject...</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    {subject === "other" && (
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Specify Subject Name *"
+                        value={customSubject}
+                        onChange={(e) => setCustomSubject(e.target.value)}
+                        placeholder="e.g. Environmental Studies, Political Science..."
+                        required
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
+                      />
+                    )}
+
                     {/* Topic / Focus Keywords for all text tools */}
                     <TextField
                       fullWidth
@@ -1692,7 +1711,7 @@ export default function TeacherAIToolsPage() {
                       label="Topic / Focus Keywords *"
                       value={customTopic}
                       onChange={(e) => setCustomTopic(e.target.value)}
-                      placeholder="e.g. Algebra, Thermodynamics, Photosynthesis, French Revolution..."
+                      placeholder="e.g. Per capita income and human development, Thermodynamics, Photosynthesis..."
                       required
                       sx={{ "& .MuiOutlinedInput-root": { borderRadius: "12px" } }}
                     />

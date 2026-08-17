@@ -27,8 +27,11 @@ export function getAiClient() {
   return aiClientInstance;
 }
 
-export function getGeminiModel() {
-  // Returns 'gemini-2.5-flash-lite' by default
+export function getGeminiModel(feature = "") {
+  if (feature === "question_paper") {
+    return (process.env.GEMINI_MODEL_QUESTION_PAPER || "gemini-2.5-flash").replace(/^models\//, "");
+  }
+  // Returns 'gemini-2.5-flash-lite' by default for other features
   return (process.env.GEMINI_MODEL || "gemini-2.5-flash-lite").replace(/^models\//, "");
 }
 

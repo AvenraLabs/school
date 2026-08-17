@@ -9,7 +9,6 @@ import {
 } from "./rag.service.js";
 import {
   getAvailableSubjects,
-  getAvailableChapters,
   getAvailableGrades,
   invalidateCurriculumCache,
 } from "./curriculum-cache.service.js";
@@ -130,31 +129,7 @@ export const getCurriculumSubjects = asyncHandler(async (req, res) => {
   res.json({ subjects, board: targetBoard });
 });
 
-/**
- * GET /api/rag/curriculum/chapters?board=CBSE&grade=6&subject=Science
- * Returns all chapters in ChromaDB for board + grade + subject.
- */
-export const getCurriculumChapters = asyncHandler(async (req, res) => {
-  let { board, grade, subject } = req.query;
-  if (!grade || !subject) {
-    throw new AppError("grade and subject are required", 400);
-  }
 
-  if (req.user?.school_id) {
-    const School = (await import("../schools/school.model.js")).default;
-    const school = await School.findByPk(req.user.school_id);
-    if (school?.board) {
-      board = school.board;
-    }
-  }
-
-  const rawBoard = String(board || "").toUpperCase().trim();
-  const targetBoard = (!rawBoard || rawBoard === "1" || rawBoard.includes("CBSE")) ? "CBSE" : rawBoard;
-  const gradeNum = String(grade).replace(/\D/g, "") || "6";
-
-  const chapters = await getAvailableChapters(targetBoard, gradeNum, subject);
-  res.json({ chapters, board: targetBoard });
-});
 
 /**
  * GET /api/rag/curriculum/grades?board=CBSE

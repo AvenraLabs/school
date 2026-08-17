@@ -174,32 +174,7 @@ export async function getAvailableSubjects(board = "CBSE", grade = "10") {
   return getDefaultSubjects(gradeNum);
 }
 
-/**
- * Returns available chapters for a board + grade + subject
- */
-export async function getAvailableChapters(board = "CBSE", grade = "10", subject = "Science") {
-  const index = await buildCurriculumIndex();
-  const cleanBoard = String(board || "CBSE").toUpperCase().trim().includes("STATE")
-    ? "STATE"
-    : "CBSE";
-  const gradeNum = parseInt(String(grade).replace(/\D/g, ""), 10) || 6;
-  const cleanSubject = String(subject || "").trim();
 
-  // Try exact match or case-insensitive match
-  const gradeSubjects = index[cleanBoard]?.[String(gradeNum)] || {};
-  let chapters = gradeSubjects[cleanSubject] || [];
-
-  if (chapters.length === 0) {
-    const matchedKey = Object.keys(gradeSubjects).find(
-      (k) => k.toLowerCase() === cleanSubject.toLowerCase()
-    );
-    if (matchedKey) {
-      chapters = gradeSubjects[matchedKey] || [];
-    }
-  }
-
-  return chapters;
-}
 
 /**
  * Returns distinct grades that have ingested books

@@ -2,6 +2,7 @@ import { Op } from "sequelize";
 import { getAiClient, getGeminiModel } from "../rag/shared/aiClient.js";
 import { getTeacherChapter } from "../rag/runtime/getTeacherChapter.js";
 import { isLanguageSubject } from "../rag/runtime/detectSubject.js";
+import { normalizeBoard } from "../rag/shared/boardUtils.js";
 import TeacherAiDocument from "./teacher-ai-document.model.js";
 import School from "../schools/school.model.js";
 import Class from "../classes/classes.model.js";
@@ -98,22 +99,27 @@ async function safeGenerateContent(ai, model, prompt) {
   }
 }
 
+function isMathHeavySubject(subj = "") {
+  const s = String(subj).toLowerCase();
+  return s.includes("math") || s.includes("physic") || s.includes("chemist") || s.includes("statist") || s.includes("account") || s.includes("econom");
+}
+
 /**
  * Main AI Content Generation Service for Teachers
  */
 export async function generateTeacherAiService({
   user,
-  feature, // 'question_paper' | 'lesson_plan' | 'lesson_summary' | 'teacher_quiz'
+  feature,
   board,
   grade,
   subject,
-  chapters = [],
-  chapter = "",
-  title = "",
-  examName = "",
-  totalMarks = 50,
-  duration = 60,
-  numQuestions = 10,
+  chapter,
+  chapters,
+  title,
+  examName,
+  totalMarks,
+  duration,
+  numQuestions,
   difficulty = "MEDIUM",
   questionTypes = [],
   teachingDuration = "45 mins",
@@ -123,12 +129,12 @@ export async function generateTeacherAiService({
   targetAudience = "Student",
   showCorrectAnswers = true,
   showExplanations = true,
-  availableUntil = null,
-  classId = null,
-  sectionId = null,
+  availableUntil,
+  classId,
+  sectionId,
   instructions = "",
-  skipRag = false, // When true, bypass RAG and go direct to Gemini
-  topic = "", // Teacher specified topic / focus area
+  skipRag = false,
+  topic = "",
   questionCounts = {},
 }) {
   if (user.role !== "teacher" && user.role !== "school_admin" && user.role !== "super_admin") {
@@ -136,51 +142,72 @@ export async function generateTeacherAiService({
   }
 
   // ── SPAM PROTECTION & HARD LIMITS ──
-  const safeNumQuestions = Math.min(Math.max(Number(numQuestions) || 5, 1), 50); // Hard cap: max 50 questions
-  const safeTotalMarks = Math.min(Math.max(Number(totalMarks) || 10, 1), 500); // Hard cap: max 500 marks
-  const safeDuration = Math.min(Math.max(Number(duration) || 15, 1), 300); // Hard cap: max 300 minutes
+  const safeNumQuestions = Math.min(Math.max(Number(numQuestions) || 5, 1), 50);
+  const safeTotalMarks = Math.min(Math.max(Number(totalMarks) || 10, 1), 500);
+  const safeDuration = Math.min(Math.max(Number(duration) || 15, 1), 300);
   const safeTitle = (title || "").slice(0, 200);
   const safeInstructions = (instructions || "").slice(0, 500);
 
   const school = await School.findByPk(user.school_id);
-  const finalBoard = (board || school?.board || "CBSE").toUpperCase();
+  const finalBoard = normalizeBoard(board || school?.board || "CBSE");
 
   const gradeStr = String(grade || "10");
   const gradeMatch = gradeStr.match(/\d+/);
   const finalGrade = gradeMatch ? gradeMatch[0] : "10";
-  const finalSubject = subject || "General";
-
-  // Resolve chapter list
-  let chapList = Array.isArray(chapters) && chapters.length > 0 ? chapters : [];
-  if (chapList.length === 0 && chapter) {
-    chapList = String(chapter).split(",").map((c) => c.trim()).filter(Boolean);
-  }
+  const finalSubject = (subject || "General").trim();
+  const userTopic = (topic || title || "").trim();
 
   const isLang = isLanguageSubject(finalSubject);
+  const isMathHeavy = isMathHeavySubject(finalSubject);
+
   let textbookContext = "";
   let chunksCount = 0;
 
-  // Skip RAG for: language subjects, explicit skipRag flag, or subject 'other'
-  const bypassRag = isLang || skipRag || finalSubject.toLowerCase() === "other";
+  // For Question Paper: ALWAYS attempt RAG first (even for languages/custom subjects)
+  if (feature === "question_paper") {
+    if (userTopic) {
+      try {
+        const ragRes = await getTeacherChapter({
+          board: finalBoard,
+          grade: finalGrade,
+          subject: finalSubject,
+          topic: userTopic,
+        });
+        textbookContext = ragRes.fullChapterText || "";
+        chunksCount = ragRes.chunksCount || 0;
 
-  if (!bypassRag && (chapList.length > 0 || topic)) {
-    try {
-      const ragRes = await getTeacherChapter({
-        board: finalBoard,
-        grade: finalGrade,
-        subject: finalSubject,
-        chapters: chapList,
-        topic,
-      });
-      textbookContext = ragRes.fullChapterText || "";
-      chunksCount = ragRes.chunksCount || 0;
-    } catch (e) {
-      console.warn("[TeacherAIService] RAG context lookup notice:", e.message);
+        if (chunksCount === 0) {
+          console.warn(
+            `[TeacherAIService] Soft RAG Fallback: 0 textbook chunks found for Board="${finalBoard}", Grade="${finalGrade}", Subject="${finalSubject}", Topic="${userTopic}". Generating with standard curriculum knowledge.`
+          );
+        }
+      } catch (e) {
+        console.warn("[TeacherAIService] RAG context lookup notice:", e.message);
+      }
+    }
+  } else {
+    // For other features (lesson plan, summary, quiz): bypass for language or skipRag
+    const bypassRag = isLang || skipRag || finalSubject.toLowerCase() === "other";
+    if (!bypassRag && userTopic) {
+      try {
+        const ragRes = await getTeacherChapter({
+          board: finalBoard,
+          grade: finalGrade,
+          subject: finalSubject,
+          topic: userTopic,
+        });
+        textbookContext = ragRes.fullChapterText || "";
+        chunksCount = ragRes.chunksCount || 0;
+      } catch (e) {
+        console.warn("[TeacherAIService] RAG context lookup notice:", e.message);
+      }
     }
   }
 
+  const isGrounded = Boolean(chunksCount > 0);
+
   const ai = getAiClient();
-  const GEMINI_MODEL = getGeminiModel();
+  const GEMINI_MODEL = getGeminiModel(feature);
 
   if (user?.id) {
     await assertHasTokenBalance(user.id);
@@ -195,7 +222,7 @@ export async function generateTeacherAiService({
     
     const log = await AiChatLog.create({
       user_id: user.id,
-      user_query: String(title || topic || feature || "Teacher AI").slice(0, 250),
+      user_query: String(safeTitle || userTopic || feature || "Teacher AI").slice(0, 250),
       ai_response: String(resText || "").slice(0, 500),
       tokens_used: tokensUsed,
       prompt_tokens: promptTokens,
@@ -203,6 +230,7 @@ export async function generateTeacherAiService({
       model_used: GEMINI_MODEL,
       ai_type: aiType,
       class_level: String(finalGrade || ""),
+      meta_data: { isGrounded, chunksCount, subject: finalSubject, board: finalBoard },
     });
 
     await deductTokens({
@@ -236,12 +264,15 @@ export async function generateTeacherAiService({
       sectionSpecs.push(`- Section A: EXACTLY 5 Multiple Choice Questions (1 Mark each)`, `- Section B: EXACTLY 3 Short Answer Questions (3 Marks each)`, `- Section C: EXACTLY 2 Long Answer Questions (5 Marks each)`);
     }
 
+    const groundingInstruction = textbookContext
+      ? `Textbook Context (Grounding Content from Official Curriculum):\n${textbookContext}`
+      : `No textbook excerpt is available for this topic. Generate exam-appropriate questions based on standard ${finalBoard} Grade ${finalGrade} ${finalSubject} curriculum expectations for this topic, staying within the difficulty and scope appropriate for that grade level and board.`;
+
     const paperPrompt = `
 You are an expert examination master preparing an official Question Paper for Grade ${finalGrade} ${finalSubject} (${finalBoard} Board).
 
-Exam Title: ${title || examName || `${finalSubject} Examination`}
-Topic / Focus Area: ${topic || chapList.join(", ") || "Full Curriculum"}
-Selected Chapters: ${chapList.join(", ") || "Full Curriculum"}
+Exam Title: ${safeTitle || examName || `${finalSubject} Examination`}
+Topic / Focus Area: ${userTopic || "Curriculum Focus"}
 Total Marks: ${paperMarks}
 Duration: ${paperDuration} Mins
 Difficulty: ${difficulty}
@@ -255,7 +286,7 @@ The sum of marks for all generated questions across all sections MUST EQUAL EXAC
 System Rules:
 1. Return ONLY valid JSON matching this exact structure:
 {
-  "title": "${title || `${finalSubject} Question Paper`}",
+  "title": "${safeTitle || `${finalSubject} Question Paper`}",
   "exam_name": "${examName || "Term Assessment"}",
   "board": "${finalBoard}",
   "grade": "Grade ${finalGrade}",
@@ -291,19 +322,25 @@ System Rules:
 2. Language & depth strictly tailored to Grade ${finalGrade} ${finalBoard} standard.
 3. Provide a clear answer key and explanation for EVERY question.
 4. NO emojis. NO markdown text outside the JSON object.
-${instructions ? `Teacher Directive: ${instructions}` : ""}
+${isMathHeavy ? "5. ARITHMETIC VERIFICATION: For any calculation, numerical problem, or math-based question, double-check and re-derive the solution step by step before finalizing the answer and explanation in the answer key to ensure 100% arithmetic accuracy." : ""}
+${safeInstructions ? `Teacher Directive: ${safeInstructions}` : ""}
 
-${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
+${groundingInstruction}
 `;
 
     const result = await safeGenerateContent(ai, GEMINI_MODEL, paperPrompt);
     await recordTeacherUsage(paperPrompt, result.text, "question_paper", null, result);
 
     const parsed = parseGeminiJson(result.text || "");
+    parsed.is_grounded = isGrounded;
+    parsed.chunks_count = chunksCount;
+
     return {
       feature: "question_paper",
       data: parsed,
-      meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount },
+      isGrounded,
+      chunksCount,
+      meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount, isGrounded },
     };
   }
 
@@ -373,10 +410,15 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
     await recordTeacherUsage(planPrompt, result.text, "lesson_summary", null, result);
 
     const parsed = parseGeminiJson(result.text || "");
+    parsed.is_grounded = isGrounded;
+    parsed.chunks_count = chunksCount;
+
     return {
       feature: "lesson_plan",
       data: parsed,
-      meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount },
+      isGrounded,
+      chunksCount,
+      meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount, isGrounded },
     };
   }
 
@@ -430,10 +472,15 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
     await recordTeacherUsage(summaryPrompt, result.text, "summary", null, result);
 
     const parsed = parseGeminiJson(result.text || "");
+    parsed.is_grounded = isGrounded;
+    parsed.chunks_count = chunksCount;
+
     return {
       feature: "lesson_summary",
       data: parsed,
-      meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount },
+      isGrounded,
+      chunksCount,
+      meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount, isGrounded },
     };
   }
 
@@ -484,6 +531,9 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
     await recordTeacherUsage(quizPrompt, result.text, "quiz", null, result);
 
     const parsed = parseGeminiJson(result.text || "");
+    parsed.is_grounded = isGrounded;
+    parsed.chunks_count = chunksCount;
+    
     const quizTitle = parsed.title || safeTitle || `${finalSubject} Quiz`;
 
     // Idempotency check: prevent duplicate quiz creation within 15 seconds
@@ -504,9 +554,11 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
         feature: "teacher_quiz",
         quizId: existingQuiz.id,
         data: parsed,
+        isGrounded,
+        chunksCount,
         publishedToClassId: classId,
         message: "Quiz homework successfully created and published to students!",
-        meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount },
+        meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount, isGrounded },
       };
     }
 
@@ -551,9 +603,11 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
       feature: "teacher_quiz",
       quizId: quiz.id,
       data: parsed,
+      isGrounded,
+      chunksCount,
       publishedToClassId: classId,
       message: "Quiz homework successfully created and published to students!",
-      meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount },
+      meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount, isGrounded },
     };
   }
 

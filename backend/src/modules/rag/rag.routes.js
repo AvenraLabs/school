@@ -11,7 +11,6 @@ import {
   triggerIngestion,
   runTeacherAiContent,
   getCurriculumSubjects,
-  getCurriculumChapters,
   getCurriculumGrades,
 } from "./rag.controller.js";
 
@@ -33,16 +32,10 @@ router.post("/teacher-ai", allowRoles("teacher", "school_admin", "super_admin"),
 router.post("/ingest", allowRoles("school_admin", "super_admin"), triggerIngestion);
 
 // ─── Curriculum Metadata (powers Teacher AI dropdowns) ───
-// Returns data from PostgreSQL only — fast, no ChromaDB
 router.get(
   "/curriculum/subjects",
   allowRoles("teacher", "school_admin", "super_admin"),
   getCurriculumSubjects
-);
-router.get(
-  "/curriculum/chapters",
-  allowRoles("teacher", "school_admin", "super_admin"),
-  getCurriculumChapters
 );
 router.get(
   "/curriculum/grades",

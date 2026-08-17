@@ -1304,13 +1304,6 @@ export const curriculumAPI = {
     return response.data?.subjects || response.data || [];
   },
 
-  getChapters: async (board, grade, subject) => {
-    const gradeNum = String(grade).replace(/\D/g, '');
-    const response = await axiosInstance.get('/rag/curriculum/chapters', {
-      params: { board: String(board || 'CBSE').toUpperCase(), grade: gradeNum, subject },
-    });
-    return response.data?.chapters || response.data || [];
-  },
 
   getGrades: async (board) => {
     const response = await axiosInstance.get('/rag/curriculum/grades', {
