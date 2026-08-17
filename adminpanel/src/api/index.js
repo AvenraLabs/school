@@ -1316,7 +1316,7 @@ export const curriculumAPI = {
 // Teacher AI / Question Paper API
 export const teacherAiAPI = {
   generate: async (payload) => {
-    const response = await axiosInstance.post('/teacher-ai/generate', payload);
+    const response = await axiosInstance.post('/teacher-ai/generate', payload, { timeout: 180000 });
     return response.data;
   },
 

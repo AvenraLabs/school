@@ -1,7 +1,7 @@
 import api from "../../api/axios";
 
 export const generateTeacherAiApi = (payload) =>
-  api.post("/teacher-ai/generate", payload);
+  api.post("/teacher-ai/generate", payload, { timeout: 180000 });
 
 export const saveTeacherAiDocumentApi = (payload) =>
   api.post("/teacher-ai/documents", payload);

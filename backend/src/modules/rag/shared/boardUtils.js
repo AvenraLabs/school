@@ -56,6 +56,9 @@ export function normalizeBoard(board) {
 
   // Clean punctuation and spacing for alias matching
   const clean = upper.replace(/[^A-Z0-9]/g, "");
+  if (!clean || /^\d+$/.test(clean)) {
+    return "CBSE";
+  }
   for (const [alias, canonical] of Object.entries(BOARD_ALIASES)) {
     const cleanAlias = alias.replace(/[^A-Z0-9]/g, "");
     if (clean === cleanAlias) {
