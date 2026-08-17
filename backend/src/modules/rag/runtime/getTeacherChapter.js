@@ -8,41 +8,55 @@ const KNOWN_COLLECTIONS = ["textbook_chunks", "cbse_books"];
 
 /**
  * Helper to query all available Chroma collections (handling legacy cbse_books + textbook_chunks)
+ * with a strict 3-second timeout so teacher AI generation never hangs if ChromaDB is slow/offline.
  */
 async function queryChromaCollections(queryFn) {
-  try {
-    const primaryCol = await getOrGetCollection();
-    const res = await queryFn(primaryCol);
-    if (res && res.docs && res.docs.length > 0) {
-      return res;
-    }
-  } catch (e) {
-    console.warn("[getTeacherChapter] Primary collection query note:", e.message);
-  }
-
-  // Fallback to other known collections
-  const chromaUrl = new URL(
-    CHROMA_URL.startsWith("http") ? CHROMA_URL : `http://${CHROMA_URL}`
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("ChromaDB query timed out (3s)")), 3000)
   );
-  const client = new ChromaClient({
-    host: chromaUrl.hostname,
-    port: chromaUrl.port ? Number(chromaUrl.port) : chromaUrl.protocol === "https:" ? 443 : 80,
-    ssl: chromaUrl.protocol === "https:",
-  });
 
-  for (const colName of KNOWN_COLLECTIONS) {
-    try {
-      const col = await client.getCollection({ name: colName });
-      if (col) {
-        const res = await queryFn(col);
+  try {
+    const runQuery = async () => {
+      try {
+        const primaryCol = await getOrGetCollection();
+        const res = await queryFn(primaryCol);
         if (res && res.docs && res.docs.length > 0) {
           return res;
         }
+      } catch (e) {
+        console.warn("[getTeacherChapter] Primary collection query note:", e.message);
       }
-    } catch {}
-  }
 
-  return { docs: [], metas: [] };
+      // Fallback to other known collections
+      const chromaUrl = new URL(
+        CHROMA_URL.startsWith("http") ? CHROMA_URL : `http://${CHROMA_URL}`
+      );
+      const client = new ChromaClient({
+        host: chromaUrl.hostname,
+        port: chromaUrl.port ? Number(chromaUrl.port) : chromaUrl.protocol === "https:" ? 443 : 80,
+        ssl: chromaUrl.protocol === "https:",
+      });
+
+      for (const colName of KNOWN_COLLECTIONS) {
+        try {
+          const col = await client.getCollection({ name: colName });
+          if (col) {
+            const res = await queryFn(col);
+            if (res && res.docs && res.docs.length > 0) {
+              return res;
+            }
+          }
+        } catch {}
+      }
+
+      return { docs: [], metas: [] };
+    };
+
+    return await Promise.race([runQuery(), timeoutPromise]);
+  } catch (e) {
+    console.warn("[getTeacherChapter] Chroma vector search notice:", e.message);
+    return { docs: [], metas: [] };
+  }
 }
 
 /**

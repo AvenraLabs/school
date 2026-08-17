@@ -12,6 +12,7 @@ import {
   getAvailableGrades,
   invalidateCurriculumCache,
 } from "./curriculum-cache.service.js";
+import { normalizeBoard } from "./shared/boardUtils.js";
 
 // Student Chat API
 export const sendChatMessage = asyncHandler(async (req, res) => {
@@ -121,8 +122,7 @@ export const getCurriculumSubjects = asyncHandler(async (req, res) => {
     }
   }
 
-  const rawBoard = String(board || "").toUpperCase().trim();
-  const targetBoard = (!rawBoard || rawBoard === "1" || rawBoard.includes("CBSE")) ? "CBSE" : rawBoard;
+  const targetBoard = normalizeBoard(board);
   const gradeNum = String(grade).replace(/\D/g, "") || "6";
 
   const subjects = await getAvailableSubjects(targetBoard, gradeNum);
@@ -146,8 +146,7 @@ export const getCurriculumGrades = asyncHandler(async (req, res) => {
     }
   }
 
-  const rawBoard = String(board || "").toUpperCase().trim();
-  const targetBoard = (!rawBoard || rawBoard === "1" || rawBoard.includes("CBSE")) ? "CBSE" : rawBoard;
+  const targetBoard = normalizeBoard(board);
 
   const grades = await getAvailableGrades(targetBoard);
   res.json({ grades, board: targetBoard });

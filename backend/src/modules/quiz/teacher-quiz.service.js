@@ -28,7 +28,10 @@ export async function generateTeacherQuizAI({ user, board, classId, subject, cha
   const grade = gradeMatch ? gradeMatch[0] : "6";
 
   const school = await School.findByPk(user.school_id);
-  const finalBoard = normalizeBoard(board || school?.board || "CBSE");
+  const rawBoard = (board && !/^\d+$/.test(String(board).trim()))
+    ? board
+    : (school?.board && !/^\d+$/.test(String(school.board).trim()) ? school.board : "CBSE");
+  const finalBoard = normalizeBoard(rawBoard);
 
   // Fetch full chapter context directly from ChromaDB
   const { fullChapterText } = await getTeacherChapter({

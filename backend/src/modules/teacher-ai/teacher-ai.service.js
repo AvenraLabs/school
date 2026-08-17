@@ -149,7 +149,10 @@ export async function generateTeacherAiService({
   const safeInstructions = (instructions || "").slice(0, 500);
 
   const school = await School.findByPk(user.school_id);
-  const finalBoard = normalizeBoard(board || school?.board || "CBSE");
+  const rawBoard = (board && !/^\d+$/.test(String(board).trim()))
+    ? board
+    : (school?.board && !/^\d+$/.test(String(school.board).trim()) ? school.board : "CBSE");
+  const finalBoard = normalizeBoard(rawBoard);
 
   const gradeStr = String(grade || "10");
   const gradeMatch = gradeStr.match(/\d+/);
