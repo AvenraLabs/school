@@ -43,6 +43,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       "capacitor://localhost",
       "https://app.avenra.org",
       "https://admin.avenra.org",
+      "https://school.avenra.org",
+      "https://demo.avenra.org"
     ];
 
 const io = new Server(httpServer, {
