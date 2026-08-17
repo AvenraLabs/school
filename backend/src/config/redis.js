@@ -1,5 +1,6 @@
 import Redis from "ioredis";
 
+const REDIS_ENABLED = process.env.REDIS_ENABLED !== "false" && process.env.ENABLE_REDIS !== "false";
 const REDIS_HOST = process.env.REDIS_HOST || "127.0.0.1";
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || "6379", 10);
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD || undefined;
@@ -7,41 +8,45 @@ const REDIS_PASSWORD = process.env.REDIS_PASSWORD || undefined;
 let redisClient = null;
 let isRedisConnected = false;
 
-try {
-  redisClient = new Redis({
-    host: REDIS_HOST,
-    port: REDIS_PORT,
-    password: REDIS_PASSWORD,
-    maxRetriesPerRequest: 1,
-    retryStrategy(times) {
-      if (times > 3) {
-        console.warn("[Redis] Connection retries exhausted. Running in fallback mode without Redis cache.");
-        return null; // Stop retrying automatically
+if (REDIS_ENABLED) {
+  try {
+    redisClient = new Redis({
+      host: REDIS_HOST,
+      port: REDIS_PORT,
+      password: REDIS_PASSWORD,
+      maxRetriesPerRequest: 1,
+      retryStrategy(times) {
+        if (times > 3) {
+          console.warn("[Redis] Connection retries exhausted. Running in fallback mode without Redis cache.");
+          return null; // Stop retrying automatically
+        }
+        return Math.min(times * 200, 1000);
+      },
+      lazyConnect: true,
+    });
+
+    redisClient.on("connect", () => {
+      isRedisConnected = true;
+      console.log(`[Redis] Connected successfully to ${REDIS_HOST}:${REDIS_PORT}`);
+    });
+
+    redisClient.on("error", (err) => {
+      if (isRedisConnected) {
+        console.warn("[Redis] Warning:", err.message);
       }
-      return Math.min(times * 200, 1000);
-    },
-    lazyConnect: true,
-  });
+      isRedisConnected = false;
+    });
 
-  redisClient.on("connect", () => {
-    isRedisConnected = true;
-    console.log(`[Redis] Connected successfully to ${REDIS_HOST}:${REDIS_PORT}`);
-  });
-
-  redisClient.on("error", (err) => {
-    if (isRedisConnected) {
-      console.warn("[Redis] Warning:", err.message);
-    }
-    isRedisConnected = false;
-  });
-
-  // Attempt initial connect
-  redisClient.connect().catch((err) => {
-    console.warn(`[Redis] Failed initial connection to ${REDIS_HOST}:${REDIS_PORT}. Operating in DB fallback mode.`);
-    isRedisConnected = false;
-  });
-} catch (err) {
-  console.warn("[Redis] Client initialization error. Operating without Redis.");
+    // Attempt initial connect
+    redisClient.connect().catch((err) => {
+      console.warn(`[Redis] Failed initial connection to ${REDIS_HOST}:${REDIS_PORT}. Operating in DB fallback mode.`);
+      isRedisConnected = false;
+    });
+  } catch (err) {
+    console.warn("[Redis] Client initialization error. Operating without Redis.");
+  }
+} else {
+  console.log("[Redis] Redis disabled via REDIS_ENABLED=false. Operating in Memory/DB fallback mode.");
 }
 
 // ── In-Memory Cache Fallback (when Redis is disabled or unreachable) ──

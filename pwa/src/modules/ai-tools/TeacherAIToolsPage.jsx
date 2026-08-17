@@ -90,25 +90,9 @@ function RenderQuestionPaperView({ data }) {
           <Typography variant="body2" sx={{ fontWeight: 700, color: "#475569" }}>
             {data.board || data.meta?.board || "Board"} | {data.grade || "Grade 10"} | {data.subject || "Subject"}
           </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            {data.is_grounded ? (
-              <Chip
-                label={`Textbook Grounded (${data.chunks_count || "RAG"} Chunks)`}
-                size="small"
-                sx={{ fontWeight: 800, bgcolor: "#d1fae5", color: "#065f46", height: 22, fontSize: 11 }}
-              />
-            ) : (
-              <Chip
-                label="Curriculum Knowledge"
-                title="Generated from curriculum knowledge — not sourced from the school's textbook"
-                size="small"
-                sx={{ fontWeight: 800, bgcolor: "#fef3c7", color: "#b45309", height: 22, fontSize: 11 }}
-              />
-            )}
-            <Typography variant="body2" sx={{ fontWeight: 700, color: "#475569" }}>
-              Time: {data.duration_mins || 60} Mins | Max Marks: {data.total_marks || 50}
-            </Typography>
-          </Box>
+          <Typography variant="body2" sx={{ fontWeight: 700, color: "#475569" }}>
+            Time: {data.duration_mins || 60} Mins | Max Marks: {data.total_marks || 50}
+          </Typography>
         </Box>
       </Box>
 
