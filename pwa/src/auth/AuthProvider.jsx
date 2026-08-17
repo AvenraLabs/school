@@ -3,9 +3,7 @@ import { jwtDecode } from "jwt-decode";
 import { setupAxiosInterceptors } from "../api/axios.interceptors";
 import api from "../api/axios";
 import { validateToken, logoutApi } from "../api/auth.api";
-import { getSharedSocket } from "../services/socket.service";
-import { io } from "socket.io-client";
-import { SOCKET_BASE_URL } from "../api/config";
+import { getSharedSocket, disconnectSharedSocket } from "../services/socket.service";
 
 import { registerAndSubscribePush, unsubscribePushDevice } from "../utils/pushManager";
 
@@ -326,7 +324,11 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     setError(null);
-    disconnectSharedSocket();
+    try {
+      disconnectSharedSocket();
+    } catch (e) {
+      console.warn("Socket disconnect failed:", e);
+    }
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("accounts");
