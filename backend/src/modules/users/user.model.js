@@ -97,4 +97,44 @@ const User = db.define(
   }
 );
 
+import { deleteCache } from "../../config/redis.js";
+
+User.addHook("beforeBulkUpdate", (options) => {
+  options.individualHooks = true;
+});
+
+User.addHook("beforeBulkDestroy", (options) => {
+  options.individualHooks = true;
+});
+
+User.addHook("afterUpdate", async (instance) => {
+  try {
+    if (instance?.id) {
+      await deleteCache(`auth:identity:${instance.id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
+User.addHook("afterSave", async (instance) => {
+  try {
+    if (instance?.id) {
+      await deleteCache(`auth:identity:${instance.id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
+User.addHook("afterDestroy", async (instance) => {
+  try {
+    if (instance?.id) {
+      await deleteCache(`auth:identity:${instance.id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
 export default User;

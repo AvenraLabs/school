@@ -111,14 +111,19 @@ export async function createVideoGeneration(req, res, next) {
     const cleanLanguage = language || "English";
     const resolvedSubjectName = subjectName ? subjectName.trim() : "General";
 
-    // Idempotency Check: Prevent duplicate jobs for identical topic/subject within 30 seconds
+    // Idempotency Check: Prevent duplicate jobs for identical teacher/school/class/section/topic/content_type within 30 seconds
     const thirtySecsAgo = new Date(Date.now() - 30000);
     const existingJob = await VideoGeneration.findOne({
       where: {
+        school_id: schoolId,
         teacher_id: teacherId,
+        class_id: targetClassId,
+        section_id: sectionId || null,
         topic: topic.trim(),
         subject_name: resolvedSubjectName,
         content_type,
+        language: cleanLanguage,
+        duration: cleanDuration,
         status: { [Op.in]: ["completed", "processing"] },
         createdAt: { [Op.gte]: thirtySecsAgo },
       },

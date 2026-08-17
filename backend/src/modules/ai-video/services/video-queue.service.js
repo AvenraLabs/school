@@ -73,6 +73,7 @@ export async function processVideoGeneration(generationId) {
         classId: record.class_id,
         subjectName: record.subject_name,
         topic: record.topic,
+        userId,
       }),
     ]);
 

@@ -116,4 +116,44 @@ const Teacher = db.define(
   }
 );
 
+import { deleteCache } from "../../config/redis.js";
+
+Teacher.addHook("beforeBulkUpdate", (options) => {
+  options.individualHooks = true;
+});
+
+Teacher.addHook("beforeBulkDestroy", (options) => {
+  options.individualHooks = true;
+});
+
+Teacher.addHook("afterUpdate", async (instance) => {
+  try {
+    if (instance?.user_id) {
+      await deleteCache(`auth:identity:${instance.user_id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
+Teacher.addHook("afterSave", async (instance) => {
+  try {
+    if (instance?.user_id) {
+      await deleteCache(`auth:identity:${instance.user_id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
+Teacher.addHook("afterDestroy", async (instance) => {
+  try {
+    if (instance?.user_id) {
+      await deleteCache(`auth:identity:${instance.user_id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
 export default Teacher;

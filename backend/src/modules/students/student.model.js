@@ -136,4 +136,44 @@ const Student = db.define(
   }
 );
 
+import { deleteCache } from "../../config/redis.js";
+
+Student.addHook("beforeBulkUpdate", (options) => {
+  options.individualHooks = true;
+});
+
+Student.addHook("beforeBulkDestroy", (options) => {
+  options.individualHooks = true;
+});
+
+Student.addHook("afterUpdate", async (instance) => {
+  try {
+    if (instance?.user_id) {
+      await deleteCache(`auth:identity:${instance.user_id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
+Student.addHook("afterSave", async (instance) => {
+  try {
+    if (instance?.user_id) {
+      await deleteCache(`auth:identity:${instance.user_id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
+Student.addHook("afterDestroy", async (instance) => {
+  try {
+    if (instance?.user_id) {
+      await deleteCache(`auth:identity:${instance.user_id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
 export default Student;

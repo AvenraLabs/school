@@ -82,7 +82,7 @@ export function convertGsToPublicUrl(gsUri) {
 /**
  * Submit Text-to-Video generation task to Google Vertex AI
  */
-export async function submitTextToVideoTask({ prompt, duration = "6", fps = 24, schoolId, classId, subjectName, topic }) {
+export async function submitTextToVideoTask({ prompt, duration = "6", fps = 24, schoolId, classId, subjectName, topic, userId }) {
   const startTime = Date.now();
   try {
     const ai = getGenAIClient();
@@ -94,13 +94,14 @@ export async function submitTextToVideoTask({ prompt, duration = "6", fps = 24, 
       baseGcsUri += "/";
     }
 
-    // Build structured folder URI with env & school isolation to prevent multi-tenant clashes
+    // Build structured folder URI with env, school & user isolation to prevent multi-tenant clashes
     const envFolder = process.env.NODE_ENV === "production" ? "prod" : "dev";
     const schoolFolder = `school_${schoolId || "global"}`;
+    const userFolder = `user_${userId || "global"}`;
     const classFolder = `class_${classId || "all"}`;
     const subjectSlug = slugify(subjectName || "general");
     
-    const outputGcsUri = `${baseGcsUri}${envFolder}/${schoolFolder}/${classFolder}/${subjectSlug}/`;
+    const outputGcsUri = `${baseGcsUri}${envFolder}/${schoolFolder}/${userFolder}/${classFolder}/${subjectSlug}/`;
 
     let durationSec = parseInt(String(duration), 10) || 6;
     if (![4, 6, 8].includes(durationSec)) {

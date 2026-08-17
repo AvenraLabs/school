@@ -44,4 +44,44 @@ const Driver = db.define(
   }
 );
 
+import { deleteCache } from "../../config/redis.js";
+
+Driver.addHook("beforeBulkUpdate", (options) => {
+  options.individualHooks = true;
+});
+
+Driver.addHook("beforeBulkDestroy", (options) => {
+  options.individualHooks = true;
+});
+
+Driver.addHook("afterUpdate", async (instance) => {
+  try {
+    if (instance?.user_id) {
+      await deleteCache(`auth:identity:${instance.user_id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
+Driver.addHook("afterSave", async (instance) => {
+  try {
+    if (instance?.user_id) {
+      await deleteCache(`auth:identity:${instance.user_id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
+Driver.addHook("afterDestroy", async (instance) => {
+  try {
+    if (instance?.user_id) {
+      await deleteCache(`auth:identity:${instance.user_id}`);
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+});
+
 export default Driver;
