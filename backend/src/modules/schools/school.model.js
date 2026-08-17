@@ -16,7 +16,7 @@ const School = db.define(
       allowNull: false,
     },
 
-    school_code: {
+    code: {
       type: DataTypes.STRING(30),
       allowNull: true,
       unique: true,

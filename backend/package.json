@@ -9,6 +9,7 @@
     "dev": "node --watch server.js",
     "rag:ingest": "node src/modules/rag/ingest/ingestAllBooks.js",
     "rag:audit": "node src/modules/rag/scripts/auditChromaChunks.js",
+    "db:migrate": "node src/config/migrateRunner.js",
     "migrate": "sequelize-cli --config config/config.cjs db:migrate",
     "migrate:undo": "sequelize-cli --config config/config.cjs db:migrate:undo",
     "seed": "sequelize-cli --config config/config.cjs db:seed:all",

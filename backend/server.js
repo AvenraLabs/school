@@ -109,8 +109,8 @@ app.use("/api/storage", express.static(path.join(__dirname, "storage")));
 
 
 // HEALTH CHECK
-app.get("/", (req, res) => {
-  res.json({ message: "server is running ;)" });
+app.get(["/", "/health", "/api/health"], (req, res) => {
+  res.status(200).json({ status: "ok", message: "server is running ;)", timestamp: new Date().toISOString() });
 });
 
 
