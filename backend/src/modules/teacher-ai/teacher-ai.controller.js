@@ -8,7 +8,7 @@ import {
   deleteTeacherAiDocumentService,
 } from "./teacher-ai.service.js";
 
-// Generate Content (Question Paper, Lesson Plan, Lesson Summary, Quiz Homework)
+// Generate Content (Question Paper, Lesson Plan, Quiz Homework)
 export const generateTeacherAiContent = asyncHandler(async (req, res) => {
   const result = await generateTeacherAiService({
     user: req.user,

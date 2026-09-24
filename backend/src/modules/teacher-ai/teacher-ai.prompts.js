@@ -1,20 +1,4 @@
 export const PROMPTS = {
-  lesson_summary: ({ topic, classLevel, subject }) => `
-You are a school teacher preparing for a class.
-
-Create a clear lesson summary for:
-Class: ${classLevel}
-Subject: ${subject}
-Topic: ${topic}
-
-The summary should:
-- Be structured
-- Include key concepts
-- Be easy to explain to students
-- Fit a 30–40 minute class
-- DO NOT use or include any emojis in the summary.
-`,
-
   question_paper: ({ subject, classLevel, chapter, marks }) => `
 Create a CBSE-style question paper for:
 

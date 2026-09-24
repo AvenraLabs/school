@@ -26,7 +26,7 @@ const TeacherAiDocument = db.define(
       },
     },
     type: {
-      type: DataTypes.STRING, // 'question_paper' | 'lesson_plan' | 'lesson_summary'
+      type: DataTypes.STRING, // 'question_paper' | 'lesson_plan'
       allowNull: false,
     },
     title: {

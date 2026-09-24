@@ -13,12 +13,11 @@ import { deductTokens, ensureTokenAccount, assertHasTokenBalance } from "../../t
  * Generates teacher AI tools:
  * 1. Question Paper
  * 2. Lesson Plan
- * 3. Lesson Summary
- * 4. Teacher-created Quiz (Saves directly to DB for student homework attempt)
+ * 3. Teacher-created Quiz (Saves directly to DB for student homework attempt)
  */
 export async function generateTeacherAiContent({
   user,
-  tool, // 'question_paper' | 'lesson_plan' | 'lesson_summary' | 'student_quiz'
+  tool, // 'question_paper' | 'lesson_plan' | 'student_quiz'
   board,
   grade,
   subject,
@@ -173,7 +172,7 @@ ${chapterContext ? `Textbook Context:\n${chapterContext}` : ""}
     };
   }
 
-  // Handle Question Paper, Lesson Plan, and Lesson Summary
+  // Handle Question Paper and Lesson Plan
   let systemPrompt = "";
 
   if (tool === "question_paper") {
@@ -199,7 +198,8 @@ System Rules:
 4. Language & Depth strictly aligned to Grade ${finalGrade} ${finalBoard} academic standards.
 ${customInstructions ? `Additional Teacher Directive: ${customInstructions}` : ""}
 `;
-  } else if (tool === "lesson_plan") {
+  } else {
+    // lesson_plan
     systemPrompt = `
 You are an expert Master Educator creating a structured 45-Minute Lesson Plan for Grade ${finalGrade} ${finalSubject} (${finalBoard} Board).
 
@@ -223,28 +223,6 @@ System Rules:
    - **Differentiated Instruction**: Support for struggling students and challenge for advanced learners
    - **Homework & Assessment**: 2 practice questions for home
 3. NO emojis. NO conversational intro text.
-${customInstructions ? `Additional Teacher Directive: ${customInstructions}` : ""}
-`;
-  } else {
-    // lesson_summary
-    systemPrompt = `
-You are an expert Academic Lead generating a concise, high-yield Lesson Summary & Revision Guide for Grade ${finalGrade} ${finalSubject} (${finalBoard} Board).
-
-Topic / Chapter: ${chapter || title || "Lesson Summary"}
-
-${chapterContext ? `Textbook Context:\n${chapterContext}\n` : ""}
-
-System Rules:
-1. Format as clean, structured Markdown.
-2. Include:
-   - **Chapter Overview**: Core theme and learning objectives
-   - **Key Concepts & Bulleted Mind-Map**: Clear bullet points explaining each major concept
-   - **Important Definitions & Key Terms**: Concise glossary of essential terms
-   - **Formulae / Key Principles**: Fundamental rules, equations, or laws
-   - **Common Misconceptions & Exam Pitfalls**: What students frequently get wrong
-   - **5-Minute Rapid Revision Checklist**: Quick check questions for students
-3. NO emojis. NO conversational fluff.
-4. Straight to the point.
 ${customInstructions ? `Additional Teacher Directive: ${customInstructions}` : ""}
 `;
   }
@@ -271,7 +249,7 @@ ${customInstructions ? `Additional Teacher Directive: ${customInstructions}` : "
       prompt_tokens: promptTokens,
       candidate_tokens: candidateTokens,
       model_used: GEMINI_MODEL,
-      ai_type: tool === "question_paper" ? "question_paper" : tool === "student_quiz" ? "quiz" : "lesson_summary",
+      ai_type: tool === "question_paper" ? "question_paper" : tool === "student_quiz" ? "quiz" : "lesson_plan",
       class_level: String(finalGrade || ""),
     });
 

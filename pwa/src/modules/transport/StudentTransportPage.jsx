@@ -85,12 +85,10 @@ export default function StudentTransportPage() {
   const [requestLoading, setRequestLoading] = useState(false);
   const [requestSuccess, setRequestSuccess] = useState(false);
 
-  // Map state
-  const [googleMapsEnabled, setGoogleMapsEnabled] = useState(false);
+  // Map state (OpenStreetMap / Leaflet)
   const [mapsLoaded, setMapsLoaded] = useState(false);
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
-  const markerRef = useRef(null);
 
   // Enhanced Leaflet Map State for World-Class UX
   const routePointsRef = useRef([]);
@@ -150,26 +148,21 @@ export default function StudentTransportPage() {
     };
   }, [studentId, activeTrip]);
 
-  // Clean up maps when switcher toggle changes to prevent conflicts
+  // Clean up Leaflet map on component unmount
   useEffect(() => {
-    if (mapRef.current) {
-      try {
-        if (typeof mapRef.current.remove === "function") {
-          mapRef.current.remove();
+    return () => {
+      if (mapRef.current) {
+        try {
+          if (typeof mapRef.current.remove === "function") {
+            mapRef.current.remove();
+          }
+        } catch (e) {
+          console.error("Cleanup map error:", e);
         }
-      } catch (e) {
-        console.error("Cleanup map error:", e);
+        mapRef.current = null;
       }
-      mapRef.current = null;
-    }
-    if (markerRef.current) {
-      markerRef.current = null;
-    }
-    if (mapContainerRef.current) {
-      mapContainerRef.current.innerHTML = "";
-    }
-    setMapsLoaded(false);
-  }, [googleMapsEnabled]);
+    };
+  }, []);
 
   // Dynamic Leaflet OpenStreetMap Loader
   useEffect(() => {
@@ -225,56 +218,12 @@ export default function StudentTransportPage() {
     document.head.appendChild(script);
   }, []);
 
-  // Update Map marker
+  // Update Map marker with OpenStreetMap (Leaflet)
   useEffect(() => {
     if (!mapsLoaded || !mapContainerRef.current || !gpsLocation || !transportInfo) return;
-    const lat = Number(gpsLocation.latitude);
-    const lng = Number(gpsLocation.longitude);
 
-    if (googleMapsEnabled) {
-      const google = window.google;
-      if (!google || !google.maps) return;
-
-      const busSvg = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36">
-          <circle cx="12" cy="12" r="11" fill="#1976d2" stroke="#ffffff" stroke-width="2"/>
-          <path d="M7 15c0 .37.3.7.7.7h.7c.36 0 .7-.33.7-.7v-.7h5.8v.7c0 .37.3.7.7.7h.7c.37 0 .7-.33.7-.7v-2.3c0-2.33-2.39-3-5.33-3s-5.34.67-5.34 3V15zm1-2.7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm8.7 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zM16 7H8V5.7h8V7z" fill="#ffffff"/>
-        </svg>
-      `;
-      const busIconUrl = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(busSvg);
-
-      if (!mapRef.current) {
-        const map = new google.maps.Map(mapContainerRef.current, {
-          center: { lat, lng },
-          zoom: 15,
-          mapTypeId: "roadmap",
-          disableDefaultUI: true,
-          zoomControl: true,
-        });
-        mapRef.current = map;
-
-        const marker = new google.maps.Marker({
-          position: { lat, lng },
-          map: mapRef.current,
-          icon: {
-            url: busIconUrl,
-            size: new google.maps.Size(36, 36),
-            scaledSize: new google.maps.Size(36, 36),
-            origin: new google.maps.Point(0, 0),
-            anchor: new google.maps.Point(18, 18),
-          },
-          title: transportInfo.vehicle?.vehicle_name || "Bus",
-        });
-        markerRef.current = marker;
-
-        const infoWindow = new google.maps.InfoWindow({
-          content: `<b>${transportInfo.vehicle?.vehicle_name || "Bus"}</b><br/>Driver: ${transportInfo.vehicle?.driver?.user?.name || "Driver"}`,
-        });
-        infoWindow.open(mapRef.current, marker);
-      }
-    } else {
-      const L = window.L;
-      if (!L || !mapContainerRef.current) return;
+    const L = window.L;
+    if (!L || !mapContainerRef.current) return;
 
     const lat = Number(gpsLocation.latitude);
     const lng = Number(gpsLocation.longitude);
@@ -368,8 +317,9 @@ export default function StudentTransportPage() {
 
       mapRef.current = map;
 
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        maxZoom: 20
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
 
       // Listen to user map move/zoom to save viewport state to localStorage
@@ -412,8 +362,7 @@ export default function StudentTransportPage() {
         mapRef.current.panTo(newPt, { animate: true, duration: 0.8 });
       }
     }
-  }
-  }, [mapsLoaded, gpsLocation, transportInfo, googleMapsEnabled]);
+  }, [mapsLoaded, gpsLocation, transportInfo]);
 
   const handleRecenterBus = () => {
     if (mapRef.current && gpsLocation) {
@@ -431,12 +380,10 @@ export default function StudentTransportPage() {
       try {
         const res = await api.get("/student/transport/me");
         if (res.data?.success && res.data.data) {
-          const hasApiKey = Boolean(import.meta.env.VITE_GOOGLE_MAPS_KEY);
           const { active_trip, last_trip, ...tInfo } = res.data.data;
           setTransportInfo(tInfo);
           setActiveTrip(active_trip || null);
           setLastTrip(last_trip || null);
-          setGoogleMapsEnabled(hasApiKey && (res.data.data.google_maps_enabled || false));
         }
       } catch (e) {
         console.error(e);
@@ -456,12 +403,10 @@ export default function StudentTransportPage() {
 
       // Use the richer live response if available, else fallback to /me
       if (liveRes?.data?.success && liveRes.data.data) {
-        const { transport, active_trip, last_trip, google_maps_enabled } = liveRes.data.data;
-        const hasApiKey = Boolean(import.meta.env.VITE_GOOGLE_MAPS_KEY);
+        const { transport, active_trip, last_trip } = liveRes.data.data;
         setTransportInfo(transport);
         setActiveTrip(active_trip || null);
         setLastTrip(last_trip || null);
-        setGoogleMapsEnabled(hasApiKey && (google_maps_enabled || false));
 
         // If there is an active trip, fetch its GPS location in the background
         if (active_trip) {
@@ -474,12 +419,10 @@ export default function StudentTransportPage() {
             .catch(() => {/* ignore — location is optional */});
         }
       } else if (transportRes?.data?.success && transportRes.data.data) {
-        const hasApiKey = Boolean(import.meta.env.VITE_GOOGLE_MAPS_KEY);
         const { active_trip, last_trip, ...tInfo } = transportRes.data.data;
         setTransportInfo(tInfo);
         setActiveTrip(active_trip || null);
         setLastTrip(last_trip || null);
-        setGoogleMapsEnabled(hasApiKey && (transportRes.data.data.google_maps_enabled || false));
       }
     } catch (e) {
       console.error(e);

@@ -709,7 +709,6 @@ export async function getBillingSummaryService({ school_id = null }) {
   let totalPlatformVideoSecs = 0;
   let totalPlatformDiagrams = 0;
   let totalPlatformWhatsappSent = 0;
-  let totalPlatformMapsCalls = 0;
 
   for (const sch of schools) {
     const sid = sch.id;

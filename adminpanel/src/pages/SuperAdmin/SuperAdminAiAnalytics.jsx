@@ -266,11 +266,10 @@ export function SuperAdminAiAnalytics() {
                     onChange={(e) => setIntFilterIntegration(e.target.value)}
                     className="bg-white border border-[#E4E1D8] text-[#14213D] rounded-[6px] px-2.5 py-1.5 font-medium outline-none focus:border-[#2F6F5E]"
                   >
-                    <option value="">All Services (Gemini, Veo, WhatsApp, Maps)</option>
+                    <option value="">All Services (Gemini, Veo, WhatsApp)</option>
                     <option value="gemini">Gemini AI</option>
                     <option value="veo">Veo 3 AI Video</option>
                     <option value="whatsapp">WhatsApp Cloud API</option>
-                    <option value="maps">Google Maps</option>
                   </select>
 
                   <select

@@ -2,24 +2,39 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { authAPI } from '../../api';
-import { GraduationCap, Eye, EyeOff, ArrowRight, AlertCircle, Info, Globe, Mail } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Info, Globe, Mail } from 'lucide-react';
 import { Modal } from '../../components/common/Modal';
 
-/* ─── Inline keyframes (can't be done in Tailwind without config changes) ─── */
+/* ─── Custom Atmospheric Styles & Keyframes ─── */
 const styles = `
-  @keyframes pulse-sparkle {
-    0%   { transform: scale(0.8) rotate(0deg);  opacity: 0.5; }
-    100% { transform: scale(1.2) rotate(15deg); opacity: 1;   }
-  }
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
     25%       { transform: translateX(-4px); }
     75%       { transform: translateX(4px); }
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .sparkle-anim { animation: pulse-sparkle 3s ease-in-out infinite alternate; }
   .shake-anim   { animation: shake 0.4s ease-in-out; }
   .spin-anim    { animation: spin 0.8s linear infinite; }
+
+  .pill-input {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px -1px rgba(27, 56, 43, 0.04), 0 1px 3px -1px rgba(0, 0, 0, 0.02);
+  }
+  .pill-input:focus {
+    box-shadow: 0 0 0 3px rgba(27, 56, 43, 0.15), 0 4px 12px -2px rgba(27, 56, 43, 0.08);
+  }
+  .btn-primary-teak {
+    box-shadow: 0 8px 20px -4px rgba(27, 56, 43, 0.35);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-primary-teak:hover {
+    box-shadow: 0 12px 24px -4px rgba(27, 56, 43, 0.45);
+    transform: translateY(-1px);
+  }
+  .btn-primary-teak:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px -2px rgba(27, 56, 43, 0.3);
+  }
 `;
 
 export function LoginPage() {
@@ -73,166 +88,189 @@ export function LoginPage() {
     <>
       <style>{styles}</style>
 
-      {/* Page shell — purple gradient background */}
-      <div className="relative min-h-screen w-full overflow-hidden flex flex-row items-center bg-gradient-to-br from-[#eee9f7] via-[#e2d7f3] to-[#c9a8e8] font-sans">
+      <div
+        className="min-h-screen w-full relative flex items-center justify-center overflow-x-hidden select-none bg-[#f6f2ea]"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 10% 15%, rgba(27, 56, 43, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 90% 85%, rgba(214, 178, 112, 0.12) 0%, transparent 45%),
+            radial-gradient(circle at 50% 50%, rgba(253, 251, 247, 0.8) 0%, rgba(246, 242, 234, 0.95) 100%)
+          `,
+          fontFamily: '"Plus Jakarta Sans", "Inter", sans-serif',
+        }}
+      >
+        {/* BEGIN: Ambient Geometric Background Decorations */}
+        {/* Wireframe circle ring in bottom-left */}
+        <div className="pointer-events-none absolute -bottom-16 -left-16 w-80 h-80 rounded-full border border-[#d6cdbd]/70 opacity-60" />
+        <div className="pointer-events-none absolute bottom-8 left-8 w-56 h-56 rounded-full border border-[#e4dcce]/60 opacity-40" />
 
-        {/* ── Decorative: blurred top-left blob ── */}
-        <div
-          className="absolute pointer-events-none z-[1]"
-          style={{
-            top: '-130px',
-            left: '-130px',
-            height: '420px',
-            width: '420px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle at 30% 30%, rgba(99,102,241,0.75) 0%, rgba(139,92,246,0.55) 45%, rgba(196,181,253,0.35) 75%)',
-            filter: 'blur(30px)',
-          }}
-        />
+        {/* Wireframe circle ring in top-right */}
+        <div className="pointer-events-none absolute -top-12 -right-12 w-72 h-72 rounded-full border border-[#d6cdbd]/70 opacity-60" />
 
-        {/* ── Decorative: outline circles ── */}
-        <div className="absolute border-2 border-white/60 rounded-full pointer-events-none" style={{ top: '40px', right: '40px', height: '64px', width: '64px' }} />
-        <div className="absolute border-2 border-white/40 rounded-full pointer-events-none" style={{ bottom: '40px', left: '40px', height: '96px', width: '96px' }} />
+        {/* Subtle decorative sparkles mirroring design */}
+        <div className="pointer-events-none absolute top-1/4 left-[15%] text-[#c89d4d]/40 text-xl font-thin select-none">✦</div>
+        <div className="pointer-events-none absolute bottom-1/3 left-1/3 text-[#1b382b]/25 text-xs font-thin select-none">✦</div>
+        <div className="pointer-events-none absolute top-1/3 right-[12%] text-[#c89d4d]/30 text-sm font-thin select-none">✦</div>
+        {/* END: Ambient Geometric Background Decorations */}
 
-        {/* ── LEFT: illustration panel (hidden on ≤1024px) ── */}
-        <div className="relative z-[5] hidden lg:flex flex-[1.2] h-screen items-center justify-center p-10">
-          {/* Decorative swirl SVG */}
-          <svg className="absolute inset-0 w-full h-full opacity-70 pointer-events-none" viewBox="0 0 1440 1024" fill="none">
-            <path
-              d="M980 300 C 1120 260, 1250 380, 1180 500 C 1100 640, 900 560, 850 700 C 800 840, 1000 900, 1150 850"
-              stroke="white" strokeWidth="2" strokeLinecap="round"
-            />
-            <path d="M960 300 l 25 -15 l -5 28" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" />
-          </svg>
+        {/* BEGIN: Main Login Container */}
+        <main className="w-full max-w-7xl mx-auto px-6 py-6 sm:py-8 lg:py-12 z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-8 items-center min-h-0 lg:min-h-[640px]">
+            {/* BEGIN: Left Column Featured Academic Visual (Desktop only for streamlined mobile UX) */}
+            <section aria-label="Academic Illustration Showcase" className="hidden lg:flex lg:col-span-6 xl:col-span-7 items-center justify-center relative">
+              {/* Background subtle orbit lines */}
+              <div className="pointer-events-none absolute w-[480px] h-[480px] rounded-full border border-[#dcd3c1]/40 -z-10 scale-90 sm:scale-105" />
+              <div className="pointer-events-none absolute w-[360px] h-[360px] rounded-full border border-[#1b382b]/10 -z-10 -rotate-12" />
 
-          {/* Sparkles */}
-          <Sparkle className="sparkle-anim absolute" style={{ top: '25%', left: '15%' }} size={22} />
-          <Sparkle className="sparkle-anim absolute" style={{ top: '55%', left: '80%', animationDelay: '1s' }} size={14} />
-          <Sparkle className="sparkle-anim absolute" style={{ top: '70%', left: '20%', animationDelay: '1.5s' }} size={10} />
-
-          <img src="/images.svg" alt="" className="relative z-[6] max-w-[95%] max-h-[85vh] object-contain" />
-        </div>
-
-        {/* ── RIGHT: form panel ── */}
-        <div className="relative z-10 w-full max-w-[440px] flex flex-col items-center px-6 py-12 lg:px-12 lg:mr-[8%] mx-auto">
-
-          {/* Brand */}
-          <div className="flex flex-col items-center text-center mb-2">
-            <div
-              className="h-16 w-16 rounded-full flex items-center justify-center mb-3 transition-transform hover:scale-105"
-              style={{
-                background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)',
-                boxShadow: '0 10px 25px -5px rgba(126,34,206,0.45)',
-              }}
-            >
-              <GraduationCap size={32} color="#fff" strokeWidth={2.2} />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 m-0">SchoolIQ</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Admin Management Console</p>
-          </div>
-
-          <h2 className="text-[32px] font-extrabold text-gray-900 mt-7 mb-6 text-center">Welcome back</h2>
-
-          {/* Error Alert */}
-          {error && (
-            <div className="shake-anim flex items-start gap-2.5 px-[18px] py-3 rounded-2xl bg-[#fff5f5] border border-[#fed7d7] text-[#c53030] text-[13.5px] mb-4 w-full box-border">
-              <AlertCircle size={18} className="shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-[18px] w-full">
-            <input
-              type="text"
-              placeholder="Enter Username or Mobile Number"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full border-none rounded-full bg-white px-6 py-3.5 text-sm text-gray-700 outline-none box-border transition-all placeholder-gray-400"
-              style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
-              onFocus={e => e.target.style.boxShadow = '0 0 0 3px rgba(168,85,247,0.35)'}
-              onBlur={e => e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)'}
-              required
-              disabled={loading}
-              autoFocus
-            />
-
-            {/* Password field */}
-            <div className="relative w-full">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full border-none rounded-full bg-white px-6 pr-12 py-3.5 text-sm text-gray-700 outline-none box-border transition-all placeholder-gray-400"
-                style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
-                onFocus={e => e.target.style.boxShadow = '0 0 0 3px rgba(168,85,247,0.35)'}
-                onBlur={e => e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)'}
-                required
-                disabled={loading}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((s) => !s)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-transparent border-none text-[#a855f7] hover:text-[#7e22ce] cursor-pointer flex items-center"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                disabled={loading}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-
-            {/* Submit button */}
-            <button
-              type="submit"
-              className="w-full border-none rounded-full py-3.5 text-white font-semibold text-[15px] flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed"
-              style={{
-                background: 'linear-gradient(90deg, #a855f7 0%, #7e22ce 100%)',
-                boxShadow: '0 10px 25px -5px rgba(126,34,206,0.4)',
-              }}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  {/* Spinner */}
-                  <span
-                    className="spin-anim inline-block rounded-full"
-                    style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff' }}
+              {/* High Quality Academic Composition */}
+              <div className="relative group p-3 sm:p-5 max-w-lg lg:max-w-xl w-full">
+                <div className="relative rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(27,56,43,0.14)] border border-[#e5ded0]/80 bg-[#f9f6f0]/50 backdrop-blur-sm">
+                  <img
+                    src="/screen.png"
+                    alt="SchoolIQ Academic Still Life Composition"
+                    className="w-full h-auto object-cover transform transition-transform duration-700 hover:scale-[1.02]"
+                    width="1200"
+                    height="896"
                   />
-                  <span>Verifying…</span>
-                </>
-              ) : (
-                <>
-                  <span>Sign in</span>
-                  <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-          </form>
+                  {/* Soft inner vignette shadow for seamless aesthetic integration */}
+                  <div className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-inset ring-black/5 shadow-inner" />
+                </div>
+                {/* Soft glow beneath illustration */}
+                <div className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 w-4/5 h-12 bg-[#1b382b]/10 blur-2xl rounded-full" />
+              </div>
+            </section>
+            {/* END: Left Column Featured Academic Visual */}
 
-          {/* Footer */}
-          <div className="flex items-center justify-center gap-1.5 mt-10 text-xs text-[#52607D]">
-            <span>Powered by</span>
-            <button
-              type="button"
-              onClick={() => setShowAboutModal(true)}
-              className="font-bold text-[#2F6F5E] hover:underline cursor-pointer flex items-center gap-1 bg-transparent border-none p-0"
-            >
-              Avenra <Info size={13} className="text-[#2F6F5E]" />
-            </button>
+            {/* BEGIN: Right Column Authentication Form */}
+            <section aria-label="Login Form" className="lg:col-span-6 xl:col-span-5 flex flex-col items-center justify-center">
+              <div className="w-full max-w-[420px] mx-auto flex flex-col items-center">
+                {/* Brand Identity Header */}
+                <h1 className="text-3xl font-extrabold text-[#11241c] tracking-tight text-center">
+                  School<span className="text-[#c89d4d]">IQ</span>
+                </h1>
+                <div className="inline-flex items-center gap-2 px-3 py-1 mt-2 mb-5 sm:mb-7 rounded-full bg-[#1b382b]/5 border border-[#1b382b]/10 text-[11px] font-semibold text-[#1e4031] tracking-[0.14em] uppercase shadow-xs select-none">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#2e7d58]" />
+                  <span>Admin Management Console</span>
+                </div>
+
+                {/* Main Welcome Title */}
+                <h2 className="text-[26px] sm:text-[32px] font-extrabold text-[#11241c] tracking-tight text-center mb-6 sm:mb-8">
+                  Welcome back
+                </h2>
+
+                {/* Error Alert */}
+                {error && (
+                  <div className="shake-anim flex items-start gap-2.5 px-4 py-3 rounded-2xl bg-[#fff5f5] border border-[#fed7d7] text-[#c53030] text-[13.5px] mb-4 w-full box-border">
+                    <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                {/* Credentials Entry Form */}
+                <form onSubmit={handleSubmit} className="w-full space-y-4" data-purpose="credentials-form">
+                  {/* First Input: Username / Mobile */}
+                  <div className="relative">
+                    <input
+                      id="username-field"
+                      name="username"
+                      type="text"
+                      placeholder="Enter Username or Mobile Number"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                      disabled={loading}
+                      autoFocus
+                      className="pill-input w-full h-[54px] px-6 rounded-full bg-white border border-[#ded8cb] text-[#1c2c24] placeholder-[#8f9b93] text-[15px] focus:outline-none focus:border-[#1b382b] focus:ring-2 focus:ring-[#1b382b]/20 transition duration-150"
+                    />
+                  </div>
+
+                  {/* Second Input: Password with visibility toggle */}
+                  <div className="relative">
+                    <input
+                      id="password-field"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={loading}
+                      className="pill-input w-full h-[54px] pl-6 pr-14 rounded-full bg-white border border-[#ded8cb] text-[#1c2c24] placeholder-[#8f9b93] text-[15px] focus:outline-none focus:border-[#1b382b] focus:ring-2 focus:ring-[#1b382b]/20 transition duration-150"
+                    />
+                    {/* Eye Toggle Icon Button */}
+                    <button
+                      type="button"
+                      id="toggle-password-visibility"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowPassword((s) => !s)}
+                      disabled={loading}
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-[#798a80] hover:text-[#1b382b] p-1 rounded-full focus:outline-none transition-colors cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
+
+                  {/* Primary Action Button */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="btn-primary-teak w-full h-[54px] rounded-full bg-[#1b382b] hover:bg-[#142c22] text-white font-medium text-[16px] flex items-center justify-center space-x-2 transition-all duration-200 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                    >
+                      {loading ? (
+                        <>
+                          <span
+                            className="spin-anim inline-block rounded-full"
+                            style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff' }}
+                          />
+                          <span>Verifying…</span>
+                        </>
+                      ) : (
+                        <span>Sign in →</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Footer Attribution Link */}
+                <footer className="mt-6 sm:mt-10 flex items-center justify-center" data-purpose="login-footer">
+                  <div className="flex items-center space-x-1 text-[13px] text-[#6d7e74]">
+                    <span>Powered by</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAboutModal(true)}
+                      className="font-bold text-[#1a3529] hover:underline inline-flex items-center space-x-1 cursor-pointer bg-transparent border-none p-0"
+                    >
+                      <span>Avenra</span>
+                    </button>
+                    {/* Info Circle Icon */}
+                    <button
+                      type="button"
+                      onClick={() => setShowAboutModal(true)}
+                      title="System Information"
+                      className="text-[#87968e] hover:text-[#1b382b] inline-flex items-center justify-center w-4 h-4 rounded-full ml-0.5 focus:outline-none cursor-pointer"
+                    >
+                      <Info size={14} />
+                    </button>
+                  </div>
+                </footer>
+              </div>
+            </section>
+            {/* END: Right Column Authentication Form */}
           </div>
-        </div>
+        </main>
+        {/* END: Main Login Container */}
 
         {/* About Avenra Modal */}
         {showAboutModal && (
           <Modal isOpen={true} onClose={() => setShowAboutModal(false)} title="About Avenra Platform">
             <div className="space-y-4 text-xs">
-              <div className="flex items-center gap-3 p-3 bg-[#EAF3F0] rounded-[8px] border border-[#D3E6E0]">
-                <div className="w-10 h-10 rounded-[8px] bg-[#2F6F5E] text-white flex items-center justify-center font-bold text-lg">
+              <div className="flex items-center gap-3 p-3 bg-[#e3ebe6] rounded-[8px] border border-[#d6cdbd]">
+                <div className="w-10 h-10 rounded-[8px] bg-[#1b382b] text-white flex items-center justify-center font-bold text-lg">
                   A
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-[#14213D]">Avenra Enterprise Systems</h4>
+                  <h4 className="font-bold text-sm text-[#11241c]">Avenra Enterprise Systems</h4>
                   <p className="text-[#52607D]">School Management System &amp; Administration Console</p>
                 </div>
               </div>
@@ -240,11 +278,11 @@ export function LoginPage() {
               <div className="space-y-2.5 divide-y divide-[#EDEAE1] pt-1">
                 <div className="flex items-center justify-between py-1.5">
                   <span className="font-semibold text-[#52607D]">Engineering &amp; Publisher</span>
-                  <span className="font-bold text-[#14213D]">Avenra</span>
+                  <span className="font-bold text-[#11241c]">Avenra</span>
                 </div>
                 <div className="flex items-center justify-between py-1.5">
                   <span className="font-semibold text-[#52607D]">Build Version</span>
-                  <span className="font-mono text-[#2F6F5E] font-semibold">v1.0.0 (Production)</span>
+                  <span className="font-mono text-[#1b382b] font-semibold">v1.0.0 (Production)</span>
                 </div>
                 <div className="flex items-center justify-between py-1.5">
                   <span className="font-semibold text-[#52607D]">Official Portal</span>
@@ -252,7 +290,7 @@ export function LoginPage() {
                     href="https://avenra.org"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-[#2F6F5E] hover:underline flex items-center gap-1"
+                    className="font-medium text-[#1b382b] hover:underline flex items-center gap-1"
                   >
                     <Globe size={13} /> avenra.org
                   </a>
@@ -261,7 +299,7 @@ export function LoginPage() {
                   <span className="font-semibold text-[#52607D]">Technical Support Desk</span>
                   <a
                     href="mailto:founders@avenra.org"
-                    className="font-medium text-[#2F6F5E] hover:underline flex items-center gap-1 font-mono"
+                    className="font-medium text-[#1b382b] hover:underline flex items-center gap-1 font-mono"
                   >
                     <Mail size={13} /> founders@avenra.org
                   </a>
@@ -276,13 +314,5 @@ export function LoginPage() {
         )}
       </div>
     </>
-  );
-}
-
-function Sparkle({ size = 20, className = '', style = {} }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className} style={style} fill="white">
-      <path d="M12 0 L14 10 L24 12 L14 14 L12 24 L10 14 L0 12 L10 10 Z" />
-    </svg>
   );
 }

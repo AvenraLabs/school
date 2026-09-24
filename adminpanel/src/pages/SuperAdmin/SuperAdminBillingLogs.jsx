@@ -24,7 +24,6 @@ const DEFAULT_RATES = {
   aiTokenRate: 0.05,          // ₹0.05 per 1,000 tokens
   aiVideoRate: 2.00,          // ₹2.00 per video minute
   aiDiagramRate: 1.00,        // ₹1.00 per diagram image
-  mapsRate: 400.00,           // ₹400.00 per 1,000 requests
 };
 
 export function SuperAdminBillingLogs() {
@@ -35,7 +34,7 @@ export function SuperAdminBillingLogs() {
   const [billingSummary, setBillingSummary] = useState(null);
   const [apiLogs, setApiLogs] = useState([]);
 
-  // Telemetry breakdown tabs: 'ai' | 'video' | 'diagram' | 'whatsapp' | 'maps'
+  // Telemetry breakdown tabs: 'ai' | 'video' | 'diagram' | 'whatsapp'
   const [serviceTab, setServiceTab] = useState('ai');
   const [aiSchoolData, setAiSchoolData] = useState(null);
 
@@ -115,24 +114,19 @@ export function SuperAdminBillingLogs() {
   const diagramCount = topSummary?.diagram?.count 
     || itemsList.reduce((acc, sch) => acc + (sch.diagram?.count || 0), 0);
 
-  const mapsRequests = topSummary?.google_maps?.api_calls_count 
-    || itemsList.reduce((acc, sch) => acc + (sch.google_maps?.api_calls_count || 0), 0);
-
   // Calculated Costs in INR (₹)
   const whatsappCost = whatsappSent * (rates.whatsappRate || 0.75);
   const aiCost = (tokensUsed / 1000) * (rates.aiTokenRate || 0.05);
   const videoCost = (videoSeconds / 60) * (rates.aiVideoRate || 2.00);
   const diagramCost = diagramCount * (rates.aiDiagramRate || 1.00);
-  const mapsCost = (mapsRequests / 1000) * (rates.mapsRate || 400.00);
 
-  const totalEstBill = whatsappCost + aiCost + videoCost + diagramCost + mapsCost;
+  const totalEstBill = whatsappCost + aiCost + videoCost + diagramCost;
 
   // Service Log Filtering
   const videoLogs = apiLogs.filter((l) => l.category?.includes('Video') || l.id?.startsWith('vid_'));
   const diagramLogs = apiLogs.filter((l) => l.category?.includes('Diagram') || l.id?.startsWith('dia_'));
   const whatsappLogs = apiLogs.filter((l) => l.category?.includes('WhatsApp') || l.id?.startsWith('wa_'));
   const aiChatLogs = apiLogs.filter((l) => l.category?.includes('AI Chat') || l.id?.startsWith('ai_'));
-  const mapsLogs = apiLogs.filter((l) => l.category?.includes('Maps') || l.id?.startsWith('map_'));
 
   const activeLogs = serviceTab === 'video'
     ? videoLogs
@@ -140,9 +134,7 @@ export function SuperAdminBillingLogs() {
       ? diagramLogs
       : serviceTab === 'whatsapp'
         ? whatsappLogs
-        : serviceTab === 'maps'
-          ? mapsLogs
-          : aiChatLogs;
+        : aiChatLogs;
 
   return (
     <div className="space-y-4">

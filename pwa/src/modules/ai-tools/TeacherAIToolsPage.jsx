@@ -32,7 +32,6 @@ import {
   AutoAwesome,
   Description,
   School,
-  AutoStories,
   AssignmentTurnedIn,
   PictureAsPdf,
   CheckCircle,
@@ -269,89 +268,6 @@ function RenderLessonPlanView({ data }) {
   );
 }
 
-function RenderLessonSummaryView({ data }) {
-  if (!data) return null;
-  return (
-    <Stack spacing={2.5}>
-      {/* Header */}
-      <Box sx={{ borderBottom: "2px solid #f59e0b", pb: 1.5, textAlign: "center" }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, color: "#0f172a" }}>
-          {data.title || "Lesson Summary"}
-        </Typography>
-        <Box sx={{ display: "flex", justifyContent: "center", gap: 1.5, mt: 1, flexWrap: "wrap" }}>
-          <Chip label={data.board || data.meta?.board || "Board"} size="small" sx={{ fontWeight: 700, bgcolor: "#e0e7ff", color: "#3730a3" }} />
-          <Chip label={data.grade || "Grade 10"} size="small" sx={{ fontWeight: 700, bgcolor: "#fef3c7", color: "#b45309" }} />
-          <Chip label={data.subject || "Subject"} size="small" sx={{ fontWeight: 700, bgcolor: "#e0f2fe", color: "#0369a1" }} />
-          <Chip label={`Length: ${data.summary_length || "Medium"}`} size="small" sx={{ fontWeight: 700 }} />
-        </Box>
-      </Box>
-
-      {/* Chapter Overview */}
-      {data.chapter_summary && (
-        <Box sx={{ bgcolor: "#fffbeb", p: 2, borderRadius: "10px", border: "1px solid #fde68a" }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#92400e", mb: 0.5 }}>
-            Overview
-          </Typography>
-          <Typography variant="body2" sx={{ color: "#451a03", lineHeight: 1.6 }}>
-            {data.chapter_summary}
-          </Typography>
-        </Box>
-      )}
-
-      {/* Key Concepts */}
-      {data.key_concepts && data.key_concepts.length > 0 && (
-        <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0f172a", mb: 1 }}>
-            Core Concepts
-          </Typography>
-          <Stack spacing={1}>
-            {data.key_concepts.map((kc, i) => (
-              <Box key={i} sx={{ p: 1.2, bgcolor: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                <Typography variant="body2" sx={{ fontWeight: 700, color: "#0f172a" }}>
-                  {kc.title}
-                </Typography>
-                <Typography variant="caption" sx={{ color: "#475569", display: "block", mt: 0.3 }}>
-                  {kc.description}
-                </Typography>
-              </Box>
-            ))}
-          </Stack>
-        </Box>
-      )}
-
-      {/* Important Definitions */}
-      {data.important_definitions && data.important_definitions.length > 0 && (
-        <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0f172a", mb: 1 }}>
-            Definitions
-          </Typography>
-          <Stack spacing={0.8}>
-            {data.important_definitions.map((def, i) => (
-              <Typography key={i} variant="body2" sx={{ color: "#334155" }}>
-                <strong>{def.term}:</strong> {def.definition}
-              </Typography>
-            ))}
-          </Stack>
-        </Box>
-      )}
-
-      {/* Exam Tips */}
-      {data.exam_tips && data.exam_tips.length > 0 && (
-        <Box sx={{ bgcolor: "#ecfdf5", p: 1.5, borderRadius: "8px", border: "1px solid #a7f3d0" }}>
-          <Typography variant="caption" sx={{ fontWeight: 800, color: "#047857", display: "block", mb: 0.5 }}>
-            Exam Tips:
-          </Typography>
-          <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.8rem", color: "#065f46" }}>
-            {data.exam_tips.map((tip, i) => (
-              <li key={i}>{tip}</li>
-            ))}
-          </ul>
-        </Box>
-      )}
-    </Stack>
-  );
-}
-
 function RenderTeacherQuizView({ data }) {
   if (!data) return null;
   return (
@@ -420,14 +336,6 @@ const AI_TOOLS = [
     color: "#ec4899",
     gradient: "linear-gradient(135deg, #ec4899 0%, #f472b6 100%)",
     badge: "Plan",
-  },
-  {
-    key: "lesson_summary",
-    title: "Lesson Summary",
-    icon: <AutoStories sx={{ fontSize: 32 }} />,
-    color: "#f59e0b",
-    gradient: "linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)",
-    badge: "Summary",
   },
   {
     key: "teacher_quiz",
@@ -502,7 +410,6 @@ function DocumentViewer({ doc, onBack, onDelete }) {
         <CardContent id="document-pdf-content" sx={{ p: 3, bgcolor: "#ffffff" }}>
           {doc.type === "question_paper" && <RenderQuestionPaperView data={doc.data} />}
           {doc.type === "lesson_plan" && <RenderLessonPlanView data={doc.data} />}
-          {doc.type === "lesson_summary" && <RenderLessonSummaryView data={doc.data} />}
           {doc.type === "teacher_quiz" && <RenderTeacherQuizView data={doc.data} />}
         </CardContent>
       </Card>
@@ -517,7 +424,7 @@ function DocumentViewer({ doc, onBack, onDelete }) {
 export default function TeacherAIToolsPage() {
   const theme = useTheme();
 
-  const [selectedToolKey, setSelectedToolKey] = useState(null); // null | 'question_paper' | 'lesson_plan' | 'lesson_summary' | 'teacher_quiz' | 'saved_drafts'
+  const [selectedToolKey, setSelectedToolKey] = useState(null); // null | 'question_paper' | 'lesson_plan' | 'teacher_quiz' | 'saved_drafts'
   const [loading, setLoading] = useState(false);
   const isGeneratingRef = useRef(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -573,10 +480,6 @@ export default function TeacherAIToolsPage() {
   const [teachingDuration, setTeachingDuration] = useState("45 mins");
   const [teachingStyle, setTeachingStyle] = useState("Interactive");
   const [learningObjectives, setLearningObjectives] = useState("");
-
-  // Lesson Summary State
-  const [summaryLength, setSummaryLength] = useState("Medium");
-  const [targetAudience, setTargetAudience] = useState("Student");
 
   // Quiz Homework State
   const [selectedTargetKey, setSelectedTargetKey] = useState("");
@@ -975,8 +878,6 @@ export default function TeacherAIToolsPage() {
         teachingDuration,
         teachingStyle,
         learningObjectives,
-        summaryLength,
-        targetAudience,
         showCorrectAnswers,
         showExplanations,
         availableUntil: availableUntil || null,
@@ -994,7 +895,7 @@ export default function TeacherAIToolsPage() {
         return;
       }
 
-      // For Question Paper, Lesson Plan, Lesson Summary: Auto-save draft & open Document Viewer
+      // For Question Paper, Lesson Plan: Auto-save draft & open Document Viewer
       let docId = null;
       try {
         const saveRes = await saveTeacherAiDocumentApi({
@@ -1837,27 +1738,6 @@ export default function TeacherAIToolsPage() {
                         <MenuItem value="Interactive">Interactive</MenuItem>
                         <MenuItem value="Lecture">Lecture</MenuItem>
                         <MenuItem value="Activity-based">Activity-based</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Box>
-                )}
-
-                {/* ─── Lesson Summary Fields ─── */}
-                {selectedToolKey === "lesson_summary" && (
-                  <Box sx={{ display: "flex", gap: 1.5 }}>
-                    <FormControl size="small" sx={{ flex: 1 }}>
-                      <InputLabel sx={{ fontWeight: 700 }}>Length</InputLabel>
-                      <Select value={summaryLength} label="Length" onChange={(e) => setSummaryLength(e.target.value)} sx={{ borderRadius: "12px" }}>
-                        <MenuItem value="Short">Short</MenuItem>
-                        <MenuItem value="Medium">Medium</MenuItem>
-                        <MenuItem value="Detailed">Detailed</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <FormControl size="small" sx={{ flex: 1 }}>
-                      <InputLabel sx={{ fontWeight: 700 }}>Audience</InputLabel>
-                      <Select value={targetAudience} label="Audience" onChange={(e) => setTargetAudience(e.target.value)} sx={{ borderRadius: "12px" }}>
-                        <MenuItem value="Student">Student Guide</MenuItem>
-                        <MenuItem value="Teacher">Teacher Reference</MenuItem>
                       </Select>
                     </FormControl>
                   </Box>

@@ -125,8 +125,6 @@ export async function generateTeacherAiService({
   teachingDuration = "45 mins",
   teachingStyle = "Interactive",
   learningObjectives = "",
-  summaryLength = "Medium",
-  targetAudience = "Student",
   showCorrectAnswers = true,
   showExplanations = true,
   availableUntil,
@@ -410,7 +408,7 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
 `;
 
     const result = await safeGenerateContent(ai, GEMINI_MODEL, planPrompt);
-    await recordTeacherUsage(planPrompt, result.text, "lesson_summary", null, result);
+    await recordTeacherUsage(planPrompt, result.text, "lesson_plan", null, result);
 
     const parsed = parseGeminiJson(result.text || "");
     parsed.is_grounded = isGrounded;
@@ -425,69 +423,7 @@ ${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
     };
   }
 
-  // 3. AI Lesson Summary Generator
-  if (feature === "lesson_summary") {
-    const summaryPrompt = `
-You are an Academic Lead generating a high-yield Lesson Summary for Grade ${finalGrade} ${finalSubject} (${finalBoard} Board).
-
-Topic / Focus Area: ${topic || chapList.join(", ") || "Chapter Summary"}
-Chapter: ${chapList.join(", ") || topic || "Chapter Summary"}
-Summary Length: ${summaryLength}
-Target Audience: ${targetAudience}
-
-System Rules:
-1. Return ONLY valid JSON matching this exact structure:
-{
-  "title": "${title || `${finalSubject} Summary`}",
-  "grade": "Grade ${finalGrade}",
-  "subject": "${finalSubject}",
-  "chapter": "${topic || chapList.join(", ")}",
-  "summary_length": "${summaryLength}",
-  "target_audience": "${targetAudience}",
-  "chapter_summary": "Comprehensive overview paragraph of the topic/chapter.",
-  "key_concepts": [
-    { "title": "Concept 1", "description": "Bullet point explanation" }
-  ],
-  "important_definitions": [
-    { "term": "Term Name", "definition": "Clear concise definition" }
-  ],
-  "important_formulae": [
-    { "name": "Law/Formula Name", "expression": "Formula / Equation" }
-  ],
-  "important_points": [
-    "Crucial point 1"
-  ],
-  "exam_tips": [
-    "Tip to score full marks on this topic"
-  ],
-  "quick_revision_checklist": [
-    "Can I define X?",
-    "Can I state formula Y?"
-  ]
-}
-2. NO emojis. NO text outside JSON.
-${instructions ? `Teacher Directive: ${instructions}` : ""}
-
-${textbookContext ? `Textbook Context:\n${textbookContext}` : ""}
-`;
-
-    const result = await safeGenerateContent(ai, GEMINI_MODEL, summaryPrompt);
-    await recordTeacherUsage(summaryPrompt, result.text, "summary", null, result);
-
-    const parsed = parseGeminiJson(result.text || "");
-    parsed.is_grounded = isGrounded;
-    parsed.chunks_count = chunksCount;
-
-    return {
-      feature: "lesson_summary",
-      data: parsed,
-      isGrounded,
-      chunksCount,
-      meta: { isLanguageSubject: isLang, usedRagContext: Boolean(textbookContext), chunksCount, isGrounded },
-    };
-  }
-
-  // 4. AI Teacher Quiz (Creates assignment published to target class & section)
+  // 3. AI Teacher Quiz (Creates assignment published to target class & section)
   if (feature === "teacher_quiz") {
     if (!classId) {
       throw new AppError("Target class selection is required to assign quiz homework", 400);
