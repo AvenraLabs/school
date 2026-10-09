@@ -350,6 +350,13 @@ export function generateClassTimetablePDF({
   });
   if (maxPeriods === 0) maxPeriods = 7; // default minimum period columns
 
+  // Check which columns are breaks across days
+  const isColBreak = [];
+  for (let i = 0; i < maxPeriods; i++) {
+    const hasBreak = DAYS.some((d) => timetable[d]?.[i]?.is_break);
+    isColBreak.push(hasBreak);
+  }
+
   const dayColWidth = 26;
   const periodColWidth = (contentWidth - dayColWidth) / maxPeriods;
   const headerHeight = 9;
@@ -364,9 +371,15 @@ export function generateClassTimetablePDF({
   doc.setTextColor(255, 255, 255);
   doc.text('DAY / PERIOD', margin + dayColWidth / 2, y + 5.5, { align: 'center' });
 
+  let academicPeriodNumber = 0;
   for (let i = 0; i < maxPeriods; i++) {
     const colX = margin + dayColWidth + i * periodColWidth;
-    doc.text(`Period ${i + 1}`, colX + periodColWidth / 2, y + 5.5, { align: 'center' });
+    if (isColBreak[i]) {
+      doc.text('BREAK', colX + periodColWidth / 2, y + 5.5, { align: 'center' });
+    } else {
+      academicPeriodNumber++;
+      doc.text(`Period ${academicPeriodNumber}`, colX + periodColWidth / 2, y + 5.5, { align: 'center' });
+    }
   }
   y += headerHeight;
 

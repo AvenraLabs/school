@@ -7,5 +7,5 @@ export const loginSchema = z.object({
 
 export const changePasswordSchema = z.object({
   old_password: z.string().min(1, "Current password required"),
-  new_password: z.string().min(6, "New password must be at least 6 characters"),
+  new_password: z.string().min(4, "New password must be at least 4 characters"),
 });

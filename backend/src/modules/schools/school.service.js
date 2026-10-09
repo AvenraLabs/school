@@ -137,6 +137,15 @@ export const resetSchoolAdminPasswordService = async ({
   admin.first_login = true;
   await admin.save();
 
+  try {
+    const RefreshToken = (await import("../auth/refresh-token.model.js")).default;
+    const { deleteCache } = await import("../../config/redis.js");
+    await RefreshToken.destroy({ where: { user_id: admin.id } });
+    await deleteCache(`auth:identity:${admin.id}`);
+  } catch (err) {
+    // Non-fatal if session cleanup fails
+  }
+
   return { username: admin.username };
 };
 

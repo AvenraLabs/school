@@ -16,8 +16,7 @@ import SiblingSelector from "./SiblingSelector";
 export default function AppHeader() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { items } = useNotifications();
-  const unreadCount = items?.filter?.((n) => !n.is_acknowledged)?.length || 0;
+  const { items, unreadCount } = useNotifications();
 
   const basePath =
     user?.role === "student"

@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import { ReadinessCheckPanel } from '../../components/Timetable/ReadinessCheckPanel';
 import { GeneratedDraftReviewModal } from '../../components/Timetable/GeneratedDraftReviewModal';
 import { EmptyState } from '../../components/common/EmptyState';
-import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck, AlertTriangle, Check, Printer, Copy, Clock, Wand2, ShieldCheck, Sparkles, RefreshCw, Download } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, ChevronLeft, UserCheck, AlertTriangle, Check, Printer, Copy, Clock, Wand2, ShieldCheck, Sparkles, RefreshCw, Download, Coffee, BookOpen } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { generateClassTimetablePDF } from '../../utils/pdfGenerator';
 
@@ -550,25 +550,47 @@ export function Timetables({
             </div>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
-            {entries.map((entry, idx) => (
-              <div key={idx} className="p-3 border border-[#E4E1D8] rounded-[8px] bg-white space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-[#52607D]">Period #{idx + 1}</span>
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1.5 cursor-pointer text-xs">
-                      <input
-                        type="checkbox"
-                        checked={entry.is_break}
-                        onChange={(e) => updateEntry(idx, 'is_break', e.target.checked)}
-                        className="rounded accent-[#2F6F5E]"
-                      />
-                      <span>Is Break / Recess</span>
-                    </label>
-                    <Button variant="ghost" size="icon" onClick={() => removeEntry(idx)} className="text-[#B0403A]">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </div>
+            {(() => {
+              let academicPeriodCount = 0;
+              return entries.map((entry, idx) => {
+                const isBreak = !!entry.is_break;
+                if (!isBreak) academicPeriodCount++;
+                const currentPeriodNum = academicPeriodCount;
+
+                return (
+                  <div
+                    key={idx}
+                    className={`p-3 border rounded-[8px] space-y-2 ${
+                      isBreak ? 'border-amber-200 bg-amber-50/40' : 'border-[#E4E1D8] bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      {isBreak ? (
+                        <span className="font-semibold text-amber-800 flex items-center gap-1.5 text-xs">
+                          <Coffee className="w-4 h-4 text-amber-700" />
+                          Break / Recess Slot
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-[#14213D] flex items-center gap-1.5 text-xs">
+                          <BookOpen className="w-4 h-4 text-[#2F6F5E]" />
+                          Period #{currentPeriodNum}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+                          <input
+                            type="checkbox"
+                            checked={entry.is_break}
+                            onChange={(e) => updateEntry(idx, 'is_break', e.target.checked)}
+                            className="rounded accent-[#2F6F5E]"
+                          />
+                          <span>Is Break / Recess</span>
+                        </label>
+                        <Button variant="ghost" size="icon" onClick={() => removeEntry(idx)} className="text-[#B0403A]">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div>
@@ -630,7 +652,9 @@ export function Timetables({
                   )}
                 </div>
               </div>
-            ))}
+            );
+          });
+        })()}
 
             <Button variant="outline" size="sm" icon={Plus} onClick={addEntry} className="w-full">
               Add Period Slot
@@ -671,31 +695,48 @@ export function Timetables({
                   ) : dayEntries.length === 0 ? (
                     <div className="p-4 text-center text-[#8C97AB] italic">No periods scheduled</div>
                   ) : (
-                    dayEntries.map((period, pIdx) => (
-                      <div
-                        key={pIdx}
-                        className={`p-2 rounded-[6px] border text-xs ${
-                          period.is_break
-                            ? 'bg-[#FDF8EC] border-[#F8D7D5] text-[#B8860B]'
-                            : 'bg-white border-[#E4E1D8]'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center font-mono text-[10px] text-[#52607D]">
-                          <span>
-                            {period.start_time} - {period.end_time}
-                          </span>
-                          {period.is_break && <span className="font-semibold uppercase">Recess</span>}
-                        </div>
-                        {!period.is_break && (
-                          <div className="mt-1">
-                            <div className="font-semibold text-[#14213D]">{period.subject_name || period.subject?.name || 'Subject'}</div>
-                            <div className="text-[10px] text-[#2F6F5E]">
-                              {period.teacher_name || period.teacher?.name || 'Assigned Teacher'}
+                    (() => {
+                      let academicCount = 0;
+                      return dayEntries.map((period, pIdx) => {
+                        const isBreak = !!period.is_break;
+                        if (!isBreak) academicCount++;
+                        const currentNum = academicCount;
+                        return (
+                          <div
+                            key={pIdx}
+                            className={`p-2 rounded-[6px] border text-xs ${
+                              isBreak
+                                ? 'bg-amber-50/60 border-amber-200 text-amber-800'
+                                : 'bg-white border-[#E4E1D8]'
+                            }`}
+                          >
+                            <div className="flex justify-between items-center text-[10px]">
+                              <span className="font-mono text-[#52607D]">
+                                {period.start_time} - {period.end_time}
+                              </span>
+                              {isBreak ? (
+                                <span className="font-semibold text-amber-700 flex items-center gap-1">
+                                  <Coffee className="w-3 h-3" />
+                                  {period.title || 'Recess / Break'}
+                                </span>
+                              ) : (
+                                <span className="font-semibold text-[#2F6F5E] bg-[#EAF3F0] px-1.5 py-0.5 rounded text-[9px]">
+                                  Period {currentNum}
+                                </span>
+                              )}
                             </div>
+                            {!isBreak && (
+                              <div className="mt-1">
+                                <div className="font-semibold text-[#14213D]">{period.subject_name || period.subject?.name || 'Subject'}</div>
+                                <div className="text-[10px] text-[#2F6F5E]">
+                                  {period.teacher_name || period.teacher?.name || 'Assigned Teacher'}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))
+                        );
+                      });
+                    })()
                   )}
                 </CardContent>
               </Card>

@@ -112,13 +112,21 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     }
   }
 
-  let cleanedPhone = phone;
-  if (phone) {
-    cleanedPhone = cleanTo10Digits(phone);
-    const existingPhone = await User.findOne({ where: { phone: cleanedPhone } });
-    if (existingPhone && existingPhone.id !== req.user.id) {
-      throw new AppError("Phone already in use", 400);
-    }
+  let cleanedPhone = phone ? cleanTo10Digits(phone) : null;
+  let cleanedEmergency = emergency_contact ? cleanTo10Digits(emergency_contact) : null;
+
+  // Student accounts share contact numbers with parents/guardians (who may be drivers, teachers, or have multiple children).
+  // Ensure at least one contact number is provided: either phone or emergency contact.
+  if (!cleanedPhone && !cleanedEmergency) {
+    throw new AppError("Please provide either a phone number or an emergency contact number", 400);
+  }
+
+  // Cross-populate so both user account and student profile maintain valid contact info
+  if (!cleanedPhone && cleanedEmergency) {
+    cleanedPhone = cleanedEmergency;
+  }
+  if (!cleanedEmergency && cleanedPhone) {
+    cleanedEmergency = cleanedPhone;
   }
 
   const currentUser = await User.findByPk(req.user.id);
@@ -140,12 +148,10 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     }
   }
 
-  if (Object.keys(directUpdates).length > 0) {
-    await User.update(directUpdates, { where: { id: req.user.id } });
-    await deleteCache(`auth:identity:${req.user.id}`);
-  }
+  const wasFirstLogin = Boolean(currentUser.first_login || currentUser.must_change_password);
+  const isApproved = student.approval_status === "approved";
 
-  if (student.approval_status === "approved") {
+  if (isApproved && !wasFirstLogin) {
     // ── 2. Queue profile-field diffs for admin approval ──
     const pending_data = {};
 
@@ -262,7 +268,7 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     userUpdates.must_change_password = false;
   }
   if (name !== undefined) userUpdates.name = name;
-  if (phone !== undefined) userUpdates.phone = cleanedPhone || null;
+  if (phone !== undefined || cleanedPhone) userUpdates.phone = cleanedPhone || null;
   if (req.body.email !== undefined) userUpdates.email = req.body.email;
   if (avatar_url !== undefined) {
     if (avatar_url !== currentUser.avatar_url) {
@@ -282,13 +288,13 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     father_name,
     mother_name,
     guardian_name,
-    emergency_contact,
+    emergency_contact: cleanedEmergency || emergency_contact || null,
     residential_status,
     address,
     roll_no: roll_no || null,
-    approval_status: "pending",
-    approved_by: null,
-    approved_at: null,
+    approval_status: isApproved ? "approved" : "pending",
+    approved_by: isApproved ? student.approved_by : null,
+    approved_at: isApproved ? student.approved_at : null,
     rejection_reason: null,
   };
 
@@ -336,6 +342,7 @@ export const completeStudentProfile = asyncHandler(async (req, res) => {
     accessToken,
     refreshToken,
     user: tokenPayload,
+    already_approved: isApproved,
   });
 });
 

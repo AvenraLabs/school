@@ -90,7 +90,7 @@ export default function TimetableStudentView({ timetable }) {
 
                 <Box sx={{ textAlign: "right", flex: 1 }}>
                   <Typography variant="subtitle1" fontWeight="bold" color={isBreak ? "text.secondary" : "text.primary"}>
-                    {isBreak ? "Break" : (p.subject?.name || "Subject")}
+                    {isBreak ? (p.title || "Break") : (p.subject?.name || "Subject")}
                   </Typography>
                   {!isBreak && teacherName && (
                     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>

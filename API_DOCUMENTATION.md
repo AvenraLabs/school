@@ -26,6 +26,7 @@ Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
 - `GET /:id` (Admin): Get school details and configuration settings.
 - `PATCH /:id` (Admin): Update school settings, logo, risk thresholds, library rules.
 - `PATCH /:id/modules` (Super Admin): Update `enabled_modules` JSON payload (7 core module toggles).
+- `PATCH /:id/admin-reset-password` (Super Admin): Resets target school's school_admin password and invalidates active sessions. Body: `{ new_password }`.
 
 
 ### Academic Years (`/api/academic-years`)
@@ -67,6 +68,7 @@ CRUD for the school-wide subject catalog.
 ### Students (`/api/students`)
 - `GET /` — List students (filtered by class, section, status, search).
 - `POST /` — Register/create student profile.
+- `POST /complete-profile` — First-login student profile completion & credential update. Accepts personal, security, and contact information; accepts either phone OR emergency contact (phone uniqueness is non-enforced to allow parents who are drivers/staff or have multiple children to share numbers).
 - `GET /me` — Current student profile details.
 - `GET /:id` — Detailed student profile view.
 - `PATCH /:id` — Update student profile details.

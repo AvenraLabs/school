@@ -39,7 +39,9 @@ export function SubjectPeriodsManager({
 
   const toast = useToast();
 
-  useEffect(() => { loadClasses(); }, []);
+  useEffect(() => {
+    loadClasses();
+  }, []);
 
   useEffect(() => {
     if (selectedClass) {
@@ -61,13 +63,16 @@ export function SubjectPeriodsManager({
   const loadClasses = async () => {
     try {
       const res = await classesAPI.list();
-      setClasses(res.items || []);
+      const items = res.items || [];
+      setClasses(items);
+      return items;
     } catch {
       toast.error('Failed to load classes');
+      return [];
     }
   };
 
-  const loadSubjects = async () => {
+  const loadSubjects = async (overrideClasses) => {
     if (!selectedClass) return;
     setLoading(true);
     setAiSuggested(false);
@@ -106,8 +111,34 @@ export function SubjectPeriodsManager({
 
       // Derive budget from the class's assigned bell schedule template
       try {
-        const classObj = classes.find((c) => String(c.id) === String(selectedClass));
-        const templateId = classObj?.bellScheduleTemplate?.id ?? classObj?.bell_schedule_template_id ?? null;
+        let currentClasses = (overrideClasses && overrideClasses.length > 0) ? overrideClasses : classes;
+        if (!currentClasses || currentClasses.length === 0) {
+          currentClasses = await loadClasses();
+        }
+
+        let classObj = (currentClasses || []).find((c) => String(c.id) === String(selectedClass));
+        if (!classObj) {
+          try {
+            const clsRes = await classesAPI.getById(Number(selectedClass));
+            classObj = clsRes.data || clsRes.item || clsRes.class || clsRes;
+          } catch {
+            const res = await classesAPI.list();
+            const freshItems = res.items || [];
+            setClasses(freshItems);
+            classObj = freshItems.find((c) => String(c.id) === String(selectedClass));
+          }
+        }
+
+        let templateId = classObj?.bellScheduleTemplate?.id ?? classObj?.bell_schedule_template_id ?? null;
+        if (!templateId) {
+          try {
+            const allTplRes = await bellSchedulesAPI.list();
+            const allTemplates = allTplRes.items || allTplRes.data || allTplRes || [];
+            const matchedTpl = allTemplates.find((t) => (t.classes || []).some((c) => String(c.id) === String(selectedClass)));
+            if (matchedTpl) templateId = matchedTpl.id;
+          } catch {}
+        }
+
         if (templateId) {
           const tplRes = await bellSchedulesAPI.getById(templateId);
           const tpl = tplRes.data || tplRes.template || tplRes;
@@ -194,7 +225,7 @@ export function SubjectPeriodsManager({
     else setAcademicPeriods((prev) => ({ ...prev, [sub.id]: num }));
   };
 
-  const handleSuggestAIDistribution = () => {
+  const handleSuggestAIDistribution = async () => {
     const acadSubjects = subjectsList.filter((s) => s.subject_type !== 'co_curricular');
     const coSubjects = subjectsList.filter((s) => s.subject_type === 'co_curricular');
 
@@ -203,7 +234,38 @@ export function SubjectPeriodsManager({
       return;
     }
 
-    const budget = periodBudget || 30;
+    let budget = periodBudget;
+    if (budget === null && selectedClass) {
+      try {
+        let classObj = classes.find((c) => String(c.id) === String(selectedClass));
+        if (!classObj) {
+          const clsRes = await classesAPI.getById(Number(selectedClass));
+          classObj = clsRes.item || clsRes.class || clsRes.data || clsRes;
+        }
+        let templateId = classObj?.bellScheduleTemplate?.id ?? classObj?.bell_schedule_template_id ?? null;
+        if (!templateId) {
+          const allTplRes = await bellSchedulesAPI.list();
+          const allTemplates = allTplRes.items || allTplRes.data || allTplRes || [];
+          const matchedTpl = allTemplates.find((t) => (t.classes || []).some((c) => String(c.id) === String(selectedClass)));
+          if (matchedTpl) templateId = matchedTpl.id;
+        }
+        if (templateId) {
+          const tplRes = await bellSchedulesAPI.getById(templateId);
+          const tpl = tplRes.data || tplRes.template || tplRes;
+          const slots = tpl.periods || [];
+          const academicSlots = slots.filter((s) => !s.is_break).length;
+          const wDays = tpl.working_days_per_week || classObj?.bellScheduleTemplate?.working_days_per_week || 6;
+          budget = academicSlots * wDays;
+          setPeriodBudget(budget);
+          setAcademicSlotsPerDay(academicSlots);
+          setWorkingDays(wDays);
+          setBreakCount(slots.filter((s) => s.is_break).length);
+        }
+      } catch {}
+    }
+
+    // Default to 36 (6 teaching periods x 6 working days) if no bell schedule exists
+    budget = budget || (academicSlotsPerDay > 0 ? academicSlotsPerDay * workingDays : 36);
 
     // Reserve 1 period per co-curricular, distribute remainder to academic
     const coReserved = coSubjects.length;

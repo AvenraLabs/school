@@ -41,6 +41,8 @@ export const getAllSchools = asyncHandler(async (req, res) => {
     success: true,
     total: schools.length,
     items: schools,
+    data: schools,
+    schools: schools,
   });
 });
 

@@ -58,8 +58,8 @@ export default function FirstLoginPage() {
     name: user?.name || "",
     dob: "",
     gender: "",
-    phone: "",
-    email: "",
+    phone: user?.phone || "",
+    email: user?.email || "",
     father_name: "",
     mother_name: "",
     guardian_name: "",
@@ -141,6 +141,14 @@ export default function FirstLoginPage() {
       }
     }
 
+    // Validate personal step
+    if (activeStep === 1) {
+      if (!formData.name?.trim()) {
+        setError("Full Name is required.");
+        return;
+      }
+    }
+
     if (activeStep === steps.length - 1) {
       await handleSubmit();
     } else {
@@ -153,8 +161,19 @@ export default function FirstLoginPage() {
   }
 
   async function handleSubmit() {
-    setLoading(true);
     setError(null);
+
+    // Validate that student has provided at least one contact number (phone OR emergency_contact)
+    if (isStudent) {
+      const hasPhone = Boolean(formData.phone?.trim());
+      const hasEmergency = Boolean(formData.emergency_contact?.trim());
+      if (!hasPhone && !hasEmergency) {
+        setError("Please provide either a phone number or an emergency contact number.");
+        return;
+      }
+    }
+
+    setLoading(true);
 
     try {
       const submitData = {
@@ -164,6 +183,16 @@ export default function FirstLoginPage() {
       };
 
       if (avatarUrl) submitData.avatar_url = avatarUrl;
+
+      // Cross-populate so both phone and emergency_contact are filled if only one was provided
+      if (isStudent) {
+        if (!submitData.phone?.trim() && submitData.emergency_contact?.trim()) {
+          submitData.phone = submitData.emergency_contact.trim();
+        }
+        if (!submitData.emergency_contact?.trim() && submitData.phone?.trim()) {
+          submitData.emergency_contact = submitData.phone.trim();
+        }
+      }
 
       // Strip empty/undefined fields so the backend doesn't overwrite with nulls
       Object.keys(submitData).forEach((key) => {
@@ -407,7 +436,14 @@ export default function FirstLoginPage() {
                   <MenuItem value="other">Other</MenuItem>
                 </TextField>
 
-                <TextField size="small" label="Phone Number" value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} fullWidth />
+                <TextField
+                  size="small"
+                  label="Phone Number"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange("phone", e.target.value)}
+                  fullWidth
+                  helperText={isStudent ? (formData.emergency_contact?.trim() ? "Optional (emergency contact provided)" : "Either phone or emergency contact is required") : ""}
+                />
                 <TextField size="small" label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} fullWidth />
               </Stack>
             )}
@@ -424,7 +460,14 @@ export default function FirstLoginPage() {
             {/* ── Step 3 (Student): Contact ── */}
             {isStudent && activeStep === 3 && (
               <Stack spacing={1.5}>
-                <TextField size="small" label="Emergency Contact Number" value={formData.emergency_contact} onChange={(e) => handleInputChange("emergency_contact", e.target.value)} fullWidth required />
+                <TextField
+                  size="small"
+                  label="Emergency Contact Number"
+                  value={formData.emergency_contact}
+                  onChange={(e) => handleInputChange("emergency_contact", e.target.value)}
+                  fullWidth
+                  helperText={formData.phone?.trim() ? "Optional (phone number provided)" : "Required if phone number was not provided"}
+                />
                 <TextField
                   select
                   size="small"

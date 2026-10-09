@@ -299,36 +299,50 @@ export function BellSchedulesManager() {
                 </CardHeader>
                 <CardContent className="pt-3 space-y-2">
                   <div className="space-y-1.5">
-                    {periodList.map((p, idx) => (
-                      <div
-                        key={p.id || idx}
-                        className={`flex items-center justify-between px-3 py-1.5 rounded-md border text-xs ${
-                          p.is_break
-                            ? 'bg-[#FAFAF8] border-amber-200 text-amber-900 font-medium'
-                            : 'bg-white border-[#E4E1D8] text-[#14213D]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded bg-gray-100 flex items-center justify-center font-bold text-[10px] text-gray-600">
-                            {p.order_index ?? idx + 1}
-                          </span>
-                          {p.is_break ? (
-                            <span className="flex items-center gap-1.5 text-amber-700">
-                              <Coffee className="w-3.5 h-3.5" />
-                              {p.title || 'Break'}
+                    {(() => {
+                      let academicPeriodCount = 0;
+                      return periodList.map((p, idx) => {
+                        const isBreak = !!p.is_break;
+                        if (!isBreak) academicPeriodCount++;
+                        const currentPeriodNum = academicPeriodCount;
+
+                        return (
+                          <div
+                            key={p.id || idx}
+                            className={`flex items-center justify-between px-3 py-1.5 rounded-md border text-xs ${
+                              isBreak
+                                ? 'bg-[#FAFAF8] border-amber-200 text-amber-900 font-medium'
+                                : 'bg-white border-[#E4E1D8] text-[#14213D]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {isBreak ? (
+                                <span className="w-5 h-5 rounded bg-amber-100 flex items-center justify-center text-amber-700" title="Break slot">
+                                  <Coffee className="w-3 h-3" />
+                                </span>
+                              ) : (
+                                <span className="w-5 h-5 rounded bg-[#EAF3F0] text-[#2F6F5E] flex items-center justify-center font-bold text-[10px] border border-[#D3E6E0]">
+                                  {currentPeriodNum}
+                                </span>
+                              )}
+                              {isBreak ? (
+                                <span className="flex items-center gap-1.5 text-amber-800 font-semibold">
+                                  {p.title || 'Break'}
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1.5 font-medium">
+                                  <BookOpen className="w-3.5 h-3.5 text-[#2F6F5E]" />
+                                  Period {currentPeriodNum}
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-mono text-gray-500 text-[11px]">
+                              {p.start_time} - {p.end_time}
                             </span>
-                          ) : (
-                            <span className="flex items-center gap-1.5">
-                              <BookOpen className="w-3.5 h-3.5 text-[#2F6F5E]" />
-                              Period {p.order_index ?? idx + 1}
-                            </span>
-                          )}
-                        </div>
-                        <span className="font-mono text-gray-500 text-[11px]">
-                          {p.start_time} - {p.end_time}
-                        </span>
-                      </div>
-                    ))}
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </CardContent>
               </Card>
@@ -423,7 +437,12 @@ export function BellSchedulesManager() {
 
           <div className="space-y-2 border-t border-[#E4E1D8] pt-3">
             <div className="flex items-center justify-between">
-              <label className="font-bold text-[#14213D] text-xs">Period Slots & Break Timings</label>
+              <div>
+                <label className="font-bold text-[#14213D] text-xs">Period Slots & Break Timings</label>
+                <span className="text-gray-500 font-normal text-[11px] ml-2">
+                  ({formPeriods.filter((p) => !p.is_break).length} periods, {formPeriods.filter((p) => p.is_break).length} breaks)
+                </span>
+              </div>
               <Button
                 type="button"
                 variant="outline"
@@ -436,57 +455,74 @@ export function BellSchedulesManager() {
             </div>
 
             <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              {formPeriods.map((p, idx) => (
-                <div
-                  key={idx}
-                  className={`p-2.5 rounded-md border flex flex-wrap items-center justify-between gap-2 ${
-                    p.is_break
-                      ? 'bg-amber-50/60 border-amber-200'
-                      : 'bg-white border-[#E4E1D8]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 w-full md:w-auto">
-                    <div className="flex flex-col gap-0.5">
-                      <button
-                        type="button"
-                        onClick={() => handleMovePeriod(idx, -1)}
-                        disabled={idx === 0}
-                        className="text-gray-400 hover:text-gray-700 disabled:opacity-30"
-                      >
-                        <ArrowUp className="w-3 h-3" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleMovePeriod(idx, 1)}
-                        disabled={idx === formPeriods.length - 1}
-                        className="text-gray-400 hover:text-gray-700 disabled:opacity-30"
-                      >
-                        <ArrowDown className="w-3 h-3" />
-                      </button>
-                    </div>
+              {(() => {
+                let academicPeriodCount = 0;
+                return formPeriods.map((p, idx) => {
+                  const isBreak = !!p.is_break;
+                  if (!isBreak) academicPeriodCount++;
+                  const currentPeriodNum = academicPeriodCount;
 
-                    <span className="w-6 h-6 rounded-full bg-[#14213D] text-white flex items-center justify-center font-bold text-[10px]">
-                      {idx + 1}
-                    </span>
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-2.5 rounded-md border flex flex-wrap items-center justify-between gap-2 ${
+                        isBreak
+                          ? 'bg-amber-50/60 border-amber-200'
+                          : 'bg-white border-[#E4E1D8]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 w-full md:w-auto">
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleMovePeriod(idx, -1)}
+                            disabled={idx === 0}
+                            className="text-gray-400 hover:text-gray-700 disabled:opacity-30"
+                          >
+                            <ArrowUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMovePeriod(idx, 1)}
+                            disabled={idx === formPeriods.length - 1}
+                            className="text-gray-400 hover:text-gray-700 disabled:opacity-30"
+                          >
+                            <ArrowDown className="w-3 h-3" />
+                          </button>
+                        </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <Input
-                        type="time"
-                        value={p.start_time}
-                        onChange={(e) => handlePeriodChange(idx, 'start_time', e.target.value)}
-                        className="w-24 text-xs py-1"
-                        required
-                      />
-                      <span className="text-gray-400">-</span>
-                      <Input
-                        type="time"
-                        value={p.end_time}
-                        onChange={(e) => handlePeriodChange(idx, 'end_time', e.target.value)}
-                        className="w-24 text-xs py-1"
-                        required
-                      />
-                    </div>
-                  </div>
+                        {isBreak ? (
+                          <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center text-[10px]" title="Break slot">
+                            <Coffee className="w-3 h-3 text-amber-700" />
+                          </span>
+                        ) : (
+                          <span className="w-6 h-6 rounded-full bg-[#14213D] text-white flex items-center justify-center font-bold text-[10px]">
+                            {currentPeriodNum}
+                          </span>
+                        )}
+
+                        <span className={`text-xs font-semibold min-w-16 ${isBreak ? 'text-amber-800' : 'text-[#14213D]'}`}>
+                          {isBreak ? 'Break' : `Period ${currentPeriodNum}`}
+                        </span>
+
+                        <div className="flex items-center gap-1.5">
+                          <Input
+                            type="time"
+                            value={p.start_time}
+                            onChange={(e) => handlePeriodChange(idx, 'start_time', e.target.value)}
+                            className="w-24 text-xs py-1"
+                            required
+                          />
+                          <span className="text-gray-400">-</span>
+                          <Input
+                            type="time"
+                            value={p.end_time}
+                            onChange={(e) => handlePeriodChange(idx, 'end_time', e.target.value)}
+                            className="w-24 text-xs py-1"
+                            required
+                          />
+                        </div>
+                      </div>
 
                   <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                     <label className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
@@ -520,7 +556,9 @@ export function BellSchedulesManager() {
                     </Button>
                   </div>
                 </div>
-              ))}
+              );
+            });
+          })()}
             </div>
           </div>
 

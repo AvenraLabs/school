@@ -28,10 +28,12 @@ export function BulkSeeder() {
       schoolAPI
         .list()
         .then((data) => {
-          const list = Array.isArray(data) ? data : data.schools || data.data || [];
+          const list = Array.isArray(data)
+            ? data
+            : (data?.items || data?.schools || data?.data || []);
           setSchools(list);
           if (list.length > 0) {
-            setSelectedSchoolId(String(list[0].id));
+            setSelectedSchoolId((prev) => prev || String(list[0].id));
           }
         })
         .catch(() => {

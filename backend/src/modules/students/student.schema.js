@@ -33,7 +33,7 @@ export const completeStudentProfileSchema = z.object({
   father_name: z.string().optional(),
   mother_name: z.string().optional(),
   guardian_name: z.string().optional(),
-  emergency_contact: z.string().optional(),
+  emergency_contact: z.preprocess(emptyToUndefined, z.string().optional()),
   residential_status: z.preprocess(emptyToUndefined, z.enum(["dayscholar", "hosteler"]).optional()),
   address: z.string().optional(),
   avatar_url: z.string().optional().or(z.literal("")).or(z.null()),

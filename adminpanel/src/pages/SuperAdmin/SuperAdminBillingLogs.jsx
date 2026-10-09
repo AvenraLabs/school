@@ -53,7 +53,9 @@ export function SuperAdminBillingLogs() {
   useEffect(() => {
     schoolAPI.list()
       .then((data) => {
-        const list = Array.isArray(data) ? data : data.schools || data.data || [];
+        const list = Array.isArray(data)
+          ? data
+          : (data?.items || data?.schools || data?.data || []);
         setSchools(list);
       })
       .catch((err) => console.error('Failed to load schools for billing filter:', err));

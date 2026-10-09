@@ -134,8 +134,8 @@ export function SuperAdminSchoolsTab({ schools = [], loading, onRefresh }) {
     }
     setSubmitting(true);
     try {
-      await authAPI.resetUserPassword(resetSchool.admin_user_id || resetSchool.id, newPassword);
-      toast.success(`Admin password for ${resetSchool.name || resetSchool.school_name} reset successfully!`);
+      await schoolAPI.resetAdminPassword(resetSchool.id, newPassword);
+      toast.success(`Admin password for ${resetSchool.school_name || resetSchool.name} reset successfully!`);
       setShowResetModal(false);
       setNewPassword('');
     } catch (err) {
@@ -460,11 +460,17 @@ export function SuperAdminSchoolsTab({ schools = [], loading, onRefresh }) {
 
       {/* Modal: Reset Admin Password */}
       {showResetModal && resetSchool && (
-        <Modal isOpen={showResetModal} onClose={() => setShowResetModal(false)} title={`Reset Admin Password — ${resetSchool.name}`}>
+        <Modal
+          isOpen={showResetModal}
+          onClose={() => setShowResetModal(false)}
+          title={`Reset Admin Password — ${resetSchool.school_name || resetSchool.name || 'School'}`}
+        >
           <form onSubmit={handleResetPasswordSubmit} className="space-y-4 text-xs">
             <div className="p-3 bg-[#FAFAF8] rounded-[8px] border border-[#E4E1D8] space-y-1">
               <span className="text-[10px] text-[#8C97AB] font-mono uppercase block">TARGET ADMIN ACCOUNT</span>
-              <p className="font-bold text-[#14213D] text-sm">@{resetSchool.admin_username || resetSchool.code}</p>
+              <p className="font-bold text-[#14213D] text-sm">
+                @{resetSchool.admin_username || resetSchool.users?.[0]?.username || resetSchool.admin_user?.username || resetSchool.code}
+              </p>
             </div>
 
             <div>

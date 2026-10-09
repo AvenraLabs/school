@@ -337,8 +337,12 @@ export const adminResetUserPassword = asyncHandler(async (req, res) => {
     throw new AppError("Forbidden: Cannot reset password for a user from another school", 403);
   }
 
-  if (targetUser.role === "school_admin" || targetUser.role === "super_admin") {
+  if (req.user.role === "school_admin" && (targetUser.role === "school_admin" || targetUser.role === "super_admin")) {
     throw new AppError("Forbidden: Cannot reset admin password using this endpoint", 403);
+  }
+
+  if (targetUser.role === "super_admin" && targetUser.id !== req.user.id) {
+    throw new AppError("Forbidden: Cannot reset super admin password using this endpoint", 403);
   }
 
   targetUser.password = new_password;

@@ -10,10 +10,10 @@ export const updateSchoolStatusSchema = z.object({
 
 export const updateSchoolAdminStatusSchema = z.object({
   is_active: z.boolean(),
-});                                                                                                                                                                                  
+});
 
 export const resetSchoolAdminPasswordSchema = z.object({
-  new_password: z.string().min(6),
+  new_password: z.string().min(4),
 });
 
 export const updateSchoolSchema = z.object({
